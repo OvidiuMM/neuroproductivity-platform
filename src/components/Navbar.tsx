@@ -35,9 +35,14 @@ export const Navbar: React.FC<NavbarProps> = ({
               <Brain className="w-5 h-5 text-indigo-400" />
             </div>
             <div>
-              <span className="text-lg font-bold tracking-tight text-slate-900 block leading-tight">
-                NeuroProductividad
-              </span>
+              <div className="flex items-center gap-2">
+                <span className="text-lg font-bold tracking-tight text-slate-900 block leading-tight">
+                  NeuroProductividad
+                </span>
+                <span className="text-[10px] font-mono font-bold bg-slate-100 text-slate-600 px-1.5 py-0.5 rounded border border-slate-200">
+                  v0.1.0
+                </span>
+              </div>
               <span className="text-[11px] text-slate-500 font-medium">
                 Metodología Dr. Jonathan Benito Sipos
               </span>
