@@ -61,8 +61,8 @@ El sistema rechaza las restricciones coercitivas (como las rotaciones atencional
 ### Pasos
 ```bash
 # 1. Clonar el repositorio
-git clone https://github.com/TU_USUARIO/neuroproductividad.git
-cd neuroproductividad
+git clone https://github.com/OvidiuMM/neuroproductivity-platform.git
+cd neuroproductivity-platform
 
 # 2. Instalar dependencias
 npm install
