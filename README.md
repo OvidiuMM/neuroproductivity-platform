@@ -57,7 +57,7 @@ El sistema rechaza las restricciones coercitivas (como las rotaciones atencional
 ## 🚀 Instalación y Puesta en Marcha
 
 ### Prerrequisitos
-* Node.js $\ge 18$ o $\ge 22$
+* Node.js $\ge 22.12$
 * npm o pnpm o yarn
 
 ### Pasos
@@ -77,9 +77,21 @@ npm run build
 
 # 5. Ejecutar validación de tipos y linter
 npm run lint
+
+# 6. Ejecutar pruebas unitarias y de integración
+npm run test:unit
+npm run test:integration
+
+# 7. Instalar Chromium y ejecutar pruebas E2E
+npx playwright install chromium
+npm run test:e2e
 ```
 
 El servidor estará disponible en `http://localhost:3000` o `http://localhost:5173`.
+
+### Pruebas automatizadas
+
+El banco de pruebas cubre lógica pura con el test runner de Node, integración del almacenamiento local y flujos de extremo a extremo en Chromium con Playwright. `npm test` ejecuta los tres niveles; GitHub Actions también valida tipos, compila la aplicación y ejecuta toda la suite en cada push y pull request.
 
 ---
 

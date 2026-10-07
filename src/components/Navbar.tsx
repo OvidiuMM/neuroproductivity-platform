@@ -48,7 +48,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                 </span>
               </div>
               <span className="text-[11px] text-slate-500 font-medium">
-                Metodología Dr. Jonathan Benito Sipos
+                Basado en la metodología de Dr. Jonathan Benito Sipos
               </span>
             </div>
           </div>
