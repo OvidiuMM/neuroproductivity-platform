@@ -1,12 +1,14 @@
 import React from 'react';
-import { ListContext } from '../types';
-import { Brain, Briefcase, User, Calendar, Mail, Compass, Plus, ShieldCheck, CheckCircle2 } from 'lucide-react';
+import { ListContext, UserProfile } from '../types';
+import { Brain, Briefcase, User, Calendar, Mail, Compass, Plus, ShieldCheck, CheckCircle2, ChevronDown } from 'lucide-react';
 
 interface NavbarProps {
   activeTab: 'tasks' | 'wheel' | 'bermudas' | 'requirements';
   setActiveTab: (tab: 'tasks' | 'wheel' | 'bermudas' | 'requirements') => void;
   activeContext: ListContext;
   setActiveContext: (context: ListContext) => void;
+  activeUser: UserProfile;
+  onOpenUserSwitcher: () => void;
   onOpenNewTask: () => void;
   onOpenNewMeeting: () => void;
   onOpenNewEmail: () => void;
@@ -18,6 +20,8 @@ export const Navbar: React.FC<NavbarProps> = ({
   setActiveTab,
   activeContext,
   setActiveContext,
+  activeUser,
+  onOpenUserSwitcher,
   onOpenNewTask,
   onOpenNewMeeting,
   onOpenNewEmail,
@@ -136,6 +140,29 @@ export const Navbar: React.FC<NavbarProps> = ({
                 </span>
               </button>
             </div>
+
+            {/* User Profile & Space Isolation Trigger */}
+            <button
+              onClick={onOpenUserSwitcher}
+              className="flex items-center gap-2 p-1 pl-1.5 pr-2 rounded-xl border border-slate-200 hover:border-slate-300 hover:bg-slate-50 transition-all text-xs"
+              title={`Espacio de usuario: ${activeUser.name} (${activeUser.email})`}
+            >
+              <div
+                className={`w-6 h-6 rounded-lg text-white font-bold text-[10px] flex items-center justify-center shrink-0 shadow-2xs ${
+                  activeUser.color === 'emerald'
+                    ? 'bg-emerald-600'
+                    : activeUser.color === 'amber'
+                    ? 'bg-amber-600'
+                    : 'bg-indigo-600'
+                }`}
+              >
+                {activeUser.initials}
+              </div>
+              <span className="hidden xl:inline font-bold text-slate-800 max-w-[110px] truncate">
+                {activeUser.name.split(' ')[0]}
+              </span>
+              <ChevronDown className="w-3 h-3 text-slate-400" />
+            </button>
 
             {/* Primary Action Button */}
             <button

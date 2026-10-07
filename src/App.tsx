@@ -4,7 +4,7 @@
  */
 
 import React, { useState, useEffect } from 'react';
-import { ListContext, TaskItem, WheelCategory, MeetingGuard, EmailDraft } from './types';
+import { ListContext, TaskItem, WheelCategory, MeetingGuard, EmailDraft, UserProfile } from './types';
 import { StorageService } from './services/storage';
 import { Navbar } from './components/Navbar';
 import { TaskList } from './components/TaskList';
@@ -15,6 +15,7 @@ import { MeetingModal } from './components/MeetingModal';
 import { EmailModal } from './components/EmailModal';
 import { SystemRequirementsViewer } from './components/SystemRequirementsViewer';
 import { SplashScreen } from './components/SplashScreen';
+import { UserSwitcher } from './components/UserSwitcher';
 import {
   Brain,
   Sparkles,
@@ -28,10 +29,16 @@ import {
 } from 'lucide-react';
 
 export default function App() {
-  const [tasks, setTasks] = useState<TaskItem[]>(() => StorageService.getTasks());
-  const [wheelLogs, setWheelLogs] = useState(() => StorageService.getWheelLogs());
-  const [meetings, setMeetings] = useState<MeetingGuard[]>(() => StorageService.getMeetings());
-  const [emails, setEmails] = useState<EmailDraft[]>(() => StorageService.getEmails());
+  // Gestión de Usuarios y Espacios Aislados
+  const [users, setUsers] = useState<UserProfile[]>(() => StorageService.getUsers());
+  const [activeUser, setActiveUser] = useState<UserProfile>(() => StorageService.getActiveUser());
+  const [isUserSwitcherOpen, setIsUserSwitcherOpen] = useState(false);
+
+  // Estados de datos aislados por usuario activo
+  const [tasks, setTasks] = useState<TaskItem[]>(() => StorageService.getTasks(StorageService.getActiveUserId()));
+  const [wheelLogs, setWheelLogs] = useState(() => StorageService.getWheelLogs(StorageService.getActiveUserId()));
+  const [meetings, setMeetings] = useState<MeetingGuard[]>(() => StorageService.getMeetings(StorageService.getActiveUserId()));
+  const [emails, setEmails] = useState<EmailDraft[]>(() => StorageService.getEmails(StorageService.getActiveUserId()));
 
   const [activeContext, setActiveContext] = useState<ListContext>('WORK');
   const [activeTab, setActiveTab] = useState<'tasks' | 'wheel' | 'bermudas' | 'requirements'>('tasks');
@@ -53,7 +60,32 @@ export default function App() {
     setTimeout(() => setToastMessage(null), 4000);
   };
 
-  // Guardar en Storage al mutar estado
+  // Cambio de Usuario con Segregación Total de Datos
+  const handleSelectUser = (userId: string) => {
+    StorageService.setActiveUserId(userId);
+    const user = StorageService.getActiveUser();
+    setActiveUser(user);
+    // Recargar todos los subsistemas con el espacio de datos aislado del nuevo usuario
+    setTasks(StorageService.getTasks(userId));
+    setWheelLogs(StorageService.getWheelLogs(userId));
+    setMeetings(StorageService.getMeetings(userId));
+    setEmails(StorageService.getEmails(userId));
+    showToast(`Espacio de trabajo cambiado a: ${user.name}`);
+  };
+
+  // Creación de Nuevo Usuario (Sandbox Aislado)
+  const handleCreateUser = (newUserData: Omit<UserProfile, 'id' | 'createdAt' | 'initials' | 'color'>) => {
+    const created = StorageService.createUser(newUserData);
+    setUsers(StorageService.getUsers());
+    setActiveUser(created);
+    setTasks([]);
+    setWheelLogs(StorageService.getWheelLogs(created.id));
+    setMeetings([]);
+    setEmails([]);
+    showToast(`Nuevo espacio de trabajo aislado creado para ${created.name}`);
+  };
+
+  // Guardar en Storage al mutar estado con userId
   const handleSaveTask = (taskData: Omit<TaskItem, 'id' | 'createdAt' | 'updatedAt' | 'completed'>) => {
     if (editingTask) {
       const updated = tasks.map((t) =>
@@ -61,25 +93,27 @@ export default function App() {
           ? {
               ...t,
               ...taskData,
+              userId: activeUser.id,
               updatedAt: new Date().toISOString()
             }
           : t
       );
       setTasks(updated);
-      StorageService.saveTasks(updated);
+      StorageService.saveTasks(updated, activeUser.id);
       showToast('Acción operativa actualizada con validación sintáctica exitosa.');
       setEditingTask(null);
     } else {
       const newTask: TaskItem = {
         ...taskData,
         id: `task-${Date.now()}`,
+        userId: activeUser.id,
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
         completed: false
       };
       const updated = [newTask, ...tasks];
       setTasks(updated);
-      StorageService.saveTasks(updated);
+      StorageService.saveTasks(updated, activeUser.id);
       showToast(
         taskData.isSomeday
           ? 'Tarea archivada en el Sumidero Cognitivo ("Opciones Futuras").'
@@ -93,30 +127,30 @@ export default function App() {
       t.id === id ? { ...t, completed: !t.completed, updatedAt: new Date().toISOString() } : t
     );
     setTasks(updated);
-    StorageService.saveTasks(updated);
+    StorageService.saveTasks(updated, activeUser.id);
   };
 
   const handleDeleteTask = (id: string) => {
     const updated = tasks.filter((t) => t.id !== id);
     setTasks(updated);
-    StorageService.saveTasks(updated);
+    StorageService.saveTasks(updated, activeUser.id);
     showToast('Acción eliminada del inventario.');
   };
 
   const handleAppendWheelSnapshot = (scores: Record<WheelCategory, number>, label?: string) => {
-    const newLog = StorageService.appendWheelSnapshot(scores, label);
+    const newLog = StorageService.appendWheelSnapshot(scores, label, activeUser.id);
     setWheelLogs([...wheelLogs, newLog]);
     showToast('Nuevo snapshot append-only consolidado con marca de tiempo UTC.');
   };
 
   const handleSaveMeeting = (meetingData: Omit<MeetingGuard, 'id' | 'createdAt'>) => {
-    const saved = StorageService.saveMeeting(meetingData);
+    const saved = StorageService.saveMeeting(meetingData, activeUser.id);
     setMeetings([saved, ...meetings]);
     showToast('Reunión blindada registrada exitosamente (fuera de la franja matutina).');
   };
 
   const handleSendEmail = (emailData: Omit<EmailDraft, 'id'>) => {
-    const saved = StorageService.saveEmail(emailData);
+    const saved = StorageService.saveEmail(emailData, activeUser.id);
     setEmails([saved, ...emails]);
     showToast('Mensaje despachado con protocolo de redacción inversa validado.');
   };
@@ -141,6 +175,8 @@ export default function App() {
         setActiveTab={setActiveTab}
         activeContext={activeContext}
         setActiveContext={setActiveContext}
+        activeUser={activeUser}
+        onOpenUserSwitcher={() => setIsUserSwitcherOpen(true)}
         onOpenNewTask={() => {
           setEditingTask(null);
           setIsTaskModalOpen(true);
@@ -181,6 +217,17 @@ export default function App() {
                     {activeContext === 'WORK' ? 'Esfera Profesional' : 'Esfera Personal'}
                   </strong>
                 </span>
+                <span className="text-slate-300">·</span>
+                <button
+                  type="button"
+                  onClick={() => setIsUserSwitcherOpen(true)}
+                  className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-slate-100 hover:bg-slate-200 text-[11px] text-slate-700 font-semibold transition-colors"
+                  title="Cambiar espacio de usuario aislado"
+                >
+                  <span className={`w-2 h-2 rounded-full ${activeUser.color === 'emerald' ? 'bg-emerald-500' : activeUser.color === 'amber' ? 'bg-amber-500' : 'bg-indigo-500'}`} />
+                  <span>Usuario: {activeUser.name}</span>
+                  <span className="text-[10px] text-indigo-600 font-normal">({activeUser.role.split(' ')[0]})</span>
+                </button>
               </div>
 
               <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-slate-900 leading-tight">
@@ -335,6 +382,16 @@ export default function App() {
         isOpen={isEmailModalOpen}
         onClose={() => setIsEmailModalOpen(false)}
         onSendEmail={handleSendEmail}
+      />
+
+      {/* MODAL 4: GESTOR DE IDENTIDADES Y ESPACIOS AISLADOS DE USUARIO */}
+      <UserSwitcher
+        isOpen={isUserSwitcherOpen}
+        onClose={() => setIsUserSwitcherOpen(false)}
+        users={users}
+        activeUser={activeUser}
+        onSelectUser={handleSelectUser}
+        onCreateUser={handleCreateUser}
       />
 
     </div>

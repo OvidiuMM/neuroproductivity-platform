@@ -1,6 +1,8 @@
-import { TaskItem, WheelOfLifeLog, MeetingGuard, EmailDraft, WheelCategory } from '../types';
+import { TaskItem, WheelOfLifeLog, MeetingGuard, EmailDraft, WheelCategory, UserProfile } from '../types';
 
 const STORAGE_KEYS = {
+  USERS: 'neuro_users_v1',
+  ACTIVE_USER_ID: 'neuro_active_user_id_v1',
   TASKS: 'neuro_tasks_v1',
   WHEEL_LOGS: 'neuro_wheel_logs_v1',
   MEETINGS: 'neuro_meetings_v1',
@@ -8,11 +10,43 @@ const STORAGE_KEYS = {
   ACTIVE_CONTEXT: 'neuro_active_context_v1'
 };
 
-// Semilla inicial de la Rueda de la Vida (histórico longitudinal para demostrar neuroplasticidad)
-const INITIAL_WHEEL_LOGS: WheelOfLifeLog[] = [
+// Usuarios Semilla Iniciales
+const INITIAL_USERS: UserProfile[] = [
   {
-    id: 'wheel-snapshot-1',
-    userId: 'user-default',
+    id: 'user-1',
+    name: 'Dr. Jonathan Benito Sipos',
+    email: 'jonathan@uam.es',
+    role: 'Investigador Neurociencia (UAM)',
+    color: 'indigo',
+    initials: 'JB',
+    createdAt: '2026-06-01T08:00:00Z'
+  },
+  {
+    id: 'user-2',
+    name: 'Ovidiu M.',
+    email: 'ovidiu@getdeardoc.com',
+    role: 'Líder Técnico & Productividad',
+    color: 'emerald',
+    initials: 'OM',
+    createdAt: '2026-07-01T09:00:00Z'
+  },
+  {
+    id: 'user-3',
+    name: 'Dra. Elena Ramos',
+    email: 'elena.ramos@salud.org',
+    role: 'Especialista en Medicina Preventiva',
+    color: 'amber',
+    initials: 'ER',
+    createdAt: '2026-08-01T10:00:00Z'
+  }
+];
+
+// Semillas de Rueda de la Vida por usuario
+const INITIAL_WHEEL_LOGS: WheelOfLifeLog[] = [
+  // Dr. Jonathan Benito Sipos
+  {
+    id: 'wheel-snapshot-u1-1',
+    userId: 'user-1',
     timestamp: '2026-07-06T10:00:00Z',
     label: 'Hace 90 días (Evaluación inicial)',
     scores: {
@@ -26,8 +60,8 @@ const INITIAL_WHEEL_LOGS: WheelOfLifeLog[] = [
     }
   },
   {
-    id: 'wheel-snapshot-2',
-    userId: 'user-default',
+    id: 'wheel-snapshot-u1-2',
+    userId: 'user-1',
     timestamp: '2026-09-06T10:00:00Z',
     label: 'Hace 30 días (Progreso intermedio)',
     scores: {
@@ -41,8 +75,8 @@ const INITIAL_WHEEL_LOGS: WheelOfLifeLog[] = [
     }
   },
   {
-    id: 'wheel-snapshot-3',
-    userId: 'user-default',
+    id: 'wheel-snapshot-u1-3',
+    userId: 'user-1',
     timestamp: '2026-10-06T09:00:00Z',
     label: 'Estado Actual Vigente',
     scores: {
@@ -54,15 +88,46 @@ const INITIAL_WHEEL_LOGS: WheelOfLifeLog[] = [
       Relaciones: 6,
       Espiritualidad: 6
     }
+  },
+  // Ovidiu M.
+  {
+    id: 'wheel-snapshot-u2-1',
+    userId: 'user-2',
+    timestamp: '2026-08-15T10:00:00Z',
+    label: 'Evaluación Arquitectura Q3',
+    scores: {
+      Salud: 6,
+      'Carrera Profesional': 9,
+      Finanzas: 8,
+      Familia: 6,
+      Ocio: 4,
+      Relaciones: 6,
+      Espiritualidad: 5
+    }
+  },
+  {
+    id: 'wheel-snapshot-u2-2',
+    userId: 'user-2',
+    timestamp: '2026-10-06T11:00:00Z',
+    label: 'Estado Actual Vigente',
+    scores: {
+      Salud: 8,
+      'Carrera Profesional': 9,
+      Finanzas: 8,
+      Familia: 7,
+      Ocio: 6,
+      Relaciones: 7,
+      Espiritualidad: 7
+    }
   }
 ];
 
-// Semilla inicial de tareas con Top 10 y tareas secundarias para probar la jerarquía visual Gestalt
+// Semillas de Tareas segregadas por usuario
 const INITIAL_TASKS: TaskItem[] = [
-  // --- Tareas Profesionales (Top 10 operativo) ---
+  // --- Tareas Dr. Jonathan Benito Sipos (user-1) ---
   {
     id: 'task-w-1',
-    userId: 'user-default',
+    userId: 'user-1',
     listContext: 'WORK',
     title: 'Revisar la hoja de cálculo de balance contable y previsión de gastos',
     description: 'Conciliar extractos bancarios del último mes y cuadrar los centros de coste antes del comité financiero.',
@@ -80,7 +145,7 @@ const INITIAL_TASKS: TaskItem[] = [
   },
   {
     id: 'task-w-2',
-    userId: 'user-default',
+    userId: 'user-1',
     listContext: 'WORK',
     title: 'Redactar propuesta técnica de migración a arquitectura offline-first',
     description: 'Detallar especificaciones de IndexedDB, multiEntry y colas de sincronización para el equipo de desarrollo.',
@@ -96,7 +161,7 @@ const INITIAL_TASKS: TaskItem[] = [
   },
   {
     id: 'task-w-3',
-    userId: 'user-default',
+    userId: 'user-1',
     listContext: 'WORK',
     title: 'Auditar código del analizador sintáctico de verbos de acción física',
     description: 'Verificar que intercepta entradas amorfas y orienta hacia el primer paso motor físico indivisible.',
@@ -112,7 +177,7 @@ const INITIAL_TASKS: TaskItem[] = [
   },
   {
     id: 'task-w-4',
-    userId: 'user-default',
+    userId: 'user-1',
     listContext: 'WORK',
     title: 'Programar validaciones estrictas del blindaje de reuniones matutinas',
     description: 'Implementar regla inquebrantable de bloqueo heurístico para convocatorias antes de las 12:00 h.',
@@ -128,7 +193,7 @@ const INITIAL_TASKS: TaskItem[] = [
   },
   {
     id: 'task-w-5',
-    userId: 'user-default',
+    userId: 'user-1',
     listContext: 'WORK',
     title: 'Configurar índices B-Tree en PostgreSQL para consultas multiEntry',
     description: 'Aplicar índice parcial sobre tareas activas omitiendo las catalogadas como Quizá / Algún día.',
@@ -144,7 +209,7 @@ const INITIAL_TASKS: TaskItem[] = [
   },
   {
     id: 'task-w-6',
-    userId: 'user-default',
+    userId: 'user-1',
     listContext: 'WORK',
     title: 'Diseñar interfaz de redacción inversa de correo electrónico',
     description: 'Bloquear campo de destinatarios hasta que el cuerpo y adjuntos hayan sido plenamente completados.',
@@ -160,7 +225,7 @@ const INITIAL_TASKS: TaskItem[] = [
   },
   {
     id: 'task-w-7',
-    userId: 'user-default',
+    userId: 'user-1',
     listContext: 'WORK',
     title: 'Contactar al proveedor cloud para formalizar SLA del 99.99%',
     description: 'Enviar términos del contrato de clústeres multi-zona y redundancia de bases de datos.',
@@ -176,7 +241,7 @@ const INITIAL_TASKS: TaskItem[] = [
   },
   {
     id: 'task-w-8',
-    userId: 'user-default',
+    userId: 'user-1',
     listContext: 'WORK',
     title: 'Verificar contraste WCAG 2.1 AA en estilos de la jerarquía Top 10',
     description: 'Ejecutar auditoría en Lighthouse para garantizar contraste de 4.5:1 en texto y 3:1 en encabezados.',
@@ -192,7 +257,7 @@ const INITIAL_TASKS: TaskItem[] = [
   },
   {
     id: 'task-w-9',
-    userId: 'user-default',
+    userId: 'user-1',
     listContext: 'WORK',
     title: 'Presentar demo interactiva de la Rueda de la Vida al equipo clínico',
     description: 'Demostrar interacción táctil directa sobre el gráfico polar SVG y registro append-only.',
@@ -208,7 +273,7 @@ const INITIAL_TASKS: TaskItem[] = [
   },
   {
     id: 'task-w-10',
-    userId: 'user-default',
+    userId: 'user-1',
     listContext: 'WORK',
     title: 'Limpiar ramas deprecadas del repositorio git y actualizar dependencias',
     description: 'Ejecutar git prune y verificar que la compilación pase sin advertencias en Node 22.',
@@ -222,61 +287,10 @@ const INITIAL_TASKS: TaskItem[] = [
     linkedBy: 'AUTO_TFIDF',
     completed: false
   },
-  // --- Tareas Profesionales secundarias (Índice 11 en adelante: bajo contraste y minimalista) ---
-  {
-    id: 'task-w-11',
-    userId: 'user-default',
-    listContext: 'WORK',
-    title: 'Actualizar firmas de correo del departamento de operaciones',
-    description: 'Estandarizar aviso legal y tipografía corporativa en las firmas.',
-    priority: 'LOW',
-    createdAt: '2026-09-28T09:00:00Z',
-    updatedAt: '2026-09-28T09:00:00Z',
-    observations: [],
-    isSomeday: false,
-    wheelCategory: 'Carrera Profesional',
-    wheelCategoryConfidence: 0.65,
-    linkedBy: 'AUTO_TFIDF',
-    completed: false
-  },
-  {
-    id: 'task-w-12',
-    userId: 'user-default',
-    listContext: 'WORK',
-    title: 'Archivar facturas electrónicas de suministros de oficina del trimestre pasado',
-    description: 'Clasificar PDFs en Google Drive según centro de costes.',
-    priority: 'LOW',
-    createdAt: '2026-09-25T14:00:00Z',
-    updatedAt: '2026-09-25T14:00:00Z',
-    observations: [],
-    isSomeday: false,
-    wheelCategory: 'Finanzas',
-    wheelCategoryConfidence: 0.81,
-    linkedBy: 'AUTO_TFIDF',
-    completed: false
-  },
-  // --- Tareas Profesionales en Sumidero Cognitivo (Quizá / Algún día) ---
-  {
-    id: 'task-w-someday-1',
-    userId: 'user-default',
-    listContext: 'WORK',
-    title: 'Evaluar viabilidad de certificación internacional en Neurociencia Aplicada',
-    description: 'Revisar programas de posgrado y presupuestos para el próximo año.',
-    priority: 'LOW',
-    createdAt: '2026-10-01T10:00:00Z',
-    updatedAt: '2026-10-01T10:00:00Z',
-    observations: [],
-    isSomeday: true,
-    wheelCategory: 'Carrera Profesional',
-    wheelCategoryConfidence: 0.78,
-    linkedBy: 'AUTO_TFIDF',
-    completed: false
-  },
-
-  // --- Tareas Personales ---
+  // Tarea personal user-1
   {
     id: 'task-p-1',
-    userId: 'user-default',
+    userId: 'user-1',
     listContext: 'PERSONAL',
     title: 'Planificar dieta y entrenamiento de fuerza con fisioterapeuta',
     description: 'Programar 3 sesiones semanales de 45 minutos y ajustar ingesta calórica proteica para soporte neuromuscular.',
@@ -290,79 +304,97 @@ const INITIAL_TASKS: TaskItem[] = [
     linkedBy: 'AUTO_TFIDF',
     completed: false
   },
+
+  // --- Tareas de Ovidiu M. (user-2: Espacio aislado) ---
   {
-    id: 'task-p-2',
-    userId: 'user-default',
-    listContext: 'PERSONAL',
-    title: 'Comprar billetes de tren para visita familiar de fin de semana',
-    description: 'Coordinar horarios de llegada con mis padres y reservar billetes de ida y vuelta.',
-    priority: 'HIGH',
-    createdAt: '2026-10-05T18:00:00Z',
-    updatedAt: '2026-10-05T18:00:00Z',
+    id: 'task-u2-1',
+    userId: 'user-2',
+    listContext: 'WORK',
+    title: 'Implementar pipeline CI/CD en GitHub Actions para despliegue automatizado',
+    description: 'Configurar workflows de build, test de linting y despliegue continuo hacia Google Cloud Run.',
+    priority: 'CRITICAL',
+    createdAt: '2026-10-07T08:00:00Z',
+    updatedAt: '2026-10-07T08:00:00Z',
     observations: [],
     isSomeday: false,
-    wheelCategory: 'Familia',
+    wheelCategory: 'Carrera Profesional',
+    wheelCategoryConfidence: 0.95,
+    linkedBy: 'AUTO_TFIDF',
+    completed: false
+  },
+  {
+    id: 'task-u2-2',
+    userId: 'user-2',
+    listContext: 'WORK',
+    title: 'Auditar latencia P95 menor a 150ms en consultas sobre IndexedDB',
+    description: 'Realizar benchmarking sobre índices B-Tree en cliente para verificar respuesta perceptual nula.',
+    priority: 'CRITICAL',
+    createdAt: '2026-10-07T08:15:00Z',
+    updatedAt: '2026-10-07T08:15:00Z',
+    observations: [],
+    isSomeday: false,
+    wheelCategory: 'Carrera Profesional',
     wheelCategoryConfidence: 0.91,
     linkedBy: 'AUTO_TFIDF',
     completed: false
   },
   {
-    id: 'task-p-3',
-    userId: 'user-default',
-    listContext: 'PERSONAL',
-    title: 'Revisar cuotas del seguro de salud y comparar con pólizas del mercado',
-    description: 'Comprobar cobertura dental y hospitalaria antes de la renovación anual.',
+    id: 'task-u2-3',
+    userId: 'user-2',
+    listContext: 'WORK',
+    title: 'Configurar contenedor Docker y variables de entorno para Cloud Run',
+    description: 'Verificar puerto 3000, variables de base de datos y certificados de Digital Asset Links.',
     priority: 'HIGH',
-    createdAt: '2026-10-04T12:00:00Z',
-    updatedAt: '2026-10-04T12:00:00Z',
+    createdAt: '2026-10-07T08:30:00Z',
+    updatedAt: '2026-10-07T08:30:00Z',
     observations: [],
     isSomeday: false,
-    wheelCategory: 'Finanzas',
+    wheelCategory: 'Carrera Profesional',
     wheelCategoryConfidence: 0.89,
     linkedBy: 'AUTO_TFIDF',
     completed: false
   },
   {
-    id: 'task-p-4',
-    userId: 'user-default',
+    id: 'task-u2-p1',
+    userId: 'user-2',
     listContext: 'PERSONAL',
-    title: 'Realizar 20 minutos de meditación mindfulness y respiración diafragmática',
-    description: 'Sesión matutina en silencio antes de encender dispositivos electrónicos.',
-    priority: 'MEDIUM',
-    createdAt: '2026-10-04T07:00:00Z',
-    updatedAt: '2026-10-04T07:00:00Z',
+    title: 'Correr 8 kilómetros por la montaña y realizar estiramientos completos',
+    description: 'Entrenamiento aeróbico matutino en ayunas para oxigenación cerebral y regulación dopaminérgica.',
+    priority: 'CRITICAL',
+    createdAt: '2026-10-07T06:00:00Z',
+    updatedAt: '2026-10-07T06:00:00Z',
     observations: [],
     isSomeday: false,
-    wheelCategory: 'Espiritualidad',
-    wheelCategoryConfidence: 0.93,
+    wheelCategory: 'Salud',
+    wheelCategoryConfidence: 0.97,
     linkedBy: 'AUTO_TFIDF',
     completed: false
   },
   {
-    id: 'task-p-someday-1',
-    userId: 'user-default',
+    id: 'task-u2-p2',
+    userId: 'user-2',
     listContext: 'PERSONAL',
-    title: 'Aprender tocar guitarra española y tomar clases los sábados',
-    description: 'Proyecto musical para disfrute de ocio en un futuro semestre.',
-    priority: 'LOW',
-    createdAt: '2026-09-20T10:00:00Z',
-    updatedAt: '2026-09-20T10:00:00Z',
+    title: 'Revisar portafolio de fondos indexados y balance de ahorro trimestral',
+    description: 'Calcular rentabilidad acumulada y transferir excedente a fondo de emergencia.',
+    priority: 'HIGH',
+    createdAt: '2026-10-07T06:30:00Z',
+    updatedAt: '2026-10-07T06:30:00Z',
     observations: [],
-    isSomeday: true,
-    wheelCategory: 'Ocio',
-    wheelCategoryConfidence: 0.85,
+    isSomeday: false,
+    wheelCategory: 'Finanzas',
+    wheelCategoryConfidence: 0.94,
     linkedBy: 'AUTO_TFIDF',
     completed: false
   }
 ];
 
-// Semilla inicial de reuniones blindadas (Módulo 5)
+// Semillas de reuniones
 const INITIAL_MEETINGS: MeetingGuard[] = [
   {
     id: 'meet-1',
-    userId: 'user-default',
-    title: 'Sincronización semanal de arquitectura y sprints técnicos',
-    startTime: '2026-10-07T13:00:00Z', // 13:00 h (Hora valle permitida)
+    userId: 'user-1',
+    title: 'Sincronización semanal de arquitectura y neuroproductividad',
+    startTime: '2026-10-07T13:00:00Z',
     endTime: '2026-10-07T13:45:00Z',
     agendaPoints: [
       '1. Estado de implementación del motor TF-IDF',
@@ -372,14 +404,28 @@ const INITIAL_MEETINGS: MeetingGuard[] = [
     moderatorName: 'Dr. Jonathan Benito Sipos',
     moderatorEmail: 'jonathan@uam.es',
     createdAt: '2026-10-05T09:00:00Z'
+  },
+  {
+    id: 'meet-u2-1',
+    userId: 'user-2',
+    title: 'Revisión técnica de despliegue en Google Cloud Run y APK',
+    startTime: '2026-10-08T14:00:00Z',
+    endTime: '2026-10-08T14:30:00Z',
+    agendaPoints: [
+      '1. Configuración de Digital Asset Links',
+      '2. Certificación de PWA e instalación en Android',
+      '3. Rendimiento de sincronización offline'
+    ],
+    moderatorName: 'Ovidiu M.',
+    moderatorEmail: 'ovidiu@getdeardoc.com',
+    createdAt: '2026-10-07T07:00:00Z'
   }
 ];
 
-// Semilla inicial de correos con redacción inversa (Módulo 5)
 const INITIAL_EMAILS: EmailDraft[] = [
   {
     id: 'email-1',
-    userId: 'user-default',
+    userId: 'user-1',
     subject: 'Síntesis metodológica: Reestructuración de la fricción cognitiva',
     body: 'Adjunto el informe técnico con las validaciones de los 5 módulos de neuroproductividad. Se han blindado las mañanas y la jerarquía visual del Top 10 está operativa.',
     attachments: [{ name: 'especificacion_tecnica.pdf', size: '2.4 MB' }],
@@ -390,7 +436,71 @@ const INITIAL_EMAILS: EmailDraft[] = [
 ];
 
 export class StorageService {
-  static getTasks(): TaskItem[] {
+  // GESTIÓN DE USUARIOS
+  static getUsers(): UserProfile[] {
+    try {
+      const data = localStorage.getItem(STORAGE_KEYS.USERS);
+      return data ? JSON.parse(data) : INITIAL_USERS;
+    } catch {
+      return INITIAL_USERS;
+    }
+  }
+
+  static getActiveUserId(): string {
+    try {
+      return localStorage.getItem(STORAGE_KEYS.ACTIVE_USER_ID) || 'user-1';
+    } catch {
+      return 'user-1';
+    }
+  }
+
+  static getActiveUser(): UserProfile {
+    const users = this.getUsers();
+    const activeId = this.getActiveUserId();
+    return users.find((u) => u.id === activeId) || users[0] || INITIAL_USERS[0];
+  }
+
+  static setActiveUserId(userId: string): void {
+    try {
+      localStorage.setItem(STORAGE_KEYS.ACTIVE_USER_ID, userId);
+    } catch (e) {
+      console.error('Error saving active user id:', e);
+    }
+  }
+
+  static createUser(user: Omit<UserProfile, 'id' | 'createdAt' | 'initials' | 'color'>): UserProfile {
+    const users = this.getUsers();
+    const initials = user.name
+      .split(' ')
+      .map((n) => n[0])
+      .slice(0, 2)
+      .join('')
+      .toUpperCase();
+
+    const colors = ['indigo', 'emerald', 'amber', 'purple', 'sky', 'rose'];
+    const color = colors[users.length % colors.length];
+
+    const newUser: UserProfile = {
+      ...user,
+      id: `user-${Date.now()}`,
+      initials: initials || 'US',
+      color,
+      createdAt: new Date().toISOString()
+    };
+
+    users.push(newUser);
+    try {
+      localStorage.setItem(STORAGE_KEYS.USERS, JSON.stringify(users));
+      this.setActiveUserId(newUser.id);
+    } catch (e) {
+      console.error('Error creating user:', e);
+    }
+
+    return newUser;
+  }
+
+  // TAREAS (AISLAMIENTO POR USER_ID)
+  static getAllRawTasks(): TaskItem[] {
     try {
       const data = localStorage.getItem(STORAGE_KEYS.TASKS);
       return data ? JSON.parse(data) : INITIAL_TASKS;
@@ -399,15 +509,28 @@ export class StorageService {
     }
   }
 
-  static saveTasks(tasks: TaskItem[]): void {
+  static getTasks(userId?: string): TaskItem[] {
+    const targetUserId = userId || this.getActiveUserId();
+    const allTasks = this.getAllRawTasks();
+    return allTasks.filter((t) => t.userId === targetUserId);
+  }
+
+  static saveTasks(tasks: TaskItem[], userId?: string): void {
+    const targetUserId = userId || this.getActiveUserId();
+    const allTasks = this.getAllRawTasks();
+    // Reemplaza las tareas del usuario actual y mantiene intactas las de los demás usuarios
+    const otherUsersTasks = allTasks.filter((t) => t.userId !== targetUserId);
+    const updated = [...tasks.map((t) => ({ ...t, userId: targetUserId })), ...otherUsersTasks];
+
     try {
-      localStorage.setItem(STORAGE_KEYS.TASKS, JSON.stringify(tasks));
+      localStorage.setItem(STORAGE_KEYS.TASKS, JSON.stringify(updated));
     } catch (e) {
-      console.error('Error saving tasks to localStorage:', e);
+      console.error('Error saving tasks:', e);
     }
   }
 
-  static getWheelLogs(): WheelOfLifeLog[] {
+  // RUEDA DE LA VIDA (APPEND-ONLY POR USER_ID)
+  static getAllRawWheelLogs(): WheelOfLifeLog[] {
     try {
       const data = localStorage.getItem(STORAGE_KEYS.WHEEL_LOGS);
       return data ? JSON.parse(data) : INITIAL_WHEEL_LOGS;
@@ -416,26 +539,57 @@ export class StorageService {
     }
   }
 
-  // Modelo Append-Only: NUNCA sobreescribe, siempre agrega un nuevo snapshot
-  static appendWheelSnapshot(scores: Record<WheelCategory, number>, label?: string): WheelOfLifeLog {
-    const logs = this.getWheelLogs();
+  static getWheelLogs(userId?: string): WheelOfLifeLog[] {
+    const targetUserId = userId || this.getActiveUserId();
+    const allLogs = this.getAllRawWheelLogs();
+    const userLogs = allLogs.filter((l) => l.userId === targetUserId);
+
+    if (userLogs.length === 0) {
+      // Si el usuario no tiene historial, crear evaluación por defecto inicial
+      return [
+        {
+          id: `wheel-default-${targetUserId}`,
+          userId: targetUserId,
+          timestamp: new Date().toISOString(),
+          label: 'Evaluación inicial',
+          scores: {
+            Salud: 7,
+            'Carrera Profesional': 7,
+            Finanzas: 7,
+            Familia: 7,
+            Ocio: 6,
+            Relaciones: 6,
+            Espiritualidad: 6
+          }
+        }
+      ];
+    }
+    return userLogs;
+  }
+
+  static appendWheelSnapshot(scores: Record<WheelCategory, number>, label?: string, userId?: string): WheelOfLifeLog {
+    const targetUserId = userId || this.getActiveUserId();
+    const allLogs = this.getAllRawWheelLogs();
+
     const newLog: WheelOfLifeLog = {
       id: `wheel-snapshot-${Date.now()}`,
-      userId: 'user-default',
+      userId: targetUserId,
       timestamp: new Date().toISOString(),
       label: label || `Evaluación ${new Date().toLocaleDateString('es-ES', { month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' })}`,
       scores: { ...scores }
     };
-    logs.push(newLog);
+
+    allLogs.push(newLog);
     try {
-      localStorage.setItem(STORAGE_KEYS.WHEEL_LOGS, JSON.stringify(logs));
+      localStorage.setItem(STORAGE_KEYS.WHEEL_LOGS, JSON.stringify(allLogs));
     } catch (e) {
       console.error('Error appending wheel snapshot:', e);
     }
     return newLog;
   }
 
-  static getMeetings(): MeetingGuard[] {
+  // REUNIONES (BLINDAJE BERMUDAS POR USER_ID)
+  static getAllRawMeetings(): MeetingGuard[] {
     try {
       const data = localStorage.getItem(STORAGE_KEYS.MEETINGS);
       return data ? JSON.parse(data) : INITIAL_MEETINGS;
@@ -444,23 +598,33 @@ export class StorageService {
     }
   }
 
-  static saveMeeting(meeting: Omit<MeetingGuard, 'id' | 'createdAt'>): MeetingGuard {
-    const list = this.getMeetings();
+  static getMeetings(userId?: string): MeetingGuard[] {
+    const targetUserId = userId || this.getActiveUserId();
+    return this.getAllRawMeetings().filter((m) => m.userId === targetUserId);
+  }
+
+  static saveMeeting(meeting: Omit<MeetingGuard, 'id' | 'createdAt'>, userId?: string): MeetingGuard {
+    const targetUserId = userId || this.getActiveUserId();
+    const allMeetings = this.getAllRawMeetings();
+
     const newMeeting: MeetingGuard = {
       ...meeting,
+      userId: targetUserId,
       id: `meet-${Date.now()}`,
       createdAt: new Date().toISOString()
     };
-    list.unshift(newMeeting);
+
+    allMeetings.unshift(newMeeting);
     try {
-      localStorage.setItem(STORAGE_KEYS.MEETINGS, JSON.stringify(list));
+      localStorage.setItem(STORAGE_KEYS.MEETINGS, JSON.stringify(allMeetings));
     } catch (e) {
       console.error('Error saving meeting:', e);
     }
     return newMeeting;
   }
 
-  static getEmails(): EmailDraft[] {
+  // CORREOS (POR USER_ID)
+  static getAllRawEmails(): EmailDraft[] {
     try {
       const data = localStorage.getItem(STORAGE_KEYS.EMAILS);
       return data ? JSON.parse(data) : INITIAL_EMAILS;
@@ -469,15 +633,24 @@ export class StorageService {
     }
   }
 
-  static saveEmail(email: Omit<EmailDraft, 'id'>): EmailDraft {
-    const list = this.getEmails();
+  static getEmails(userId?: string): EmailDraft[] {
+    const targetUserId = userId || this.getActiveUserId();
+    return this.getAllRawEmails().filter((e) => e.userId === targetUserId);
+  }
+
+  static saveEmail(email: Omit<EmailDraft, 'id'>, userId?: string): EmailDraft {
+    const targetUserId = userId || this.getActiveUserId();
+    const allEmails = this.getAllRawEmails();
+
     const newEmail: EmailDraft = {
       ...email,
+      userId: targetUserId,
       id: `email-${Date.now()}`
     };
-    list.unshift(newEmail);
+
+    allEmails.unshift(newEmail);
     try {
-      localStorage.setItem(STORAGE_KEYS.EMAILS, JSON.stringify(list));
+      localStorage.setItem(STORAGE_KEYS.EMAILS, JSON.stringify(allEmails));
     } catch (e) {
       console.error('Error saving email:', e);
     }
