@@ -1,0 +1,6 @@
+{
+  "name": "NeuroProductividad - Dr. Benito Sipos",
+  "description": "Plataforma web de gestión del tiempo y neuroproductividad basada en la metodología del Dr. Jonathan Benito Sipos con validación estricta de requisitos, Rueda de la Vida, Jerarquía Visual y Blindaje del Triángulo de las Bermudas.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
