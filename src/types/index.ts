@@ -70,12 +70,16 @@ export interface EmailDraft {
 
 export interface UserProfile {
   id: string;
+  googleId?: string;
   name: string;
   email: string;
+  photoUrl?: string;
   role: string;
   color: string;
   initials: string;
+  authProvider: 'google' | 'local';
   createdAt: string;
+  lastLoginAt?: string;
 }
 
 export interface FormValidationError {

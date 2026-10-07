@@ -7,7 +7,7 @@ interface NavbarProps {
   setActiveTab: (tab: 'tasks' | 'wheel' | 'bermudas' | 'requirements') => void;
   activeContext: ListContext;
   setActiveContext: (context: ListContext) => void;
-  activeUser: UserProfile;
+  activeUser: UserProfile | null;
   onOpenUserSwitcher: () => void;
   onOpenNewTask: () => void;
   onOpenNewMeeting: () => void;
@@ -43,8 +43,8 @@ export const Navbar: React.FC<NavbarProps> = ({
                 <span className="text-lg font-bold tracking-tight text-slate-900 block leading-tight">
                   NeuroProductividad
                 </span>
-                <span className="text-[10px] font-mono font-bold bg-slate-100 text-slate-600 px-1.5 py-0.5 rounded border border-slate-200">
-                  v0.1.0
+                <span className="text-[10px] font-mono font-bold bg-indigo-50 text-indigo-700 px-1.5 py-0.5 rounded border border-indigo-200">
+                  v0.2.0
                 </span>
               </div>
               <span className="text-[11px] text-slate-500 font-medium">
@@ -142,27 +142,37 @@ export const Navbar: React.FC<NavbarProps> = ({
             </div>
 
             {/* User Profile & Space Isolation Trigger */}
-            <button
-              onClick={onOpenUserSwitcher}
-              className="flex items-center gap-2 p-1 pl-1.5 pr-2 rounded-xl border border-slate-200 hover:border-slate-300 hover:bg-slate-50 transition-all text-xs"
-              title={`Espacio de usuario: ${activeUser.name} (${activeUser.email})`}
-            >
-              <div
-                className={`w-6 h-6 rounded-lg text-white font-bold text-[10px] flex items-center justify-center shrink-0 shadow-2xs ${
-                  activeUser.color === 'emerald'
-                    ? 'bg-emerald-600'
-                    : activeUser.color === 'amber'
-                    ? 'bg-amber-600'
-                    : 'bg-indigo-600'
-                }`}
+            {activeUser ? (
+              <button
+                onClick={onOpenUserSwitcher}
+                className="flex items-center gap-2 p-1 pl-1.5 pr-2 rounded-xl border border-slate-200 hover:border-slate-300 hover:bg-slate-50 transition-all text-xs"
+                title={`Espacio de usuario: ${activeUser.name} (${activeUser.email})`}
               >
-                {activeUser.initials}
-              </div>
-              <span className="hidden xl:inline font-bold text-slate-800 max-w-[110px] truncate">
-                {activeUser.name.split(' ')[0]}
-              </span>
-              <ChevronDown className="w-3 h-3 text-slate-400" />
-            </button>
+                <div
+                  className={`w-6 h-6 rounded-lg text-white font-bold text-[10px] flex items-center justify-center shrink-0 shadow-2xs ${
+                    activeUser.color === 'emerald'
+                      ? 'bg-emerald-600'
+                      : activeUser.color === 'amber'
+                      ? 'bg-amber-600'
+                      : 'bg-indigo-600'
+                  }`}
+                >
+                  {activeUser.initials}
+                </div>
+                <span className="hidden xl:inline font-bold text-slate-800 max-w-[110px] truncate">
+                  {activeUser.name.split(' ')[0]}
+                </span>
+                <ChevronDown className="w-3 h-3 text-slate-400" />
+              </button>
+            ) : (
+              <button
+                onClick={onOpenUserSwitcher}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-slate-300 bg-white hover:bg-slate-50 text-xs font-bold text-slate-700 transition-all shadow-2xs"
+              >
+                <User className="w-3.5 h-3.5 text-indigo-600" />
+                <span>Entrar</span>
+              </button>
+            )}
 
             {/* Primary Action Button */}
             <button
