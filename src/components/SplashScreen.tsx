@@ -87,7 +87,7 @@ export const SplashScreen: React.FC<SplashScreenProps> = ({
             NeuroProductividad
           </h1>
           <p className="text-xs text-indigo-300 font-medium tracking-wide">
-            Metodología Dr. Jonathan Benito Sipos
+            Basado en la metodología de Dr. Jonathan Benito Sipos
           </p>
           <p className="text-[11px] text-slate-400 pt-1 leading-relaxed max-w-xs mx-auto">
             Andamiaje neurocognitivo para la corteza prefrontal y mitigación del estrés
