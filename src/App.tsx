@@ -14,6 +14,7 @@ import { BermudasShield } from './components/BermudasShield';
 import { MeetingModal } from './components/MeetingModal';
 import { EmailModal } from './components/EmailModal';
 import { SystemRequirementsViewer } from './components/SystemRequirementsViewer';
+import { SplashScreen } from './components/SplashScreen';
 import {
   Brain,
   Sparkles,
@@ -34,6 +35,9 @@ export default function App() {
 
   const [activeContext, setActiveContext] = useState<ListContext>('WORK');
   const [activeTab, setActiveTab] = useState<'tasks' | 'wheel' | 'bermudas' | 'requirements'>('tasks');
+
+  // Estado de pantalla de inicio móvil (Splash Screen)
+  const [showSplash, setShowSplash] = useState(true);
 
   // Modales
   const [isTaskModalOpen, setIsTaskModalOpen] = useState(false);
@@ -276,18 +280,36 @@ export default function App() {
       {/* FOOTER DISCRETO Y EDITORIAL */}
       <footer className="border-t border-slate-200 bg-white py-6 mt-12 text-xs text-slate-500">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between gap-3">
-          <p>
-            Plataforma Web de Neuroproductividad · Basada en la metodología e investigación del Dr. Jonathan Benito Sipos (Universidad Autónoma de Madrid).
-          </p>
-          <div className="flex items-center gap-4 text-slate-600">
+          <div className="flex items-center gap-2">
+            <span className="font-bold text-slate-700">NeuroProductividad v0.1.0</span>
+            <span className="text-slate-300">·</span>
+            <p className="text-slate-500">
+              Metodología e investigación del Dr. Jonathan Benito Sipos (UAM).
+            </p>
+          </div>
+          <div className="flex items-center gap-3 text-slate-600">
+            <button
+              onClick={() => setShowSplash(true)}
+              className="text-[11px] text-indigo-600 hover:text-indigo-800 font-semibold px-2 py-0.5 rounded bg-indigo-50 border border-indigo-200 transition-colors"
+            >
+              📱 Ver Pantalla de Inicio Móvil
+            </button>
+            <span className="text-slate-300">·</span>
             <span>Offline-First (IndexedDB)</span>
-            <span>·</span>
+            <span className="text-slate-300">·</span>
             <span>Append-Only UTC</span>
-            <span>·</span>
-            <span>TF-IDF Similitud de Coseno</span>
           </div>
         </div>
       </footer>
+
+      {/* PANTALLA DE INICIO MÓVIL (SPLASH SCREEN v0.1.0) */}
+      {showSplash && (
+        <SplashScreen
+          version="0.1.0"
+          autoDismissMs={1600}
+          onFinish={() => setShowSplash(false)}
+        />
+      )}
 
       {/* MODAL 1: CAPTURA DE TAREA CON ANALIZADOR SINTÁCTICO Y TF-IDF */}
       <TaskModal

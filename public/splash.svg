@@ -1,0 +1,30 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1080 1920" width="1080" height="1920">
+  <defs>
+    <radialGradient id="bgGlow" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#312e81" stop-opacity="0.4"/>
+      <stop offset="100%" stop-color="#020617" stop-opacity="1"/>
+    </radialGradient>
+    <linearGradient id="iconGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#6366f1"/>
+      <stop offset="100%" stop-color="#1e1b4b"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Background -->
+  <rect width="1080" height="1920" fill="#020617"/>
+  <circle cx="540" cy="960" r="500" fill="url(#bgGlow)"/>
+
+  <!-- Logo Container -->
+  <rect x="420" y="760" width="240" height="240" rx="60" fill="url(#iconGrad)" stroke="#818cf8" stroke-width="4"/>
+  <circle cx="540" cy="880" r="70" fill="none" stroke="#a5b4fc" stroke-width="6" stroke-dasharray="8 8"/>
+  <polygon points="540,830 585,865 570,920 540,940 510,920 495,865" fill="rgba(255, 255, 255, 0.2)" stroke="#ffffff" stroke-width="6"/>
+
+  <!-- App Title & Metodology -->
+  <text x="540" y="1080" text-anchor="middle" font-family="system-ui, -apple-system, sans-serif" font-size="44" font-weight="800" fill="#ffffff" letter-spacing="-1">NeuroProductividad</text>
+  <text x="540" y="1130" text-anchor="middle" font-family="system-ui, -apple-system, sans-serif" font-size="24" font-weight="600" fill="#818cf8">Metodología Dr. Jonathan Benito Sipos</text>
+  <text x="540" y="1175" text-anchor="middle" font-family="system-ui, -apple-system, sans-serif" font-size="18" fill="#94a3b8">Andamiaje Digital para la Corteza Prefrontal</text>
+
+  <!-- Version Tag -->
+  <rect x="490" y="1220" width="100" height="34" rx="17" fill="#1e293b" stroke="#334155" stroke-width="1"/>
+  <text x="540" y="1243" text-anchor="middle" font-family="monospace" font-size="14" font-weight="bold" fill="#a5b4fc">v0.1.0</text>
+</svg>
