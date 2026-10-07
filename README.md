@@ -58,7 +58,7 @@ El sistema rechaza las restricciones coercitivas (como las rotaciones atencional
 
 ### Prerrequisitos
 * Node.js $\ge 22.12$
-* npm o pnpm o yarn
+* npm (el gestor utilizado por CI y el despliegue)
 
 ### Pasos
 ```bash
@@ -67,7 +67,7 @@ git clone https://github.com/OvidiuMM/neuroproductivity-platform.git
 cd neuroproductivity-platform
 
 # 2. Instalar dependencias
-npm install
+npm ci
 
 # 3. Iniciar el servidor de desarrollo local
 npm run dev
@@ -92,6 +92,14 @@ El servidor estará disponible en `http://localhost:3000` o `http://localhost:51
 ### Pruebas automatizadas
 
 El banco de pruebas cubre lógica pura con el test runner de Node, integración del almacenamiento local y flujos de extremo a extremo en Chromium con Playwright. `npm test` ejecuta los tres niveles; GitHub Actions también valida tipos, compila la aplicación y ejecuta toda la suite en cada push y pull request.
+
+### Despliegue en Google Cloud Run
+
+El repositorio utiliza `package-lock.json` como único archivo de bloqueo. No añadas `bun.lock` ni `bun.lockb`: Google Buildpacks selecciona Bun cuando encuentra estos archivos, aunque CI utilice npm.
+
+El buildpack instala las dependencias con npm, ejecuta `npm run build` y arranca el servicio con `npm start`. `tsx` es una dependencia de producción porque este comando ejecuta `server.ts`; debe seguir disponible cuando se eliminan las dependencias de desarrollo. El servidor utiliza el puerto indicado por la variable `PORT` de Cloud Run.
+
+Después de cambiar dependencias, actualiza y confirma `package.json` y `package-lock.json` juntos. Para comprobar la instalación reproducible, ejecuta `npm ci` antes de compilar y probar.
 
 ---
 
