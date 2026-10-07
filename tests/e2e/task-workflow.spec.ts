@@ -11,7 +11,14 @@ test('creates a task and persists it after reloading', async ({ page }) => {
   await page
     .getByPlaceholder('Detalla el resultado esperado, personas involucradas o requerimientos físicos previos...')
     .fill('Confirmar la fecha y hora de entrega.');
-  await page.getByRole('button', { name: 'Guardar Acción Operativa' }).click();
+  await page
+    .getByPlaceholder('Detalla el resultado esperado, personas involucradas o requerimientos físicos previos...')
+    .press('Tab');
+  await expect(page.getByText('Sugerencia NLP TF-IDF:')).toBeVisible();
+
+  const saveButton = page.getByRole('button', { name: 'Guardar Acción Operativa' });
+  await saveButton.scrollIntoViewIfNeeded();
+  await saveButton.click();
 
   await expect(page.getByText(title, { exact: true })).toBeVisible();
   await page.reload();
