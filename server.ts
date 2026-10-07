@@ -8,7 +8,36 @@ const __dirname = path.dirname(__filename);
 const app = express();
 const PORT = process.env.PORT || 3000;
 
+// Middleware de CORS para permitir solicitudes desde clientes móviles (Android Capacitor / TWA / WebView)
+app.use((req, res, next) => {
+  res.header('Access-Control-Allow-Origin', '*');
+  res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+  res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization');
+  if (req.method === 'OPTIONS') {
+    res.sendStatus(200);
+    return;
+  }
+  next();
+});
+
 app.use(express.json());
+
+// Endpoint Digital Asset Links para validación y certificación de APK nativo de Android (TWA / Trusted Web Activity)
+app.get('/.well-known/assetlinks.json', (_req: Request, res: Response) => {
+  res.setHeader('Content-Type', 'application/json');
+  res.json([
+    {
+      relation: ['delegate_permission/common.handle_all_urls'],
+      target: {
+        namespace: 'android_app',
+        package_name: process.env.ANDROID_PACKAGE_NAME || 'org.neuroproductividad.app',
+        sha256_cert_fingerprints: [
+          process.env.ANDROID_SHA256_FINGERPRINT || '00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00'
+        ]
+      }
+    }
+  ]);
+});
 
 // API Endpoints
 app.get('/api/health', (_req: Request, res: Response) => {
