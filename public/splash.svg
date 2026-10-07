@@ -21,7 +21,7 @@
 
   <!-- App Title & Metodology -->
   <text x="540" y="1080" text-anchor="middle" font-family="system-ui, -apple-system, sans-serif" font-size="44" font-weight="800" fill="#ffffff" letter-spacing="-1">NeuroProductividad</text>
-  <text x="540" y="1130" text-anchor="middle" font-family="system-ui, -apple-system, sans-serif" font-size="24" font-weight="600" fill="#818cf8">Metodología Dr. Jonathan Benito Sipos</text>
+  <text x="540" y="1130" text-anchor="middle" font-family="system-ui, -apple-system, sans-serif" font-size="24" font-weight="600" fill="#818cf8">Basado en la metodología de Dr. Jonathan Benito Sipos</text>
   <text x="540" y="1175" text-anchor="middle" font-family="system-ui, -apple-system, sans-serif" font-size="18" fill="#94a3b8">Andamiaje Digital para la Corteza Prefrontal</text>
 
   <!-- Version Tag -->
