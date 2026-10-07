@@ -10,34 +10,43 @@ const STORAGE_KEYS = {
   ACTIVE_CONTEXT: 'neuro_active_context_v1'
 };
 
-// Usuarios Semilla Iniciales
+// Usuarios Semilla Iniciales con Cuentas de Google e Identidad Segura
 const INITIAL_USERS: UserProfile[] = [
   {
     id: 'user-1',
+    googleId: 'google-sub-10829182',
     name: 'Dr. Jonathan Benito Sipos',
     email: 'jonathan@uam.es',
     role: 'Investigador Neurociencia (UAM)',
     color: 'indigo',
     initials: 'JB',
-    createdAt: '2026-06-01T08:00:00Z'
+    authProvider: 'google',
+    createdAt: '2026-06-01T08:00:00Z',
+    lastLoginAt: '2026-10-06T09:00:00Z'
   },
   {
     id: 'user-2',
+    googleId: 'google-sub-94827163',
     name: 'Ovidiu M.',
     email: 'ovidiu@getdeardoc.com',
     role: 'Líder Técnico & Productividad',
     color: 'emerald',
     initials: 'OM',
-    createdAt: '2026-07-01T09:00:00Z'
+    authProvider: 'google',
+    createdAt: '2026-07-01T09:00:00Z',
+    lastLoginAt: '2026-10-07T04:00:00Z'
   },
   {
     id: 'user-3',
+    googleId: 'google-sub-55829104',
     name: 'Dra. Elena Ramos',
-    email: 'elena.ramos@salud.org',
+    email: 'elena.ramos.med@gmail.com',
     role: 'Especialista en Medicina Preventiva',
     color: 'amber',
     initials: 'ER',
-    createdAt: '2026-08-01T10:00:00Z'
+    authProvider: 'google',
+    createdAt: '2026-08-01T10:00:00Z',
+    lastLoginAt: '2026-10-05T14:00:00Z'
   }
 ];
 
@@ -485,6 +494,7 @@ export class StorageService {
       id: `user-${Date.now()}`,
       initials: initials || 'US',
       color,
+      authProvider: user.authProvider || 'local',
       createdAt: new Date().toISOString()
     };
 
@@ -497,6 +507,89 @@ export class StorageService {
     }
 
     return newUser;
+  }
+
+  // AUTENTICACIÓN E IDENTIFICACIÓN CON CUENTAS DE GOOGLE
+  static signInWithGoogle(googleData: {
+    name: string;
+    email: string;
+    photoUrl?: string;
+    role?: string;
+  }): UserProfile {
+    const users = this.getUsers();
+    const normalizedEmail = googleData.email.trim().toLowerCase();
+    const existingIndex = users.findIndex((u) => u.email.toLowerCase() === normalizedEmail);
+
+    if (existingIndex !== -1) {
+      const existing = users[existingIndex];
+      const updated: UserProfile = {
+        ...existing,
+        name: googleData.name || existing.name,
+        photoUrl: googleData.photoUrl || existing.photoUrl,
+        role: googleData.role || existing.role,
+        authProvider: 'google',
+        lastLoginAt: new Date().toISOString()
+      };
+      users[existingIndex] = updated;
+      try {
+        localStorage.setItem(STORAGE_KEYS.USERS, JSON.stringify(users));
+        this.setActiveUserId(updated.id);
+      } catch (e) {
+        console.error('Error updating Google user:', e);
+      }
+      return updated;
+    }
+
+    // Nuevo usuario con cuenta de Google: aprovisionar espacio aislado
+    const initials = (googleData.name || googleData.email)
+      .split(/[\s.@]+/)
+      .map((n) => n[0])
+      .slice(0, 2)
+      .join('')
+      .toUpperCase();
+
+    const colors = ['indigo', 'emerald', 'amber', 'purple', 'sky', 'rose'];
+    const color = colors[users.length % colors.length];
+
+    const newUser: UserProfile = {
+      id: `user-g-${Date.now()}`,
+      googleId: `google-sub-${Math.random().toString(36).substring(2, 10)}`,
+      name: googleData.name || googleData.email.split('@')[0],
+      email: normalizedEmail,
+      photoUrl: googleData.photoUrl,
+      role: googleData.role || 'Usuario Google Workspace',
+      color,
+      initials: initials || 'G',
+      authProvider: 'google',
+      createdAt: new Date().toISOString(),
+      lastLoginAt: new Date().toISOString()
+    };
+
+    users.push(newUser);
+    try {
+      localStorage.setItem(STORAGE_KEYS.USERS, JSON.stringify(users));
+      this.setActiveUserId(newUser.id);
+    } catch (e) {
+      console.error('Error creating Google user:', e);
+    }
+
+    return newUser;
+  }
+
+  static deleteUser(userId: string): boolean {
+    const users = this.getUsers();
+    if (users.length <= 1) return false; // Evitar borrar el último usuario
+    const filtered = users.filter((u) => u.id !== userId);
+    try {
+      localStorage.setItem(STORAGE_KEYS.USERS, JSON.stringify(filtered));
+      if (this.getActiveUserId() === userId) {
+        this.setActiveUserId(filtered[0].id);
+      }
+      return true;
+    } catch (e) {
+      console.error('Error deleting user:', e);
+      return false;
+    }
   }
 
   // TAREAS (AISLAMIENTO POR USER_ID)

@@ -31,14 +31,14 @@ import {
 export default function App() {
   // Gestión de Usuarios y Espacios Aislados
   const [users, setUsers] = useState<UserProfile[]>(() => StorageService.getUsers());
-  const [activeUser, setActiveUser] = useState<UserProfile>(() => StorageService.getActiveUser());
+  const [activeUser, setActiveUser] = useState<UserProfile | null>(() => StorageService.getActiveUser());
   const [isUserSwitcherOpen, setIsUserSwitcherOpen] = useState(false);
 
   // Estados de datos aislados por usuario activo
-  const [tasks, setTasks] = useState<TaskItem[]>(() => StorageService.getTasks(StorageService.getActiveUserId()));
-  const [wheelLogs, setWheelLogs] = useState(() => StorageService.getWheelLogs(StorageService.getActiveUserId()));
-  const [meetings, setMeetings] = useState<MeetingGuard[]>(() => StorageService.getMeetings(StorageService.getActiveUserId()));
-  const [emails, setEmails] = useState<EmailDraft[]>(() => StorageService.getEmails(StorageService.getActiveUserId()));
+  const [tasks, setTasks] = useState<TaskItem[]>(() => StorageService.getTasks());
+  const [wheelLogs, setWheelLogs] = useState(() => StorageService.getWheelLogs());
+  const [meetings, setMeetings] = useState<MeetingGuard[]>(() => StorageService.getMeetings());
+  const [emails, setEmails] = useState<EmailDraft[]>(() => StorageService.getEmails());
 
   const [activeContext, setActiveContext] = useState<ListContext>('WORK');
   const [activeTab, setActiveTab] = useState<'tasks' | 'wheel' | 'bermudas' | 'requirements'>('tasks');
@@ -65,7 +65,6 @@ export default function App() {
     StorageService.setActiveUserId(userId);
     const user = StorageService.getActiveUser();
     setActiveUser(user);
-    // Recargar todos los subsistemas con el espacio de datos aislado del nuevo usuario
     setTasks(StorageService.getTasks(userId));
     setWheelLogs(StorageService.getWheelLogs(userId));
     setMeetings(StorageService.getMeetings(userId));
@@ -73,47 +72,75 @@ export default function App() {
     showToast(`Espacio de trabajo cambiado a: ${user.name}`);
   };
 
-  // Creación de Nuevo Usuario (Sandbox Aislado)
-  const handleCreateUser = (newUserData: Omit<UserProfile, 'id' | 'createdAt' | 'initials' | 'color'>) => {
-    const created = StorageService.createUser(newUserData);
+  // Identificación e Inicio de Sesión con Cuenta de Google
+  const handleGoogleSignIn = (googleData: { name: string; email: string; role?: string }) => {
+    const user = StorageService.signInWithGoogle(googleData);
     setUsers(StorageService.getUsers());
-    setActiveUser(created);
+    setActiveUser(user);
+    setTasks(StorageService.getTasks(user.id));
+    setWheelLogs(StorageService.getWheelLogs(user.id));
+    setMeetings(StorageService.getMeetings(user.id));
+    setEmails(StorageService.getEmails(user.id));
+    showToast(`Autenticado con Google: ${user.name} (${user.email}). Espacio seguro activo.`);
+  };
+
+  // Cierre de Sesión (Bloqueo de Espacio)
+  const handleLogout = () => {
+    setActiveUser(null);
     setTasks([]);
-    setWheelLogs(StorageService.getWheelLogs(created.id));
+    setWheelLogs([]);
     setMeetings([]);
     setEmails([]);
-    showToast(`Nuevo espacio de trabajo aislado creado para ${created.name}`);
+    showToast('Sesión cerrada. Espacio de datos bloqueado de forma segura.');
+  };
+
+  // Eliminación de Cuenta de este Dispositivo
+  const handleRemoveUser = (userId: string) => {
+    const removed = StorageService.deleteUser(userId);
+    if (removed) {
+      const remainingUsers = StorageService.getUsers();
+      setUsers(remainingUsers);
+      if (activeUser?.id === userId) {
+        if (remainingUsers.length > 0) {
+          handleSelectUser(remainingUsers[0].id);
+        } else {
+          handleLogout();
+        }
+      }
+      showToast('Cuenta de Google desvinculada del dispositivo.');
+    }
   };
 
   // Guardar en Storage al mutar estado con userId
   const handleSaveTask = (taskData: Omit<TaskItem, 'id' | 'createdAt' | 'updatedAt' | 'completed'>) => {
+    const currentUserId = activeUser?.id || 'anonymous';
     if (editingTask) {
       const updated = tasks.map((t) =>
         t.id === editingTask.id
           ? {
               ...t,
               ...taskData,
-              userId: activeUser.id,
+              userId: currentUserId,
               updatedAt: new Date().toISOString()
             }
           : t
       );
       setTasks(updated);
-      StorageService.saveTasks(updated, activeUser.id);
+      StorageService.saveTasks(updated, currentUserId);
       showToast('Acción operativa actualizada con validación sintáctica exitosa.');
       setEditingTask(null);
     } else {
       const newTask: TaskItem = {
         ...taskData,
         id: `task-${Date.now()}`,
-        userId: activeUser.id,
+        userId: currentUserId,
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
         completed: false
       };
       const updated = [newTask, ...tasks];
       setTasks(updated);
-      StorageService.saveTasks(updated, activeUser.id);
+      StorageService.saveTasks(updated, currentUserId);
       showToast(
         taskData.isSomeday
           ? 'Tarea archivada en el Sumidero Cognitivo ("Opciones Futuras").'
@@ -123,34 +150,39 @@ export default function App() {
   };
 
   const handleToggleComplete = (id: string) => {
+    const currentUserId = activeUser?.id || 'anonymous';
     const updated = tasks.map((t) =>
       t.id === id ? { ...t, completed: !t.completed, updatedAt: new Date().toISOString() } : t
     );
     setTasks(updated);
-    StorageService.saveTasks(updated, activeUser.id);
+    StorageService.saveTasks(updated, currentUserId);
   };
 
   const handleDeleteTask = (id: string) => {
+    const currentUserId = activeUser?.id || 'anonymous';
     const updated = tasks.filter((t) => t.id !== id);
     setTasks(updated);
-    StorageService.saveTasks(updated, activeUser.id);
+    StorageService.saveTasks(updated, currentUserId);
     showToast('Acción eliminada del inventario.');
   };
 
   const handleAppendWheelSnapshot = (scores: Record<WheelCategory, number>, label?: string) => {
-    const newLog = StorageService.appendWheelSnapshot(scores, label, activeUser.id);
+    const currentUserId = activeUser?.id || 'anonymous';
+    const newLog = StorageService.appendWheelSnapshot(scores, label, currentUserId);
     setWheelLogs([...wheelLogs, newLog]);
     showToast('Nuevo snapshot append-only consolidado con marca de tiempo UTC.');
   };
 
   const handleSaveMeeting = (meetingData: Omit<MeetingGuard, 'id' | 'createdAt'>) => {
-    const saved = StorageService.saveMeeting(meetingData, activeUser.id);
+    const currentUserId = activeUser?.id || 'anonymous';
+    const saved = StorageService.saveMeeting(meetingData, currentUserId);
     setMeetings([saved, ...meetings]);
     showToast('Reunión blindada registrada exitosamente (fuera de la franja matutina).');
   };
 
   const handleSendEmail = (emailData: Omit<EmailDraft, 'id'>) => {
-    const saved = StorageService.saveEmail(emailData, activeUser.id);
+    const currentUserId = activeUser?.id || 'anonymous';
+    const saved = StorageService.saveEmail(emailData, currentUserId);
     setEmails([saved, ...emails]);
     showToast('Mensaje despachado con protocolo de redacción inversa validado.');
   };
@@ -221,12 +253,20 @@ export default function App() {
                 <button
                   type="button"
                   onClick={() => setIsUserSwitcherOpen(true)}
-                  className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-slate-100 hover:bg-slate-200 text-[11px] text-slate-700 font-semibold transition-colors"
-                  title="Cambiar espacio de usuario aislado"
+                  className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-slate-100 hover:bg-slate-200 text-[11px] text-slate-700 font-semibold transition-colors"
+                  title="Gestionar cuenta de Google y espacio aislado"
                 >
-                  <span className={`w-2 h-2 rounded-full ${activeUser.color === 'emerald' ? 'bg-emerald-500' : activeUser.color === 'amber' ? 'bg-amber-500' : 'bg-indigo-500'}`} />
-                  <span>Usuario: {activeUser.name}</span>
-                  <span className="text-[10px] text-indigo-600 font-normal">({activeUser.role.split(' ')[0]})</span>
+                  {activeUser ? (
+                    <>
+                      <span className={`w-2 h-2 rounded-full ${activeUser.color === 'emerald' ? 'bg-emerald-500' : activeUser.color === 'amber' ? 'bg-amber-500' : 'bg-indigo-500'}`} />
+                      <span>Google: {activeUser.name}</span>
+                      <span className="text-[10px] text-indigo-600 font-normal">({activeUser.role.split(' ')[0]})</span>
+                    </>
+                  ) : (
+                    <span className="text-amber-700 font-bold flex items-center gap-1">
+                      <span>🔒 Iniciar Sesión con Google</span>
+                    </span>
+                  )}
                 </button>
               </div>
 
@@ -328,7 +368,7 @@ export default function App() {
       <footer className="border-t border-slate-200 bg-white py-6 mt-12 text-xs text-slate-500">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between gap-3">
           <div className="flex items-center gap-2">
-            <span className="font-bold text-slate-700">NeuroProductividad v0.1.0</span>
+            <span className="font-bold text-slate-700">NeuroProductividad v0.2.0</span>
             <span className="text-slate-300">·</span>
             <p className="text-slate-500">
               Metodología e investigación del Dr. Jonathan Benito Sipos (UAM).
@@ -342,6 +382,8 @@ export default function App() {
               📱 Ver Pantalla de Inicio Móvil
             </button>
             <span className="text-slate-300">·</span>
+            <span>Google Auth</span>
+            <span className="text-slate-300">·</span>
             <span>Offline-First (IndexedDB)</span>
             <span className="text-slate-300">·</span>
             <span>Append-Only UTC</span>
@@ -349,10 +391,10 @@ export default function App() {
         </div>
       </footer>
 
-      {/* PANTALLA DE INICIO MÓVIL (SPLASH SCREEN v0.1.0) */}
+      {/* PANTALLA DE INICIO MÓVIL (SPLASH SCREEN v0.2.0) */}
       {showSplash && (
         <SplashScreen
-          version="0.1.0"
+          version="0.2.0"
           autoDismissMs={1600}
           onFinish={() => setShowSplash(false)}
         />
@@ -384,14 +426,16 @@ export default function App() {
         onSendEmail={handleSendEmail}
       />
 
-      {/* MODAL 4: GESTOR DE IDENTIDADES Y ESPACIOS AISLADOS DE USUARIO */}
+      {/* MODAL 4: GESTOR DE IDENTIDADES GOOGLE Y ESPACIOS AISLADOS DE USUARIO */}
       <UserSwitcher
         isOpen={isUserSwitcherOpen}
         onClose={() => setIsUserSwitcherOpen(false)}
         users={users}
         activeUser={activeUser}
         onSelectUser={handleSelectUser}
-        onCreateUser={handleCreateUser}
+        onGoogleSignIn={handleGoogleSignIn}
+        onLogout={handleLogout}
+        onRemoveUser={handleRemoveUser}
       />
 
     </div>
