@@ -68,6 +68,16 @@ export interface EmailDraft {
   sentAt?: string;
 }
 
+export interface UserProfile {
+  id: string;
+  name: string;
+  email: string;
+  role: string;
+  color: string;
+  initials: string;
+  createdAt: string;
+}
+
 export interface FormValidationError {
   field: string;
   message: string;
