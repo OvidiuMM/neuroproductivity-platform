@@ -371,7 +371,7 @@ export default function App() {
             <span className="font-bold text-slate-700">NeuroProductividad v0.2.0</span>
             <span className="text-slate-300">·</span>
             <p className="text-slate-500">
-              Metodología e investigación del Dr. Jonathan Benito Sipos (UAM).
+              Basado en la metodología de Dr. Jonathan Benito Sipos (UAM).
             </p>
           </div>
           <div className="flex items-center gap-3 text-slate-600">
