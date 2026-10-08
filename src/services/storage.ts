@@ -16,7 +16,7 @@ const INITIAL_USERS: UserProfile[] = [
     id: 'user-1',
     googleId: 'google-sub-10829182',
     name: 'Dr. Jonathan Benito Sipos',
-    email: 'jonathan@uam.es',
+    email: 'jonathan@example.com',
     role: 'Investigador Neurociencia (UAM)',
     color: 'indigo',
     initials: 'JB',
@@ -28,7 +28,7 @@ const INITIAL_USERS: UserProfile[] = [
     id: 'user-2',
     googleId: 'google-sub-94827163',
     name: 'Ovidiu M.',
-    email: 'ovidiu@getdeardoc.com',
+    email: 'ovidiu5891@gmail.com',
     role: 'Líder Técnico & Productividad',
     color: 'emerald',
     initials: 'OM',
@@ -39,11 +39,11 @@ const INITIAL_USERS: UserProfile[] = [
   {
     id: 'user-3',
     googleId: 'google-sub-55829104',
-    name: 'Dra. Elena Ramos',
-    email: 'elena.ramos.med@gmail.com',
-    role: 'Especialista en Medicina Preventiva',
+    name: 'Marian M.',
+    email: 'moldovan0991@gmail.com',
+    role: 'Arquitecto',
     color: 'amber',
-    initials: 'ER',
+    initials: 'MM',
     authProvider: 'google',
     createdAt: '2026-08-01T10:00:00Z',
     lastLoginAt: '2026-10-05T14:00:00Z'
@@ -320,7 +320,7 @@ const INITIAL_TASKS: TaskItem[] = [
     userId: 'user-2',
     listContext: 'WORK',
     title: 'Implementar pipeline CI/CD en GitHub Actions para despliegue automatizado',
-    description: 'Configurar workflows de build, test de linting y despliegue continuo hacia Google Cloud Run.',
+    description: 'Configurar workflows de build, test de linting y despliegue continuo hacia Firebase Hosting y Cloud Functions.',
     priority: 'CRITICAL',
     createdAt: '2026-10-07T08:00:00Z',
     updatedAt: '2026-10-07T08:00:00Z',
@@ -351,8 +351,8 @@ const INITIAL_TASKS: TaskItem[] = [
     id: 'task-u2-3',
     userId: 'user-2',
     listContext: 'WORK',
-    title: 'Configurar contenedor Docker y variables de entorno para Cloud Run',
-    description: 'Verificar puerto 3000, variables de base de datos y certificados de Digital Asset Links.',
+    title: 'Configurar firebase.json y parámetros de entorno para Cloud Functions',
+    description: 'Verificar rewrites de Hosting hacia la API, región europe-west1 y certificados de Digital Asset Links.',
     priority: 'HIGH',
     createdAt: '2026-10-07T08:30:00Z',
     updatedAt: '2026-10-07T08:30:00Z',
@@ -411,13 +411,13 @@ const INITIAL_MEETINGS: MeetingGuard[] = [
       '3. Asignación de tareas críticas del Top 10'
     ],
     moderatorName: 'Dr. Jonathan Benito Sipos',
-    moderatorEmail: 'jonathan@uam.es',
+    moderatorEmail: 'jonathan@example.com',
     createdAt: '2026-10-05T09:00:00Z'
   },
   {
     id: 'meet-u2-1',
     userId: 'user-2',
-    title: 'Revisión técnica de despliegue en Google Cloud Run y APK',
+    title: 'Revisión técnica de despliegue en Firebase Hosting y APK',
     startTime: '2026-10-08T14:00:00Z',
     endTime: '2026-10-08T14:30:00Z',
     agendaPoints: [
@@ -426,7 +426,7 @@ const INITIAL_MEETINGS: MeetingGuard[] = [
       '3. Rendimiento de sincronización offline'
     ],
     moderatorName: 'Ovidiu M.',
-    moderatorEmail: 'ovidiu@getdeardoc.com',
+    moderatorEmail: 'ovidiu@example.com',
     createdAt: '2026-10-07T07:00:00Z'
   }
 ];
@@ -439,7 +439,7 @@ const INITIAL_EMAILS: EmailDraft[] = [
     body: 'Adjunto el informe técnico con las validaciones de los 5 módulos de neuroproductividad. Se han blindado las mañanas y la jerarquía visual del Top 10 está operativa.',
     attachments: [{ name: 'especificacion_tecnica.pdf', size: '2.4 MB' }],
     noAttachmentsDeclared: false,
-    recipients: ['equipo@neuroproductividad.org'],
+    recipients: ['equipo@example.com'],
     sentAt: '2026-10-06T08:00:00Z'
   }
 ];

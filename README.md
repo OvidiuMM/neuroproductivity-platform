@@ -50,6 +50,7 @@ El sistema rechaza las restricciones coercitivas (como las rotaciones atencional
 | **Algoritmia** | Motor TF-IDF & Cosine Similarity en TS, Parser sintáctico de verbos en español |
 | **Visualización** | SVG interactivo polar / radar, Matemáticas polares de deformación poligonal |
 | **Almacenamiento** | Arquitectura *Offline-First* con IndexedDB y almacenamiento persistente local |
+| **Hosting y API** | Firebase Hosting (SPA) y Cloud Functions for Firebase 2.ª gen con Express (`europe-west1`) |
 | **Referencia Backend** | PostgreSQL (Esquema DDL relacional con índices parciales B-Tree y tipos JSONB) |
 
 ---
@@ -59,6 +60,7 @@ El sistema rechaza las restricciones coercitivas (como las rotaciones atencional
 ### Prerrequisitos
 * Node.js $\ge 22.12$
 * npm (el gestor utilizado por CI y el despliegue)
+* Firebase CLI (`npm install -g firebase-tools`) para los emuladores y el despliegue
 
 ### Pasos
 ```bash
@@ -66,8 +68,9 @@ El sistema rechaza las restricciones coercitivas (como las rotaciones atencional
 git clone https://github.com/OvidiuMM/neuroproductivity-platform.git
 cd neuroproductivity-platform
 
-# 2. Instalar dependencias
+# 2. Instalar dependencias (frontend y Cloud Functions)
 npm ci
+npm ci --prefix functions
 
 # 3. Iniciar el servidor de desarrollo local
 npm run dev
@@ -78,9 +81,10 @@ npm run build
 # 5. Ejecutar validación de tipos y linter
 npm run lint
 
-# 6. Ejecutar pruebas unitarias y de integración
+# 6. Ejecutar pruebas unitarias, de integración y de la API
 npm run test:unit
 npm run test:integration
+npm --prefix functions test
 
 # 7. Instalar Chromium y ejecutar pruebas E2E
 npx playwright install chromium
@@ -91,15 +95,37 @@ El servidor estará disponible en `http://localhost:3000` o `http://localhost:51
 
 ### Pruebas automatizadas
 
-El banco de pruebas cubre lógica pura con el test runner de Node, integración del almacenamiento local y flujos de extremo a extremo en Chromium con Playwright. `npm test` ejecuta los tres niveles; GitHub Actions también valida tipos, compila la aplicación y ejecuta toda la suite en cada push y pull request.
+El banco de pruebas cubre lógica pura con el test runner de Node, integración del almacenamiento local y flujos de extremo a extremo en Chromium con Playwright. `npm test` ejecuta los tres niveles; las rutas de la API se prueban aparte con `npm --prefix functions test`. GitHub Actions también valida tipos, compila la aplicación y la función, y ejecuta toda la suite en cada push y pull request.
 
-### Despliegue en Google Cloud Run
+### Despliegue en Firebase (Hosting + Cloud Functions)
 
-El repositorio utiliza `package-lock.json` como único archivo de bloqueo. No añadas `bun.lock` ni `bun.lockb`: Google Buildpacks selecciona Bun cuando encuentra estos archivos, aunque CI utilice npm.
+Firebase Hosting sirve la SPA compilada (`dist/`) y la función `api` (Cloud Functions 2.ª gen, región `europe-west1`) atiende el backend. Las rutas se definen en `firebase.json`:
 
-El buildpack instala las dependencias con npm, ejecuta `npm run build` y arranca el servicio con `npm start`. `tsx` es una dependencia de producción porque este comando ejecuta `server.ts`; debe seguir disponible cuando se eliminan las dependencias de desarrollo. El servidor utiliza el puerto indicado por la variable `PORT` de Cloud Run.
+| Ruta | Destino |
+| :--- | :--- |
+| `/api/**` | Función `api` (`functions/src/app.ts`) |
+| `/.well-known/assetlinks.json` | Función `api` (Digital Asset Links de la APK Android) |
+| `**` | `index.html` (fallback de la SPA) |
 
-Después de cambiar dependencias, actualiza y confirma `package.json` y `package-lock.json` juntos. Para comprobar la instalación reproducible, ejecuta `npm ci` antes de compilar y probar.
+Requisitos: un proyecto de Firebase en plan Blaze (Cloud Functions lo exige) y la Firebase CLI con sesión iniciada (`firebase login`).
+
+El ID del proyecto no se versiona: `.firebaserc` está en `.gitignore`. En cada clon, selecciona el proyecto una vez:
+
+```bash
+firebase use --add
+```
+
+La función usa dos parámetros, `ANDROID_PACKAGE_NAME` y `ANDROID_SHA256_FINGERPRINT`. `firebase deploy` los pide la primera vez y los guarda en `functions/.env.<project-id>`, ignorado por git. Para los emuladores, defínelos en `functions/.env.local`.
+
+```bash
+# Emuladores locales: Hosting en http://localhost:5002 y Functions en el puerto 5001
+npm run emulators
+
+# Despliegue: compila la SPA y la función antes de subirlas
+npm run deploy
+```
+
+El repositorio utiliza `package-lock.json` (en la raíz y en `functions/`) como únicos archivos de bloqueo; no añadas `bun.lock` ni `pnpm-lock.yaml`. Después de cambiar dependencias, actualiza y confirma `package.json` y `package-lock.json` juntos. Para comprobar la instalación reproducible, ejecuta `npm ci` y `npm ci --prefix functions` antes de compilar y probar.
 
 ---
 
@@ -110,6 +136,13 @@ Después de cambiar dependencias, actualiza y confirma `package.json` y `package
 ├── package.json                 # Dependencias y scripts
 ├── vite.config.ts               # Configuración de Vite y Tailwind
 ├── tsconfig.json                # Configuración de TypeScript estricto
+├── firebase.json                # Firebase Hosting (rewrites y caché) y Cloud Functions
+├── functions/                   # Cloud Functions for Firebase (API)
+│   ├── src/
+│   │   ├── index.ts             # Función HTTP `api` (región europe-west1)
+│   │   └── app.ts               # Rutas Express: /api/health, /api/nlp/infer y assetlinks.json
+│   └── test/
+│       └── app.test.ts          # Pruebas de las rutas de la API
 ├── src/
 │   ├── main.tsx                 # Montaje de la aplicación React
 │   ├── App.tsx                  # Orquestador principal de estado y vistas
