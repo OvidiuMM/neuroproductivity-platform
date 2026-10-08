@@ -3,9 +3,22 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState, useEffect } from 'react';
-import { AppTab, ListContext, TaskItem, WheelCategory, MeetingGuard, EmailDraft, UserProfile } from './types';
-import { StorageService } from './services/storage';
+import React, { useState, useEffect, useRef } from 'react';
+import { GoogleAuthProvider, deleteUser, reauthenticateWithPopup, type User } from 'firebase/auth';
+import { AppTab, ListContext, TaskItem, WheelCategory, WheelOfLifeLog, MeetingGuard, EmailDraft, UserProfile } from './types';
+import { signOutAndClearCache, type FirebaseServices } from './services/firebase';
+import {
+  appendWheelLog,
+  deleteAllUserData,
+  deleteTask,
+  exportUserData,
+  importUserData,
+  saveEmail,
+  saveMeeting,
+  saveTask,
+  subscribeToCollection
+} from './services/repository';
+import { buildImport, clearLocalData, getLocalProfiles, type LocalProfileSummary } from './services/localData';
 import { Navbar } from './components/Navbar';
 import { TaskList } from './components/TaskList';
 import { TaskModal } from './components/TaskModal';
@@ -15,7 +28,8 @@ import { MeetingModal } from './components/MeetingModal';
 import { EmailModal } from './components/EmailModal';
 import { SystemRequirementsViewer } from './components/SystemRequirementsViewer';
 import { SplashScreen } from './components/SplashScreen';
-import { UserSwitcher } from './components/UserSwitcher';
+import { AccountMenu } from './components/AccountMenu';
+import { ImportLocalDataModal } from './components/ImportLocalDataModal';
 import { HowItWorks } from './components/HowItWorks';
 import {
   Brain,
@@ -29,23 +43,61 @@ import {
   ArrowRight
 } from 'lucide-react';
 
-export default function App() {
-  // Gestión de Usuarios y Espacios Aislados
-  const [users, setUsers] = useState<UserProfile[]>(() => StorageService.getUsers());
-  const [activeUser, setActiveUser] = useState<UserProfile | null>(() => StorageService.getActiveUser());
-  const [isUserSwitcherOpen, setIsUserSwitcherOpen] = useState(false);
+interface AppProps {
+  user: User;
+  services: FirebaseServices;
+}
 
-  // Estados de datos aislados por usuario activo
-  const [tasks, setTasks] = useState<TaskItem[]>(() => StorageService.getTasks());
-  const [wheelLogs, setWheelLogs] = useState(() => StorageService.getWheelLogs());
-  const [meetings, setMeetings] = useState<MeetingGuard[]>(() => StorageService.getMeetings());
-  const [emails, setEmails] = useState<EmailDraft[]>(() => StorageService.getEmails());
+const initialsOf = (name: string) =>
+  name
+    .split(/[\s.@]+/)
+    .filter(Boolean)
+    .map((n) => n[0])
+    .slice(0, 2)
+    .join('')
+    .toUpperCase() || 'U';
+
+const downloadJson = (filename: string, data: unknown) => {
+  const url = URL.createObjectURL(new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' }));
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = filename;
+  link.click();
+  URL.revokeObjectURL(url);
+};
+
+export default function App({ user, services }: AppProps) {
+  const { db } = services;
+  const uid = user.uid;
+
+  // Perfil para la interfaz a partir de la cuenta de Google
+  const profile: UserProfile = {
+    id: uid,
+    name: user.displayName || user.email || 'Tu cuenta',
+    email: user.email ?? undefined,
+    photoUrl: user.photoURL ?? undefined,
+    role: '',
+    color: 'indigo',
+    initials: initialsOf(user.displayName || user.email || ''),
+    authProvider: 'google',
+    createdAt: user.metadata.creationTime ?? ''
+  };
+  const [isAccountMenuOpen, setIsAccountMenuOpen] = useState(false);
+
+  // Datos de la cuenta, sincronizados en tiempo real con Firestore (y disponibles sin conexión desde la caché)
+  const [tasks, setTasks] = useState<TaskItem[]>([]);
+  const [wheelLogs, setWheelLogs] = useState<WheelOfLifeLog[]>([]);
+  const [wheelSynced, setWheelSynced] = useState(false);
+  const [meetings, setMeetings] = useState<MeetingGuard[]>([]);
+  const [emails, setEmails] = useState<EmailDraft[]>([]);
+
+  // Datos de la versión sin cuentas que siguen en este navegador, pendientes de importar
+  const [localProfiles, setLocalProfiles] = useState<LocalProfileSummary[]>(() => getLocalProfiles());
+  const [isImportPostponed, setIsImportPostponed] = useState(false);
 
   const [activeContext, setActiveContext] = useState<ListContext>('WORK');
-  // Primer arranque: mientras el perfil no tenga ninguna evaluación guardada, la app abre en la Rueda de la Vida
-  const [activeTab, setActiveTab] = useState<AppTab>(() =>
-    StorageService.getWheelLogs().length === 0 ? 'wheel' : 'tasks'
-  );
+  const [activeTab, setActiveTab] = useState<AppTab>('tasks');
+  const firstRunChecked = useRef(false);
 
   // Estado de pantalla de inicio móvil (Splash Screen)
   const [showSplash, setShowSplash] = useState(true);
@@ -64,77 +116,55 @@ export default function App() {
     setTimeout(() => setToastMessage(null), 4000);
   };
 
-  // Carga los datos del perfil; si aún no tiene evaluaciones de la Rueda, abre la Rueda (primer arranque)
-  const loadProfile = (user: UserProfile) => {
-    const logs = StorageService.getWheelLogs(user.id);
-    setActiveUser(user);
-    setTasks(StorageService.getTasks(user.id));
-    setWheelLogs(logs);
-    setMeetings(StorageService.getMeetings(user.id));
-    setEmails(StorageService.getEmails(user.id));
-    if (logs.length === 0) setActiveTab('wheel');
+  const reportError = (action: string) => (e: unknown) => {
+    console.error(`Error al ${action}:`, e);
+    showToast(`No se pudo ${action}. Revisa tu conexión e inténtalo de nuevo.`);
   };
 
-  // Cambio de perfil local
-  const handleSelectUser = (userId: string) => {
-    StorageService.setActiveUserId(userId);
-    const user = StorageService.getActiveUser();
-    if (!user) return;
-    loadProfile(user);
-    showToast(`Perfil activo: ${user.name}`);
-  };
+  // Suscripción en tiempo real a los datos de la cuenta
+  useEffect(() => {
+    const onError = reportError('cargar tus datos');
+    const unsubscribers = [
+      subscribeToCollection(db, uid, 'tasks', setTasks, onError),
+      subscribeToCollection(
+        db,
+        uid,
+        'wheelLogs',
+        (logs, { fromServer }) => {
+          setWheelLogs(logs);
+          if (fromServer) setWheelSynced(true);
+          // Primer arranque: sin evaluaciones confirmadas por el servidor, la app abre en la Rueda de la Vida
+          if (!firstRunChecked.current && (fromServer || logs.length > 0)) {
+            firstRunChecked.current = true;
+            if (logs.length === 0) setActiveTab('wheel');
+          }
+        },
+        onError
+      ),
+      subscribeToCollection(db, uid, 'meetings', setMeetings, onError),
+      subscribeToCollection(db, uid, 'emails', setEmails, onError)
+    ];
+    return () => unsubscribers.forEach((unsubscribe) => unsubscribe());
+  }, [db, uid]);
 
-  // Nuevo perfil local en este navegador
-  const handleCreateProfile = ({ name, role }: { name: string; role: string }) => {
-    const user = StorageService.createUser({ name, role, authProvider: 'local' });
-    setUsers(StorageService.getUsers());
-    loadProfile(user);
-    showToast(`Perfil creado: ${user.name}`);
-  };
-
-  // Elimina el perfil y sus datos de este navegador
-  const handleRemoveUser = (userId: string) => {
-    const removed = StorageService.deleteUser(userId);
-    if (removed) {
-      setUsers(StorageService.getUsers());
-      if (activeUser?.id === userId) {
-        const user = StorageService.getActiveUser();
-        if (user) loadProfile(user);
-      }
-      showToast('Perfil eliminado de este navegador.');
-    }
-  };
-
-  // Guardar en Storage al mutar estado con userId
+  // Las escrituras se reflejan al instante (caché local) y se sincronizan con el servidor en segundo plano
   const handleSaveTask = (taskData: Omit<TaskItem, 'id' | 'createdAt' | 'updatedAt' | 'completed'>) => {
-    const currentUserId = activeUser?.id || 'anonymous';
+    const now = new Date().toISOString();
     if (editingTask) {
-      const updated = tasks.map((t) =>
-        t.id === editingTask.id
-          ? {
-              ...t,
-              ...taskData,
-              userId: currentUserId,
-              updatedAt: new Date().toISOString()
-            }
-          : t
-      );
-      setTasks(updated);
-      StorageService.saveTasks(updated, currentUserId);
+      const current = tasks.find((t) => t.id === editingTask.id) ?? editingTask;
+      saveTask(db, uid, { ...current, ...taskData, updatedAt: now }).catch(reportError('guardar la tarea'));
       showToast('Acción operativa actualizada con validación sintáctica exitosa.');
       setEditingTask(null);
     } else {
       const newTask: TaskItem = {
         ...taskData,
         id: `task-${Date.now()}`,
-        userId: currentUserId,
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
+        userId: uid,
+        createdAt: now,
+        updatedAt: now,
         completed: false
       };
-      const updated = [newTask, ...tasks];
-      setTasks(updated);
-      StorageService.saveTasks(updated, currentUserId);
+      saveTask(db, uid, newTask).catch(reportError('guardar la tarea'));
       showToast(
         taskData.isSomeday
           ? 'Tarea archivada en el Sumidero Cognitivo ("Opciones Futuras").'
@@ -144,41 +174,78 @@ export default function App() {
   };
 
   const handleToggleComplete = (id: string) => {
-    const currentUserId = activeUser?.id || 'anonymous';
-    const updated = tasks.map((t) =>
-      t.id === id ? { ...t, completed: !t.completed, updatedAt: new Date().toISOString() } : t
+    const task = tasks.find((t) => t.id === id);
+    if (!task) return;
+    saveTask(db, uid, { ...task, completed: !task.completed, updatedAt: new Date().toISOString() }).catch(
+      reportError('actualizar la tarea')
     );
-    setTasks(updated);
-    StorageService.saveTasks(updated, currentUserId);
   };
 
   const handleDeleteTask = (id: string) => {
-    const currentUserId = activeUser?.id || 'anonymous';
-    const updated = tasks.filter((t) => t.id !== id);
-    setTasks(updated);
-    StorageService.saveTasks(updated, currentUserId);
+    deleteTask(db, uid, id).catch(reportError('eliminar la tarea'));
     showToast('Acción eliminada del inventario.');
   };
 
   const handleAppendWheelSnapshot = (scores: Record<WheelCategory, number>, label?: string) => {
-    const currentUserId = activeUser?.id || 'anonymous';
-    const newLog = StorageService.appendWheelSnapshot(scores, label, currentUserId);
-    setWheelLogs([...wheelLogs, newLog]);
+    const now = new Date();
+    const log: WheelOfLifeLog = {
+      id: `wheel-snapshot-${now.getTime()}`,
+      userId: uid,
+      timestamp: now.toISOString(),
+      label:
+        label ||
+        `Evaluación ${now.toLocaleDateString('es-ES', { month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' })}`,
+      scores: { ...scores }
+    };
+    appendWheelLog(db, uid, log).catch(reportError('guardar la evaluación'));
     showToast('Nuevo snapshot append-only consolidado con marca de tiempo UTC.');
   };
 
   const handleSaveMeeting = (meetingData: Omit<MeetingGuard, 'id' | 'createdAt'>) => {
-    const currentUserId = activeUser?.id || 'anonymous';
-    const saved = StorageService.saveMeeting(meetingData, currentUserId);
-    setMeetings([saved, ...meetings]);
+    const meeting: MeetingGuard = {
+      ...meetingData,
+      id: `meet-${Date.now()}`,
+      userId: uid,
+      createdAt: new Date().toISOString()
+    };
+    saveMeeting(db, uid, meeting).catch(reportError('guardar la reunión'));
     showToast('Reunión blindada registrada exitosamente (fuera de la franja matutina).');
   };
 
   const handleSendEmail = (emailData: Omit<EmailDraft, 'id'>) => {
-    const currentUserId = activeUser?.id || 'anonymous';
-    const saved = StorageService.saveEmail(emailData, currentUserId);
-    setEmails([saved, ...emails]);
+    saveEmail(db, uid, { ...emailData, id: `email-${Date.now()}`, userId: uid }).catch(reportError('guardar el correo'));
     showToast('Mensaje despachado con protocolo de redacción inversa validado.');
+  };
+
+  // CUENTA
+  const handleExportData = async () => {
+    const data = await exportUserData(db, uid);
+    downloadJson(`neuroproductividad-${new Date().toISOString().slice(0, 10)}.json`, {
+      exportedAt: new Date().toISOString(),
+      account: { name: user.displayName, email: user.email },
+      ...data
+    });
+  };
+
+  const handleDeleteAccount = async () => {
+    // Firebase exige un inicio de sesión reciente para eliminar la cuenta
+    await reauthenticateWithPopup(user, new GoogleAuthProvider());
+    await deleteAllUserData(db, uid);
+    await deleteUser(user);
+    await signOutAndClearCache(services);
+  };
+
+  // IMPORTACIÓN DE DATOS DE LA VERSIÓN SIN CUENTAS
+  const handleImportLocalData = async (profileIds: string[]) => {
+    await importUserData(db, uid, buildImport(profileIds));
+    clearLocalData();
+    setLocalProfiles([]);
+    showToast('Datos importados a tu cuenta.');
+  };
+
+  const handleDiscardLocalData = () => {
+    clearLocalData();
+    setLocalProfiles([]);
   };
 
   // Conteo de tareas por contexto
@@ -201,8 +268,8 @@ export default function App() {
         setActiveTab={setActiveTab}
         activeContext={activeContext}
         setActiveContext={setActiveContext}
-        activeUser={activeUser}
-        onOpenUserSwitcher={() => setIsUserSwitcherOpen(true)}
+        activeUser={profile}
+        onOpenAccount={() => setIsAccountMenuOpen(true)}
         onOpenNewTask={() => {
           setEditingTask(null);
           setIsTaskModalOpen(true);
@@ -246,21 +313,12 @@ export default function App() {
                 <span className="text-slate-300">·</span>
                 <button
                   type="button"
-                  onClick={() => setIsUserSwitcherOpen(true)}
+                  onClick={() => setIsAccountMenuOpen(true)}
                   className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-slate-100 hover:bg-slate-200 text-[11px] text-slate-700 font-semibold transition-colors"
-                  title="Cambiar de perfil"
+                  title="Tu cuenta"
                 >
-                  {activeUser ? (
-                    <>
-                      <span className={`w-2 h-2 rounded-full ${activeUser.color === 'emerald' ? 'bg-emerald-500' : activeUser.color === 'amber' ? 'bg-amber-500' : 'bg-indigo-500'}`} />
-                      <span>Perfil: {activeUser.name}</span>
-                      {activeUser.role && (
-                        <span className="text-[10px] text-indigo-600 font-normal">({activeUser.role.split(' ')[0]})</span>
-                      )}
-                    </>
-                  ) : (
-                    <span className="text-amber-700 font-bold">Elegir perfil</span>
-                  )}
+                  <span className="w-2 h-2 rounded-full bg-indigo-500" />
+                  <span>Cuenta: {profile.name}</span>
                 </button>
               </div>
 
@@ -337,9 +395,11 @@ export default function App() {
 
         {/* PESTAÑA 2: RUEDA DE LA VIDA (MÓDULO 1) */}
         {activeTab === 'wheel' && (
+          // Se remonta cuando llegan los datos confirmados por el servidor para partir de la última evaluación
           <WheelOfLife
-            key={activeUser?.id}
+            key={wheelSynced ? 'synced' : 'cache'}
             logs={wheelLogs}
+            showFirstStep={wheelSynced && wheelLogs.length === 0}
             onAppendSnapshot={handleAppendWheelSnapshot}
             onOpenHelp={() => setActiveTab('help')}
           />
@@ -367,7 +427,7 @@ export default function App() {
       <footer className="border-t border-slate-200 bg-white py-6 mt-12 text-xs text-slate-500">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between gap-3">
           <div className="flex items-center gap-2">
-            <span className="font-bold text-slate-700">NeuroProductividad v0.2.0</span>
+            <span className="font-bold text-slate-700">NeuroProductividad v{__APP_VERSION__}</span>
             <span className="text-slate-300">·</span>
             <p className="text-slate-500">
               Basado en la metodología de Dr. Jonathan Benito Sipos (UAM).
@@ -388,17 +448,17 @@ export default function App() {
               Guía de uso
             </button>
             <span className="text-slate-300">·</span>
-            <span>Datos guardados en este navegador</span>
+            <span>Datos sincronizados en tu cuenta</span>
             <span className="text-slate-300">·</span>
             <span>Append-Only UTC</span>
           </div>
         </div>
       </footer>
 
-      {/* PANTALLA DE INICIO MÓVIL (SPLASH SCREEN v0.2.0) */}
+      {/* PANTALLA DE INICIO MÓVIL (SPLASH SCREEN) */}
       {showSplash && (
         <SplashScreen
-          version="0.2.0"
+          version={__APP_VERSION__}
           autoDismissMs={1600}
           onFinish={() => setShowSplash(false)}
         />
@@ -430,16 +490,25 @@ export default function App() {
         onSendEmail={handleSendEmail}
       />
 
-      {/* MODAL 4: PERFILES LOCALES DE ESTE NAVEGADOR */}
-      <UserSwitcher
-        isOpen={isUserSwitcherOpen}
-        onClose={() => setIsUserSwitcherOpen(false)}
-        users={users}
-        activeUser={activeUser}
-        onSelectUser={handleSelectUser}
-        onCreateProfile={handleCreateProfile}
-        onRemoveUser={handleRemoveUser}
+      {/* MODAL 4: CUENTA (CERRAR SESIÓN, DESCARGAR DATOS, ELIMINAR CUENTA) */}
+      <AccountMenu
+        isOpen={isAccountMenuOpen}
+        onClose={() => setIsAccountMenuOpen(false)}
+        user={profile}
+        onSignOut={() => signOutAndClearCache(services)}
+        onExportData={handleExportData}
+        onDeleteAccount={handleDeleteAccount}
       />
+
+      {/* MODAL 5: IMPORTAR DATOS DE LA VERSIÓN SIN CUENTAS */}
+      {localProfiles.length > 0 && !isImportPostponed && (
+        <ImportLocalDataModal
+          profiles={localProfiles}
+          onImport={handleImportLocalData}
+          onDiscard={handleDiscardLocalData}
+          onLater={() => setIsImportPostponed(true)}
+        />
+      )}
 
     </div>
   );

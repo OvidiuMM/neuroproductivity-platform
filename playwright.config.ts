@@ -14,10 +14,13 @@ export default defineConfig({
       use: { ...devices['Desktop Chrome'] }
     }
   ],
+  // npm run dev arranca los emuladores de Auth y Firestore (proyecto demo) y la app conectada a ellos
   webServer: {
-    command: 'npm run dev -- --host 127.0.0.1',
+    command: 'npm run dev',
     url: 'http://127.0.0.1:3000',
     reuseExistingServer: !process.env.CI,
-    timeout: 60_000
+    timeout: 120_000,
+    // SIGINT deja que la CLI de Firebase apague los emuladores; con SIGTERM el de Firestore (Java) se queda vivo
+    gracefulShutdown: { signal: 'SIGINT', timeout: 15_000 }
   }
 });
