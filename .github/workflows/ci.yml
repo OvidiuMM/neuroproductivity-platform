@@ -52,3 +52,62 @@ jobs:
 
       - name: Run end-to-end tests
         run: npm run test:e2e
+
+  deploy:
+    name: Deploy to Firebase
+    needs: validate
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    # Un solo deploy a la vez; los merges seguidos esperan en cola en lugar de cancelarse
+    concurrency:
+      group: firebase-deploy
+      cancel-in-progress: false
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: |
+            package-lock.json
+            functions/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install Cloud Functions dependencies
+        run: npm ci --prefix functions
+
+      # Workload Identity Federation: token temporal por ejecución, sin claves de cuenta de servicio
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v3
+        with:
+          workload_identity_provider: ${{ secrets.GCP_WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ secrets.GCP_SERVICE_ACCOUNT }}
+
+      # functions/.env.<project-id> no se versiona; en CI los parámetros salen de las variables del repositorio
+      - name: Write Cloud Functions params
+        env:
+          ANDROID_PACKAGE_NAME: ${{ vars.ANDROID_PACKAGE_NAME }}
+          ANDROID_SHA256_FINGERPRINT: ${{ vars.ANDROID_SHA256_FINGERPRINT }}
+        run: |
+          for name in ANDROID_PACKAGE_NAME ANDROID_SHA256_FINGERPRINT; do
+            if [ -z "${!name}" ]; then
+              echo "::error::Falta la variable de repositorio $name"
+              exit 1
+            fi
+          done
+          printf 'ANDROID_PACKAGE_NAME=%s\nANDROID_SHA256_FINGERPRINT=%s\n' \
+            "$ANDROID_PACKAGE_NAME" "$ANDROID_SHA256_FINGERPRINT" > functions/.env
+
+      # Los predeploy de firebase.json compilan la SPA y la función antes de subirlas
+      - name: Deploy Hosting and Cloud Functions
+        env:
+          FIREBASE_PROJECT_ID: ${{ secrets.FIREBASE_PROJECT_ID }}
+        run: npx --yes firebase-tools@15.33.0 deploy --only hosting,functions --project "$FIREBASE_PROJECT_ID" --non-interactive
