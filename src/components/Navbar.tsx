@@ -1,10 +1,10 @@
 import React from 'react';
-import { ListContext, UserProfile } from '../types';
-import { Brain, Briefcase, User, Calendar, Mail, Compass, Plus, ShieldCheck, CheckCircle2, ChevronDown } from 'lucide-react';
+import { AppTab, ListContext, UserProfile } from '../types';
+import { Brain, Briefcase, User, Calendar, Mail, Compass, Plus, ShieldCheck, CheckCircle2, ChevronDown, BookOpen } from 'lucide-react';
 
 interface NavbarProps {
-  activeTab: 'tasks' | 'wheel' | 'bermudas' | 'requirements';
-  setActiveTab: (tab: 'tasks' | 'wheel' | 'bermudas' | 'requirements') => void;
+  activeTab: AppTab;
+  setActiveTab: (tab: AppTab) => void;
   activeContext: ListContext;
   setActiveContext: (context: ListContext) => void;
   activeUser: UserProfile | null;
@@ -54,7 +54,7 @@ export const Navbar: React.FC<NavbarProps> = ({
           </div>
 
           {/* Zone 2: Navigation Links */}
-          <nav className="hidden md:flex items-center gap-1 lg:gap-2">
+          <nav className="hidden md:flex items-center gap-1">
             <button
               onClick={() => setActiveTab('tasks')}
               className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors flex items-center gap-1.5 ${
@@ -100,12 +100,28 @@ export const Navbar: React.FC<NavbarProps> = ({
               }`}
             >
               <CheckCircle2 className="w-3.5 h-3.5 text-indigo-300" />
-              <span>Validación de Requisitos</span>
+              <span className="2xl:hidden">Requisitos</span>
+              <span className="hidden 2xl:inline">Validación de Requisitos</span>
+            </button>
+
+            {/* Solo icono salvo en pantallas muy anchas: la barra no cabe a 1280 px con la etiqueta completa */}
+            <button
+              onClick={() => setActiveTab('help')}
+              aria-label="Cómo funciona"
+              title="Cómo funciona"
+              className={`px-2.5 py-1.5 rounded-lg text-xs font-semibold transition-colors flex items-center gap-1.5 ${
+                activeTab === 'help'
+                  ? 'bg-slate-900 text-white shadow-sm'
+                  : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
+              }`}
+            >
+              <BookOpen className="w-3.5 h-3.5" />
+              <span className="hidden 2xl:inline">Cómo funciona</span>
             </button>
           </nav>
 
           {/* Zone 3: Actions & Strict Context Switch */}
-          <div className="flex items-center gap-2 sm:gap-3">
+          <div className="flex items-center gap-2">
             {/* Context Switcher (Exclusión absoluta de esferas) */}
             <div className="flex items-center bg-slate-100 p-0.5 rounded-lg border border-slate-200">
               <button
@@ -146,7 +162,7 @@ export const Navbar: React.FC<NavbarProps> = ({
               <button
                 onClick={onOpenUserSwitcher}
                 className="flex items-center gap-2 p-1 pl-1.5 pr-2 rounded-xl border border-slate-200 hover:border-slate-300 hover:bg-slate-50 transition-all text-xs"
-                title={`Espacio de usuario: ${activeUser.name} (${activeUser.email})`}
+                title={`Perfil: ${activeUser.name}`}
               >
                 <div
                   className={`w-6 h-6 rounded-lg text-white font-bold text-[10px] flex items-center justify-center shrink-0 shadow-2xs ${
@@ -159,7 +175,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                 >
                   {activeUser.initials}
                 </div>
-                <span className="hidden xl:inline font-bold text-slate-800 max-w-[110px] truncate">
+                <span className="hidden 2xl:inline font-bold text-slate-800 max-w-[110px] truncate">
                   {activeUser.name.split(' ')[0]}
                 </span>
                 <ChevronDown className="w-3 h-3 text-slate-400" />
@@ -170,7 +186,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                 className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-slate-300 bg-white hover:bg-slate-50 text-xs font-bold text-slate-700 transition-all shadow-2xs"
               >
                 <User className="w-3.5 h-3.5 text-indigo-600" />
-                <span>Entrar</span>
+                <span>Elegir perfil</span>
               </button>
             )}
 
@@ -212,6 +228,12 @@ export const Navbar: React.FC<NavbarProps> = ({
             className={`px-2 py-1 font-semibold rounded ${activeTab === 'requirements' ? 'text-indigo-700 bg-indigo-50 font-bold' : 'text-slate-500'}`}
           >
             Requisitos
+          </button>
+          <button
+            onClick={() => setActiveTab('help')}
+            className={`px-2 py-1 font-semibold rounded ${activeTab === 'help' ? 'text-slate-900 bg-slate-100' : 'text-slate-500'}`}
+          >
+            Ayuda
           </button>
         </div>
       </div>
