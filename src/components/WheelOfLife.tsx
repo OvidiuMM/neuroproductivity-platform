@@ -4,6 +4,8 @@ import { Compass, History, Save, Sparkles, Check, TrendingUp, AlertCircle, Flag,
 
 interface WheelOfLifeProps {
   logs: WheelOfLifeLog[];
+  // Primer arranque: la cuenta no tiene ninguna evaluación guardada (confirmado con el servidor)
+  showFirstStep: boolean;
   onAppendSnapshot: (scores: Record<WheelCategory, number>, label?: string) => void;
   onOpenHelp: () => void;
 }
@@ -18,9 +20,8 @@ const CATEGORIES: WheelCategory[] = [
   'Espiritualidad'
 ];
 
-export const WheelOfLife: React.FC<WheelOfLifeProps> = ({ logs, onAppendSnapshot, onOpenHelp }) => {
+export const WheelOfLife: React.FC<WheelOfLifeProps> = ({ logs, showFirstStep, onAppendSnapshot, onOpenHelp }) => {
   // Sin evaluaciones guardadas (primer arranque) todas las áreas empiezan en 0
-  const isFirstEvaluation = logs.length === 0;
   const latestLog = logs[logs.length - 1] || {
     scores: {
       Salud: 0,
@@ -86,8 +87,8 @@ export const WheelOfLife: React.FC<WheelOfLifeProps> = ({ logs, onAppendSnapshot
   return (
     <div className="space-y-6">
 
-      {/* AVISO DE PRIMER PASO (solo mientras el perfil no tiene ninguna evaluación guardada) */}
-      {isFirstEvaluation && (
+      {/* AVISO DE PRIMER PASO (solo mientras la cuenta no tiene ninguna evaluación guardada) */}
+      {showFirstStep && (
         <div
           role="status"
           className="p-5 bg-indigo-50 border border-indigo-200 rounded-2xl flex flex-col sm:flex-row sm:items-center gap-4"
