@@ -128,10 +128,10 @@ export const HowItWorks: React.FC<HowItWorksProps> = ({ onNavigate }) => {
       <div className="bg-amber-50/70 rounded-2xl p-6 border border-amber-200 space-y-2">
         <h3 className="text-xs font-bold uppercase tracking-wider text-amber-900 flex items-center gap-1.5">
           <Database className="w-4 h-4" />
-          Tus datos y perfiles
+          Tus datos
         </h3>
         <p className="text-sm text-amber-950 leading-relaxed">
-          Todo se guarda solo en este navegador. No hay cuentas ni contraseñas, y nada se sincroniza entre dispositivos. Los perfiles sirven para separar espacios en un mismo navegador, pero cualquiera que lo use puede abrirlos. Si borras los datos del navegador, se pierden.
+          Todo se guarda en tu cuenta de Google, en servidores de Google Cloud en la Unión Europea (Bélgica), y solo tú puedes acceder. Se sincroniza entre tus dispositivos y la app sigue funcionando sin conexión: los cambios se envían al recuperarla. Desde el menú de tu cuenta puedes descargar tus datos o eliminar la cuenta con todo su contenido.
         </p>
       </div>
     </div>
