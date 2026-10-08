@@ -4,7 +4,7 @@
  */
 
 import React, { useState, useEffect } from 'react';
-import { ListContext, TaskItem, WheelCategory, MeetingGuard, EmailDraft, UserProfile } from './types';
+import { AppTab, ListContext, TaskItem, WheelCategory, MeetingGuard, EmailDraft, UserProfile } from './types';
 import { StorageService } from './services/storage';
 import { Navbar } from './components/Navbar';
 import { TaskList } from './components/TaskList';
@@ -16,6 +16,7 @@ import { EmailModal } from './components/EmailModal';
 import { SystemRequirementsViewer } from './components/SystemRequirementsViewer';
 import { SplashScreen } from './components/SplashScreen';
 import { UserSwitcher } from './components/UserSwitcher';
+import { HowItWorks } from './components/HowItWorks';
 import {
   Brain,
   Sparkles,
@@ -41,7 +42,10 @@ export default function App() {
   const [emails, setEmails] = useState<EmailDraft[]>(() => StorageService.getEmails());
 
   const [activeContext, setActiveContext] = useState<ListContext>('WORK');
-  const [activeTab, setActiveTab] = useState<'tasks' | 'wheel' | 'bermudas' | 'requirements'>('tasks');
+  // Primer arranque: mientras el perfil no tenga ninguna evaluación guardada, la app abre en la Rueda de la Vida
+  const [activeTab, setActiveTab] = useState<AppTab>(() =>
+    StorageService.getWheelLogs().length === 0 ? 'wheel' : 'tasks'
+  );
 
   // Estado de pantalla de inicio móvil (Splash Screen)
   const [showSplash, setShowSplash] = useState(true);
@@ -60,54 +64,44 @@ export default function App() {
     setTimeout(() => setToastMessage(null), 4000);
   };
 
-  // Cambio de Usuario con Segregación Total de Datos
+  // Carga los datos del perfil; si aún no tiene evaluaciones de la Rueda, abre la Rueda (primer arranque)
+  const loadProfile = (user: UserProfile) => {
+    const logs = StorageService.getWheelLogs(user.id);
+    setActiveUser(user);
+    setTasks(StorageService.getTasks(user.id));
+    setWheelLogs(logs);
+    setMeetings(StorageService.getMeetings(user.id));
+    setEmails(StorageService.getEmails(user.id));
+    if (logs.length === 0) setActiveTab('wheel');
+  };
+
+  // Cambio de perfil local
   const handleSelectUser = (userId: string) => {
     StorageService.setActiveUserId(userId);
     const user = StorageService.getActiveUser();
-    setActiveUser(user);
-    setTasks(StorageService.getTasks(userId));
-    setWheelLogs(StorageService.getWheelLogs(userId));
-    setMeetings(StorageService.getMeetings(userId));
-    setEmails(StorageService.getEmails(userId));
-    showToast(`Espacio de trabajo cambiado a: ${user.name}`);
+    if (!user) return;
+    loadProfile(user);
+    showToast(`Perfil activo: ${user.name}`);
   };
 
-  // Identificación e Inicio de Sesión con Cuenta de Google
-  const handleGoogleSignIn = (googleData: { name: string; email: string; role?: string }) => {
-    const user = StorageService.signInWithGoogle(googleData);
+  // Nuevo perfil local en este navegador
+  const handleCreateProfile = ({ name, role }: { name: string; role: string }) => {
+    const user = StorageService.createUser({ name, role, authProvider: 'local' });
     setUsers(StorageService.getUsers());
-    setActiveUser(user);
-    setTasks(StorageService.getTasks(user.id));
-    setWheelLogs(StorageService.getWheelLogs(user.id));
-    setMeetings(StorageService.getMeetings(user.id));
-    setEmails(StorageService.getEmails(user.id));
-    showToast(`Autenticado con Google: ${user.name} (${user.email}). Espacio seguro activo.`);
+    loadProfile(user);
+    showToast(`Perfil creado: ${user.name}`);
   };
 
-  // Cierre de Sesión (Bloqueo de Espacio)
-  const handleLogout = () => {
-    setActiveUser(null);
-    setTasks([]);
-    setWheelLogs([]);
-    setMeetings([]);
-    setEmails([]);
-    showToast('Sesión cerrada. Espacio de datos bloqueado de forma segura.');
-  };
-
-  // Eliminación de Cuenta de este Dispositivo
+  // Elimina el perfil y sus datos de este navegador
   const handleRemoveUser = (userId: string) => {
     const removed = StorageService.deleteUser(userId);
     if (removed) {
-      const remainingUsers = StorageService.getUsers();
-      setUsers(remainingUsers);
+      setUsers(StorageService.getUsers());
       if (activeUser?.id === userId) {
-        if (remainingUsers.length > 0) {
-          handleSelectUser(remainingUsers[0].id);
-        } else {
-          handleLogout();
-        }
+        const user = StorageService.getActiveUser();
+        if (user) loadProfile(user);
       }
-      showToast('Cuenta de Google desvinculada del dispositivo.');
+      showToast('Perfil eliminado de este navegador.');
     }
   };
 
@@ -196,7 +190,7 @@ export default function App() {
   const latestLog = wheelLogs[wheelLogs.length - 1];
   const wheelAverage = latestLog
     ? (Object.values(latestLog.scores).reduce((a, b) => a + b, 0) / Object.values(latestLog.scores).length).toFixed(1)
-    : '7.0';
+    : '0.0';
 
   return (
     <div className="min-h-screen bg-slate-50 text-slate-900 font-sans flex flex-col antialiased selection:bg-indigo-500 selection:text-white">
@@ -254,18 +248,18 @@ export default function App() {
                   type="button"
                   onClick={() => setIsUserSwitcherOpen(true)}
                   className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-slate-100 hover:bg-slate-200 text-[11px] text-slate-700 font-semibold transition-colors"
-                  title="Gestionar cuenta de Google y espacio aislado"
+                  title="Cambiar de perfil"
                 >
                   {activeUser ? (
                     <>
                       <span className={`w-2 h-2 rounded-full ${activeUser.color === 'emerald' ? 'bg-emerald-500' : activeUser.color === 'amber' ? 'bg-amber-500' : 'bg-indigo-500'}`} />
-                      <span>Google: {activeUser.name}</span>
-                      <span className="text-[10px] text-indigo-600 font-normal">({activeUser.role.split(' ')[0]})</span>
+                      <span>Perfil: {activeUser.name}</span>
+                      {activeUser.role && (
+                        <span className="text-[10px] text-indigo-600 font-normal">({activeUser.role.split(' ')[0]})</span>
+                      )}
                     </>
                   ) : (
-                    <span className="text-amber-700 font-bold flex items-center gap-1">
-                      <span>🔒 Iniciar Sesión con Google</span>
-                    </span>
+                    <span className="text-amber-700 font-bold">Elegir perfil</span>
                   )}
                 </button>
               </div>
@@ -344,8 +338,10 @@ export default function App() {
         {/* PESTAÑA 2: RUEDA DE LA VIDA (MÓDULO 1) */}
         {activeTab === 'wheel' && (
           <WheelOfLife
+            key={activeUser?.id}
             logs={wheelLogs}
             onAppendSnapshot={handleAppendWheelSnapshot}
+            onOpenHelp={() => setActiveTab('help')}
           />
         )}
 
@@ -361,6 +357,9 @@ export default function App() {
 
         {/* PESTAÑA 4: ESPECIFICACIÓN TÉCNICA & BANCO DE PRUEBAS */}
         {activeTab === 'requirements' && <SystemRequirementsViewer />}
+
+        {/* PESTAÑA 5: CÓMO FUNCIONA LA APP */}
+        {activeTab === 'help' && <HowItWorks onNavigate={setActiveTab} />}
 
       </main>
 
@@ -382,9 +381,14 @@ export default function App() {
               📱 Ver Pantalla de Inicio Móvil
             </button>
             <span className="text-slate-300">·</span>
-            <span>Google Auth</span>
+            <button
+              onClick={() => setActiveTab('help')}
+              className="text-[11px] text-indigo-600 hover:text-indigo-800 font-semibold"
+            >
+              Guía de uso
+            </button>
             <span className="text-slate-300">·</span>
-            <span>Offline-First (IndexedDB)</span>
+            <span>Datos guardados en este navegador</span>
             <span className="text-slate-300">·</span>
             <span>Append-Only UTC</span>
           </div>
@@ -426,15 +430,14 @@ export default function App() {
         onSendEmail={handleSendEmail}
       />
 
-      {/* MODAL 4: GESTOR DE IDENTIDADES GOOGLE Y ESPACIOS AISLADOS DE USUARIO */}
+      {/* MODAL 4: PERFILES LOCALES DE ESTE NAVEGADOR */}
       <UserSwitcher
         isOpen={isUserSwitcherOpen}
         onClose={() => setIsUserSwitcherOpen(false)}
         users={users}
         activeUser={activeUser}
         onSelectUser={handleSelectUser}
-        onGoogleSignIn={handleGoogleSignIn}
-        onLogout={handleLogout}
+        onCreateProfile={handleCreateProfile}
         onRemoveUser={handleRemoveUser}
       />
 
