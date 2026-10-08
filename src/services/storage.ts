@@ -16,7 +16,7 @@ const INITIAL_USERS: UserProfile[] = [
     id: 'user-1',
     googleId: 'google-sub-10829182',
     name: 'Dr. Jonathan Benito Sipos',
-    email: 'jonathan@uam.es',
+    email: 'jonathan@example.com',
     role: 'Investigador Neurociencia (UAM)',
     color: 'indigo',
     initials: 'JB',
@@ -28,7 +28,7 @@ const INITIAL_USERS: UserProfile[] = [
     id: 'user-2',
     googleId: 'google-sub-94827163',
     name: 'Ovidiu M.',
-    email: 'ovidiu@getdeardoc.com',
+    email: 'ovidiu@example.com',
     role: 'Líder Técnico & Productividad',
     color: 'emerald',
     initials: 'OM',
@@ -40,7 +40,7 @@ const INITIAL_USERS: UserProfile[] = [
     id: 'user-3',
     googleId: 'google-sub-55829104',
     name: 'Dra. Elena Ramos',
-    email: 'elena.ramos.med@gmail.com',
+    email: 'elena.ramos@example.com',
     role: 'Especialista en Medicina Preventiva',
     color: 'amber',
     initials: 'ER',
@@ -411,7 +411,7 @@ const INITIAL_MEETINGS: MeetingGuard[] = [
       '3. Asignación de tareas críticas del Top 10'
     ],
     moderatorName: 'Dr. Jonathan Benito Sipos',
-    moderatorEmail: 'jonathan@uam.es',
+    moderatorEmail: 'jonathan@example.com',
     createdAt: '2026-10-05T09:00:00Z'
   },
   {
@@ -426,7 +426,7 @@ const INITIAL_MEETINGS: MeetingGuard[] = [
       '3. Rendimiento de sincronización offline'
     ],
     moderatorName: 'Ovidiu M.',
-    moderatorEmail: 'ovidiu@getdeardoc.com',
+    moderatorEmail: 'ovidiu@example.com',
     createdAt: '2026-10-07T07:00:00Z'
   }
 ];
@@ -439,7 +439,7 @@ const INITIAL_EMAILS: EmailDraft[] = [
     body: 'Adjunto el informe técnico con las validaciones de los 5 módulos de neuroproductividad. Se han blindado las mañanas y la jerarquía visual del Top 10 está operativa.',
     attachments: [{ name: 'especificacion_tecnica.pdf', size: '2.4 MB' }],
     noAttachmentsDeclared: false,
-    recipients: ['equipo@neuroproductividad.org'],
+    recipients: ['equipo@example.com'],
     sentAt: '2026-10-06T08:00:00Z'
   }
 ];
