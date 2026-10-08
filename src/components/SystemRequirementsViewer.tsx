@@ -433,7 +433,7 @@ export const SystemRequirementsViewer: React.FC = () => {
                     <td className="py-2 px-3 font-mono font-bold text-indigo-700">RF-01</td>
                     <td className="py-2 px-3 font-medium">M1: Rueda de la Vida</td>
                     <td className="py-2 px-3">Gráfico polar SVG interactivo con 7 categorías vitales.</td>
-                    <td className="py-2 px-3">Escala 1 a 10 con arrastre y redibujado en tiempo real.</td>
+                    <td className="py-2 px-3">Escala 0 a 10 con arrastre y redibujado en tiempo real.</td>
                   </tr>
                   <tr>
                     <td className="py-2 px-3 font-mono font-bold text-indigo-700">RF-02</td>
