@@ -1,7 +1,9 @@
 import { expect, test } from '@playwright/test';
+import { signInWithGoogle } from './helpers';
 
 test('creates a task and persists it after reloading', async ({ page }) => {
   await page.goto('/');
+  await signInWithGoogle(page);
 
   await expect(page.getByText('Basado en la metodología de Dr. Jonathan Benito Sipos').first()).toBeVisible();
   await page.getByRole('button', { name: 'Nueva Tarea' }).click();
@@ -20,7 +22,7 @@ test('creates a task and persists it after reloading', async ({ page }) => {
   await saveButton.scrollIntoViewIfNeeded();
   await saveButton.click();
 
-  // Un perfil sin evaluaciones abre en la Rueda de la Vida; las tareas están en Listas Duales
+  // Una cuenta sin evaluaciones abre en la Rueda de la Vida; las tareas están en Listas Duales
   await page.getByRole('button', { name: 'Listas Duales' }).click();
   await expect(page.getByText(title, { exact: true })).toBeVisible();
   await page.reload();

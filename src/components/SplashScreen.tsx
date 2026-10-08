@@ -9,7 +9,7 @@ interface SplashScreenProps {
 
 export const SplashScreen: React.FC<SplashScreenProps> = ({
   onFinish,
-  version = '0.2.0',
+  version = __APP_VERSION__,
   autoDismissMs = 1600
 }) => {
   const [isVisible, setIsVisible] = useState(true);

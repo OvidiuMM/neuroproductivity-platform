@@ -47,6 +47,22 @@ jobs:
       - name: Run integration tests
         run: npm run test:integration
 
+      # Los emuladores de Firebase (reglas y e2e) necesitan Java; los binarios se cachean entre ejecuciones
+      - name: Set up Java for Firebase emulators
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+
+      - name: Cache Firebase emulators
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/firebase/emulators
+          key: firebase-emulators-${{ hashFiles('package-lock.json') }}
+
+      - name: Run Firestore security rules tests
+        run: npm run test:rules
+
       - name: Install Playwright browser
         run: npx playwright install --with-deps chromium
 
@@ -106,8 +122,9 @@ jobs:
           printf 'ANDROID_PACKAGE_NAME=%s\nANDROID_SHA256_FINGERPRINT=%s\n' \
             "$ANDROID_PACKAGE_NAME" "$ANDROID_SHA256_FINGERPRINT" > functions/.env
 
-      # Los predeploy de firebase.json compilan la SPA y la función antes de subirlas
-      - name: Deploy Hosting and Cloud Functions
+      # Los predeploy de firebase.json compilan la SPA y la función antes de subirlas.
+      # firebase-tools sale de devDependencies (versión fijada en package.json).
+      - name: Deploy Hosting, Cloud Functions and Firestore rules
         env:
           FIREBASE_PROJECT_ID: ${{ secrets.FIREBASE_PROJECT_ID }}
-        run: npx --yes firebase-tools@15.33.0 deploy --only hosting,functions --project "$FIREBASE_PROJECT_ID" --non-interactive
+        run: npx firebase deploy --only hosting,functions,firestore --project "$FIREBASE_PROJECT_ID" --non-interactive

@@ -1,7 +1,7 @@
 # NeuroProductividad — Plataforma de Gestión del Tiempo y Neurociencia Aplicada
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
-[![Version](https://img.shields.io/badge/Version-0.2.0-indigo.svg)](#)
+[![Version](https://img.shields.io/badge/Version-0.5.0-indigo.svg)](#)
 [![React](https://img.shields.io/badge/React-19.0-61dafb.svg?logo=react&logoColor=black)](https://react.dev/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.x-3178c6.svg?logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
 [![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-4.x-38bdf8.svg?logo=tailwindcss&logoColor=white)](https://tailwindcss.com/)
@@ -17,7 +17,8 @@ El sistema rechaza las restricciones coercitivas (como las rotaciones atencional
 
 ### 1. Motor Estratégico: Rueda de la Vida & Trazabilidad Temporal Inmutable (`M1`)
 * **Gráfico Polar Interactivo SVG:** Mapeo de 7 dominios vitales (*Salud, Carrera Profesional, Finanzas, Familia, Ocio, Relaciones, Espiritualidad*) evaluados del 0 al 10 con arrastre y redibujado en tiempo real.
-* **Primer arranque guiado:** Un perfil sin evaluaciones abre directamente la Rueda con todas las áreas a 0 y un aviso de primer paso que enlaza a la guía *Cómo funciona* (pantallas, relaciones entre módulos y dónde se guardan los datos).
+* **Cuentas y sincronización:** Inicio de sesión con Google; los datos de cada cuenta se guardan en Firestore (UE), funcionan sin conexión y se sincronizan entre dispositivos. En el primer inicio de sesión se ofrece importar los datos que la versión anterior guardaba solo en el navegador. Desde el menú de la cuenta se pueden descargar los datos o eliminar la cuenta con todo su contenido.
+* **Primer arranque guiado:** Una cuenta sin evaluaciones abre directamente la Rueda con todas las áreas a 0 y un aviso de primer paso que enlaza a la guía *Cómo funciona* (pantallas, relaciones entre módulos y dónde se guardan los datos).
 * **Persistencia Append-Only:** Prohibición estricta de sobrescritura (`UPDATE`). Cada consolidación genera un nuevo snapshot inmutable con sellos de tiempo precisos en formato UTC (Unix Epoch).
 * **Comparativa Histórica de Neuroplasticidad:** Superposición gráfica de polígonos translúcidos (actual vs. 30, 90 o 365 días) para verificar empíricamente el impacto del hábito sostenido y activar circuitos de recompensa dopaminérgicos.
 
@@ -49,7 +50,7 @@ El sistema rechaza las restricciones coercitivas (como las rotaciones atencional
 | **Frontend** | React 19, TypeScript, Vite, Tailwind CSS v4, Lucide Icons |
 | **Algoritmia** | Motor TF-IDF & Cosine Similarity en TS, Parser sintáctico de verbos en español |
 | **Visualización** | SVG interactivo polar / radar, Matemáticas polares de deformación poligonal |
-| **Almacenamiento** | `localStorage` del navegador, con perfiles locales. No hay cuentas, inicio de sesión ni sincronización entre dispositivos |
+| **Cuentas y datos** | Firebase Authentication (Google) y Cloud Firestore (`europe-west1`) con caché persistente: funciona sin conexión y sincroniza entre dispositivos |
 | **Hosting y API** | Firebase Hosting (SPA) y Cloud Functions for Firebase 2.ª gen con Express (`europe-west1`) |
 | **Referencia Backend** | PostgreSQL (Esquema DDL relacional con índices parciales B-Tree y tipos JSONB) |
 
@@ -60,7 +61,8 @@ El sistema rechaza las restricciones coercitivas (como las rotaciones atencional
 ### Prerrequisitos
 * Node.js $\ge 22.12$
 * npm (el gestor utilizado por CI y el despliegue)
-* Firebase CLI (`npm install -g firebase-tools`) para los emuladores y el despliegue
+* Java 21 o superior para el emulador de Firestore (desarrollo local y pruebas)
+* La Firebase CLI se instala con `npm ci` (`firebase-tools` en `devDependencies`); `npx firebase …` usa esa versión
 
 ### Pasos
 ```bash
@@ -72,7 +74,8 @@ cd neuroproductivity-platform
 npm ci
 npm ci --prefix functions
 
-# 3. Iniciar el servidor de desarrollo local
+# 3. Iniciar la app en local: arranca los emuladores de Auth y Firestore (proyecto demo, sin tocar producción)
+#    y la app conectada a ellos. El inicio de sesión con Google lo simula el emulador.
 npm run dev
 
 # 4. Compilar para producción
@@ -81,9 +84,10 @@ npm run build
 # 5. Ejecutar validación de tipos y linter
 npm run lint
 
-# 6. Ejecutar pruebas unitarias, de integración y de la API
+# 6. Ejecutar pruebas unitarias, de integración, de reglas de Firestore y de la API
 npm run test:unit
 npm run test:integration
+npm run test:rules
 npm --prefix functions test
 
 # 7. Instalar Chromium y ejecutar pruebas E2E
@@ -91,15 +95,15 @@ npx playwright install chromium
 npm run test:e2e
 ```
 
-El servidor estará disponible en `http://localhost:3000` o `http://localhost:5173`.
+La app estará disponible en `http://localhost:3000` y la interfaz de los emuladores en `http://localhost:4000`.
 
 ### Pruebas automatizadas
 
-El banco de pruebas cubre lógica pura con el test runner de Node, integración del almacenamiento local y flujos de extremo a extremo en Chromium con Playwright. `npm test` ejecuta los tres niveles; las rutas de la API se prueban aparte con `npm --prefix functions test`. GitHub Actions también valida tipos, compila la aplicación y la función, y ejecuta toda la suite en cada push y pull request.
+El banco de pruebas cubre lógica pura con el test runner de Node, la importación de datos locales, las reglas de seguridad de Firestore contra el emulador y flujos de extremo a extremo en Chromium con Playwright (inicio de sesión con el emulador de Auth, primer arranque, importación y tareas). `npm test` ejecuta todos los niveles; las rutas de la API se prueban aparte con `npm --prefix functions test`. GitHub Actions también valida tipos, compila la aplicación y la función, y ejecuta toda la suite en cada push y pull request.
 
-### Despliegue en Firebase (Hosting + Cloud Functions)
+### Despliegue en Firebase (Hosting + Cloud Functions + Firestore)
 
-Firebase Hosting sirve la SPA compilada (`dist/`) y la función `api` (Cloud Functions 2.ª gen, región `europe-west1`) atiende el backend. Las rutas se definen en `firebase.json`:
+Firebase Hosting sirve la SPA compilada (`dist/`), la función `api` (Cloud Functions 2.ª gen, región `europe-west1`) atiende el backend y Firestore guarda los datos de cada cuenta en `users/{uid}/…`. Las reglas (`firestore.rules`) solo permiten a cada persona acceder a sus propios datos y hacen las evaluaciones de la Rueda *append-only*. La app lee su configuración de Firebase de `/__/firebase/init.json`, que sirve el propio Hosting, así que el ID del proyecto no está en el código. Las rutas se definen en `firebase.json`:
 
 | Ruta | Destino |
 | :--- | :--- |
@@ -107,7 +111,7 @@ Firebase Hosting sirve la SPA compilada (`dist/`) y la función `api` (Cloud Fun
 | `/.well-known/assetlinks.json` | Función `api` (Digital Asset Links de la APK Android) |
 | `**` | `index.html` (fallback de la SPA) |
 
-Requisitos: un proyecto de Firebase en plan Blaze (Cloud Functions lo exige) y la Firebase CLI con sesión iniciada (`firebase login`).
+Requisitos: un proyecto de Firebase en plan Blaze (Cloud Functions lo exige), una base de datos de Firestore `(default)` en `europe-west1`, el proveedor de inicio de sesión **Google** activado en Authentication y la Firebase CLI con sesión iniciada (`npx firebase login`).
 
 El ID del proyecto no se versiona: `.firebaserc` está en `.gitignore`. En cada clon, selecciona el proyecto una vez:
 
@@ -118,16 +122,16 @@ firebase use --add
 La función usa dos parámetros, `ANDROID_PACKAGE_NAME` y `ANDROID_SHA256_FINGERPRINT`. `firebase deploy` los pide la primera vez y los guarda en `functions/.env.<project-id>`, ignorado por git. Para los emuladores, defínelos en `functions/.env.local`.
 
 ```bash
-# Emuladores locales: Hosting en http://localhost:5002 y Functions en el puerto 5001
+# Emuladores locales (proyecto demo): Hosting en http://localhost:5002, Functions, Auth y Firestore
 npm run emulators
 
-# Despliegue: compila la SPA y la función antes de subirlas
+# Despliegue: compila la SPA y la función antes de subirlas y publica las reglas de Firestore
 npm run deploy
 ```
 
 #### Despliegue automático desde GitHub Actions
 
-Cada push a `main` (por ejemplo, al mergear un pull request) despliega Hosting y la función si el job `validate` pasa. Los deploys se ejecutan de uno en uno. GitHub se autentica en Google Cloud con Workload Identity Federation: cada ejecución recibe un token temporal y no hay claves de cuenta de servicio guardadas.
+Cada push a `main` (por ejemplo, al mergear un pull request) despliega Hosting, la función y las reglas de Firestore si el job `validate` pasa. Los deploys se ejecutan de uno en uno. GitHub se autentica en Google Cloud con Workload Identity Federation: cada ejecución recibe un token temporal y no hay claves de cuenta de servicio guardadas.
 
 El workflow necesita estos valores en el repositorio. Los secrets se ocultan en los logs, así que el ID del proyecto tampoco aparece ahí.
 
@@ -147,9 +151,9 @@ PROJECT_NUMBER=$(gcloud projects describe "$PROJECT_ID" --format='value(projectN
 SA="github-deployer@$PROJECT_ID.iam.gserviceaccount.com"
 REPO_ID=1408574835  # gh api repos/OvidiuMM/neuroproductivity-platform -q .id
 
-# 1. Cuenta de servicio con los permisos para desplegar Hosting y Functions
+# 1. Cuenta de servicio con los permisos para desplegar Hosting, Functions y las reglas de Firestore
 gcloud iam service-accounts create github-deployer --project "$PROJECT_ID" --display-name "GitHub Actions deployer"
-for role in roles/firebasehosting.admin roles/cloudfunctions.admin; do
+for role in roles/firebasehosting.admin roles/cloudfunctions.admin roles/firebaserules.admin roles/datastore.indexAdmin; do
   gcloud projects add-iam-policy-binding "$PROJECT_ID" --member "serviceAccount:$SA" --role "$role" --condition None
 done
 # Las funciones se ejecutan con la cuenta de servicio de Compute y el CLI comprueba también la de App Engine;
@@ -189,7 +193,8 @@ El repositorio utiliza `package-lock.json` (en la raíz y en `functions/`) como 
 ├── package.json                 # Dependencias y scripts
 ├── vite.config.ts               # Configuración de Vite y Tailwind
 ├── tsconfig.json                # Configuración de TypeScript estricto
-├── firebase.json                # Firebase Hosting (rewrites y caché) y Cloud Functions
+├── firebase.json                # Firebase Hosting (rewrites y caché), Cloud Functions, Firestore y emuladores
+├── firestore.rules              # Reglas de seguridad: cada cuenta solo accede a users/{uid}
 ├── functions/                   # Cloud Functions for Firebase (API)
 │   ├── src/
 │   │   ├── index.ts             # Función HTTP `api` (región europe-west1)
@@ -198,6 +203,7 @@ El repositorio utiliza `package-lock.json` (en la raíz y en `functions/`) como 
 │       └── app.test.ts          # Pruebas de las rutas de la API
 ├── src/
 │   ├── main.tsx                 # Montaje de la aplicación React
+│   ├── AuthGate.tsx             # Inicio de sesión obligatorio antes de mostrar la app
 │   ├── App.tsx                  # Orquestador principal de estado y vistas
 │   ├── index.css                # Estilos base con Tailwind CSS
 │   ├── types/
@@ -205,7 +211,9 @@ El repositorio utiliza `package-lock.json` (en la raíz y en `functions/`) como 
 │   ├── services/
 │   │   ├── nlpEngine.ts         # Motor TF-IDF y Similitud del Coseno
 │   │   ├── syntaxAnalyzer.ts    # Analizador de verbos de acción física
-│   │   └── storage.ts           # Perfiles locales y datos en localStorage, snapshots append-only
+│   │   ├── firebase.ts          # Configuración de Firebase, Auth y Firestore con caché sin conexión
+│   │   ├── repository.ts        # Lectura en tiempo real y escritura de los datos de cada cuenta
+│   │   └── localData.ts         # Importación de los datos de la versión sin cuentas (localStorage)
 │   └── components/
 │       ├── Navbar.tsx           # Barra superior (Contrato de 3 Zonas)
 │       ├── TaskList.tsx         # Jerarquía Visual Gestalt (Top 10 vs Periférico)
@@ -214,7 +222,9 @@ El repositorio utiliza `package-lock.json` (en la raíz y en `functions/`) como 
 │       ├── BermudasShield.tsx   # Blindaje de Agenda y Correo Inverso
 │       ├── MeetingModal.tsx     # Agendamiento con bloqueo matutino y triple validación
 │       ├── EmailModal.tsx       # Cliente con redacción inversa y alerta no-scroll
-│       ├── UserSwitcher.tsx     # Perfiles locales de este navegador
+│       ├── LoginScreen.tsx      # Inicio de sesión con Google y aviso de privacidad
+│       ├── AccountMenu.tsx      # Cerrar sesión, descargar datos y eliminar la cuenta
+│       ├── ImportLocalDataModal.tsx # Importación de datos locales en el primer inicio de sesión
 │       ├── HowItWorks.tsx       # Guía «Cómo funciona»: pantallas y relaciones entre módulos
 │       └── SystemRequirementsViewer.tsx # Banco de pruebas en vivo y specs BDD
 ```

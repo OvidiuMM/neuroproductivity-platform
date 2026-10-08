@@ -1,0 +1,26 @@
+rules_version = '2';
+
+// Cada persona solo puede leer y escribir sus propios datos en users/{uid}.
+// Todo lo que no coincide con estas reglas queda denegado.
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function isOwner(uid) {
+      return request.auth != null && request.auth.uid == uid;
+    }
+
+    match /users/{uid} {
+      allow read, write: if isOwner(uid);
+
+      match /{collection}/{docId} {
+        allow read, create, delete: if isOwner(uid)
+          && collection in ['tasks', 'wheelLogs', 'meetings', 'emails'];
+
+        // Las evaluaciones de la Rueda de la Vida son append-only: no se modifican.
+        // Reescribir el mismo contenido sí se permite para que una importación pueda reintentarse.
+        allow update: if isOwner(uid)
+          && collection in ['tasks', 'wheelLogs', 'meetings', 'emails']
+          && (collection != 'wheelLogs' || request.resource.data == resource.data);
+      }
+    }
+  }
+}
