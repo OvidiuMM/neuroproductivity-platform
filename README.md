@@ -125,6 +125,59 @@ npm run emulators
 npm run deploy
 ```
 
+#### Despliegue automático desde GitHub Actions
+
+Cada push a `main` (por ejemplo, al mergear un pull request) despliega Hosting y la función si el job `validate` pasa. Los deploys se ejecutan de uno en uno. GitHub se autentica en Google Cloud con Workload Identity Federation: cada ejecución recibe un token temporal y no hay claves de cuenta de servicio guardadas.
+
+El workflow necesita estos valores en el repositorio. Los secrets se ocultan en los logs, así que el ID del proyecto tampoco aparece ahí.
+
+| Tipo | Nombre | Valor |
+| :--- | :--- | :--- |
+| Secret | `FIREBASE_PROJECT_ID` | ID del proyecto de Firebase |
+| Secret | `GCP_SERVICE_ACCOUNT` | Email de la cuenta de servicio `github-deployer` |
+| Secret | `GCP_WORKLOAD_IDENTITY_PROVIDER` | Ruta completa del proveedor de identidad |
+| Variable | `ANDROID_PACKAGE_NAME` | Package name de la APK |
+| Variable | `ANDROID_SHA256_FINGERPRINT` | Huella SHA-256 del certificado de firma de la APK |
+
+Configuración inicial, una sola vez, con una cuenta propietaria del proyecto:
+
+```bash
+PROJECT_ID=<project-id>
+PROJECT_NUMBER=$(gcloud projects describe "$PROJECT_ID" --format='value(projectNumber)')
+SA="github-deployer@$PROJECT_ID.iam.gserviceaccount.com"
+REPO_ID=1408574835  # gh api repos/OvidiuMM/neuroproductivity-platform -q .id
+
+# 1. Cuenta de servicio con los permisos para desplegar Hosting y Functions
+gcloud iam service-accounts create github-deployer --project "$PROJECT_ID" --display-name "GitHub Actions deployer"
+for role in roles/firebasehosting.admin roles/cloudfunctions.admin; do
+  gcloud projects add-iam-policy-binding "$PROJECT_ID" --member "serviceAccount:$SA" --role "$role" --condition None
+done
+# Las funciones se ejecutan con la cuenta de servicio de Compute y el CLI comprueba también la de App Engine;
+# desplegar exige poder actuar como ellas. Omite la de App Engine si el proyecto no la tiene.
+for runtime_sa in "$PROJECT_NUMBER-compute@developer.gserviceaccount.com" "$PROJECT_ID@appspot.gserviceaccount.com"; do
+  gcloud iam service-accounts add-iam-policy-binding "$runtime_sa" \
+    --project "$PROJECT_ID" --member "serviceAccount:$SA" --role roles/iam.serviceAccountUser
+done
+
+# 2. Workload Identity Federation, limitada a este repositorio y a la rama main
+gcloud services enable iamcredentials.googleapis.com sts.googleapis.com --project "$PROJECT_ID"
+gcloud iam workload-identity-pools create github --project "$PROJECT_ID" --location global --display-name "GitHub Actions"
+gcloud iam workload-identity-pools providers create-oidc neuroproductivity-platform --project "$PROJECT_ID" \
+  --location global --workload-identity-pool github --issuer-uri https://token.actions.githubusercontent.com \
+  --attribute-mapping "google.subject=assertion.sub,attribute.repository_id=assertion.repository_id,attribute.ref=assertion.ref" \
+  --attribute-condition "assertion.repository_id == '$REPO_ID' && assertion.ref == 'refs/heads/main'"
+gcloud iam service-accounts add-iam-policy-binding "$SA" --project "$PROJECT_ID" --role roles/iam.workloadIdentityUser \
+  --member "principalSet://iam.googleapis.com/projects/$PROJECT_NUMBER/locations/global/workloadIdentityPools/github/attribute.repository_id/$REPO_ID"
+
+# 3. Secrets y variables del repositorio
+gh secret set FIREBASE_PROJECT_ID --body "$PROJECT_ID"
+gh secret set GCP_SERVICE_ACCOUNT --body "$SA"
+gh secret set GCP_WORKLOAD_IDENTITY_PROVIDER \
+  --body "projects/$PROJECT_NUMBER/locations/global/workloadIdentityPools/github/providers/neuroproductivity-platform"
+gh variable set ANDROID_PACKAGE_NAME --body "<package-name>"
+gh variable set ANDROID_SHA256_FINGERPRINT --body "<huella-sha256>"
+```
+
 El repositorio utiliza `package-lock.json` (en la raíz y en `functions/`) como únicos archivos de bloqueo; no añadas `bun.lock` ni `pnpm-lock.yaml`. Después de cambiar dependencias, actualiza y confirma `package.json` y `package-lock.json` juntos. Para comprobar la instalación reproducible, ejecuta `npm ci` y `npm ci --prefix functions` antes de compilar y probar.
 
 ---
