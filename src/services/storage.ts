@@ -320,7 +320,7 @@ const INITIAL_TASKS: TaskItem[] = [
     userId: 'user-2',
     listContext: 'WORK',
     title: 'Implementar pipeline CI/CD en GitHub Actions para despliegue automatizado',
-    description: 'Configurar workflows de build, test de linting y despliegue continuo hacia Google Cloud Run.',
+    description: 'Configurar workflows de build, test de linting y despliegue continuo hacia Firebase Hosting y Cloud Functions.',
     priority: 'CRITICAL',
     createdAt: '2026-10-07T08:00:00Z',
     updatedAt: '2026-10-07T08:00:00Z',
@@ -351,8 +351,8 @@ const INITIAL_TASKS: TaskItem[] = [
     id: 'task-u2-3',
     userId: 'user-2',
     listContext: 'WORK',
-    title: 'Configurar contenedor Docker y variables de entorno para Cloud Run',
-    description: 'Verificar puerto 3000, variables de base de datos y certificados de Digital Asset Links.',
+    title: 'Configurar firebase.json y parámetros de entorno para Cloud Functions',
+    description: 'Verificar rewrites de Hosting hacia la API, región europe-west1 y certificados de Digital Asset Links.',
     priority: 'HIGH',
     createdAt: '2026-10-07T08:30:00Z',
     updatedAt: '2026-10-07T08:30:00Z',
@@ -417,7 +417,7 @@ const INITIAL_MEETINGS: MeetingGuard[] = [
   {
     id: 'meet-u2-1',
     userId: 'user-2',
-    title: 'Revisión técnica de despliegue en Google Cloud Run y APK',
+    title: 'Revisión técnica de despliegue en Firebase Hosting y APK',
     startTime: '2026-10-08T14:00:00Z',
     endTime: '2026-10-08T14:30:00Z',
     agendaPoints: [
