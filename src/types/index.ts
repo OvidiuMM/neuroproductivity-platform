@@ -1,5 +1,7 @@
 export type ListContext = 'WORK' | 'PERSONAL';
 
+export type AppTab = 'tasks' | 'wheel' | 'bermudas' | 'requirements' | 'help';
+
 export type TaskPriority = 'CRITICAL' | 'HIGH' | 'MEDIUM' | 'LOW';
 
 export type WheelCategory = 
@@ -42,7 +44,7 @@ export interface WheelOfLifeLog {
   userId: string;
   timestamp: string; // Inmutable UTC Timestamp
   label?: string;
-  scores: Record<WheelCategory, number>; // 1 to 10
+  scores: Record<WheelCategory, number>; // 0 to 10
 }
 
 export interface MeetingGuard {
@@ -72,7 +74,7 @@ export interface UserProfile {
   id: string;
   googleId?: string;
   name: string;
-  email: string;
+  email?: string;
   photoUrl?: string;
   role: string;
   color: string;
