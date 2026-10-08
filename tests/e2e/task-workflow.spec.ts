@@ -20,7 +20,10 @@ test('creates a task and persists it after reloading', async ({ page }) => {
   await saveButton.scrollIntoViewIfNeeded();
   await saveButton.click();
 
+  // Un perfil sin evaluaciones abre en la Rueda de la Vida; las tareas están en Listas Duales
+  await page.getByRole('button', { name: 'Listas Duales' }).click();
   await expect(page.getByText(title, { exact: true })).toBeVisible();
   await page.reload();
+  await page.getByRole('button', { name: 'Listas Duales' }).click();
   await expect(page.getByText(title, { exact: true })).toBeVisible();
 });

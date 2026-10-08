@@ -1,10 +1,11 @@
 import React, { useState } from 'react';
 import { WheelOfLifeLog, WheelCategory } from '../types';
-import { Compass, History, Save, Sparkles, Check, TrendingUp, AlertCircle } from 'lucide-react';
+import { Compass, History, Save, Sparkles, Check, TrendingUp, AlertCircle, Flag, BookOpen } from 'lucide-react';
 
 interface WheelOfLifeProps {
   logs: WheelOfLifeLog[];
   onAppendSnapshot: (scores: Record<WheelCategory, number>, label?: string) => void;
+  onOpenHelp: () => void;
 }
 
 const CATEGORIES: WheelCategory[] = [
@@ -17,16 +18,18 @@ const CATEGORIES: WheelCategory[] = [
   'Espiritualidad'
 ];
 
-export const WheelOfLife: React.FC<WheelOfLifeProps> = ({ logs, onAppendSnapshot }) => {
+export const WheelOfLife: React.FC<WheelOfLifeProps> = ({ logs, onAppendSnapshot, onOpenHelp }) => {
+  // Sin evaluaciones guardadas (primer arranque) todas las áreas empiezan en 0
+  const isFirstEvaluation = logs.length === 0;
   const latestLog = logs[logs.length - 1] || {
     scores: {
-      Salud: 7,
-      'Carrera Profesional': 8,
-      Finanzas: 7,
-      Familia: 7,
-      Ocio: 6,
-      Relaciones: 6,
-      Espiritualidad: 6
+      Salud: 0,
+      'Carrera Profesional': 0,
+      Finanzas: 0,
+      Familia: 0,
+      Ocio: 0,
+      Relaciones: 0,
+      Espiritualidad: 0
     }
   };
 
@@ -47,8 +50,8 @@ export const WheelOfLife: React.FC<WheelOfLifeProps> = ({ logs, onAppendSnapshot
   const angleStep = (Math.PI * 2) / numCategories;
 
   const getCoordinates = (index: number, score: number) => {
-    // Score is 1 to 10
-    const normalizedScore = Math.max(1, Math.min(10, score)) / 10;
+    // Score is 0 to 10
+    const normalizedScore = Math.max(0, Math.min(10, score)) / 10;
     const angle = index * angleStep - Math.PI / 2;
     const r = radius * normalizedScore;
     return {
@@ -59,7 +62,7 @@ export const WheelOfLife: React.FC<WheelOfLifeProps> = ({ logs, onAppendSnapshot
 
   const generatePolygonPath = (scores: Record<WheelCategory, number>) => {
     return CATEGORIES.map((cat, i) => {
-      const { x, y } = getCoordinates(i, scores[cat] || 5);
+      const { x, y } = getCoordinates(i, scores[cat] ?? 0);
       return `${i === 0 ? 'M' : 'L'} ${x} ${y}`;
     }).join(' ') + ' Z';
   };
@@ -67,7 +70,7 @@ export const WheelOfLife: React.FC<WheelOfLifeProps> = ({ logs, onAppendSnapshot
   const handleScoreChange = (cat: WheelCategory, value: number) => {
     setCurrentScores((prev) => ({
       ...prev,
-      [cat]: Math.max(1, Math.min(10, value))
+      [cat]: Math.max(0, Math.min(10, value))
     }));
   };
 
@@ -82,7 +85,33 @@ export const WheelOfLife: React.FC<WheelOfLifeProps> = ({ logs, onAppendSnapshot
 
   return (
     <div className="space-y-6">
-      
+
+      {/* AVISO DE PRIMER PASO (solo mientras el perfil no tiene ninguna evaluación guardada) */}
+      {isFirstEvaluation && (
+        <div
+          role="status"
+          className="p-5 bg-indigo-50 border border-indigo-200 rounded-2xl flex flex-col sm:flex-row sm:items-center gap-4"
+        >
+          <div className="w-10 h-10 rounded-xl bg-indigo-600 text-white flex items-center justify-center shrink-0">
+            <Flag className="w-5 h-5" />
+          </div>
+          <div className="flex-1 space-y-1">
+            <h3 className="text-sm font-bold text-indigo-950">Primer paso: evalúa tu Rueda de la Vida</h3>
+            <p className="text-xs text-indigo-900 leading-relaxed">
+              Puntúa de 0 a 10 tu satisfacción actual en cada área y pulsa <strong>Consolidar Estado</strong>. Será tu punto de partida: las tareas que crees se vincularán a estas áreas y podrás comparar tu progreso en cada nueva evaluación.
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={onOpenHelp}
+            className="px-3.5 py-2 text-xs font-bold text-indigo-700 bg-white border border-indigo-200 rounded-xl hover:bg-indigo-100 transition-colors flex items-center gap-1.5 whitespace-nowrap"
+          >
+            <BookOpen className="w-3.5 h-3.5" />
+            <span>Cómo funciona la app</span>
+          </button>
+        </div>
+      )}
+
       {/* Encabezado y explicación metodológica */}
       <div className="bg-white rounded-2xl p-6 border border-slate-200 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
@@ -91,7 +120,7 @@ export const WheelOfLife: React.FC<WheelOfLifeProps> = ({ logs, onAppendSnapshot
             Rueda de la Vida & Trazabilidad Temporal Inmutable
           </h2>
           <p className="text-xs text-slate-500 mt-1 max-w-2xl leading-relaxed">
-            Módulo 1: Evaluación holística de la satisfacción autopercibida (escala 1 a 10). Cada modificación genera una captura inmutable <em>append-only</em> para trazar correlaciones con el esfuerzo diario de neuroplasticidad.
+            Módulo 1: Evaluación holística de la satisfacción autopercibida (escala 0 a 10). Cada modificación genera una captura inmutable <em>append-only</em> para trazar correlaciones con el esfuerzo diario de neuroplasticidad.
           </p>
         </div>
 
@@ -118,7 +147,7 @@ export const WheelOfLife: React.FC<WheelOfLifeProps> = ({ logs, onAppendSnapshot
           <div className="relative w-full max-w-[460px] aspect-square flex items-center justify-center">
             <svg width={size} height={size} className="w-full h-full overflow-visible">
               
-              {/* Círculos concéntricos de referencia (Niveles del 1 al 10) */}
+              {/* Círculos concéntricos de referencia (Niveles del 0 al 10) */}
               {[2, 4, 6, 8, 10].map((level) => (
                 <circle
                   key={level}
@@ -231,13 +260,13 @@ export const WheelOfLife: React.FC<WheelOfLifeProps> = ({ logs, onAppendSnapshot
         {/* COLUMNA DERECHA: AJUSTE DIRECTO DE RADIOS & SNAPSHOT APPEND-ONLY */}
         <div className="lg:col-span-5 space-y-5">
           
-          {/* Panel de Sliders / Manipulación Directa (1 al 10) */}
+          {/* Panel de Sliders / Manipulación Directa (0 al 10) */}
           <div className="bg-white rounded-2xl p-5 border border-slate-200 shadow-xs space-y-3.5">
             <div className="flex items-center justify-between pb-2 border-b border-slate-100">
               <h3 className="text-xs font-bold uppercase tracking-wider text-slate-700">
                 Puntuaciones por Segmento Vital
               </h3>
-              <span className="text-[11px] text-slate-400">Escala ordinal 1-10</span>
+              <span className="text-[11px] text-slate-400">Escala ordinal 0-10</span>
             </div>
 
             <div className="space-y-3 max-h-[300px] overflow-y-auto pr-2">
@@ -261,10 +290,11 @@ export const WheelOfLife: React.FC<WheelOfLifeProps> = ({ logs, onAppendSnapshot
                     </div>
                     <input
                       type="range"
-                      min="1"
+                      min="0"
                       max="10"
                       step="1"
                       value={currentVal}
+                      aria-label={`Puntuación de ${cat}`}
                       onChange={(e) => handleScoreChange(cat, parseInt(e.target.value, 10))}
                       className="w-full h-1.5 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-indigo-600"
                     />

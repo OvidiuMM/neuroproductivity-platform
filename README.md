@@ -4,7 +4,6 @@
 [![Version](https://img.shields.io/badge/Version-0.2.0-indigo.svg)](#)
 [![React](https://img.shields.io/badge/React-19.0-61dafb.svg?logo=react&logoColor=black)](https://react.dev/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.x-3178c6.svg?logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
-[![Google Auth](https://img.shields.io/badge/Google_Auth-Multi--Account-4285F4.svg?logo=google&logoColor=white)](#identificación-con-cuentas-de-google-y-espacios-aislados)
 [![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-4.x-38bdf8.svg?logo=tailwindcss&logoColor=white)](https://tailwindcss.com/)
 [![Architecture](https://img.shields.io/badge/Architecture-Offline--First-emerald.svg)](#arquitectura-técnica)
 
@@ -17,7 +16,8 @@ El sistema rechaza las restricciones coercitivas (como las rotaciones atencional
 ## 🧠 Fundamentos Metodológicos y Módulos del Sistema
 
 ### 1. Motor Estratégico: Rueda de la Vida & Trazabilidad Temporal Inmutable (`M1`)
-* **Gráfico Polar Interactivo SVG:** Mapeo de 7 dominios vitales (*Salud, Carrera Profesional, Finanzas, Familia, Ocio, Relaciones, Espiritualidad*) evaluados del 1 al 10 con arrastre y redibujado en tiempo real.
+* **Gráfico Polar Interactivo SVG:** Mapeo de 7 dominios vitales (*Salud, Carrera Profesional, Finanzas, Familia, Ocio, Relaciones, Espiritualidad*) evaluados del 0 al 10 con arrastre y redibujado en tiempo real.
+* **Primer arranque guiado:** Un perfil sin evaluaciones abre directamente la Rueda con todas las áreas a 0 y un aviso de primer paso que enlaza a la guía *Cómo funciona* (pantallas, relaciones entre módulos y dónde se guardan los datos).
 * **Persistencia Append-Only:** Prohibición estricta de sobrescritura (`UPDATE`). Cada consolidación genera un nuevo snapshot inmutable con sellos de tiempo precisos en formato UTC (Unix Epoch).
 * **Comparativa Histórica de Neuroplasticidad:** Superposición gráfica de polígonos translúcidos (actual vs. 30, 90 o 365 días) para verificar empíricamente el impacto del hábito sostenido y activar circuitos de recompensa dopaminérgicos.
 
@@ -49,7 +49,7 @@ El sistema rechaza las restricciones coercitivas (como las rotaciones atencional
 | **Frontend** | React 19, TypeScript, Vite, Tailwind CSS v4, Lucide Icons |
 | **Algoritmia** | Motor TF-IDF & Cosine Similarity en TS, Parser sintáctico de verbos en español |
 | **Visualización** | SVG interactivo polar / radar, Matemáticas polares de deformación poligonal |
-| **Almacenamiento** | Arquitectura *Offline-First* con IndexedDB y almacenamiento persistente local |
+| **Almacenamiento** | `localStorage` del navegador, con perfiles locales. No hay cuentas, inicio de sesión ni sincronización entre dispositivos |
 | **Hosting y API** | Firebase Hosting (SPA) y Cloud Functions for Firebase 2.ª gen con Express (`europe-west1`) |
 | **Referencia Backend** | PostgreSQL (Esquema DDL relacional con índices parciales B-Tree y tipos JSONB) |
 
@@ -205,7 +205,7 @@ El repositorio utiliza `package-lock.json` (en la raíz y en `functions/`) como 
 │   ├── services/
 │   │   ├── nlpEngine.ts         # Motor TF-IDF y Similitud del Coseno
 │   │   ├── syntaxAnalyzer.ts    # Analizador de verbos de acción física
-│   │   └── storage.ts           # Servicio Offline-First y snapshots append-only
+│   │   └── storage.ts           # Perfiles locales y datos en localStorage, snapshots append-only
 │   └── components/
 │       ├── Navbar.tsx           # Barra superior (Contrato de 3 Zonas)
 │       ├── TaskList.tsx         # Jerarquía Visual Gestalt (Top 10 vs Periférico)
@@ -214,6 +214,8 @@ El repositorio utiliza `package-lock.json` (en la raíz y en `functions/`) como 
 │       ├── BermudasShield.tsx   # Blindaje de Agenda y Correo Inverso
 │       ├── MeetingModal.tsx     # Agendamiento con bloqueo matutino y triple validación
 │       ├── EmailModal.tsx       # Cliente con redacción inversa y alerta no-scroll
+│       ├── UserSwitcher.tsx     # Perfiles locales de este navegador
+│       ├── HowItWorks.tsx       # Guía «Cómo funciona»: pantallas y relaciones entre módulos
 │       └── SystemRequirementsViewer.tsx # Banco de pruebas en vivo y specs BDD
 ```
 
