@@ -37,11 +37,13 @@
     "rules": "firestore.rules"
   },
   "emulators": {
-    "auth": { "port": 9099 },
-    "firestore": { "port": 8080 },
-    "functions": { "port": 5001 },
+    "auth": { "port": 9399 },
+    "firestore": { "port": 8281, "websocketPort": 9250 },
+    "functions": { "port": 5021 },
     "hosting": { "port": 5002 },
-    "ui": { "enabled": true },
+    "hub": { "port": 4420 },
+    "logging": { "port": 4520 },
+    "ui": { "enabled": true, "port": 4020 },
     "singleProjectMode": true
   }
 }

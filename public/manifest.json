@@ -1,7 +1,7 @@
 {
   "name": "NeuroProductividad - Dr. Benito Sipos",
   "short_name": "NeuroProd",
-  "version": "0.5.0",
+  "version": "0.6.0",
   "description": "Plataforma de gestión del tiempo y neuroproductividad basada en la metodología del Dr. Jonathan Benito Sipos",
   "start_url": "/",
   "display": "standalone",

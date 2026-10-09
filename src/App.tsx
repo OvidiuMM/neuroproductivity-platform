@@ -5,7 +5,8 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { GoogleAuthProvider, deleteUser, reauthenticateWithPopup, type User } from 'firebase/auth';
-import { AppTab, ListContext, TaskItem, WheelCategory, WheelOfLifeLog, MeetingGuard, EmailDraft, UserProfile } from './types';
+import { AppTab, ListContext, TaskItem, TaskStatus, WheelCategory, WheelOfLifeLog, MeetingGuard, EmailDraft, UserProfile } from './types';
+import { isArchived, withStatus } from './services/tasks';
 import { signOutAndClearCache, type FirebaseServices } from './services/firebase';
 import {
   appendWheelLog,
@@ -21,7 +22,8 @@ import {
 import { buildImport, clearLocalData, getLocalProfiles, type LocalProfileSummary } from './services/localData';
 import { Navbar } from './components/Navbar';
 import { TaskList } from './components/TaskList';
-import { TaskModal } from './components/TaskModal';
+import { TaskModal, type TaskFormData } from './components/TaskModal';
+import { ArchivedTasksModal } from './components/ArchivedTasksModal';
 import { WheelOfLife } from './components/WheelOfLife';
 import { BermudasShield } from './components/BermudasShield';
 import { MeetingModal } from './components/MeetingModal';
@@ -63,7 +65,8 @@ const downloadJson = (filename: string, data: unknown) => {
   link.href = url;
   link.download = filename;
   link.click();
-  URL.revokeObjectURL(url);
+  // Revocar en el mismo instante cancela la descarga en algunos navegadores
+  setTimeout(() => URL.revokeObjectURL(url), 1_000);
 };
 
 export default function App({ user, services }: AppProps) {
@@ -105,6 +108,8 @@ export default function App({ user, services }: AppProps) {
   // Modales
   const [isTaskModalOpen, setIsTaskModalOpen] = useState(false);
   const [editingTask, setEditingTask] = useState<TaskItem | null>(null);
+  const [newTaskIsSomeday, setNewTaskIsSomeday] = useState(false);
+  const [isArchiveOpen, setIsArchiveOpen] = useState(false);
   const [isMeetingModalOpen, setIsMeetingModalOpen] = useState(false);
   const [isEmailModalOpen, setIsEmailModalOpen] = useState(false);
 
@@ -148,7 +153,13 @@ export default function App({ user, services }: AppProps) {
   }, [db, uid]);
 
   // Las escrituras se reflejan al instante (caché local) y se sincronizan con el servidor en segundo plano
-  const handleSaveTask = (taskData: Omit<TaskItem, 'id' | 'createdAt' | 'updatedAt' | 'completed'>) => {
+  const openNewTask = (options?: { someday?: boolean }) => {
+    setEditingTask(null);
+    setNewTaskIsSomeday(Boolean(options?.someday));
+    setIsTaskModalOpen(true);
+  };
+
+  const handleSaveTask = (taskData: TaskFormData) => {
     const now = new Date().toISOString();
     if (editingTask) {
       const current = tasks.find((t) => t.id === editingTask.id) ?? editingTask;
@@ -162,7 +173,7 @@ export default function App({ user, services }: AppProps) {
         userId: uid,
         createdAt: now,
         updatedAt: now,
-        completed: false
+        status: 'PENDING'
       };
       saveTask(db, uid, newTask).catch(reportError('guardar la tarea'));
       showToast(
@@ -173,12 +184,12 @@ export default function App({ user, services }: AppProps) {
     }
   };
 
-  const handleToggleComplete = (id: string) => {
-    const task = tasks.find((t) => t.id === id);
-    if (!task) return;
-    saveTask(db, uid, { ...task, completed: !task.completed, updatedAt: new Date().toISOString() }).catch(
-      reportError('actualizar la tarea')
-    );
+  // "Hecha" archiva la tarea; cualquier otro estado la devuelve a su lista
+  const handleChangeStatus = (task: TaskItem, status: TaskStatus) => {
+    if (status === task.status) return;
+    saveTask(db, uid, withStatus(task, status)).catch(reportError('actualizar el estado'));
+    if (status === 'DONE') showToast('Tarea hecha y archivada. La encontrarás en «Archivadas».');
+    else if (isArchived(task)) showToast('Tarea reactivada: vuelve a su lista.');
   };
 
   const handleDeleteTask = (id: string) => {
@@ -249,9 +260,10 @@ export default function App({ user, services }: AppProps) {
   };
 
   // Conteo de tareas por contexto
-  const workCount = tasks.filter((t) => t.listContext === 'WORK' && !t.isSomeday && !t.completed).length;
-  const personalCount = tasks.filter((t) => t.listContext === 'PERSONAL' && !t.isSomeday && !t.completed).length;
-  const somedayCount = tasks.filter((t) => t.isSomeday).length;
+  const archivedTasks = tasks.filter(isArchived);
+  const workCount = tasks.filter((t) => t.listContext === 'WORK' && !t.isSomeday && !isArchived(t)).length;
+  const personalCount = tasks.filter((t) => t.listContext === 'PERSONAL' && !t.isSomeday && !isArchived(t)).length;
+  const somedayCount = tasks.filter((t) => t.isSomeday && !isArchived(t)).length;
 
   // Cálculo de promedio actual de la Rueda
   const latestLog = wheelLogs[wheelLogs.length - 1];
@@ -270,10 +282,7 @@ export default function App({ user, services }: AppProps) {
         setActiveContext={setActiveContext}
         activeUser={profile}
         onOpenAccount={() => setIsAccountMenuOpen(true)}
-        onOpenNewTask={() => {
-          setEditingTask(null);
-          setIsTaskModalOpen(true);
-        }}
+        onOpenNewTask={() => openNewTask()}
         onOpenNewMeeting={() => setIsMeetingModalOpen(true)}
         onOpenNewEmail={() => setIsEmailModalOpen(true)}
         taskCounts={{
@@ -300,7 +309,7 @@ export default function App({ user, services }: AppProps) {
           
           <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
             <div className="space-y-2 max-w-2xl">
-              <div className="flex items-center gap-2 text-xs font-semibold text-indigo-700">
+              <div className="flex flex-wrap items-center gap-2 text-xs font-semibold text-indigo-700">
                 <Brain className="w-4 h-4" />
                 <span>Andamiaje Digital para la Corteza Prefrontal</span>
                 <span className="text-slate-300">·</span>
@@ -380,16 +389,15 @@ export default function App({ user, services }: AppProps) {
           <TaskList
             tasks={tasks}
             activeContext={activeContext}
-            onToggleComplete={handleToggleComplete}
+            archivedCount={archivedTasks.length}
+            onChangeStatus={handleChangeStatus}
             onDeleteTask={handleDeleteTask}
             onEditTask={(task) => {
               setEditingTask(task);
               setIsTaskModalOpen(true);
             }}
-            onOpenNewTask={() => {
-              setEditingTask(null);
-              setIsTaskModalOpen(true);
-            }}
+            onOpenNewTask={openNewTask}
+            onOpenArchive={() => setIsArchiveOpen(true)}
           />
         )}
 
@@ -426,14 +434,14 @@ export default function App({ user, services }: AppProps) {
       {/* FOOTER DISCRETO Y EDITORIAL */}
       <footer className="border-t border-slate-200 bg-white py-6 mt-12 text-xs text-slate-500">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between gap-3">
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center justify-center gap-2">
             <span className="font-bold text-slate-700">NeuroProductividad v{__APP_VERSION__}</span>
             <span className="text-slate-300">·</span>
             <p className="text-slate-500">
               Basado en la metodología de Dr. Jonathan Benito Sipos (UAM).
             </p>
           </div>
-          <div className="flex items-center gap-3 text-slate-600">
+          <div className="flex flex-wrap items-center justify-center gap-3 text-slate-600">
             <button
               onClick={() => setShowSplash(true)}
               className="text-[11px] text-indigo-600 hover:text-indigo-800 font-semibold px-2 py-0.5 rounded bg-indigo-50 border border-indigo-200 transition-colors"
@@ -473,7 +481,17 @@ export default function App({ user, services }: AppProps) {
         }}
         onSaveTask={handleSaveTask}
         initialContext={activeContext}
+        initialSomeday={newTaskIsSomeday}
         editingTask={editingTask}
+      />
+
+      {/* VENTANA DE TAREAS ARCHIVADAS (ESTADO HECHA) */}
+      <ArchivedTasksModal
+        isOpen={isArchiveOpen}
+        onClose={() => setIsArchiveOpen(false)}
+        tasks={archivedTasks}
+        onChangeStatus={handleChangeStatus}
+        onDeleteTask={handleDeleteTask}
       />
 
       {/* MODAL 2: AGENDA DE REUNIONES CON TRIPLE VALIDACIÓN Y BLOQUEO MATUTINO */}
