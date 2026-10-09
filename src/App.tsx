@@ -438,7 +438,7 @@ export default function App({ user, services }: AppProps) {
             <span className="font-bold text-slate-700">NeuroProductividad v{__APP_VERSION__}</span>
             <span className="text-slate-300">·</span>
             <p className="text-slate-500">
-              Basado en la metodología de Dr. Jonathan Benito Sipos (UAM).
+              Inspirada en la metodología del Dr. Jonathan Benito Sipos (UAM).
             </p>
           </div>
           <div className="flex flex-wrap items-center justify-center gap-3 text-slate-600">
