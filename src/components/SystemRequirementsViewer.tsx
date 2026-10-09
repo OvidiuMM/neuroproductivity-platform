@@ -128,7 +128,7 @@ export const SystemRequirementsViewer: React.FC = () => {
                   type="text"
                   value={testTaskTitle}
                   onChange={(e) => setTestTaskTitle(e.target.value)}
-                  className="flex-1 px-3 py-2 text-xs rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-indigo-400 font-medium"
+                  className="min-w-0 flex-1 px-3 py-2 text-xs rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-indigo-400 font-medium"
                 />
               </div>
 

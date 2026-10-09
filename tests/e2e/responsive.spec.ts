@@ -7,7 +7,7 @@ const TABS = {
   desktop: ['Listas Duales', 'Rueda de la Vida', 'Blindaje Bermudas', 'Requisitos', 'Cómo funciona']
 };
 
-for (const width of [375, 768, 1280]) {
+for (const width of [360, 375, 768, 1280]) {
   test(`no horizontal overflow at ${width}px`, async ({ page }) => {
     await page.setViewportSize({ width, height: 900 });
     await page.goto('/');

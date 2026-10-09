@@ -548,7 +548,7 @@ export const TaskModal: React.FC<TaskModalProps> = ({
                 value={newObsText}
                 onChange={(e) => setNewObsText(e.target.value)}
                 placeholder="Añadir nota, enlace o sub-requisito..."
-                className="flex-1 px-3 py-1.5 text-xs rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-indigo-400"
+                className="min-w-0 flex-1 px-3 py-1.5 text-xs rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-indigo-400"
                 onKeyDown={(e) => {
                   if (e.key === 'Enter') {
                     e.preventDefault();
