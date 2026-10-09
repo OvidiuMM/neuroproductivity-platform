@@ -5,7 +5,7 @@ test('creates a task and persists it after reloading', async ({ page }) => {
   await page.goto('/');
   await signInWithGoogle(page);
 
-  await expect(page.getByText('Basado en la metodología de Dr. Jonathan Benito Sipos').first()).toBeVisible();
+  await expect(page.getByText('Inspirada en la metodología del Dr. Jonathan Benito Sipos').first()).toBeVisible();
   await page.getByRole('button', { name: 'Nueva Tarea' }).click();
 
   const title = `Llamar al proveedor E2E ${Date.now()}`;

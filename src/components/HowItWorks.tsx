@@ -57,7 +57,7 @@ export const HowItWorks: React.FC<HowItWorksProps> = ({ onNavigate }) => {
           Cómo funciona la app
         </h2>
         <p className="text-sm text-slate-600 leading-relaxed max-w-3xl">
-          NeuroProductividad aplica la metodología del Dr. Jonathan Benito Sipos: primero decides qué áreas de tu vida quieres mejorar, luego conviertes esa intención en acciones concretas y, por último, proteges el tiempo que necesitas para hacerlas.
+          NeuroProductividad se inspira en la metodología del Dr. Jonathan Benito Sipos: primero decides qué áreas de tu vida quieres mejorar, luego conviertes esa intención en acciones concretas y, por último, proteges el tiempo que necesitas para hacerlas.
         </p>
       </div>
 
