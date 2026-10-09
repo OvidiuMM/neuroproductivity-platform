@@ -39,7 +39,7 @@ export const AddToCalendarMenu: React.FC<AddToCalendarMenuProps> = ({ task }) =>
         disabled
         className="p-1.5 text-slate-300 rounded-lg cursor-not-allowed"
         title="Pon una fecha límite para añadir la tarea al calendario"
-        aria-label="Añadir al calendario (necesita fecha límite)"
+        aria-label={`Añadir «${task.title}» al calendario (necesita fecha límite)`}
       >
         <CalendarPlus className="w-4 h-4" />
       </button>
@@ -55,7 +55,7 @@ export const AddToCalendarMenu: React.FC<AddToCalendarMenuProps> = ({ task }) =>
         onClick={() => setIsOpen((open) => !open)}
         className="p-1.5 text-slate-400 hover:text-indigo-600 rounded-lg hover:bg-slate-100 transition-colors"
         title="Añadir al calendario"
-        aria-label="Añadir al calendario"
+        aria-label={`Añadir «${task.title}» al calendario`}
         aria-expanded={isOpen}
       >
         <CalendarPlus className="w-4 h-4" />

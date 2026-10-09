@@ -58,10 +58,23 @@ test('archives a task when marked done and reactivates it from the archive', asy
   await page.getByLabel(`Estado de «${title}»`).selectOption('DONE');
   await expect(page.getByRole('heading', { name: title })).toBeHidden();
 
-  await page.getByRole('button', { name: /Archivadas/ }).click();
+  const archiveButton = page.getByRole('button', { name: /Archivadas/ });
+  await archiveButton.click();
   const archive = page.getByRole('dialog', { name: 'Tareas archivadas' });
   await expect(archive.getByText(title)).toBeVisible();
 
+  // Ventana modal accesible: el foco entra al abrir, Tab no sale de ella y Escape la cierra devolviendo el foco
+  await expect(archive).toHaveAttribute('aria-modal', 'true');
+  await expect(archive.getByLabel('Buscar en las tareas archivadas')).toBeFocused();
+  for (let i = 0; i < 6; i++) {
+    await page.keyboard.press('Tab');
+    expect(await archive.evaluate((dialog) => dialog.contains(document.activeElement))).toBe(true);
+  }
+  await page.keyboard.press('Escape');
+  await expect(archive).toBeHidden();
+  await expect(archiveButton).toBeFocused();
+
+  await archiveButton.click();
   await archive.getByLabel(`Estado de «${title}»`).selectOption('IN_PROGRESS');
   await expect(archive.getByText(title)).toBeHidden();
   await archive.getByRole('button', { name: 'Cerrar' }).click();
@@ -79,7 +92,7 @@ test('adds a task with a due date to Google, Outlook or an .ics calendar file', 
   await page.getByRole('button', { name: 'Capturar Primera Acción' }).click();
   await fillAndSaveTask(page, { title, dueDate: localDateFromToday(10), dueTime: '10:30' });
 
-  await page.getByRole('button', { name: 'Añadir al calendario', exact: true }).click();
+  await page.getByRole('button', { name: `Añadir «${title}» al calendario`, exact: true }).click();
   const menu = page.getByRole('menu');
 
   const google = new URL((await menu.getByRole('menuitem', { name: 'Google Calendar' }).getAttribute('href'))!);
@@ -106,8 +119,33 @@ test('disables the calendar button for tasks without a due date', async ({ page 
   await signInWithGoogle(page);
   await page.getByRole('button', { name: 'Listas Duales' }).click();
 
+  const title = `Llamar al electricista ${unique()}`;
   await page.getByRole('button', { name: 'Capturar Primera Acción' }).click();
-  await fillAndSaveTask(page, { title: `Llamar al electricista ${unique()}` });
+  await fillAndSaveTask(page, { title });
 
-  await expect(page.getByRole('button', { name: 'Añadir al calendario (necesita fecha límite)' })).toBeDisabled();
+  await expect(page.getByRole('button', { name: `Añadir «${title}» al calendario (necesita fecha límite)` })).toBeDisabled();
+});
+
+test('updates deadline colors while the page stays open', async ({ page }) => {
+  // Reloj de Playwright: el tiempo avanza con normalidad y fastForward lo adelanta, disparando los temporizadores
+  await page.clock.install();
+  await page.goto('/');
+  await signInWithGoogle(page);
+  await page.getByRole('button', { name: 'Listas Duales' }).click();
+
+  // Vence dentro de una semana y 3 minutos: al principio no tiene color; al adelantar 5 minutos pasa a violeta
+  const due = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000 + 3 * 60 * 1000);
+  const pad = (n: number) => String(n).padStart(2, '0');
+  const title = `Llamar al gestor ${unique()}`;
+  await page.getByRole('button', { name: 'Capturar Primera Acción' }).click();
+  await fillAndSaveTask(page, {
+    title,
+    dueDate: `${due.getFullYear()}-${pad(due.getMonth() + 1)}-${pad(due.getDate())}`,
+    dueTime: `${pad(due.getHours())}:${pad(due.getMinutes())}`
+  });
+
+  const heading = page.getByRole('heading', { name: title });
+  await expect(heading).not.toHaveClass(/text-violet-600/);
+  await page.clock.fastForward('05:00');
+  await expect(heading).toHaveClass(/text-violet-600/);
 });
