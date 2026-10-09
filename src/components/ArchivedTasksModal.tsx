@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
+import React, { useRef, useState } from 'react';
 import { Archive, Search, Trash2, X } from 'lucide-react';
 import { TaskItem, TaskStatus } from '../types';
+import { useModalFocus } from '../hooks/useModalFocus';
 import { TaskStatusSelect } from './TaskStatusSelect';
 import { TaskDates } from './TaskDates';
 
@@ -17,6 +18,8 @@ const doneFormat = new Intl.DateTimeFormat('es-ES', { day: 'numeric', month: 'sh
 // Tareas hechas de las dos listas; cambiar el estado las devuelve a su lista
 export const ArchivedTasksModal: React.FC<ArchivedTasksModalProps> = ({ isOpen, onClose, tasks, onChangeStatus, onDeleteTask }) => {
   const [query, setQuery] = useState('');
+  const dialogRef = useRef<HTMLDivElement>(null);
+  useModalFocus(isOpen, dialogRef, onClose);
 
   if (!isOpen) return null;
 
@@ -28,7 +31,9 @@ export const ArchivedTasksModal: React.FC<ArchivedTasksModalProps> = ({ isOpen, 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/70 backdrop-blur-xs overflow-y-auto">
       <div
+        ref={dialogRef}
         role="dialog"
+        aria-modal="true"
         aria-label="Tareas archivadas"
         className="bg-white rounded-3xl shadow-2xl border border-slate-200 w-full max-w-2xl my-8 overflow-hidden animate-in fade-in zoom-in-95 duration-200"
       >
@@ -59,6 +64,7 @@ export const ArchivedTasksModal: React.FC<ArchivedTasksModalProps> = ({ isOpen, 
               onChange={(e) => setQuery(e.target.value)}
               placeholder="Buscar en las tareas archivadas…"
               aria-label="Buscar en las tareas archivadas"
+              data-autofocus
               className="w-full pl-9 pr-3 py-2 text-xs rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-indigo-400"
             />
           </label>

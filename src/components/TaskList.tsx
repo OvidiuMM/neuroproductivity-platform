@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { TaskItem, ListContext, TaskPriority, TaskStatus } from '../types';
 import { DEADLINE_TITLE_CLASS, dueMoment, getDeadlineState } from '../services/tasks';
+import { useNow } from '../hooks/useNow';
 import { TaskStatusSelect } from './TaskStatusSelect';
 import { TaskDates } from './TaskDates';
 import { AddToCalendarMenu } from './AddToCalendarMenu';
@@ -84,8 +85,11 @@ export const TaskList: React.FC<TaskListProps> = ({
   const top10Tasks = sortedActiveTasks.slice(0, 10);
   const peripheralTasks = sortedActiveTasks.slice(10);
 
+  // Reloj de la lista: los colores de plazo cambian solos al cruzar la semana o el vencimiento
+  const now = useNow();
+
   // El color de plazo sustituye al color base: con las dos clases, el orden del CSS decidiría cuál gana
-  const titleColor = (task: TaskItem, base: string) => DEADLINE_TITLE_CLASS[getDeadlineState(task)] || base;
+  const titleColor = (task: TaskItem, base: string) => DEADLINE_TITLE_CLASS[getDeadlineState(task, now)] || base;
 
   const getPriorityBadge = (p: TaskPriority) => {
     switch (p) {
@@ -276,7 +280,7 @@ export const TaskList: React.FC<TaskListProps> = ({
 
                         {/* Fechas, metadatos y observaciones JSONB */}
                         <div className="flex flex-wrap items-center gap-x-3 gap-y-1 pt-1 text-[11px] text-slate-400 font-mono">
-                          <TaskDates task={task} />
+                          <TaskDates task={task} now={now} />
 
                           <span className="flex items-center gap-1">
                             <Clock className="w-3 h-3" />
@@ -358,7 +362,7 @@ export const TaskList: React.FC<TaskListProps> = ({
                     </div>
 
                     <div className="flex flex-wrap items-center gap-1.5 shrink-0 text-[10px]">
-                      <TaskDates task={task} />
+                      <TaskDates task={task} now={now} />
                       <TaskStatusSelect
                         size="xs"
                         status={task.status}
@@ -428,7 +432,7 @@ export const TaskList: React.FC<TaskListProps> = ({
                           Área: {task.wheelCategory}
                         </span>
                       )}
-                      <TaskDates task={task} />
+                      <TaskDates task={task} now={now} />
                     </div>
                   </div>
 
