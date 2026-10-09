@@ -238,7 +238,7 @@ export const MeetingModal: React.FC<MeetingModalProps> = ({
                 value={agendaInput}
                 onChange={(e) => setAgendaInput(e.target.value)}
                 placeholder="Punto concreto que se va a tratar..."
-                className="flex-1 px-3 py-2 text-xs rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-indigo-400"
+                className="min-w-0 flex-1 px-3 py-2 text-xs rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-indigo-400"
                 onKeyDown={(e) => {
                   if (e.key === 'Enter') {
                     e.preventDefault();

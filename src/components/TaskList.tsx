@@ -1,8 +1,11 @@
 import React, { useState } from 'react';
-import { TaskItem, ListContext, TaskPriority } from '../types';
+import { TaskItem, ListContext, TaskPriority, TaskStatus } from '../types';
+import { DEADLINE_TITLE_CLASS, dueMoment, getDeadlineState } from '../services/tasks';
+import { useNow } from '../hooks/useNow';
+import { TaskStatusSelect } from './TaskStatusSelect';
+import { TaskDates } from './TaskDates';
+import { AddToCalendarMenu } from './AddToCalendarMenu';
 import {
-  CheckCircle2,
-  Circle,
   Clock,
   Sparkles,
   Flame,
@@ -13,33 +16,39 @@ import {
   Trash2,
   Edit2,
   Archive,
-  ChevronDown,
   Layers,
-  ArrowUpDown
+  ArrowUpDown,
+  CheckCircle2
 } from 'lucide-react';
 
 interface TaskListProps {
   tasks: TaskItem[];
   activeContext: ListContext;
-  onToggleComplete: (id: string) => void;
+  archivedCount: number;
+  onChangeStatus: (task: TaskItem, status: TaskStatus) => void;
   onDeleteTask: (id: string) => void;
   onEditTask: (task: TaskItem) => void;
-  onOpenNewTask: () => void;
+  onOpenNewTask: (options?: { someday?: boolean }) => void;
+  onOpenArchive: () => void;
 }
+
+type SortBy = 'priority' | 'deadline' | 'date' | 'category';
 
 export const TaskList: React.FC<TaskListProps> = ({
   tasks,
   activeContext,
-  onToggleComplete,
+  archivedCount,
+  onChangeStatus,
   onDeleteTask,
   onEditTask,
-  onOpenNewTask
+  onOpenNewTask,
+  onOpenArchive
 }) => {
   const [viewMode, setViewMode] = useState<'active' | 'someday'>('active');
-  const [sortBy, setSortBy] = useState<'priority' | 'date' | 'category'>('priority');
+  const [sortBy, setSortBy] = useState<SortBy>('priority');
 
-  // Filtrado por contexto estricto (Segregación Inquebrantable)
-  const contextTasks = tasks.filter((t) => t.listContext === activeContext);
+  // Filtrado por contexto estricto (Segregación Inquebrantable); las tareas hechas están archivadas
+  const contextTasks = tasks.filter((t) => t.listContext === activeContext && t.status !== 'DONE');
 
   // Separación entre tareas activas y el sumidero cognitivo "Quizá" / "Algún día"
   const activeTasks = contextTasks.filter((t) => !t.isSomeday);
@@ -54,13 +63,15 @@ export const TaskList: React.FC<TaskListProps> = ({
   };
 
   const sortedActiveTasks = [...activeTasks].sort((a, b) => {
-    // Si una está completada, enviarla al final
-    if (a.completed !== b.completed) return a.completed ? 1 : -1;
-
     if (sortBy === 'priority') {
       const pDiff = priorityOrder[b.priority] - priorityOrder[a.priority];
       if (pDiff !== 0) return pDiff;
       return new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime();
+    } else if (sortBy === 'deadline') {
+      // Las tareas sin fecha límite van al final
+      const dueA = dueMoment(a)?.getTime() ?? Infinity;
+      const dueB = dueMoment(b)?.getTime() ?? Infinity;
+      return dueA - dueB;
     } else if (sortBy === 'category') {
       const catA = a.wheelCategory || '';
       const catB = b.wheelCategory || '';
@@ -73,6 +84,12 @@ export const TaskList: React.FC<TaskListProps> = ({
   // Jerarquía Visual: Separar Top 10 del resto
   const top10Tasks = sortedActiveTasks.slice(0, 10);
   const peripheralTasks = sortedActiveTasks.slice(10);
+
+  // Reloj de la lista: los colores de plazo cambian solos al cruzar la semana o el vencimiento
+  const now = useNow();
+
+  // El color de plazo sustituye al color base: con las dos clases, el orden del CSS decidiría cuál gana
+  const titleColor = (task: TaskItem, base: string) => DEADLINE_TITLE_CLASS[getDeadlineState(task, now)] || base;
 
   const getPriorityBadge = (p: TaskPriority) => {
     switch (p) {
@@ -107,14 +124,26 @@ export const TaskList: React.FC<TaskListProps> = ({
     }
   };
 
+  // Botón al final de la lista para añadir otra tarea sin volver arriba
+  const addTaskButton = (someday: boolean) => (
+    <button
+      type="button"
+      onClick={() => onOpenNewTask({ someday })}
+      className="w-full py-3 rounded-2xl border-2 border-dashed border-slate-300 text-slate-600 hover:text-slate-900 hover:border-slate-400 hover:bg-white text-xs font-bold flex items-center justify-center gap-2 transition-colors"
+    >
+      <Plus className="w-4 h-4" />
+      Añadir tarea
+    </button>
+  );
+
   return (
     <div className="space-y-6">
-      
+
       {/* Barra de control y pestañas del Gestor Dual */}
-      <div className="bg-white rounded-2xl p-5 border border-slate-200 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        
-        {/* Pestañas: Top 10 Activo vs Opciones Futuras */}
-        <div className="flex items-center gap-2">
+      <div className="bg-white rounded-2xl p-5 border border-slate-200 shadow-xs flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+
+        {/* Pestañas: Top 10 Activo vs Opciones Futuras, y acceso al archivo */}
+        <div className="flex flex-wrap items-center gap-2">
           <button
             onClick={() => setViewMode('active')}
             className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 ${
@@ -144,21 +173,33 @@ export const TaskList: React.FC<TaskListProps> = ({
               {somedayTasks.length}
             </span>
           </button>
+
+          <button
+            onClick={onOpenArchive}
+            className="px-3.5 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 text-emerald-700 hover:bg-emerald-50 border border-emerald-200"
+          >
+            <CheckCircle2 className="w-3.5 h-3.5" />
+            <span>Archivadas</span>
+            <span className="text-[10px] bg-emerald-100 text-emerald-800 px-2 py-0.2 rounded-full font-mono">
+              {archivedCount}
+            </span>
+          </button>
         </div>
 
         {/* Selector de ordenación multidimensional */}
         {viewMode === 'active' && (
-          <div className="flex items-center gap-2 text-xs">
+          <div className="flex flex-wrap items-center gap-2 text-xs">
             <span className="text-slate-500 flex items-center gap-1">
               <ArrowUpDown className="w-3.5 h-3.5" />
               Ordenar por:
             </span>
             <select
               value={sortBy}
-              onChange={(e) => setSortBy(e.target.value as any)}
-              className="px-2.5 py-1.5 rounded-lg border border-slate-200 text-xs font-semibold bg-white text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-400"
+              onChange={(e) => setSortBy(e.target.value as SortBy)}
+              className="max-w-full px-2.5 py-1.5 rounded-lg border border-slate-200 text-xs font-semibold bg-white text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-400"
             >
               <option value="priority">Prioridad Ordinal (Crítica → Baja)</option>
+              <option value="deadline">Fecha límite (más próxima primero)</option>
               <option value="date">Última Modificación (Descendente)</option>
               <option value="category">Categoría de la Rueda de la Vida</option>
             </select>
@@ -172,7 +213,7 @@ export const TaskList: React.FC<TaskListProps> = ({
 
           {/* ZONA 1: TOP 10 OPERATIVO (ALTA ELEVACIÓN, PESO 700, CONTRASTE ELEVADO) */}
           <div className="space-y-3">
-            <div className="flex items-center justify-between px-1">
+            <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1 px-1">
               <div className="flex items-center gap-2">
                 <span className="w-2.5 h-2.5 rounded-full bg-indigo-600 animate-pulse" />
                 <h3 className="text-xs font-bold uppercase tracking-wider text-slate-900">
@@ -188,7 +229,7 @@ export const TaskList: React.FC<TaskListProps> = ({
               <div className="p-8 text-center bg-white rounded-2xl border border-slate-200 text-slate-500 space-y-3">
                 <p className="text-sm font-semibold">No hay acciones operativas activas en esta lista.</p>
                 <button
-                  onClick={onOpenNewTask}
+                  onClick={() => onOpenNewTask()}
                   className="px-4 py-2 bg-slate-900 text-white rounded-xl text-xs font-bold inline-flex items-center gap-2"
                 >
                   <Plus className="w-4 h-4" /> Capturar Primera Acción
@@ -199,11 +240,7 @@ export const TaskList: React.FC<TaskListProps> = ({
                 {top10Tasks.map((task, index) => (
                   <div
                     key={task.id}
-                    className={`p-4 sm:p-5 rounded-2xl border transition-all duration-200 ${
-                      task.completed
-                        ? 'bg-slate-50/70 border-slate-200 opacity-60'
-                        : 'bg-white border-slate-200/90 shadow-md shadow-slate-900/4 hover:shadow-lg hover:border-slate-300'
-                    }`}
+                    className="p-4 sm:p-5 rounded-2xl border transition-all duration-200 bg-white border-slate-200/90 shadow-md shadow-slate-900/4 hover:shadow-lg hover:border-slate-300"
                   >
                     <div className="flex items-start gap-3 sm:gap-4">
                       {/* Índice 1 al 10 con destacado */}
@@ -211,30 +248,21 @@ export const TaskList: React.FC<TaskListProps> = ({
                         {index + 1}
                       </span>
 
-                      {/* Botón de completar */}
-                      <button
-                        onClick={() => onToggleComplete(task.id)}
-                        className="mt-0.5 text-slate-400 hover:text-emerald-600 transition-colors shrink-0"
-                      >
-                        {task.completed ? (
-                          <CheckCircle2 className="w-5 h-5 text-emerald-600" />
-                        ) : (
-                          <Circle className="w-5 h-5 text-slate-300 hover:text-slate-500" />
-                        )}
-                      </button>
-
                       {/* Contenido principal con font-weight: 700 y espaciado expandido */}
                       <div className="flex-1 min-w-0 space-y-1.5">
                         <div className="flex flex-wrap items-center gap-2 justify-between">
                           <h4
-                            className={`text-sm sm:text-base font-bold text-slate-900 leading-snug tracking-tight ${
-                              task.completed ? 'line-through text-slate-400' : ''
-                            }`}
+                            className={`text-sm sm:text-base font-bold leading-snug tracking-tight break-words ${titleColor(task, 'text-slate-900')}`}
                           >
                             {task.title}
                           </h4>
 
-                          <div className="flex items-center gap-2 shrink-0">
+                          <div className="flex flex-wrap items-center gap-2">
+                            <TaskStatusSelect
+                              status={task.status}
+                              taskTitle={task.title}
+                              onChange={(status) => onChangeStatus(task, status)}
+                            />
                             {getPriorityBadge(task.priority)}
 
                             {task.wheelCategory && (
@@ -246,12 +274,14 @@ export const TaskList: React.FC<TaskListProps> = ({
                           </div>
                         </div>
 
-                        <p className="text-xs text-slate-600 leading-relaxed">
+                        <p className="text-xs text-slate-600 leading-relaxed break-words">
                           {task.description}
                         </p>
 
-                        {/* Metadatos y Observaciones JSONB */}
-                        <div className="flex flex-wrap items-center gap-3 pt-1 text-[11px] text-slate-400 font-mono">
+                        {/* Fechas, metadatos y observaciones JSONB */}
+                        <div className="flex flex-wrap items-center gap-x-3 gap-y-1 pt-1 text-[11px] text-slate-400 font-mono">
+                          <TaskDates task={task} now={now} />
+
                           <span className="flex items-center gap-1">
                             <Clock className="w-3 h-3" />
                             Actualizada: {new Date(task.updatedAt).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })}
@@ -272,11 +302,13 @@ export const TaskList: React.FC<TaskListProps> = ({
                       </div>
 
                       {/* Acciones de tarea */}
-                      <div className="flex items-center gap-1 shrink-0">
+                      <div className="flex flex-col sm:flex-row items-center gap-1 shrink-0">
+                        <AddToCalendarMenu task={task} />
                         <button
                           onClick={() => onEditTask(task)}
                           className="p-1.5 text-slate-400 hover:text-indigo-600 rounded-lg hover:bg-slate-100 transition-colors"
                           title="Editar tarea"
+                          aria-label={`Editar «${task.title}»`}
                         >
                           <Edit2 className="w-4 h-4" />
                         </button>
@@ -284,6 +316,7 @@ export const TaskList: React.FC<TaskListProps> = ({
                           onClick={() => onDeleteTask(task.id)}
                           className="p-1.5 text-slate-400 hover:text-red-600 rounded-lg hover:bg-slate-100 transition-colors"
                           title="Eliminar tarea"
+                          aria-label={`Eliminar «${task.title}»`}
                         >
                           <Trash2 className="w-4 h-4" />
                         </button>
@@ -299,7 +332,7 @@ export const TaskList: React.FC<TaskListProps> = ({
           {/* ZONA 2: TAREAS SECUNDARIAS (ÍNDICE 11 EN ADELANTE: DISEÑO MINIMALISTA, SIN SOMBRAS, BAJO CONTRASTE) */}
           {peripheralTasks.length > 0 && (
             <div className="pt-4 border-t border-slate-200 space-y-3">
-              <div className="flex items-center justify-between px-1">
+              <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1 px-1">
                 <h3 className="text-xs font-bold uppercase tracking-wider text-slate-500">
                   Inventario Secundario (Posición 11 en adelante · Campo Periférico)
                 </h3>
@@ -312,45 +345,45 @@ export const TaskList: React.FC<TaskListProps> = ({
                 {peripheralTasks.map((task, index) => (
                   <div
                     key={task.id}
-                    className="p-2.5 rounded-xl border border-slate-100 bg-slate-50/50 hover:bg-white text-slate-600 text-xs transition-colors flex items-center justify-between gap-3"
+                    className="p-2.5 rounded-xl border border-slate-100 bg-slate-50/50 hover:bg-white text-slate-600 text-xs transition-colors flex flex-wrap items-center justify-between gap-x-3 gap-y-1.5"
                   >
-                    <div className="flex items-center gap-3 min-w-0">
+                    <div className="flex items-center gap-3 min-w-0 flex-1">
                       <span className="text-[10px] font-mono text-slate-400 w-5 text-right shrink-0">
                         {index + 11}.
                       </span>
-                      <button
-                        onClick={() => onToggleComplete(task.id)}
-                        className="text-slate-300 hover:text-emerald-600 shrink-0"
-                      >
-                        {task.completed ? (
-                          <CheckCircle2 className="w-4 h-4 text-emerald-600" />
-                        ) : (
-                          <Circle className="w-4 h-4" />
-                        )}
-                      </button>
-                      <span className={`truncate ${task.completed ? 'line-through text-slate-400' : 'text-slate-700'}`}>
+                      <span className={`truncate ${titleColor(task, 'text-slate-700')}`}>
                         {task.title}
                       </span>
                       {task.wheelCategory && (
-                        <span className="text-[10px] text-slate-400 font-medium">
+                        <span className="hidden sm:inline text-[10px] text-slate-400 font-medium shrink-0">
                           · {task.wheelCategory}
                         </span>
                       )}
                     </div>
 
-                    <div className="flex items-center gap-1.5 shrink-0">
+                    <div className="flex flex-wrap items-center gap-1.5 shrink-0 text-[10px]">
+                      <TaskDates task={task} now={now} />
+                      <TaskStatusSelect
+                        size="xs"
+                        status={task.status}
+                        taskTitle={task.title}
+                        onChange={(status) => onChangeStatus(task, status)}
+                      />
                       <span className="text-[10px] text-slate-400 uppercase font-mono">
                         {task.priority}
                       </span>
+                      <AddToCalendarMenu task={task} />
                       <button
                         onClick={() => onEditTask(task)}
                         className="p-1 text-slate-400 hover:text-indigo-600"
+                        aria-label={`Editar «${task.title}»`}
                       >
                         <Edit2 className="w-3 h-3" />
                       </button>
                       <button
                         onClick={() => onDeleteTask(task.id)}
                         className="p-1 text-slate-400 hover:text-red-600"
+                        aria-label={`Eliminar «${task.title}»`}
                       >
                         <Trash2 className="w-3.5 h-3.5" />
                       </button>
@@ -361,6 +394,7 @@ export const TaskList: React.FC<TaskListProps> = ({
             </div>
           )}
 
+          {top10Tasks.length > 0 && addTaskButton(false)}
         </div>
       )}
 
@@ -385,21 +419,30 @@ export const TaskList: React.FC<TaskListProps> = ({
               {somedayTasks.map((task) => (
                 <div
                   key={task.id}
-                  className="p-4 bg-white rounded-2xl border border-slate-200 shadow-xs flex items-start justify-between gap-4"
+                  className="p-4 bg-white rounded-2xl border border-slate-200 shadow-xs flex flex-wrap items-start justify-between gap-4"
                 >
-                  <div className="space-y-1">
-                    <h4 className="text-sm font-semibold text-slate-900">
+                  <div className="space-y-1 min-w-0 flex-1">
+                    <h4 className={`text-sm font-semibold break-words ${titleColor(task, 'text-slate-900')}`}>
                       {task.title}
                     </h4>
-                    <p className="text-xs text-slate-600">{task.description}</p>
-                    {task.wheelCategory && (
-                      <span className="inline-block text-[10px] font-semibold text-slate-500 bg-slate-100 px-2 py-0.5 rounded-md mt-1">
-                        Área: {task.wheelCategory}
-                      </span>
-                    )}
+                    <p className="text-xs text-slate-600 break-words">{task.description}</p>
+                    <div className="flex flex-wrap items-center gap-2 mt-1 text-[11px]">
+                      {task.wheelCategory && (
+                        <span className="inline-block text-[10px] font-semibold text-slate-500 bg-slate-100 px-2 py-0.5 rounded-md">
+                          Área: {task.wheelCategory}
+                        </span>
+                      )}
+                      <TaskDates task={task} now={now} />
+                    </div>
                   </div>
 
                   <div className="flex items-center gap-2">
+                    <TaskStatusSelect
+                      status={task.status}
+                      taskTitle={task.title}
+                      onChange={(status) => onChangeStatus(task, status)}
+                    />
+                    <AddToCalendarMenu task={task} />
                     <button
                       onClick={() => onEditTask(task)}
                       className="px-2.5 py-1 text-xs font-semibold bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg transition-colors"
@@ -409,6 +452,7 @@ export const TaskList: React.FC<TaskListProps> = ({
                     <button
                       onClick={() => onDeleteTask(task.id)}
                       className="p-1.5 text-slate-400 hover:text-red-600"
+                      aria-label={`Eliminar «${task.title}»`}
                     >
                       <Trash2 className="w-4 h-4" />
                     </button>
@@ -417,6 +461,8 @@ export const TaskList: React.FC<TaskListProps> = ({
               ))}
             </div>
           )}
+
+          {addTaskButton(true)}
         </div>
       )}
 

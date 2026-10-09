@@ -10,6 +10,10 @@ interface WheelOfLifeProps {
   onOpenHelp: () => void;
 }
 
+// Margen del viewBox alrededor del círculo para que quepan las etiquetas de las áreas
+const LABEL_MARGIN_X = 100;
+const LABEL_MARGIN_Y = 16;
+
 const CATEGORIES: WheelCategory[] = [
   'Salud',
   'Carrera Profesional',
@@ -145,8 +149,14 @@ export const WheelOfLife: React.FC<WheelOfLifeProps> = ({ logs, showFirstStep, o
         {/* COLUMNA IZQUIERDA: GRÁFICO POLAR INTERACTIVO SVG */}
         <div className="lg:col-span-7 bg-white rounded-2xl p-6 border border-slate-200 shadow-xs flex flex-col items-center justify-center">
           
-          <div className="relative w-full max-w-[460px] aspect-square flex items-center justify-center">
-            <svg width={size} height={size} className="w-full h-full overflow-visible">
+          {/* viewBox con margen para las etiquetas: el gráfico escala al ancho disponible sin desbordar en móvil */}
+          <div className="relative w-full max-w-[600px] flex items-center justify-center">
+            <svg
+              viewBox={`${-LABEL_MARGIN_X} ${-LABEL_MARGIN_Y} ${size + 2 * LABEL_MARGIN_X} ${size + 2 * LABEL_MARGIN_Y}`}
+              className="w-full h-auto"
+              role="img"
+              aria-label="Gráfico de la Rueda de la Vida"
+            >
               
               {/* Círculos concéntricos de referencia (Niveles del 0 al 10) */}
               {[2, 4, 6, 8, 10].map((level) => (
@@ -315,7 +325,7 @@ export const WheelOfLife: React.FC<WheelOfLifeProps> = ({ logs, showFirstStep, o
                   value={snapshotLabel}
                   onChange={(e) => setSnapshotLabel(e.target.value)}
                   placeholder="Etiqueta opcional (ej. Cierre Q4 o Retiro)..."
-                  className="flex-1 px-3 py-1.5 text-xs rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-indigo-400"
+                  className="min-w-0 flex-1 px-3 py-1.5 text-xs rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-indigo-400"
                 />
                 <button
                   type="button"
