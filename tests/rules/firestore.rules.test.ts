@@ -15,7 +15,7 @@ describe('firestore.rules', () => {
   before(async () => {
     env = await initializeTestEnvironment({
       projectId: 'demo-neuroproductivity',
-      firestore: { rules: readFileSync('firestore.rules', 'utf8'), host: '127.0.0.1', port: 8080 }
+      firestore: { rules: readFileSync('firestore.rules', 'utf8'), host: '127.0.0.1', port: 8281 }
     });
   });
 

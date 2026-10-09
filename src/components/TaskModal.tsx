@@ -2,13 +2,18 @@ import React, { useState, useEffect } from 'react';
 import { TaskItem, ListContext, TaskPriority, WheelCategory, TaskObservation } from '../types';
 import { analyzeImmediateActionSyntax, SyntaxAnalysisResult } from '../services/syntaxAnalyzer';
 import { inferWheelCategory, NLPSuggestionResult } from '../services/nlpEngine';
-import { X, AlertTriangle, Sparkles, Check, CheckCircle2, ShieldAlert, ArrowRight, ListPlus } from 'lucide-react';
+import { validateTaskDates } from '../services/tasks';
+import { X, AlertTriangle, Sparkles, Check, CheckCircle2, ShieldAlert, ArrowRight, ListPlus, CalendarClock } from 'lucide-react';
+
+export type TaskFormData = Omit<TaskItem, 'id' | 'createdAt' | 'updatedAt' | 'status' | 'doneAt'>;
 
 interface TaskModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSaveTask: (task: Omit<TaskItem, 'id' | 'createdAt' | 'updatedAt' | 'completed'>) => void;
+  onSaveTask: (task: TaskFormData) => void;
   initialContext: ListContext;
+  // Al abrir desde "Opciones Futuras" la tarea nueva se marca como "Quizá"
+  initialSomeday?: boolean;
   editingTask?: TaskItem | null;
 }
 
@@ -27,6 +32,7 @@ export const TaskModal: React.FC<TaskModalProps> = ({
   onClose,
   onSaveTask,
   initialContext,
+  initialSomeday = false,
   editingTask
 }) => {
   const [title, setTitle] = useState('');
@@ -39,6 +45,11 @@ export const TaskModal: React.FC<TaskModalProps> = ({
   const [linkedBy, setLinkedBy] = useState<'MANUAL' | 'AUTO_TFIDF'>('MANUAL');
   const [observations, setObservations] = useState<TaskObservation[]>([]);
   const [newObsText, setNewObsText] = useState('');
+  // Fechas opcionales (vacías por defecto): solo fecha límite = plazo; con fecha de inicio = intervalo
+  const [startDate, setStartDate] = useState('');
+  const [startTime, setStartTime] = useState('');
+  const [dueDate, setDueDate] = useState('');
+  const [dueTime, setDueTime] = useState('');
 
   // Estados de validación en tiempo real
   const [touched, setTouched] = useState<{ [key: string]: boolean }>({});
@@ -59,6 +70,10 @@ export const TaskModal: React.FC<TaskModalProps> = ({
       setWheelCategoryConfidence(editingTask.wheelCategoryConfidence);
       setLinkedBy(editingTask.linkedBy || 'MANUAL');
       setObservations(editingTask.observations || []);
+      setStartDate(editingTask.startDate ?? '');
+      setStartTime(editingTask.startTime ?? '');
+      setDueDate(editingTask.dueDate ?? '');
+      setDueTime(editingTask.dueTime ?? '');
       setSyntaxResult(analyzeImmediateActionSyntax(editingTask.title));
       setOverrideSyntaxWarning(true);
     } else {
@@ -66,7 +81,11 @@ export const TaskModal: React.FC<TaskModalProps> = ({
       setDescription('');
       setListContext(initialContext);
       setPriority('MEDIUM');
-      setIsSomeday(false);
+      setIsSomeday(initialSomeday);
+      setStartDate('');
+      setStartTime('');
+      setDueDate('');
+      setDueTime('');
       setWheelCategory(undefined);
       setWheelCategoryConfidence(undefined);
       setLinkedBy('MANUAL');
@@ -76,7 +95,7 @@ export const TaskModal: React.FC<TaskModalProps> = ({
       setTouched({});
       setOverrideSyntaxWarning(false);
     }
-  }, [isOpen, editingTask, initialContext]);
+  }, [isOpen, editingTask, initialContext, initialSomeday]);
 
   // Ejecución del Analizador Sintáctico de Acción Inmediata en tiempo real (Módulo 4)
   useEffect(() => {
@@ -137,12 +156,21 @@ export const TaskModal: React.FC<TaskModalProps> = ({
   const isTitleTooLong = title.length > 100;
   const isSyntaxInvalid = !syntaxResult.isValid && !overrideSyntaxWarning;
   const isDescriptionEmpty = !description.trim();
+  // Una hora sin fecha no tiene sentido: se descarta
+  const dates = {
+    startDate: startDate || undefined,
+    startTime: (startDate && startTime) || undefined,
+    dueDate: dueDate || undefined,
+    dueTime: (dueDate && dueTime) || undefined
+  };
+  const datesError = validateTaskDates(dates);
 
   const isFormValid =
     !isTitleEmpty &&
     !isTitleTooLong &&
     !isSyntaxInvalid &&
     !isDescriptionEmpty &&
+    !datesError &&
     Boolean(listContext) &&
     Boolean(priority);
 
@@ -164,7 +192,8 @@ export const TaskModal: React.FC<TaskModalProps> = ({
       wheelCategory,
       wheelCategoryConfidence,
       linkedBy,
-      observations
+      observations,
+      ...dates
     });
 
     onClose();
@@ -330,8 +359,11 @@ export const TaskModal: React.FC<TaskModalProps> = ({
               rows={3}
               value={description}
               onChange={(e) => setDescription(e.target.value)}
-              onBlur={() => {
+              onBlur={(e) => {
                 setTouched({ ...touched, description: true });
+                // Si el foco pasa a un botón (Guardar, Cancelar…) no se lanza la sugerencia: el aviso de carga
+                // desplazaría el botón entre que se pulsa y se suelta, y el clic se perdería
+                if ((e.relatedTarget as HTMLElement | null)?.tagName === 'BUTTON') return;
                 triggerNLPInference();
               }}
               placeholder="Detalla el resultado esperado, personas involucradas o requerimientos físicos previos..."
@@ -425,6 +457,65 @@ export const TaskModal: React.FC<TaskModalProps> = ({
               )}
             </div>
           </div>
+
+          {/* FECHAS OPCIONALES: plazo (solo fecha límite) o intervalo (inicio + fecha límite), con hora opcional */}
+          <fieldset className="p-3.5 rounded-xl border border-slate-200 space-y-3">
+            <legend className="px-1 text-xs font-bold uppercase tracking-wider text-slate-600 flex items-center gap-1.5">
+              <CalendarClock className="w-3.5 h-3.5 text-indigo-600" />
+              Fechas (opcional)
+            </legend>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div className="space-y-1">
+                <span className="block text-[11px] font-semibold text-slate-700">Fecha límite</span>
+                <div className="flex gap-2">
+                  <input
+                    type="date"
+                    value={dueDate}
+                    onChange={(e) => setDueDate(e.target.value)}
+                    aria-label="Fecha límite"
+                    className="min-w-0 flex-1 px-2.5 py-1.5 rounded-lg border border-slate-300 text-xs focus:outline-none focus:ring-2 focus:ring-indigo-400"
+                  />
+                  <input
+                    type="time"
+                    value={dueTime}
+                    onChange={(e) => setDueTime(e.target.value)}
+                    disabled={!dueDate}
+                    aria-label="Hora límite"
+                    className="w-24 px-2 py-1.5 rounded-lg border border-slate-300 text-xs disabled:bg-slate-100 disabled:text-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-400"
+                  />
+                </div>
+              </div>
+              <div className="space-y-1">
+                <span className="block text-[11px] font-semibold text-slate-700">Inicio (para un intervalo)</span>
+                <div className="flex gap-2">
+                  <input
+                    type="date"
+                    value={startDate}
+                    onChange={(e) => setStartDate(e.target.value)}
+                    aria-label="Fecha de inicio"
+                    className="min-w-0 flex-1 px-2.5 py-1.5 rounded-lg border border-slate-300 text-xs focus:outline-none focus:ring-2 focus:ring-indigo-400"
+                  />
+                  <input
+                    type="time"
+                    value={startTime}
+                    onChange={(e) => setStartTime(e.target.value)}
+                    disabled={!startDate}
+                    aria-label="Hora de inicio"
+                    className="w-24 px-2 py-1.5 rounded-lg border border-slate-300 text-xs disabled:bg-slate-100 disabled:text-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-400"
+                  />
+                </div>
+              </div>
+            </div>
+            <p className="text-[11px] text-slate-500 leading-relaxed">
+              Sin hora, el plazo termina al final del día. El título se pone <span className="text-violet-600 font-semibold">violeta</span> cuando falta menos de una semana y <span className="text-red-600 font-semibold">rojo</span> cuando ha vencido.
+            </p>
+            {datesError && (
+              <p role="alert" className="text-xs text-red-600 font-medium flex items-center gap-1">
+                <AlertTriangle className="w-3.5 h-3.5" />
+                {datesError}
+              </p>
+            )}
+          </fieldset>
 
           {/* CAMPO 4: Sumidero Cognitivo ("Quizá" / "Algún día" - HU-03) */}
           <div className="p-3.5 rounded-xl border border-slate-200 bg-slate-50/60">

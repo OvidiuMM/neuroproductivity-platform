@@ -10,6 +10,7 @@ import {
 } from 'firebase/firestore';
 import type { User } from 'firebase/auth';
 import { EmailDraft, MeetingGuard, TaskItem, WheelOfLifeLog } from '../types';
+import { normalizeTask } from './tasks';
 
 // Datos de cada persona en users/{uid}/<colección>/<id>. Las reglas (firestore.rules) solo dejan acceder al propio uid.
 export type UserCollection = 'tasks' | 'wheelLogs' | 'meetings' | 'emails';
@@ -50,7 +51,9 @@ export const subscribeToCollection = <K extends UserCollection>(
     userCollection(db, uid, name),
     { includeMetadataChanges: true },
     (snapshot) => {
-      const items = snapshot.docs.map((d) => d.data()) as UserData[K];
+      const docs = snapshot.docs.map((d) => d.data());
+      // Las tareas anteriores a la 0.6.0 usan `completed` en lugar de `status`
+      const items = (name === 'tasks' ? docs.map((d) => normalizeTask(d as TaskItem)) : docs) as UserData[K];
       items.sort(SORTERS[name] as (a: unknown, b: unknown) => number);
       onData(items, { fromServer: !snapshot.metadata.fromCache });
     },

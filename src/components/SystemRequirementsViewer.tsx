@@ -51,7 +51,7 @@ export const SystemRequirementsViewer: React.FC = () => {
         </div>
 
         {/* Sub-pestañas */}
-        <div className="flex items-center gap-1.5 bg-slate-100 p-1 rounded-xl border border-slate-200 text-xs">
+        <div className="flex flex-wrap items-center gap-1.5 bg-slate-100 p-1 rounded-xl border border-slate-200 text-xs">
           <button
             onClick={() => setActiveSubTab('tester')}
             className={`px-3 py-1.5 font-bold rounded-lg transition-all flex items-center gap-1.5 ${
