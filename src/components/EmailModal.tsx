@@ -218,7 +218,7 @@ export const EmailModal: React.FC<EmailModalProps> = ({
               <div className="p-2.5 bg-amber-50 border border-amber-200 rounded-xl text-xs text-amber-900 mt-1.5 flex items-start gap-2">
                 <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
                 <p className="text-[11px] leading-relaxed">
-                  <strong>Alerta de Síntesis Informativa:</strong> El cuerpo supera las dimensiones recomendadas sin desplazamiento vertical (no-scroll). La neurociencia de Benito Sipos demuestra que mensajes excesivamente largos fragmentan la atención ajena y multiplican respuestas improductivas.
+                  <strong>Alerta de Síntesis Informativa:</strong> El cuerpo supera las dimensiones recomendadas sin desplazamiento vertical (no-scroll). Los mensajes largos fragmentan la atención de quien los lee y suelen generar más idas y vueltas.
                 </p>
               </div>
             )}

@@ -205,7 +205,7 @@ export const MeetingModal: React.FC<MeetingModalProps> = ({
                     Bloqueo Heurístico: Franja de Concentración Profunda Matutina
                   </p>
                   <p className="text-red-700 leading-relaxed text-[11px]">
-                    La neurociencia del Dr. Benito Sipos proscribe celebrar reuniones antes de las 12:00 h. Las mañanas deben reservarse para el trabajo reflexivo de alto valor biológico.
+                    Esta app no permite reuniones antes de las 12:00 h: las mañanas se reservan para el trabajo que exige más concentración.
                   </p>
                   <button
                     type="button"
