@@ -46,9 +46,10 @@ export const getFirebase = (): Promise<FirebaseServices> => {
       ignoreUndefinedProperties: true,
       localCache: persistentLocalCache({ tabManager: persistentMultipleTabManager() })
     });
+    // Puertos de firebase.json, distintos de los de por defecto para convivir con otros proyectos de Firebase
     if (usingEmulators) {
-      connectAuthEmulator(auth, 'http://127.0.0.1:9099', { disableWarnings: true });
-      connectFirestoreEmulator(db, '127.0.0.1', 8080);
+      connectAuthEmulator(auth, 'http://127.0.0.1:9399', { disableWarnings: true });
+      connectFirestoreEmulator(db, '127.0.0.1', 8281);
     }
     return { app, auth, db };
   });

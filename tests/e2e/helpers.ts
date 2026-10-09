@@ -20,3 +20,45 @@ export const signInWithGoogle = async (page: Page, email = uniqueEmail(), name =
   await expect(page.getByRole('button', { name: 'Tu cuenta' })).toBeVisible();
   return email;
 };
+
+// Fecha local (YYYY-MM-DD) a N días de hoy, como la escriben los campos de fecha
+export const localDateFromToday = (days: number) => {
+  const d = new Date();
+  d.setDate(d.getDate() + days);
+  const pad = (n: number) => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+};
+
+interface NewTask {
+  title: string;
+  dueDate?: string;
+  dueTime?: string;
+  startDate?: string;
+}
+
+// Rellena y guarda el formulario de tarea, que ya debe estar abierto
+export const fillAndSaveTask = async (page: Page, task: NewTask) => {
+  await page.getByPlaceholder('ej. Llamar al proveedor para acordar el plazo de entrega').fill(task.title);
+  await page
+    .getByPlaceholder('Detalla el resultado esperado, personas involucradas o requerimientos físicos previos...')
+    .fill('Confirmar la fecha y hora de entrega.');
+  if (task.dueDate) await page.getByLabel('Fecha límite', { exact: true }).fill(task.dueDate);
+  if (task.dueTime) await page.getByLabel('Hora límite').fill(task.dueTime);
+  if (task.startDate) await page.getByLabel('Fecha de inicio').fill(task.startDate);
+  const saveButton = page.getByRole('button', { name: 'Guardar Acción Operativa' });
+  await saveButton.scrollIntoViewIfNeeded();
+  await saveButton.click();
+  await expect(saveButton).toBeHidden();
+};
+
+export const expectNoHorizontalOverflow = async (page: Page, where: string) => {
+  const overflow = await page.evaluate(() => {
+    const width = document.documentElement.clientWidth;
+    const offenders = [...document.querySelectorAll('body *')]
+      .filter((el) => el.getBoundingClientRect().right > width + 1)
+      .slice(0, 5)
+      .map((el) => `${el.tagName.toLowerCase()}.${String((el as HTMLElement).className).slice(0, 60)}`);
+    return { scrollWidth: document.documentElement.scrollWidth, width, offenders };
+  });
+  expect(overflow.scrollWidth, `${where}: ${overflow.offenders.join(' | ')}`).toBeLessThanOrEqual(overflow.width);
+};

@@ -4,6 +4,9 @@ export type AppTab = 'tasks' | 'wheel' | 'bermudas' | 'requirements' | 'help';
 
 export type TaskPriority = 'CRITICAL' | 'HIGH' | 'MEDIUM' | 'LOW';
 
+// Estado manual de la tarea; DONE la archiva (sale de las listas y del Top 10)
+export type TaskStatus = 'PENDING' | 'BLOCKED' | 'IN_PROGRESS' | 'DONE';
+
 export type WheelCategory = 
   | 'Salud'
   | 'Carrera Profesional'
@@ -36,7 +39,13 @@ export interface TaskItem {
   wheelCategory?: WheelCategory;
   wheelCategoryConfidence?: number;
   linkedBy?: 'MANUAL' | 'AUTO_TFIDF';
-  completed: boolean;
+  status: TaskStatus;
+  doneAt?: string; // ISO / UTC: cuándo pasó a Hecha (orden del archivo)
+  // Fechas opcionales en hora local del dispositivo. Solo fecha límite = plazo; con inicio = intervalo.
+  startDate?: string; // YYYY-MM-DD
+  startTime?: string; // HH:mm (opcional)
+  dueDate?: string; // YYYY-MM-DD
+  dueTime?: string; // HH:mm (opcional; sin hora, el plazo acaba al final del día)
 }
 
 export interface WheelOfLifeLog {
