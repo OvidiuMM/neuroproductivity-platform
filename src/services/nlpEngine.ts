@@ -21,7 +21,7 @@ const SPANISH_STOPWORDS = new Set([
   'yo'
 ]);
 
-// Corpus lingüísticos pre-entrenados para los 7 sectores vitales de Benito Sipos
+// Corpus lingüísticos pre-entrenados para las 7 áreas de la Rueda de la Vida
 const CATEGORY_CORPUS: Record<WheelCategory, string[]> = {
   Salud: [
     'medico', 'doctor', 'salud', 'hospital', 'analitica', 'sangre', 'dieta', 'nutricion',

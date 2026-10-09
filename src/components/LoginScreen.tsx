@@ -32,7 +32,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onSignIn, isSigningIn,
               v{version}
             </span>
           </h1>
-          <p className="text-xs text-slate-500">Basado en la metodología de Dr. Jonathan Benito Sipos</p>
+          <p className="text-xs text-slate-500">Gestión del tiempo y neuroproductividad</p>
         </div>
       </div>
 
