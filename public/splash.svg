@@ -26,5 +26,5 @@
 
   <!-- Version Tag -->
   <rect x="490" y="1220" width="100" height="34" rx="17" fill="#1e293b" stroke="#334155" stroke-width="1"/>
-  <text x="540" y="1243" text-anchor="middle" font-family="monospace" font-size="14" font-weight="bold" fill="#a5b4fc">v0.6.0</text>
+  <text x="540" y="1243" text-anchor="middle" font-family="monospace" font-size="14" font-weight="bold" fill="#a5b4fc">v0.6.1</text>
 </svg>
