@@ -1,7 +1,7 @@
 # NeuroProductividad — Plataforma de Gestión del Tiempo y Neurociencia Aplicada
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
-[![Version](https://img.shields.io/badge/Version-0.5.0-indigo.svg)](#)
+[![Version](https://img.shields.io/badge/Version-0.6.0-indigo.svg)](#)
 [![React](https://img.shields.io/badge/React-19.0-61dafb.svg?logo=react&logoColor=black)](https://react.dev/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.x-3178c6.svg?logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
 [![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-4.x-38bdf8.svg?logo=tailwindcss&logoColor=white)](https://tailwindcss.com/)
@@ -26,6 +26,9 @@ El sistema rechaza las restricciones coercitivas (como las rotaciones atencional
 * **Segregación Estricta:** Separación absoluta entre la **Lista Profesional** y la **Lista Personal** para erradicar el coste metabólico asociado al cambio de contexto (*context-switching*).
 * **Algoritmo de Jerarquía Visual (Top 10):** En lugar de limitar artificialmente el inventario, los primeros 10 elementos se destacan visualmente mediante tipografía en negrita (`font-weight: 700`), sombras de elevación paralela (`shadow-md`), colores cálidos y márgenes expandidos. Los elementos 11+ se renderizan con diseño minimalista y desaturado.
 * **Sumidero Cognitivo "Quizá" / "Algún día" (HU-03):** Externalización de iniciativas embrionarias sin urgencia operativa, excluidas del Top 10 diario mediante índices parciales pero preservadas en "Opciones Futuras".
+* **Estado y archivo:** Cada tarea tiene un estado manual (Pendiente, En progreso, Bloqueada, Hecha). Las tareas hechas se archivan y se consultan en la ventana «Archivadas», desde donde se reactivan cambiando su estado.
+* **Fechas y alertas:** Fecha límite o intervalo opcional, con hora opcional. El título se pone violeta cuando falta menos de una semana y rojo cuando ha vencido.
+* **Calendario:** Las tareas con fecha límite se añaden a Google Calendar, Outlook.com, Outlook de Microsoft 365 o cualquier calendario (`.ics`), mediante enlaces y sin conectar cuentas.
 
 ### 3. Motor NLP de Enlace Cognitivo (`M3`)
 * **Vectorización TF-IDF Asíncrona:** Limpieza léxica y cálculo de frecuencia de término ponderada por frecuencia inversa de documento al perder el foco (`onBlur`) en los formularios.
@@ -95,7 +98,7 @@ npx playwright install chromium
 npm run test:e2e
 ```
 
-La app estará disponible en `http://localhost:3000` y la interfaz de los emuladores en `http://localhost:4000`.
+La app estará disponible en `http://localhost:3000` y la interfaz de los emuladores en `http://localhost:4020`. Los emuladores usan puertos distintos de los de por defecto de Firebase (Auth 9399, Firestore 8281, Functions 5021, Hosting 5002) para poder convivir con los de otros proyectos.
 
 ### Pruebas automatizadas
 
