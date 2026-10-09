@@ -46,7 +46,7 @@ export const SystemRequirementsViewer: React.FC = () => {
             Especificación Técnica y Banco de Pruebas de Validación
           </h2>
           <p className="text-xs text-slate-500 mt-1 max-w-2xl leading-relaxed">
-            Verificación algorítmica de los 5 subsistemas de neuroproductividad definidos en la metodología de Jonathan Benito Sipos.
+            Verificación algorítmica de los 5 subsistemas de neuroproductividad de la app.
           </p>
         </div>
 
@@ -589,7 +589,7 @@ CREATE TABLE meeting_guard (
             <h3 className="font-bold text-slate-900 font-sans text-sm">
               Escenarios de Aceptación Behavior-Driven Development (BDD Gherkin)
             </h3>
-            <span className="text-slate-400">Especificación Oficial Benito Sipos</span>
+            <span className="text-slate-400">Especificación del sistema</span>
           </div>
 
           <div className="space-y-4 text-slate-800">

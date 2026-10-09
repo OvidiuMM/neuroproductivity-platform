@@ -7,7 +7,9 @@
 [![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-4.x-38bdf8.svg?logo=tailwindcss&logoColor=white)](https://tailwindcss.com/)
 [![Architecture](https://img.shields.io/badge/Architecture-Offline--First-emerald.svg)](#arquitectura-técnica)
 
-Plataforma web de **gestión del tiempo y neuroproductividad** inspirada en la metodología del **Dr. Jonathan Benito Sipos** (profesor e investigador de Neurociencia en la Universidad Autónoma de Madrid, autor de *Gestiona tu tiempo, disfruta de la vida* y *Redefine imposible*).
+Plataforma web de **gestión del tiempo y neuroproductividad**.
+
+> Algunas ideas de esta app se inspiran en el libro *Gestiona tu tiempo, disfruta de la vida*, de Jonathan Benito Sipos. Este proyecto no está afiliado ni respaldado por el autor.
 
 El sistema rechaza las restricciones coercitivas (como las rotaciones atencionales arbitrarias o las "Tareas Muro" matutinas únicas), sustituyéndolas por un **andamiaje digital para la corteza prefrontal** que combina evaluación holística de la satisfacción vital, jerarquía visual basada en leyes de Gestalt, inferencia léxica TF-IDF y blindaje de la atención frente a interrupciones crónicas.
 
