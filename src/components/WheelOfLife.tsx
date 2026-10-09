@@ -325,7 +325,7 @@ export const WheelOfLife: React.FC<WheelOfLifeProps> = ({ logs, showFirstStep, o
                   value={snapshotLabel}
                   onChange={(e) => setSnapshotLabel(e.target.value)}
                   placeholder="Etiqueta opcional (ej. Cierre Q4 o Retiro)..."
-                  className="flex-1 px-3 py-1.5 text-xs rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-indigo-400"
+                  className="min-w-0 flex-1 px-3 py-1.5 text-xs rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-indigo-400"
                 />
                 <button
                   type="button"
