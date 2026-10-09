@@ -57,7 +57,7 @@ export const HowItWorks: React.FC<HowItWorksProps> = ({ onNavigate }) => {
           Cómo funciona la app
         </h2>
         <p className="text-sm text-slate-600 leading-relaxed max-w-3xl">
-          NeuroProductividad aplica la metodología del Dr. Jonathan Benito Sipos: primero decides qué áreas de tu vida quieres mejorar, luego conviertes esa intención en acciones concretas y, por último, proteges el tiempo que necesitas para hacerlas.
+          NeuroProductividad sigue tres pasos: primero decides qué áreas de tu vida quieres mejorar, luego conviertes esa intención en acciones concretas y, por último, proteges el tiempo que necesitas para hacerlas.
         </p>
       </div>
 
@@ -135,6 +135,14 @@ export const HowItWorks: React.FC<HowItWorksProps> = ({ onNavigate }) => {
         </h3>
         <p className="text-sm text-amber-950 leading-relaxed">
           Todo se guarda en tu cuenta de Google, en servidores de Google Cloud en la Unión Europea (Bélgica), y solo tú puedes acceder. Se sincroniza entre tus dispositivos y la app sigue funcionando sin conexión: los cambios se envían al recuperarla. Desde el menú de tu cuenta puedes descargar tus datos o eliminar la cuenta con todo su contenido.
+        </p>
+      </div>
+
+      {/* CRÉDITOS: única mención al autor, como cita de la fuente y sin dar a entender respaldo */}
+      <div className="bg-white rounded-2xl p-6 border border-slate-200 shadow-xs space-y-2">
+        <h3 className="text-xs font-bold uppercase tracking-wider text-slate-700">Créditos</h3>
+        <p className="text-sm text-slate-600 leading-relaxed">
+          Algunas ideas de esta app se inspiran en el libro <em>Gestiona tu tiempo, disfruta de la vida</em>, de Jonathan Benito Sipos. Esta app no está afiliada ni respaldada por el autor.
         </p>
       </div>
     </div>

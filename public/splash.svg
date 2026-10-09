@@ -21,10 +21,10 @@
 
   <!-- App Title & Metodology -->
   <text x="540" y="1080" text-anchor="middle" font-family="system-ui, -apple-system, sans-serif" font-size="44" font-weight="800" fill="#ffffff" letter-spacing="-1">NeuroProductividad</text>
-  <text x="540" y="1130" text-anchor="middle" font-family="system-ui, -apple-system, sans-serif" font-size="24" font-weight="600" fill="#818cf8">Basado en la metodología de Dr. Jonathan Benito Sipos</text>
+  <text x="540" y="1130" text-anchor="middle" font-family="system-ui, -apple-system, sans-serif" font-size="24" font-weight="600" fill="#818cf8">Gestión del tiempo y neuroproductividad</text>
   <text x="540" y="1175" text-anchor="middle" font-family="system-ui, -apple-system, sans-serif" font-size="18" fill="#94a3b8">Andamiaje Digital para la Corteza Prefrontal</text>
 
   <!-- Version Tag -->
   <rect x="490" y="1220" width="100" height="34" rx="17" fill="#1e293b" stroke="#334155" stroke-width="1"/>
-  <text x="540" y="1243" text-anchor="middle" font-family="monospace" font-size="14" font-weight="bold" fill="#a5b4fc">v0.6.0</text>
+  <text x="540" y="1243" text-anchor="middle" font-family="monospace" font-size="14" font-weight="bold" fill="#a5b4fc">v0.6.1</text>
 </svg>

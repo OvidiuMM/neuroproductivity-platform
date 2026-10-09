@@ -35,11 +35,12 @@ export const Navbar: React.FC<NavbarProps> = ({
         <div className="flex flex-wrap xl:flex-nowrap items-center justify-between min-h-16 py-2 gap-x-4 gap-y-2">
           
           {/* Zone 1: Single text element wordmark */}
-          <div className="flex items-center gap-3 shrink-0">
-            <div className="w-9 h-9 rounded-xl bg-slate-900 text-white flex items-center justify-center shadow-sm">
+          {/* Puede estrecharse: si falta espacio, la línea de atribución pasa a dos líneas en lugar de desbordar */}
+          <div className="flex items-center gap-3 min-w-0">
+            <div className="w-9 h-9 rounded-xl bg-slate-900 text-white flex items-center justify-center shadow-sm shrink-0">
               <Brain className="w-5 h-5 text-indigo-400" />
             </div>
-            <div>
+            <div className="min-w-0">
               <div className="flex items-center gap-2">
                 <span className="text-lg font-bold tracking-tight text-slate-900 block leading-tight">
                   NeuroProductividad
@@ -48,8 +49,8 @@ export const Navbar: React.FC<NavbarProps> = ({
                   v{__APP_VERSION__}
                 </span>
               </div>
-              <span className="hidden sm:block text-[11px] text-slate-500 font-medium">
-                Basado en la metodología de Dr. Jonathan Benito Sipos
+              <span className="hidden sm:block text-[11px] leading-tight text-slate-500 font-medium">
+                Gestión del tiempo y neuroproductividad
               </span>
             </div>
           </div>
@@ -101,11 +102,10 @@ export const Navbar: React.FC<NavbarProps> = ({
               }`}
             >
               <CheckCircle2 className="w-3.5 h-3.5 text-indigo-300" />
-              <span className="2xl:hidden">Requisitos</span>
-              <span className="hidden 2xl:inline">Validación de Requisitos</span>
+              <span>Requisitos</span>
             </button>
 
-            {/* Solo icono salvo en pantallas muy anchas: la barra no cabe a 1280 px con la etiqueta completa */}
+            {/* Solo icono: el contenido de la cabecera no pasa de 1280 px (max-w-7xl) y no cabe la etiqueta completa */}
             <button
               onClick={() => setActiveTab('help')}
               aria-label="Cómo funciona"
@@ -117,7 +117,6 @@ export const Navbar: React.FC<NavbarProps> = ({
               }`}
             >
               <BookOpen className="w-3.5 h-3.5" />
-              <span className="hidden 2xl:inline">Cómo funciona</span>
             </button>
           </nav>
 
@@ -181,9 +180,6 @@ export const Navbar: React.FC<NavbarProps> = ({
                     {activeUser.initials}
                   </div>
                 )}
-                <span className="hidden 2xl:inline font-bold text-slate-800 max-w-[110px] truncate">
-                  {activeUser.name.split(' ')[0]}
-                </span>
                 <ChevronDown className="w-3 h-3 text-slate-400" />
               </button>
             ) : (
