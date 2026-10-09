@@ -52,7 +52,7 @@ const task = (id: string, userId: string): TaskItem => ({
   updatedAt: '2026-10-01T09:00:00.000Z',
   observations: [],
   isSomeday: false,
-  completed: false
+  status: 'PENDING'
 });
 
 const wheelLog = (id: string, userId: string): WheelOfLifeLog => ({

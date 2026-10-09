@@ -31,7 +31,8 @@ export const Navbar: React.FC<NavbarProps> = ({
     <header className="sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b border-slate-200">
       {/* 3-Zone Top Bar Contract */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex items-center justify-between h-16 gap-4">
+        {/* Por debajo de 1280 px las zonas pasan a la línea siguiente en lugar de desbordar; desde ahí caben en una fila */}
+        <div className="flex flex-wrap xl:flex-nowrap items-center justify-between min-h-16 py-2 gap-x-4 gap-y-2">
           
           {/* Zone 1: Single text element wordmark */}
           <div className="flex items-center gap-3 shrink-0">
@@ -47,7 +48,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                   v{__APP_VERSION__}
                 </span>
               </div>
-              <span className="text-[11px] text-slate-500 font-medium">
+              <span className="hidden sm:block text-[11px] text-slate-500 font-medium">
                 Basado en la metodología de Dr. Jonathan Benito Sipos
               </span>
             </div>
