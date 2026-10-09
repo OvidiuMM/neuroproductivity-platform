@@ -87,7 +87,7 @@ export const SplashScreen: React.FC<SplashScreenProps> = ({
             NeuroProductividad
           </h1>
           <p className="text-xs text-indigo-300 font-medium tracking-wide">
-            Inspirada en la metodología del Dr. Jonathan Benito Sipos
+            Gestión del tiempo y neuroproductividad
           </p>
           <p className="text-[11px] text-slate-400 pt-1 leading-relaxed max-w-xs mx-auto">
             Andamiaje neurocognitivo para la corteza prefrontal y mitigación del estrés
@@ -112,9 +112,6 @@ export const SplashScreen: React.FC<SplashScreenProps> = ({
 
       {/* Pie de pantalla de inicio */}
       <div className="pb-4 text-center z-10 space-y-1">
-        <p className="text-[10px] text-slate-500 tracking-wider uppercase font-semibold">
-          Universidad Autónoma de Madrid
-        </p>
         <span className="text-[9px] text-slate-600">
           Toca cualquier punto para omitir
         </span>

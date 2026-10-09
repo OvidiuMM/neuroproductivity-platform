@@ -25,6 +25,7 @@ test('first sign-in opens the Wheel of Life at 0 with a first-step notice and a 
   await notice.getByRole('button', { name: 'Cómo funciona la app' }).click();
   await expect(page.getByRole('heading', { name: 'Cómo funciona la app' })).toBeVisible();
   await expect(page.getByText('Todo se guarda en tu cuenta de Google', { exact: false })).toBeVisible();
+  await expect(page.getByText('Esta app no está afiliada ni respaldada por el autor.', { exact: false })).toBeVisible();
 
   await page.getByRole('button', { name: 'Ir a Rueda de la Vida' }).click();
   await page.getByRole('slider', { name: 'Puntuación de Salud' }).fill('7');
