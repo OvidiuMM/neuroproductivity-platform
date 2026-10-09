@@ -25,7 +25,7 @@ export const BermudasShield: React.FC<BermudasShieldProps> = ({
           Contención y Blindaje del Triángulo de las Bermudas Temporal
         </h2>
         <p className="text-xs text-slate-600 max-w-3xl leading-relaxed">
-          Módulo 5: Neutralización de las tres vías primarias de fuga de tiempo y fragmentación atencional postuladas por el Dr. Jonathan Benito Sipos: <strong>reuniones mal gestionadas</strong>, <strong>correo electrónico reactivo</strong> y <strong>mensajería desestructurada</strong>.
+          Módulo 5: Neutralización de las tres vías primarias de fuga de tiempo y fragmentación atencional: <strong>reuniones mal gestionadas</strong>, <strong>correo electrónico reactivo</strong> y <strong>mensajería desestructurada</strong>.
         </p>
       </div>
 

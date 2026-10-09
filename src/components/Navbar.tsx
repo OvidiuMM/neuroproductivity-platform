@@ -50,7 +50,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                 </span>
               </div>
               <span className="hidden sm:block text-[11px] leading-tight text-slate-500 font-medium">
-                Inspirada en la metodología del Dr. Jonathan Benito Sipos
+                Gestión del tiempo y neuroproductividad
               </span>
             </div>
           </div>
