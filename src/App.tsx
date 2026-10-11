@@ -11,6 +11,7 @@ import { nextRecurringTask } from './services/recurrence';
 import { forceSync, signOutAndClearCache, type FirebaseServices } from './services/firebase';
 import {
   appendWheelLog,
+  completeRecurringTask,
   deleteAllUserData,
   deleteTask,
   exportUserData,
@@ -24,6 +25,8 @@ import {
   type UserCollection
 } from './services/repository';
 import { buildImport, clearLocalData, getLocalProfiles, type LocalProfileSummary } from './services/localData';
+import { arrangeTasks, parseListPrefs, type ListPrefs } from './services/taskListing';
+import { useNow } from './hooks/useNow';
 import { Navbar } from './components/Navbar';
 import type { SyncStatus } from './components/SyncIndicator';
 import { TaskList } from './components/TaskList';
@@ -105,6 +108,14 @@ export default function App({ user, services }: AppProps) {
 
   const [activeContext, setActiveContext] = useState<ListContext>('WORK');
   const [activeTab, setActiveTab] = useState<AppTab>('tasks');
+
+  // Orden y filtros del Top 10, guardados en este dispositivo para cada cuenta
+  const listPrefsKey = `neuro_list_prefs_v1:${uid}`;
+  const [listPrefs, setListPrefs] = useState<ListPrefs>(() => parseListPrefs(localStorage.getItem(listPrefsKey)));
+  useEffect(() => {
+    localStorage.setItem(listPrefsKey, JSON.stringify(listPrefs));
+  }, [listPrefs, listPrefsKey]);
+  const now = useNow();
   const firstRunChecked = useRef(false);
 
   // Estado de pantalla de inicio móvil (Splash Screen)
@@ -166,7 +177,7 @@ export default function App({ user, services }: AppProps) {
   const handleForceSync = async () => {
     setIsSyncing(true);
     try {
-      const synced = await forceSync(db);
+      const synced = await forceSync(db, uid);
       showToast(
         synced
           ? 'Todo está sincronizado con el servidor.'
@@ -254,11 +265,15 @@ export default function App({ user, services }: AppProps) {
     // Tarea recurrente marcada como Hecha: se crea la siguiente repetición (una sola vez por tarea)
     const next = status === 'DONE' && !task.nextOccurrenceId ? nextRecurringTask(task) : null;
     const updated = withStatus(task, status);
-    saveTask(db, uid, next ? { ...updated, nextOccurrenceId: next.id } : updated).catch(reportError('actualizar el estado'));
     if (next) {
-      saveTask(db, uid, next).catch(reportError('crear la siguiente repetición'));
+      completeRecurringTask(db, uid, { ...updated, nextOccurrenceId: next.id }, next).catch(
+        reportError('guardar la tarea y su siguiente repetición')
+      );
       showToast(`Tarea hecha y archivada. Siguiente repetición: ${formatTaskDates(next)?.replace('Vence: ', '')}.`);
-    } else if (status === 'DONE') {
+      return;
+    }
+    saveTask(db, uid, updated).catch(reportError('actualizar el estado'));
+    if (status === 'DONE') {
       showToast('Tarea hecha y archivada. La encontrarás en «Archivadas».');
     } else if (isArchived(task)) {
       showToast('Tarea reactivada: vuelve a su lista.');
@@ -335,6 +350,15 @@ export default function App({ user, services }: AppProps) {
   // Conteo de tareas por contexto
   const archivedTasks = tasks.filter(isArchived);
   const workCount = tasks.filter((t) => t.listContext === 'WORK' && !t.isSomeday && !isArchived(t)).length;
+  // «Top 10 Foco» cuenta lo mismo que muestra la lista: tareas activas del contexto tras aplicar los filtros
+  const top10Count = Math.min(
+    10,
+    arrangeTasks(
+      tasks.filter((t) => t.listContext === activeContext && !t.isSomeday && !isArchived(t)),
+      listPrefs,
+      now
+    ).length
+  );
   const personalCount = tasks.filter((t) => t.listContext === 'PERSONAL' && !t.isSomeday && !isArchived(t)).length;
   const somedayCount = tasks.filter((t) => t.isSomeday && !isArchived(t)).length;
 
@@ -424,7 +448,7 @@ export default function App({ user, services }: AppProps) {
                   Top 10 Foco
                 </div>
                 <div className="text-xl sm:text-2xl font-extrabold text-slate-900 font-mono">
-                  {Math.min(10, activeContext === 'WORK' ? workCount : personalCount)}/10
+                  {top10Count}/10
                 </div>
                 <div className="text-[10px] text-indigo-600 font-semibold mt-0.5">
                   Máx. prioridad
@@ -464,7 +488,8 @@ export default function App({ user, services }: AppProps) {
           <TaskList
             tasks={tasks}
             activeContext={activeContext}
-            prefsStorageKey={`neuro_list_prefs_v1:${uid}`}
+            prefs={listPrefs}
+            onPrefsChange={setListPrefs}
             archivedCount={archivedTasks.length}
             onChangeStatus={handleChangeStatus}
             onDeleteTask={handleDeleteTask}
