@@ -213,7 +213,8 @@ export const AgendaView: React.FC<AgendaViewProps> = ({ tasks, meetings, onEditT
 
           {/* Todos los días del periodo, también los vacíos, para que la estructura (y hoy) siempre esté */}
           {days.map((date) => {
-            const items = agenda.get(date)!;
+            // Las vencidas ya están en su propia sección: no se repiten en su día
+            const items = agenda.get(date)!.filter((item) => !(item.kind === 'task' && item.deadline === 'overdue'));
             const isToday = date === today;
             return (
               <section
