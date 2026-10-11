@@ -1,5 +1,5 @@
 import { TaskItem, TaskPriority, TaskStatus, WheelCategory } from '../types';
-import { PRIORITY_LEVELS, WEEK_MS, dueMoment, effectivePriority } from './tasks';
+import { PRIORITY_LEVELS, TASK_STATUSES, WEEK_MS, dueMoment, effectivePriority } from './tasks';
 
 // ESTIMACIÓN: duración estimada de la tarea, en minutos
 export const ESTIMATE_OPTIONS: { value: number; label: string }[] = [
@@ -36,6 +36,14 @@ export interface ListPrefs {
 export const DEFAULT_LIST_PREFS: ListPrefs = {
   sortBy: 'priority',
   filters: { priority: 'ALL', maxEstimate: 'ALL', status: 'ALL', deadline: 'ALL', category: 'ALL' }
+};
+
+const FILTER_OPTIONS: { [K in keyof ListFilters]: readonly ListFilters[K][] } = {
+  priority: ['ALL', ...PRIORITY_LEVELS],
+  maxEstimate: ['ALL', ...ESTIMATE_OPTIONS.map((option) => option.value)],
+  status: ['ALL', ...TASK_STATUSES.map((option) => option.value).filter((status) => status !== 'DONE')],
+  deadline: ['ALL', 'OVERDUE', 'NEXT_7_DAYS', 'WITH_DATE', 'NO_DATE'],
+  category: ['ALL', 'Salud', 'Carrera Profesional', 'Finanzas', 'Familia', 'Ocio', 'Relaciones', 'Espiritualidad']
 };
 
 export const countActiveFilters = (filters: ListFilters) =>
@@ -82,9 +90,20 @@ export const arrangeTasks = (tasks: TaskItem[], prefs: ListPrefs, now = new Date
 export const parseListPrefs = (raw: string | null): ListPrefs => {
   try {
     const stored = raw ? JSON.parse(raw) : {};
+    const filterValue = <K extends keyof ListFilters>(key: K): ListFilters[K] => {
+      const value = stored.filters?.[key];
+      return FILTER_OPTIONS[key].includes(value) ? value : DEFAULT_LIST_PREFS.filters[key];
+    };
     return {
-      sortBy: stored.sortBy in COMPARATORS ? stored.sortBy : DEFAULT_LIST_PREFS.sortBy,
-      filters: { ...DEFAULT_LIST_PREFS.filters, ...(stored.filters ?? {}) }
+      sortBy: typeof stored.sortBy === 'string' && Object.prototype.hasOwnProperty.call(COMPARATORS, stored.sortBy)
+        ? stored.sortBy : DEFAULT_LIST_PREFS.sortBy,
+      filters: {
+        priority: filterValue('priority'),
+        maxEstimate: filterValue('maxEstimate'),
+        status: filterValue('status'),
+        deadline: filterValue('deadline'),
+        category: filterValue('category')
+      }
     };
   } catch {
     return DEFAULT_LIST_PREFS;

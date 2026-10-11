@@ -92,10 +92,67 @@ describe('formatEstimate and parseListPrefs', () => {
   it('falls back to defaults for missing or invalid stored preferences', () => {
     assert.deepEqual(parseListPrefs(null), DEFAULT_LIST_PREFS);
     assert.deepEqual(parseListPrefs('not json'), DEFAULT_LIST_PREFS);
+    for (const raw of ['null', 'false', '42', '[]', '"text"', '{"filters":null}', '{"filters":42}', '{"filters":[]}']) {
+      assert.deepEqual(parseListPrefs(raw), DEFAULT_LIST_PREFS);
+    }
     assert.equal(parseListPrefs('{"sortBy":"bogus"}').sortBy, 'priority');
     const stored = parseListPrefs('{"sortBy":"estimate","filters":{"maxEstimate":60}}');
     assert.equal(stored.sortBy, 'estimate');
     assert.equal(stored.filters.maxEstimate, 60);
     assert.equal(stored.filters.priority, 'ALL');
+  });
+
+  it('rejects inherited comparator keys and non-string sort values', () => {
+    for (const sortBy of ['__proto__', 'constructor', 'toString', ['estimate'], {}, null, 1]) {
+      const stored = parseListPrefs(JSON.stringify({ sortBy }));
+      assert.deepEqual(stored, DEFAULT_LIST_PREFS);
+      assert.doesNotThrow(() => arrangeTasks([task('a'), task('b')], stored, now));
+    }
+  });
+
+  it('defaults invalid filters without discarding valid preferences or keeping extra keys', () => {
+    const stored = parseListPrefs(JSON.stringify({
+      sortBy: 'deadline',
+      filters: {
+        priority: 'UNKNOWN',
+        maxEstimate: '60',
+        status: 'DONE',
+        deadline: 'UNKNOWN',
+        category: 'UNKNOWN',
+        extra: 'HIGH'
+      }
+    }));
+    assert.deepEqual(stored, prefs({ sortBy: 'deadline' }));
+    assert.equal(countActiveFilters(stored.filters), 0);
+    assert.equal(arrangeTasks([task('a')], stored, now).length, 1);
+    assert.deepEqual(parseListPrefs('{"filters":{"__proto__":{"priority":"HIGH"}}}'), DEFAULT_LIST_PREFS);
+
+    for (const value of [null, false, {}, [], 'constructor', 90, -1]) {
+      const filters = Object.fromEntries(Object.keys(DEFAULT_LIST_PREFS.filters).map((key) => [key, value]));
+      assert.deepEqual(parseListPrefs(JSON.stringify({ filters })), DEFAULT_LIST_PREFS);
+    }
+    assert.deepEqual(
+      parseListPrefs('{"filters":{"priority":"HIGH","maxEstimate":90,"status":"BLOCKED"}}'),
+      prefs({ filters: { priority: 'HIGH', status: 'BLOCKED' } })
+    );
+  });
+
+  it('preserves all allowed sort and filter options', () => {
+    for (const sortBy of ['priority', 'deadline', 'estimate', 'date', 'category']) {
+      assert.equal(parseListPrefs(JSON.stringify({ sortBy })).sortBy, sortBy);
+    }
+    const options = {
+      priority: ['ALL', 'LOW', 'MEDIUM', 'HIGH', 'CRITICAL'],
+      maxEstimate: ['ALL', 15, 30, 60, 120, 240, 480, 960],
+      status: ['ALL', 'PENDING', 'IN_PROGRESS', 'BLOCKED'],
+      deadline: ['ALL', 'OVERDUE', 'NEXT_7_DAYS', 'WITH_DATE', 'NO_DATE'],
+      category: ['ALL', 'Salud', 'Carrera Profesional', 'Finanzas', 'Familia', 'Ocio', 'Relaciones', 'Espiritualidad']
+    };
+    for (const [key, values] of Object.entries(options)) {
+      for (const value of values) {
+        const filters = { ...DEFAULT_LIST_PREFS.filters, [key]: value };
+        assert.deepEqual(parseListPrefs(JSON.stringify({ filters })).filters, filters);
+      }
+    }
   });
 });
