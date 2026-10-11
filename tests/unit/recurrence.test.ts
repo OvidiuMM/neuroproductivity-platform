@@ -100,6 +100,23 @@ describe('nextRecurringTask', () => {
     assert.deepEqual(next.recurrence, base.recurrence);
   });
 
+  it('gives the next occurrence the same id on any device, so two tabs cannot create two', () => {
+    const later = new Date(past.getTime() + 60_000);
+    assert.equal(nextRecurringTask(base, past)!.id, nextRecurringTask(base, later)!.id);
+    assert.notEqual(nextRecurringTask(base, past)!.id, nextRecurringTask({ ...base, id: 'task-2' }, past)!.id);
+    assert.match(nextRecurringTask(base, past)!.id, /^task-r[0-9a-z]+$/);
+  });
+
+  it('skips an occurrence whose due time has already passed when completing late', () => {
+    const daily = { ...base, startDate: undefined, dueDate: '2026-10-11', dueTime: '10:00', recurrence: buildRecurrence('DAILY', '2026-10-11') };
+    // Completada el 12 a las 18:00: la del 12 a las 10:00 ya venció → la siguiente es la del 13
+    assert.equal(nextRecurringTask(daily, new Date(2026, 9, 12, 18, 0))!.dueDate, '2026-10-13');
+    // Completada el 12 a las 08:00: la del 12 aún no ha vencido
+    assert.equal(nextRecurringTask(daily, new Date(2026, 9, 12, 8, 0))!.dueDate, '2026-10-12');
+    // Sin hora vence al final del día
+    assert.equal(nextRecurringTask({ ...daily, dueTime: undefined }, new Date(2026, 9, 12, 23, 0))!.dueDate, '2026-10-12');
+  });
+
   it('returns null without recurrence, without due date or past the until date', () => {
     assert.equal(nextRecurringTask({ ...base, recurrence: undefined }, past), null);
     assert.equal(nextRecurringTask({ ...base, dueDate: undefined }, past), null);
@@ -122,6 +139,17 @@ describe('describeRecurrence and toRRule', () => {
     assert.equal(toRRule(buildRecurrence('MONTHLY', '2026-10-12', { monthlyMode: 'NTH_WEEKDAY' }), true), 'RRULE:FREQ=MONTHLY;INTERVAL=1;BYDAY=2MO');
     assert.equal(toRRule(buildRecurrence('MONTHLY', '2026-10-30', { monthlyMode: 'LAST_WEEKDAY' }), true), 'RRULE:FREQ=MONTHLY;INTERVAL=1;BYDAY=-1FR');
     assert.equal(toRRule(buildRecurrence('WEEKLY', '2026-10-12', { weekdays: [1, 3] }), true), 'RRULE:FREQ=WEEKLY;INTERVAL=1;BYDAY=MO,WE');
-    assert.equal(toRRule(buildRecurrence('MONTHLY', '2026-10-15', { until: '2027-06-30' }), false), 'RRULE:FREQ=MONTHLY;INTERVAL=1;BYMONTHDAY=15;UNTIL=20270630T235959Z');
+    // UNTIL con hora: fin del día local, expresado en UTC
+    const endOfDayUtc = new Date(2027, 5, 30, 23, 59, 59).toISOString().replace(/[-:]/g, '').replace(/\.\d{3}/, '');
+    assert.equal(toRRule(buildRecurrence('MONTHLY', '2026-10-15', { until: '2027-06-30' }), false), `RRULE:FREQ=MONTHLY;INTERVAL=1;BYMONTHDAY=15;UNTIL=${endOfDayUtc}`);
+    assert.equal(toRRule(buildRecurrence('MONTHLY', '2026-10-15', { until: '2027-06-30' }), true), 'RRULE:FREQ=MONTHLY;INTERVAL=1;BYMONTHDAY=15;UNTIL=20270630');
+  });
+
+  it('keeps the last-day fallback of days 29–31 and of 29 February in the export', () => {
+    assert.equal(toRRule(buildRecurrence('MONTHLY', '2026-10-31'), true), 'RRULE:FREQ=MONTHLY;INTERVAL=1;BYMONTHDAY=28,29,30,31;BYSETPOS=-1');
+    assert.equal(toRRule(buildRecurrence('MONTHLY', '2026-09-30'), true), 'RRULE:FREQ=MONTHLY;INTERVAL=1;BYMONTHDAY=28,29,30;BYSETPOS=-1');
+    assert.equal(toRRule(buildRecurrence('MONTHLY', '2026-10-28'), true), 'RRULE:FREQ=MONTHLY;INTERVAL=1;BYMONTHDAY=28');
+    assert.equal(toRRule(buildRecurrence('YEARLY', '2028-02-29'), true, '2028-02-29'), 'RRULE:FREQ=YEARLY;INTERVAL=1;BYMONTH=2;BYMONTHDAY=28,29;BYSETPOS=-1');
+    assert.equal(toRRule(buildRecurrence('YEARLY', '2026-10-29'), true, '2026-10-29'), 'RRULE:FREQ=YEARLY;INTERVAL=1');
   });
 });

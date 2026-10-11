@@ -11,6 +11,7 @@ import { nextRecurringTask } from './services/recurrence';
 import { forceSync, signOutAndClearCache, type FirebaseServices } from './services/firebase';
 import {
   appendWheelLog,
+  completeRecurringTask,
   deleteAllUserData,
   deleteTask,
   exportUserData,
@@ -263,11 +264,15 @@ export default function App({ user, services }: AppProps) {
     // Tarea recurrente marcada como Hecha: se crea la siguiente repetición (una sola vez por tarea)
     const next = status === 'DONE' && !task.nextOccurrenceId ? nextRecurringTask(task) : null;
     const updated = withStatus(task, status);
-    saveTask(db, uid, next ? { ...updated, nextOccurrenceId: next.id } : updated).catch(reportError('actualizar el estado'));
     if (next) {
-      saveTask(db, uid, next).catch(reportError('crear la siguiente repetición'));
+      completeRecurringTask(db, uid, { ...updated, nextOccurrenceId: next.id }, next).catch(
+        reportError('guardar la tarea y su siguiente repetición')
+      );
       showToast(`Tarea hecha y archivada. Siguiente repetición: ${formatTaskDates(next)?.replace('Vence: ', '')}.`);
-    } else if (status === 'DONE') {
+      return;
+    }
+    saveTask(db, uid, updated).catch(reportError('actualizar el estado'));
+    if (status === 'DONE') {
       showToast('Tarea hecha y archivada. La encontrarás en «Archivadas».');
     } else if (isArchived(task)) {
       showToast('Tarea reactivada: vuelve a su lista.');
