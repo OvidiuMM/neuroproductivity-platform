@@ -8,10 +8,9 @@ import {
   type User
 } from 'firebase/auth';
 import { FirebaseError } from 'firebase/app';
-import App from './App';
+import { AccessGate } from './AccessGate';
 import { LoginScreen } from './components/LoginScreen';
 import { getFirebase, type FirebaseServices } from './services/firebase';
-import { saveUserProfile } from './services/repository';
 
 type AuthState =
   | { status: 'loading' }
@@ -41,7 +40,6 @@ export const AuthGate: React.FC = () => {
         getRedirectResult(services.auth).catch((e) => setSignInError(describeSignInError(e)));
         unsubscribe = onAuthStateChanged(services.auth, (user) => {
           if (user) {
-            saveUserProfile(services.db, user).catch((e) => console.error('Error saving user profile:', e));
             setState({ status: 'signed-in', services, user });
           } else {
             setState({ status: 'signed-out', services });
@@ -99,5 +97,5 @@ export const AuthGate: React.FC = () => {
     );
   }
 
-  return <App key={state.user.uid} user={state.user} services={state.services} />;
+  return <AccessGate key={state.user.uid} user={state.user} services={state.services} />;
 };
