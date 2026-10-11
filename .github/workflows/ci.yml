@@ -66,6 +66,10 @@ jobs:
       - name: Install Playwright browser
         run: npx playwright install --with-deps chromium
 
+      # El emulador de Functions carga functions/.env.local (no versionado); en CI lleva valores de ejemplo
+      - name: Write demo Cloud Functions params for the emulator
+        run: printf 'ANDROID_PACKAGE_NAME=org.example.neuroproductividad\n' > functions/.env.local
+
       - name: Run end-to-end tests
         run: npm run test:e2e
 
@@ -107,20 +111,24 @@ jobs:
           workload_identity_provider: ${{ secrets.GCP_WORKLOAD_IDENTITY_PROVIDER }}
           service_account: ${{ secrets.GCP_SERVICE_ACCOUNT }}
 
-      # functions/.env.<project-id> no se versiona; en CI los parámetros salen de las variables del repositorio
+      # functions/.env.<project-id> no se versiona; en CI los parámetros salen de las variables y los secretos
+      # del repositorio. Los emails van en secretos para que no aparezcan en los logs. La contraseña de
+      # aplicación de Gmail no pasa por aquí: está en Secret Manager (GMAIL_APP_PASSWORD).
       - name: Write Cloud Functions params
         env:
           ANDROID_PACKAGE_NAME: ${{ vars.ANDROID_PACKAGE_NAME }}
           ANDROID_SHA256_FINGERPRINT: ${{ vars.ANDROID_SHA256_FINGERPRINT }}
+          ADMIN_EMAIL: ${{ secrets.ADMIN_EMAIL }}
+          GMAIL_USER: ${{ secrets.GMAIL_USER }}
         run: |
-          for name in ANDROID_PACKAGE_NAME ANDROID_SHA256_FINGERPRINT; do
+          for name in ANDROID_PACKAGE_NAME ANDROID_SHA256_FINGERPRINT ADMIN_EMAIL GMAIL_USER; do
             if [ -z "${!name}" ]; then
-              echo "::error::Falta la variable de repositorio $name"
+              echo "::error::Falta la variable o el secreto de repositorio $name"
               exit 1
             fi
           done
-          printf 'ANDROID_PACKAGE_NAME=%s\nANDROID_SHA256_FINGERPRINT=%s\n' \
-            "$ANDROID_PACKAGE_NAME" "$ANDROID_SHA256_FINGERPRINT" > functions/.env
+          printf 'ANDROID_PACKAGE_NAME=%s\nANDROID_SHA256_FINGERPRINT=%s\nADMIN_EMAIL=%s\nGMAIL_USER=%s\n' \
+            "$ANDROID_PACKAGE_NAME" "$ANDROID_SHA256_FINGERPRINT" "$ADMIN_EMAIL" "$GMAIL_USER" > functions/.env
 
       # Los predeploy de firebase.json compilan la SPA y la función antes de subirlas.
       # firebase-tools sale de devDependencies (versión fijada en package.json).

@@ -82,8 +82,9 @@ cd neuroproductivity-platform
 npm ci
 npm ci --prefix functions
 
-# 3. Iniciar la app en local: arranca los emuladores de Auth y Firestore (proyecto demo, sin tocar producción)
-#    y la app conectada a ellos. El inicio de sesión con Google lo simula el emulador.
+# 3. Iniciar la app en local: arranca los emuladores de Auth, Firestore y Functions (proyecto demo, sin tocar
+#    producción) y la app conectada a ellos. El inicio de sesión con Google lo simula el emulador; entra con
+#    admin@example.com para aprobar los accesos de las demás cuentas.
 npm run dev
 
 # 4. Compilar para producción
@@ -111,7 +112,7 @@ El banco de pruebas cubre lógica pura con el test runner de Node, la importaci�
 
 ### Despliegue en Firebase (Hosting + Cloud Functions + Firestore)
 
-Firebase Hosting sirve la SPA compilada (`dist/`), la función `api` (Cloud Functions 2.ª gen, región `europe-west1`) atiende el backend y Firestore guarda los datos de cada cuenta en `users/{uid}/…`. Las reglas (`firestore.rules`) solo permiten a cada persona acceder a sus propios datos y hacen las evaluaciones de la Rueda *append-only*. La app lee su configuración de Firebase de `/__/firebase/init.json`, que sirve el propio Hosting, así que el ID del proyecto no está en el código. Las rutas se definen en `firebase.json`:
+Firebase Hosting sirve la SPA compilada (`dist/`), la función `api` (Cloud Functions 2.ª gen, región `europe-west1`) atiende el backend y Firestore guarda los datos de cada cuenta en `users/{uid}/…`. Las reglas (`firestore.rules`) solo permiten a cada persona acceder a sus propios datos, y solo con su acceso aprobado, y hacen las evaluaciones de la Rueda *append-only*. La app lee su configuración de Firebase de `/__/firebase/init.json`, que sirve el propio Hosting, así que el ID del proyecto no está en el código. Las rutas se definen en `firebase.json`:
 
 | Ruta | Destino |
 | :--- | :--- |
@@ -128,6 +129,30 @@ firebase use --add
 ```
 
 La función usa dos parámetros, `ANDROID_PACKAGE_NAME` y `ANDROID_SHA256_FINGERPRINT`. `firebase deploy` los pide la primera vez y los guarda en `functions/.env.<project-id>`, ignorado por git. Para los emuladores, defínelos en `functions/.env.local`.
+
+#### Aprobación de accesos
+
+Cada cuenta necesita la aprobación de la administración antes de usar la app, también las que ya existían. Al entrar sin acceso, la persona ve una pantalla para solicitarlo con un mensaje opcional; la administración decide en la pestaña **Accesos** (aprobar, rechazar o retirar) y el cambio se aplica al momento. Tras un rechazo o una retirada se puede volver a solicitar pasado un día.
+
+- Las Cloud Functions `syncAccess`, `requestAccess`, `setAccess` y `forgetAccess` (`functions/src/access.ts`) son las únicas que escriben `access/{uid}` y `admins/{uid}`. Las reglas consultan `access/{uid}` para dejar pasar a `users/{uid}/…`.
+- La administración es la cuenta de Google cuyo email coincide con el parámetro `ADMIN_EMAIL`; se aprueba sola al entrar. En los emuladores (proyecto demo) es `admin@example.com`.
+- Avisos por email con Gmail y una contraseña de aplicación: a la administración por cada solicitud nueva y a la persona cuando se aprueba. Los envía la cuenta del parámetro `GMAIL_USER`; la contraseña está en Secret Manager como `GMAIL_APP_PASSWORD` y nunca en el repositorio ni en los `.env`. En los emuladores no se envía nada.
+
+Configuración, una sola vez, con las variables `PROJECT_ID`, `PROJECT_NUMBER` y `SA` del despliegue automático (más abajo):
+
+```bash
+# 1. Contraseña de aplicación de la cuenta de Gmail que envía los avisos (requiere la verificación en dos pasos):
+#    https://myaccount.google.com/apppasswords
+# 2. Guardarla en Secret Manager; el CLI la pide por teclado y no queda en el historial
+npx firebase functions:secrets:set GMAIL_APP_PASSWORD --project "$PROJECT_ID"
+# 3. Permisos: la cuenta de servicio de las funciones lee el secreto y la de GitHub Actions lo puede consultar al desplegar
+gcloud secrets add-iam-policy-binding GMAIL_APP_PASSWORD --project "$PROJECT_ID" \
+  --member "serviceAccount:$PROJECT_NUMBER-compute@developer.gserviceaccount.com" --role roles/secretmanager.secretAccessor
+gcloud projects add-iam-policy-binding "$PROJECT_ID" --member "serviceAccount:$SA" --role roles/secretmanager.viewer --condition None
+# 4. Emails de la administración y de la cuenta que envía, como secretos del repositorio (gh los pide por teclado)
+gh secret set ADMIN_EMAIL
+gh secret set GMAIL_USER
+```
 
 ```bash
 # Emuladores locales (proyecto demo): Hosting en http://localhost:5002, Functions, Auth y Firestore
@@ -150,6 +175,8 @@ El workflow necesita estos valores en el repositorio. Los secrets se ocultan en 
 | Secret | `GCP_WORKLOAD_IDENTITY_PROVIDER` | Ruta completa del proveedor de identidad |
 | Variable | `ANDROID_PACKAGE_NAME` | Package name de la APK |
 | Variable | `ANDROID_SHA256_FINGERPRINT` | Huella SHA-256 del certificado de firma de la APK |
+| Secret | `ADMIN_EMAIL` | Email de la cuenta de Google que aprueba los accesos |
+| Secret | `GMAIL_USER` | Cuenta de Gmail que envía los avisos de acceso |
 
 Configuración inicial, una sola vez, con una cuenta propietaria del proyecto:
 
@@ -160,8 +187,9 @@ SA="github-deployer@$PROJECT_ID.iam.gserviceaccount.com"
 REPO_ID=1408574835  # gh api repos/OvidiuMM/neuroproductivity-platform -q .id
 
 # 1. Cuenta de servicio con los permisos para desplegar Hosting, Functions y las reglas de Firestore
+#    (secretmanager.viewer: el CLI comprueba el secreto GMAIL_APP_PASSWORD al desplegar)
 gcloud iam service-accounts create github-deployer --project "$PROJECT_ID" --display-name "GitHub Actions deployer"
-for role in roles/firebasehosting.admin roles/cloudfunctions.admin roles/firebaserules.admin roles/datastore.indexAdmin; do
+for role in roles/firebasehosting.admin roles/cloudfunctions.admin roles/firebaserules.admin roles/datastore.indexAdmin roles/secretmanager.viewer; do
   gcloud projects add-iam-policy-binding "$PROJECT_ID" --member "serviceAccount:$SA" --role "$role" --condition None
 done
 # Las funciones se ejecutan con la cuenta de servicio de Compute y el CLI comprueba también la de App Engine;

@@ -70,7 +70,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onSignIn, isSigningIn,
       <div className="p-3.5 bg-slate-50 border border-slate-200 rounded-2xl text-[11px] text-slate-600 leading-relaxed flex items-start gap-2.5">
         <Cloud className="w-4 h-4 text-slate-500 shrink-0 mt-0.5" />
         <p>
-          Tus tareas, evaluaciones y agenda se guardan en tu cuenta, en servidores de Google Cloud en la Unión Europea (Bélgica). Solo tú puedes acceder a ellos, y puedes descargarlos o eliminarlos cuando quieras desde el menú de tu cuenta.
+          El acceso se aprueba cuenta a cuenta: al entrar por primera vez podrás solicitarlo. Tus tareas, evaluaciones y agenda se guardan en tu cuenta, en servidores de Google Cloud en la Unión Europea (Bélgica). Solo tú puedes acceder a ellos, y puedes descargarlos o eliminarlos cuando quieras desde el menú de tu cuenta.
         </p>
       </div>
     </div>
