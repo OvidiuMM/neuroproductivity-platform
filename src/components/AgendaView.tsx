@@ -79,7 +79,6 @@ export const AgendaView: React.FC<AgendaViewProps> = ({ tasks, meetings, onEditT
   const agenda = buildAgenda(tasks, meetings, days, now);
   const overdue = overdueTasks(tasks, now);
   const rangeLabel = `${rangeFormat.format(toLocalDate(days[0]))} – ${rangeFormat.format(toLocalDate(days[days.length - 1]))}`;
-  const daysWithItems = days.filter((d) => agenda.get(d)!.length > 0);
 
   const moveWeeks = (weeks: number) =>
     setWeekStart((start) => new Date(start.getFullYear(), start.getMonth(), start.getDate() + 7 * weeks));
@@ -212,31 +211,38 @@ export const AgendaView: React.FC<AgendaViewProps> = ({ tasks, meetings, onEditT
             </section>
           )}
 
-          {daysWithItems.length === 0 ? (
-            <p className="p-8 text-center text-xs text-slate-500 bg-white rounded-2xl border border-slate-200">
-              No hay nada programado en estas dos semanas.
-            </p>
-          ) : (
-            daysWithItems.map((date) => (
+          {/* Todos los días del periodo, también los vacíos, para que la estructura (y hoy) siempre esté */}
+          {days.map((date) => {
+            const items = agenda.get(date)!;
+            const isToday = date === today;
+            return (
               <section
                 key={date}
                 aria-labelledby={`agenda-day-${date}`}
-                className={`rounded-2xl border p-4 space-y-2 ${date === today ? 'border-indigo-400 bg-indigo-50/40' : 'border-slate-200 bg-white'}`}
+                aria-current={isToday ? 'date' : undefined}
+                className={`rounded-2xl border space-y-2 ${items.length ? 'p-4' : 'px-4 py-2.5'} ${
+                  isToday ? 'border-indigo-400 bg-indigo-50/40' : 'border-slate-200 bg-white'
+                }`}
               >
-                <h3 id={`agenda-day-${date}`} className="text-sm font-bold text-slate-900 first-letter:uppercase">
-                  {longDayFormat.format(toLocalDate(date))}
-                  {date === today && <span className="ml-2 text-[10px] font-bold uppercase text-indigo-700">Hoy</span>}
-                </h3>
-                <ul className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
-                  {agenda.get(date)!.map((item) => (
-                    <li key={item.key}>
-                      <AgendaEntry item={item} onEditTask={onEditTask} />
-                    </li>
-                  ))}
-                </ul>
+                <div className="flex flex-wrap items-baseline justify-between gap-x-3">
+                  <h3 id={`agenda-day-${date}`} className="text-sm font-bold text-slate-900 first-letter:uppercase">
+                    {longDayFormat.format(toLocalDate(date))}
+                    {isToday && <span className="ml-2 text-[10px] font-bold uppercase text-indigo-700">Hoy</span>}
+                  </h3>
+                  {items.length === 0 && <p className="text-xs text-slate-600">Sin nada programado</p>}
+                </div>
+                {items.length > 0 && (
+                  <ul className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
+                    {items.map((item) => (
+                      <li key={item.key}>
+                        <AgendaEntry item={item} onEditTask={onEditTask} />
+                      </li>
+                    ))}
+                  </ul>
+                )}
               </section>
-            ))
-          )}
+            );
+          })}
         </div>
       )}
     </div>

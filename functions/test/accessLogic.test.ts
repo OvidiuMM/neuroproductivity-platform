@@ -5,6 +5,7 @@ import {
   canDecide,
   decideRequest,
   isAdminToken,
+  isCurrentAdminMarker,
   normalizeMessage,
   REQUEST_COOLDOWN_MS,
   type AccessRecord
@@ -26,6 +27,14 @@ describe('aprobación de accesos', () => {
     assert.equal(isAdminToken({ email: 'admin@example.com', email_verified: false }, 'admin@example.com'), false);
     assert.equal(isAdminToken({ email: 'otra@example.com', email_verified: true }, 'admin@example.com'), false);
     assert.equal(isAdminToken({ email: '', email_verified: true }, ''), false);
+  });
+
+  it('solo da por válida la marca de administración de la cuenta configurada', () => {
+    assert.equal(isCurrentAdminMarker({ email: 'Admin@example.com' }, 'admin@example.com'), true);
+    assert.equal(isCurrentAdminMarker({ email: 'antes@example.com' }, 'admin@example.com'), false);
+    assert.equal(isCurrentAdminMarker({}, 'admin@example.com'), false);
+    assert.equal(isCurrentAdminMarker(undefined, 'admin@example.com'), false);
+    assert.equal(isCurrentAdminMarker({ email: 'admin@example.com' }, ''), false);
   });
 
   it('recorta el mensaje opcional y descarta lo que no es texto', () => {

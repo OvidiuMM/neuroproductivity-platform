@@ -1,6 +1,6 @@
 import { ListContext, MeetingGuard, TaskItem } from '../types';
 import { DeadlineState, getDeadlineState, toLocalDate } from './tasks';
-import { toDateString, upcomingOccurrences } from './recurrence';
+import { occurrencesBetween, toDateString } from './recurrence';
 
 // Elemento de la agenda en un día concreto
 export interface AgendaItem {
@@ -27,9 +27,6 @@ export const startOfWeek = (d: Date) => addDays(new Date(d.getFullYear(), d.getM
 // Días (YYYY-MM-DD) desde `start` incluido durante `count` días
 export const daysFrom = (start: Date, count: number) => Array.from({ length: count }, (_, i) => toDateString(addDays(start, i)));
 
-// Máximo de repeticiones previstas que se proyectan por tarea (suficiente para varias semanas de una tarea diaria)
-const MAX_PROJECTED = 120;
-
 // Agrupa por día las tareas activas con fecha (plazos, intervalos y repeticiones previstas) y las reuniones
 export const buildAgenda = (
   tasks: TaskItem[],
@@ -47,10 +44,11 @@ export const buildAgenda = (
     const base = { title: task.title, context: task.listContext, task, deadline: getDeadlineState(task, now) };
 
     if (task.startDate && task.startDate < task.dueDate) {
-      // Intervalo: empieza, días en curso y vence
-      for (let d = toLocalDate(task.startDate), i = 0; toDateString(d) <= task.dueDate && i < 400; d = addDays(d, 1), i++) {
+      // Intervalo: empieza, días en curso y vence. Solo se recorre la parte visible, dure lo que dure.
+      const from = task.startDate > first ? task.startDate : first;
+      const to = task.dueDate < last ? task.dueDate : last;
+      for (let d = toLocalDate(from); toDateString(d) <= to; d = addDays(d, 1)) {
         const date = toDateString(d);
-        if (date < first || date > last) continue;
         const label = date === task.startDate ? 'Empieza' : date === task.dueDate ? 'Vence' : 'En curso';
         add({
           ...base,
@@ -67,9 +65,7 @@ export const buildAgenda = (
 
     // Repeticiones previstas (las crea la app al completar cada una; aquí solo se anticipan)
     if (task.recurrence) {
-      for (const date of upcomingOccurrences(task.dueDate, task.recurrence, MAX_PROJECTED).slice(1)) {
-        if (date > last) break;
-        if (date < first) continue;
+      for (const date of occurrencesBetween(task.dueDate, task.recurrence, first, last)) {
         add({
           ...base,
           deadline: 'none',

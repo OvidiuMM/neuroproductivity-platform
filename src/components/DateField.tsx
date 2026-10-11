@@ -21,6 +21,7 @@ interface DateFieldProps {
   onChange: (value: string) => void;
   id?: string;
   hasVisibleLabel?: boolean;
+  required?: boolean;
   className?: string;
   inputClassName?: string;
 }
@@ -28,6 +29,7 @@ interface DateFieldProps {
 const POPOVER_WIDTH = 288;
 const VIEWPORT_MARGIN = 8;
 const INVALID_MESSAGE = `Escribe la fecha como ${DATE_INPUT_PLACEHOLDER}`;
+const REQUIRED_MESSAGE = 'Elige una fecha';
 const monthFormat = new Intl.DateTimeFormat('es-ES', { month: 'long', year: 'numeric' });
 const fullDayFormat = new Intl.DateTimeFormat('es-ES', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
 
@@ -50,6 +52,7 @@ export const DateField: React.FC<DateFieldProps> = ({
   onChange,
   id,
   hasVisibleLabel = false,
+  required = false,
   className = '',
   inputClassName = ''
 }) => {
@@ -70,17 +73,18 @@ export const DateField: React.FC<DateFieldProps> = ({
   const focusGrid = useRef(false);
 
   const parsed = parseDateInput(text);
-  const invalid = parsed === null;
+  const missing = required && parsed === '';
+  const invalid = parsed === null || missing;
 
   // Cambios desde fuera (sugerencia del analizador, «Hoy», otra tarea): se muestran sin pisar lo que se escribe
   useEffect(() => {
     setText((current) => (parseDateInput(current) === value ? current : formatDateInput(value)));
   }, [value]);
 
-  // Una fecha imposible bloquea el envío del formulario con un mensaje del navegador
+  // Una fecha imposible (o que falta, si es obligatoria) bloquea el envío del formulario con un mensaje del navegador
   useEffect(() => {
-    inputRef.current?.setCustomValidity(invalid ? INVALID_MESSAGE : '');
-  }, [invalid]);
+    inputRef.current?.setCustomValidity(parsed === null ? INVALID_MESSAGE : missing ? REQUIRED_MESSAGE : '');
+  }, [parsed, missing]);
 
   const close = (returnFocus: boolean) => {
     setOpen(false);
@@ -191,6 +195,7 @@ export const DateField: React.FC<DateFieldProps> = ({
         onBlur={() => parsed && setText(formatDateInput(parsed))}
         aria-label={hasVisibleLabel ? undefined : label}
         aria-invalid={invalid || undefined}
+        aria-required={required || undefined}
         className={`w-full pr-8 ${invalid ? 'border-red-400 bg-red-50/40' : ''} ${inputClassName}`}
       />
       <button
