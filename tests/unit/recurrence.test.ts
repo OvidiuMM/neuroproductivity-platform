@@ -121,7 +121,9 @@ describe('describeRecurrence and toRRule', () => {
   it('exports an RRULE for calendars', () => {
     assert.equal(toRRule(buildRecurrence('MONTHLY', '2026-10-12', { monthlyMode: 'NTH_WEEKDAY' }), true), 'RRULE:FREQ=MONTHLY;INTERVAL=1;BYDAY=2MO');
     assert.equal(toRRule(buildRecurrence('MONTHLY', '2026-10-30', { monthlyMode: 'LAST_WEEKDAY' }), true), 'RRULE:FREQ=MONTHLY;INTERVAL=1;BYDAY=-1FR');
-    assert.equal(toRRule(buildRecurrence('WEEKLY', '2026-10-12', { weekdays: [1, 3] }), true), 'RRULE:FREQ=WEEKLY;INTERVAL=1;BYDAY=MO,WE');
+    assert.equal(toRRule(buildRecurrence('WEEKLY', '2026-10-12', { weekdays: [1, 3] }), true), 'RRULE:FREQ=WEEKLY;INTERVAL=1;WKST=MO;BYDAY=MO,WE');
+    // Domingo va al final: la semana empieza en lunes
+    assert.equal(toRRule(buildRecurrence('WEEKLY', '2026-10-11', { interval: 2, weekdays: [0, 1] }), true), 'RRULE:FREQ=WEEKLY;INTERVAL=2;WKST=MO;BYDAY=MO,SU');
     assert.equal(toRRule(buildRecurrence('MONTHLY', '2026-10-15', { until: '2027-06-30' }), false), 'RRULE:FREQ=MONTHLY;INTERVAL=1;BYMONTHDAY=15;UNTIL=20270630T235959Z');
   });
 });
