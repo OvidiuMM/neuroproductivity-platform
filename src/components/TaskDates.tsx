@@ -1,11 +1,12 @@
 import React from 'react';
-import { CalendarClock } from 'lucide-react';
+import { CalendarClock, Repeat } from 'lucide-react';
 import { TaskItem } from '../types';
 import { formatTaskDates, getDeadlineState } from '../services/tasks';
+import { describeRecurrence } from '../services/recurrence';
 
 const DEADLINE_LABEL = { overdue: 'Vencida', soon: 'Vence en menos de una semana' } as const;
 
-// Fecha límite o intervalo de la tarea, coloreada igual que el título cuando vence o está cerca.
+// Fecha límite o intervalo de la tarea, coloreada igual que el título cuando vence o está cerca, y su repetición.
 // `now` viene del reloj de la lista (useNow) para que el color cambie aunque la página siga abierta.
 export const TaskDates: React.FC<{ task: TaskItem; now?: Date }> = ({ task, now }) => {
   const text = formatTaskDates(task);
@@ -13,10 +14,19 @@ export const TaskDates: React.FC<{ task: TaskItem; now?: Date }> = ({ task, now 
   const state = getDeadlineState(task, now);
   const color = state === 'overdue' ? 'text-red-600' : state === 'soon' ? 'text-violet-600' : 'text-slate-500';
   return (
-    <span className={`inline-flex items-center gap-1 font-semibold ${color}`}>
-      <CalendarClock className="w-3 h-3" />
-      {text}
-      {(state === 'overdue' || state === 'soon') && <span className="sr-only">({DEADLINE_LABEL[state]})</span>}
-    </span>
+    <>
+      <span className={`inline-flex items-center gap-1 font-semibold ${color}`}>
+        <CalendarClock className="w-3 h-3" />
+        {text}
+        {(state === 'overdue' || state === 'soon') && <span className="sr-only">({DEADLINE_LABEL[state]})</span>}
+      </span>
+      {task.recurrence && (
+        <span className="inline-flex items-center gap-1 font-semibold text-indigo-600">
+          <Repeat className="w-3 h-3" aria-hidden="true" />
+          <span className="sr-only">Se repite:</span>
+          {describeRecurrence(task.recurrence, task.dueDate)}
+        </span>
+      )}
+    </>
   );
 };

@@ -1,5 +1,6 @@
 import { TaskItem } from '../types';
 import { dueMoment, toLocalDate } from './tasks';
+import { describeRecurrence, toRRule } from './recurrence';
 
 // Evento de calendario a partir de las fechas de una tarea. Se exporta con enlaces "añadir evento"
 // de cada proveedor o con un archivo .ics: no hace falta conectar ninguna cuenta.
@@ -10,6 +11,7 @@ export interface CalendarEvent {
   allDay: boolean;
   start: Date; // día completo: medianoche local del primer día
   end: Date; // día completo: medianoche local del día siguiente al último (exclusivo)
+  rrule?: string; // tareas recurrentes: la serie completa (Google Calendar y .ics; los enlaces de Outlook no lo admiten)
 }
 
 const DEADLINE_EVENT_MS = 30 * 60 * 1000;
@@ -22,11 +24,24 @@ const addDays = (date: Date, days: number) => {
 
 export const buildCalendarEvent = (task: TaskItem, appUrl: string): CalendarEvent | null => {
   if (!task.dueDate) return null;
-  const description = [task.description, `Tarea de NeuroProductividad: ${appUrl}`].filter(Boolean).join('\n\n');
-  const base = { uid: `${task.id}@neuroproductividad`, title: task.title, description };
+  const allDay = !task.startTime && !task.dueTime;
+  // La serie se ancla en la fecha límite; un intervalo de varios días empieza otro día y su regla no
+  // coincidiría con el inicio del evento, así que se exporta solo esta repetición
+  const isMultiDay = Boolean(task.startDate && task.startDate !== task.dueDate);
+  const repeatNote =
+    task.recurrence && isMultiDay
+      ? `Se repite: ${describeRecurrence(task.recurrence, task.dueDate).toLowerCase()}. Las siguientes repeticiones las crea la app al marcar la tarea como hecha.`
+      : '';
+  const description = [task.description, repeatNote, `Tarea de NeuroProductividad: ${appUrl}`].filter(Boolean).join('\n\n');
+  const base = {
+    uid: `${task.id}@neuroproductividad`,
+    title: task.title,
+    description,
+    ...(task.recurrence && !isMultiDay ? { rrule: toRRule(task.recurrence, allDay, task.dueDate) } : {})
+  };
 
   // Sin horas: evento de día completo (de varios días si la tarea tiene intervalo)
-  if (!task.startTime && !task.dueTime) {
+  if (allDay) {
     return {
       ...base,
       allDay: true,
@@ -55,6 +70,7 @@ export const googleCalendarUrl = (event: CalendarEvent) => {
     ? `${localDay(event.start)}/${localDay(event.end)}`
     : `${utcStamp(event.start)}/${utcStamp(event.end)}`;
   const params = new URLSearchParams({ action: 'TEMPLATE', text: event.title, dates, details: event.description });
+  if (event.rrule) params.set('recur', event.rrule);
   return `https://calendar.google.com/calendar/render?${params}`;
 };
 
@@ -108,6 +124,7 @@ export const buildIcs = (event: CalendarEvent, now = new Date()) => {
     `UID:${event.uid}`,
     `DTSTAMP:${utcStamp(now)}`,
     ...timing,
+    ...(event.rrule ? [event.rrule] : []),
     `SUMMARY:${escapeIcsText(event.title)}`,
     `DESCRIPTION:${escapeIcsText(event.description)}`,
     'END:VEVENT',
