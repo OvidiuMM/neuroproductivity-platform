@@ -47,6 +47,23 @@ export interface TaskItem {
   dueDate?: string; // YYYY-MM-DD
   dueTime?: string; // HH:mm (opcional; sin hora, el plazo acaba al final del día)
   estimateMinutes?: number; // duración estimada (opcional)
+  recurrence?: Recurrence; // tarea recurrente (requiere fecha límite)
+  nextOccurrenceId?: string; // id de la repetición creada al completarla (evita duplicarla si se reactiva)
+}
+
+// Repetición de una tarea. Al marcarla Hecha se archiva y se crea la siguiente con la nueva fecha.
+export type RecurrenceFrequency = 'DAILY' | 'WEEKLY' | 'MONTHLY' | 'YEARLY';
+export type MonthlyMode = 'DAY_OF_MONTH' | 'NTH_WEEKDAY' | 'LAST_WEEKDAY';
+
+export interface Recurrence {
+  frequency: RecurrenceFrequency;
+  interval: number; // cada N días / semanas / meses / años (>= 1)
+  weekdays?: number[]; // WEEKLY: días de la semana (0 = domingo … 6 = sábado)
+  monthlyMode?: MonthlyMode; // MONTHLY: día del mes, N.º día de la semana (p. ej. 2.º lunes) o último
+  monthDay?: number; // DAY_OF_MONTH: 1–31 (en meses más cortos, el último día)
+  nth?: number; // NTH_WEEKDAY: 1–4
+  weekday?: number; // NTH_WEEKDAY y LAST_WEEKDAY: 0 = domingo … 6 = sábado
+  until?: string; // YYYY-MM-DD: sin repeticiones después de esta fecha (opcional)
 }
 
 export interface WheelOfLifeLog {

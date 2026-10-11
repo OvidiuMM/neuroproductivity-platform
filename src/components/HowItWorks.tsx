@@ -29,6 +29,7 @@ const SCREENS: { tab: AppTab; title: string; icon: React.ReactNode; points: stri
       'Cada tarea tiene un estado: Pendiente, En progreso, Bloqueada o Hecha. Al marcarla Hecha se archiva; desde «Archivadas» la reactivas cambiando su estado.',
       'Puedes darle una fecha límite o un intervalo, con hora opcional: el título se pone violeta cuando falta menos de una semana y rojo cuando ha vencido.',
       'Con fecha límite, el botón de calendario la añade a Google Calendar, Outlook o cualquier calendario (archivo .ics).',
+      'Las tareas pueden repetirse (cada día, semana, mes o año; por ejemplo, «cada mes, el 2.º lunes»). Al marcarla Hecha se archiva y se crea la siguiente con su nueva fecha.',
       'Las ideas sin urgencia van a «Opciones Futuras» y no compiten con el Top 10.'
     ]
   },
