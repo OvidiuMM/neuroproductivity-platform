@@ -41,14 +41,17 @@ export const Navbar: React.FC<NavbarProps> = ({
   onForceSync
 }) => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
-  const menuRef = useRef<HTMLDivElement>(null);
+  const menuButtonRef = useRef<HTMLButtonElement>(null);
+  const menuRef = useRef<HTMLElement>(null);
 
-  // El menú del móvil se cierra con Escape o al pulsar fuera
+  // El menú del móvil se cierra con Escape o al pulsar fuera de él y de su botón (también en otros
+  // controles de la cabecera, como «Nueva Tarea» o la cuenta)
   useEffect(() => {
     if (!isMenuOpen) return;
     const onKeyDown = (e: KeyboardEvent) => e.key === 'Escape' && setIsMenuOpen(false);
     const onPointerDown = (e: MouseEvent) => {
-      if (!menuRef.current?.contains(e.target as Node)) setIsMenuOpen(false);
+      const target = e.target as Node;
+      if (!menuRef.current?.contains(target) && !menuButtonRef.current?.contains(target)) setIsMenuOpen(false);
     };
     document.addEventListener('keydown', onKeyDown);
     document.addEventListener('mousedown', onPointerDown);
@@ -64,7 +67,7 @@ export const Navbar: React.FC<NavbarProps> = ({
   };
 
   return (
-    <header ref={menuRef} className="sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b border-slate-200">
+    <header className="sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b border-slate-200">
       {/* 3-Zone Top Bar Contract */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Por debajo de 1280 px las zonas pasan a la línea siguiente en lugar de desbordar; desde ahí caben en una fila */}
@@ -201,6 +204,7 @@ export const Navbar: React.FC<NavbarProps> = ({
 
             {/* Menú de secciones en el móvil */}
             <button
+              ref={menuButtonRef}
               type="button"
               onClick={() => setIsMenuOpen((open) => !open)}
               aria-expanded={isMenuOpen}
@@ -216,7 +220,7 @@ export const Navbar: React.FC<NavbarProps> = ({
 
         {/* Menú desplegable del móvil con las secciones */}
         {isMenuOpen && (
-          <nav id="mobile-sections-menu" aria-label="Secciones" className="md:hidden border-t border-slate-100 py-2">
+          <nav ref={menuRef} id="mobile-sections-menu" aria-label="Secciones" className="md:hidden border-t border-slate-100 py-2">
             <ul className="space-y-1">
               {SECTIONS.map(({ tab, label, icon: Icon }) => (
                 <li key={tab}>
