@@ -1,6 +1,18 @@
-import React, { useState } from 'react';
-import { TaskItem, ListContext, TaskPriority, TaskStatus } from '../types';
-import { DEADLINE_TITLE_CLASS, dueMoment, getDeadlineState } from '../services/tasks';
+import React, { useEffect, useState } from 'react';
+import { TaskItem, ListContext, TaskPriority, TaskStatus, WheelCategory } from '../types';
+import { DEADLINE_TITLE_CLASS, effectivePriority, getDeadlineState } from '../services/tasks';
+import {
+  DEFAULT_LIST_PREFS,
+  ESTIMATE_OPTIONS,
+  arrangeTasks,
+  countActiveFilters,
+  formatEstimate,
+  parseListPrefs,
+  type DeadlineFilter,
+  type ListFilters,
+  type ListPrefs,
+  type SortBy
+} from '../services/taskListing';
 import { useNow } from '../hooks/useNow';
 import { TaskStatusSelect } from './TaskStatusSelect';
 import { TaskDates } from './TaskDates';
@@ -18,12 +30,27 @@ import {
   Archive,
   Layers,
   ArrowUpDown,
-  CheckCircle2
+  CheckCircle2,
+  SlidersHorizontal,
+  Timer,
+  ArrowDown
 } from 'lucide-react';
+
+const PRIORITY_LABEL: Record<TaskPriority, string> = { CRITICAL: 'Crítica', HIGH: 'Alta', MEDIUM: 'Media', LOW: 'Baja' };
+const WHEEL_CATEGORIES: WheelCategory[] = ['Salud', 'Carrera Profesional', 'Finanzas', 'Familia', 'Ocio', 'Relaciones', 'Espiritualidad'];
+const DEADLINE_FILTERS: { value: DeadlineFilter; label: string }[] = [
+  { value: 'ALL', label: 'Todas' },
+  { value: 'OVERDUE', label: 'Vencidas' },
+  { value: 'NEXT_7_DAYS', label: 'Próximos 7 días' },
+  { value: 'WITH_DATE', label: 'Con fecha límite' },
+  { value: 'NO_DATE', label: 'Sin fecha límite' }
+];
 
 interface TaskListProps {
   tasks: TaskItem[];
   activeContext: ListContext;
+  // Clave de localStorage para guardar el orden y los filtros del Top 10 de esta cuenta
+  prefsStorageKey: string;
   archivedCount: number;
   onChangeStatus: (task: TaskItem, status: TaskStatus) => void;
   onDeleteTask: (id: string) => void;
@@ -32,11 +59,10 @@ interface TaskListProps {
   onOpenArchive: () => void;
 }
 
-type SortBy = 'priority' | 'deadline' | 'date' | 'category';
-
 export const TaskList: React.FC<TaskListProps> = ({
   tasks,
   activeContext,
+  prefsStorageKey,
   archivedCount,
   onChangeStatus,
   onDeleteTask,
@@ -45,7 +71,20 @@ export const TaskList: React.FC<TaskListProps> = ({
   onOpenArchive
 }) => {
   const [viewMode, setViewMode] = useState<'active' | 'someday'>('active');
-  const [sortBy, setSortBy] = useState<SortBy>('priority');
+  // Orden y filtros del Top 10, guardados en este dispositivo para cada cuenta
+  const [prefs, setPrefs] = useState<ListPrefs>(() => parseListPrefs(localStorage.getItem(prefsStorageKey)));
+  const activeFilterCount = countActiveFilters(prefs.filters);
+  const [showFilters, setShowFilters] = useState(activeFilterCount > 0);
+
+  useEffect(() => {
+    localStorage.setItem(prefsStorageKey, JSON.stringify(prefs));
+  }, [prefs, prefsStorageKey]);
+
+  const setFilter = <K extends keyof ListFilters>(key: K, value: ListFilters[K]) =>
+    setPrefs((p) => ({ ...p, filters: { ...p.filters, [key]: value } }));
+
+  // Reloj de la lista: los colores de plazo y la prioridad efectiva cambian solos con el tiempo
+  const now = useNow();
 
   // Filtrado por contexto estricto (Segregación Inquebrantable); las tareas hechas están archivadas
   const contextTasks = tasks.filter((t) => t.listContext === activeContext && t.status !== 'DONE');
@@ -54,42 +93,34 @@ export const TaskList: React.FC<TaskListProps> = ({
   const activeTasks = contextTasks.filter((t) => !t.isSomeday);
   const somedayTasks = contextTasks.filter((t) => t.isSomeday);
 
-  // Ordenación dinámica multidimensional
-  const priorityOrder: Record<TaskPriority, number> = {
-    CRITICAL: 4,
-    HIGH: 3,
-    MEDIUM: 2,
-    LOW: 1
-  };
-
-  const sortedActiveTasks = [...activeTasks].sort((a, b) => {
-    if (sortBy === 'priority') {
-      const pDiff = priorityOrder[b.priority] - priorityOrder[a.priority];
-      if (pDiff !== 0) return pDiff;
-      return new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime();
-    } else if (sortBy === 'deadline') {
-      // Las tareas sin fecha límite van al final
-      const dueA = dueMoment(a)?.getTime() ?? Infinity;
-      const dueB = dueMoment(b)?.getTime() ?? Infinity;
-      return dueA - dueB;
-    } else if (sortBy === 'category') {
-      const catA = a.wheelCategory || '';
-      const catB = b.wheelCategory || '';
-      return catA.localeCompare(catB);
-    } else {
-      return new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime();
-    }
-  });
-
-  // Jerarquía Visual: Separar Top 10 del resto
-  const top10Tasks = sortedActiveTasks.slice(0, 10);
-  const peripheralTasks = sortedActiveTasks.slice(10);
-
-  // Reloj de la lista: los colores de plazo cambian solos al cruzar la semana o el vencimiento
-  const now = useNow();
+  // Jerarquía Visual: el Top 10 son las 10 primeras tareas tras filtrar y ordenar
+  const arrangedTasks = arrangeTasks(activeTasks, prefs, now);
+  const hiddenByFilters = activeTasks.length - arrangedTasks.length;
+  const top10Tasks = arrangedTasks.slice(0, 10);
+  const peripheralTasks = arrangedTasks.slice(10);
 
   // El color de plazo sustituye al color base: con las dos clases, el orden del CSS decidiría cuál gana
   const titleColor = (task: TaskItem, base: string) => DEADLINE_TITLE_CLASS[getDeadlineState(task, now)] || base;
+
+  // Etiqueta con la prioridad efectiva; si el plazo lejano la ha bajado, se indica y se da la original
+  const priorityBadge = (task: TaskItem) => {
+    const effective = effectivePriority(task, now);
+    return (
+      <span className="inline-flex items-center gap-1">
+        {getPriorityBadge(effective)}
+        {effective !== task.priority && (
+          <span
+            className="inline-flex items-center gap-0.5 text-[10px] font-semibold text-slate-500"
+            title={`Prioridad original: ${PRIORITY_LABEL[task.priority]}. Cuenta un nivel menos porque la fecha límite está a más de una semana.`}
+          >
+            <ArrowDown className="w-3 h-3" aria-hidden="true" />
+            plazo &gt; 1 semana
+            <span className="sr-only">(prioridad original: {PRIORITY_LABEL[task.priority]})</span>
+          </span>
+        )}
+      </span>
+    );
+  };
 
   const getPriorityBadge = (p: TaskPriority) => {
     switch (p) {
@@ -186,26 +217,127 @@ export const TaskList: React.FC<TaskListProps> = ({
           </button>
         </div>
 
-        {/* Selector de ordenación multidimensional */}
+        {/* Orden y filtros del Top 10 */}
         {viewMode === 'active' && (
           <div className="flex flex-wrap items-center gap-2 text-xs">
-            <span className="text-slate-500 flex items-center gap-1">
+            <label htmlFor="list-sort" className="text-slate-500 flex items-center gap-1">
               <ArrowUpDown className="w-3.5 h-3.5" />
               Ordenar por:
-            </span>
+            </label>
             <select
-              value={sortBy}
-              onChange={(e) => setSortBy(e.target.value as SortBy)}
+              id="list-sort"
+              value={prefs.sortBy}
+              onChange={(e) => setPrefs((p) => ({ ...p, sortBy: e.target.value as SortBy }))}
               className="max-w-full px-2.5 py-1.5 rounded-lg border border-slate-200 text-xs font-semibold bg-white text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-400"
             >
-              <option value="priority">Prioridad Ordinal (Crítica → Baja)</option>
+              <option value="priority">Prioridad efectiva (Crítica → Baja)</option>
               <option value="deadline">Fecha límite (más próxima primero)</option>
+              <option value="estimate">Estimación (más cortas primero)</option>
               <option value="date">Última Modificación (Descendente)</option>
               <option value="category">Categoría de la Rueda de la Vida</option>
             </select>
+            <button
+              type="button"
+              onClick={() => setShowFilters((open) => !open)}
+              aria-expanded={showFilters}
+              aria-controls="list-filters"
+              className={`px-2.5 py-1.5 rounded-lg border text-xs font-semibold flex items-center gap-1.5 ${
+                activeFilterCount > 0 ? 'border-indigo-300 bg-indigo-50 text-indigo-700' : 'border-slate-200 text-slate-700 hover:bg-slate-50'
+              }`}
+            >
+              <SlidersHorizontal className="w-3.5 h-3.5" />
+              Filtros{activeFilterCount > 0 ? ` (${activeFilterCount})` : ''}
+            </button>
           </div>
         )}
       </div>
+
+      {/* PANEL DE FILTROS DEL TOP 10 */}
+      {viewMode === 'active' && showFilters && (
+        <div
+          id="list-filters"
+          role="group"
+          aria-label="Filtros del Top 10"
+          className="bg-white rounded-2xl p-4 border border-slate-200 shadow-xs grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3 text-xs"
+        >
+          {(
+            [
+              {
+                id: 'filter-priority',
+                label: 'Prioridad (efectiva)',
+                value: prefs.filters.priority,
+                onChange: (v: string) => setFilter('priority', v as ListFilters['priority']),
+                options: [{ value: 'ALL', label: 'Todas' }, ...(['CRITICAL', 'HIGH', 'MEDIUM', 'LOW'] as TaskPriority[]).map((p) => ({ value: p, label: PRIORITY_LABEL[p] }))]
+              },
+              {
+                id: 'filter-estimate',
+                label: 'Estimación hasta',
+                value: String(prefs.filters.maxEstimate),
+                onChange: (v: string) => setFilter('maxEstimate', v === 'ALL' ? 'ALL' : Number(v)),
+                options: [{ value: 'ALL', label: 'Cualquiera' }, ...ESTIMATE_OPTIONS.map((o) => ({ value: String(o.value), label: o.label }))]
+              },
+              {
+                id: 'filter-deadline',
+                label: 'Fecha límite',
+                value: prefs.filters.deadline,
+                onChange: (v: string) => setFilter('deadline', v as DeadlineFilter),
+                options: DEADLINE_FILTERS
+              },
+              {
+                id: 'filter-status',
+                label: 'Estado',
+                value: prefs.filters.status,
+                onChange: (v: string) => setFilter('status', v as ListFilters['status']),
+                options: [
+                  { value: 'ALL', label: 'Todos' },
+                  { value: 'PENDING', label: 'Pendiente' },
+                  { value: 'IN_PROGRESS', label: 'En progreso' },
+                  { value: 'BLOCKED', label: 'Bloqueada' }
+                ]
+              },
+              {
+                id: 'filter-category',
+                label: 'Área de la Rueda',
+                value: prefs.filters.category,
+                onChange: (v: string) => setFilter('category', v as ListFilters['category']),
+                options: [{ value: 'ALL', label: 'Todas' }, ...WHEEL_CATEGORIES.map((c) => ({ value: c, label: c }))]
+              }
+            ] as { id: string; label: string; value: string; onChange: (v: string) => void; options: { value: string; label: string }[] }[]
+          ).map((f) => (
+            <div key={f.id} className="space-y-1">
+              <label htmlFor={f.id} className="block font-semibold text-slate-600">
+                {f.label}
+              </label>
+              <select
+                id={f.id}
+                value={f.value}
+                onChange={(e) => f.onChange(e.target.value)}
+                className="w-full px-2 py-1.5 rounded-lg border border-slate-200 bg-white text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-400"
+              >
+                {f.options.map((o) => (
+                  <option key={o.value} value={o.value}>
+                    {o.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+          ))}
+          {activeFilterCount > 0 && (
+            <div className="sm:col-span-2 lg:col-span-5 flex flex-wrap items-center justify-between gap-2 text-slate-600">
+              <span role="status">
+                {hiddenByFilters === 1 ? '1 tarea oculta' : `${hiddenByFilters} tareas ocultas`} por los filtros.
+              </span>
+              <button
+                type="button"
+                onClick={() => setPrefs((p) => ({ ...p, filters: DEFAULT_LIST_PREFS.filters }))}
+                className="font-semibold text-indigo-700 hover:text-indigo-900"
+              >
+                Quitar filtros
+              </button>
+            </div>
+          )}
+        </div>
+      )}
 
       {/* VISTA 1: FLUJO ACTIVO CON JERARQUÍA GESTALT (TOP 10 VS PERIFÉRICO) */}
       {viewMode === 'active' && (
@@ -263,7 +395,7 @@ export const TaskList: React.FC<TaskListProps> = ({
                               taskTitle={task.title}
                               onChange={(status) => onChangeStatus(task, status)}
                             />
-                            {getPriorityBadge(task.priority)}
+                            {priorityBadge(task)}
 
                             {task.wheelCategory && (
                               <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-semibold bg-indigo-50 text-indigo-700 border border-indigo-200">
@@ -281,6 +413,14 @@ export const TaskList: React.FC<TaskListProps> = ({
                         {/* Fechas, metadatos y observaciones JSONB */}
                         <div className="flex flex-wrap items-center gap-x-3 gap-y-1 pt-1 text-[11px] text-slate-400 font-mono">
                           <TaskDates task={task} now={now} />
+
+                          {task.estimateMinutes !== undefined && (
+                            <span className="flex items-center gap-1 text-slate-500 font-semibold">
+                              <Timer className="w-3 h-3" />
+                              <span className="sr-only">Estimación:</span>
+                              {formatEstimate(task.estimateMinutes)}
+                            </span>
+                          )}
 
                           <span className="flex items-center gap-1">
                             <Clock className="w-3 h-3" />
@@ -370,7 +510,7 @@ export const TaskList: React.FC<TaskListProps> = ({
                         onChange={(status) => onChangeStatus(task, status)}
                       />
                       <span className="text-[10px] text-slate-400 uppercase font-mono">
-                        {task.priority}
+                        {PRIORITY_LABEL[effectivePriority(task, now)]}
                       </span>
                       <AddToCalendarMenu task={task} />
                       <button

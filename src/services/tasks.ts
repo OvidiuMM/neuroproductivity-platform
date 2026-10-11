@@ -1,4 +1,4 @@
-import { TaskItem, TaskStatus } from '../types';
+import { TaskItem, TaskPriority, TaskStatus } from '../types';
 
 export const TASK_STATUSES: { value: TaskStatus; label: string; className: string }[] = [
   { value: 'PENDING', label: 'Pendiente', className: 'bg-slate-100 text-slate-700 border-slate-200' },
@@ -48,7 +48,7 @@ export const dueMoment = (task: Pick<TaskItem, 'dueDate' | 'dueTime'>): Date | n
 
 export type DeadlineState = 'overdue' | 'soon' | 'normal' | 'none';
 
-const WEEK_MS = 7 * 24 * 60 * 60 * 1000;
+export const WEEK_MS = 7 * 24 * 60 * 60 * 1000;
 
 // Vencida: título en rojo. Vence en menos de una semana: título en violeta. Las tareas hechas no se colorean.
 export const getDeadlineState = (task: TaskItem, now = new Date()): DeadlineState => {
@@ -59,6 +59,16 @@ export const getDeadlineState = (task: TaskItem, now = new Date()): DeadlineStat
   if (remaining < 0) return 'overdue';
   if (remaining < WEEK_MS) return 'soon';
   return 'normal';
+};
+
+// PRIORIDAD EFECTIVA: con la fecha límite a más de una semana, la tarea cuenta un nivel por debajo
+// (Crítica → Alta → Media → Baja). Sin fecha límite mantiene su prioridad.
+export const PRIORITY_LEVELS: TaskPriority[] = ['LOW', 'MEDIUM', 'HIGH', 'CRITICAL'];
+
+export const effectivePriority = (task: Pick<TaskItem, 'priority' | 'dueDate' | 'dueTime'>, now = new Date()): TaskPriority => {
+  const due = dueMoment(task);
+  if (!due || due.getTime() - now.getTime() <= WEEK_MS) return task.priority;
+  return PRIORITY_LEVELS[Math.max(0, PRIORITY_LEVELS.indexOf(task.priority) - 1)];
 };
 
 export const DEADLINE_TITLE_CLASS: Record<DeadlineState, string> = {

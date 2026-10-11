@@ -389,6 +389,7 @@ export default function App({ user, services }: AppProps) {
           <TaskList
             tasks={tasks}
             activeContext={activeContext}
+            prefsStorageKey={`neuro_list_prefs_v1:${uid}`}
             archivedCount={archivedTasks.length}
             onChangeStatus={handleChangeStatus}
             onDeleteTask={handleDeleteTask}
