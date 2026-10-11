@@ -1,6 +1,6 @@
 import React from 'react';
 import { AppTab } from '../types';
-import { BookOpen, Compass, Briefcase, ShieldCheck, CheckCircle2, ArrowRight, Database, Link2 } from 'lucide-react';
+import { BookOpen, Compass, Briefcase, ShieldCheck, ArrowRight, Database, Link2 } from 'lucide-react';
 
 interface HowItWorksProps {
   onNavigate: (tab: AppTab) => void;
@@ -40,12 +40,6 @@ const SCREENS: { tab: AppTab; title: string; icon: React.ReactNode; points: stri
       'Reuniones: no se pueden programar antes de las 12:00 h y exigen hora de fin, orden del día y un moderador.',
       'Correo: primero adjuntos y cuerpo del mensaje; los destinatarios se desbloquean al final.'
     ]
-  },
-  {
-    tab: 'requirements',
-    title: 'Validación de Requisitos',
-    icon: <CheckCircle2 className="w-5 h-5 text-indigo-600" />,
-    points: ['Especificación técnica de los módulos y un banco de pruebas en vivo del analizador y del motor de sugerencias.']
   }
 ];
 
@@ -135,7 +129,7 @@ export const HowItWorks: React.FC<HowItWorksProps> = ({ onNavigate }) => {
           Tus datos
         </h3>
         <p className="text-sm text-amber-950 leading-relaxed">
-          Todo se guarda en tu cuenta de Google, en servidores de Google Cloud en la Unión Europea (Bélgica), y solo tú puedes acceder. Se sincroniza entre tus dispositivos y la app sigue funcionando sin conexión: los cambios se envían al recuperarla. Desde el menú de tu cuenta puedes descargar tus datos o eliminar la cuenta con todo su contenido.
+          Todo se guarda en tu cuenta de Google, en servidores de Google Cloud en la Unión Europea (Bélgica), y solo tú puedes acceder. Se sincroniza entre tus dispositivos y la app sigue funcionando sin conexión: los cambios se envían al recuperarla. El indicador de la cabecera está verde cuando todo está guardado en el servidor y naranja cuando hay cambios pendientes o no hay conexión; púlsalo para forzar la sincronización. Desde el menú de tu cuenta puedes descargar tus datos o eliminar la cuenta con todo su contenido.
         </p>
       </div>
 

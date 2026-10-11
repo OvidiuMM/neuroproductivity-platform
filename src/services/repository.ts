@@ -38,6 +38,8 @@ const SORTERS = {
 export interface SnapshotInfo {
   // false mientras los datos vienen solo de la caché local y aún no se han confirmado con el servidor
   fromServer: boolean;
+  // true mientras haya escrituras locales que el servidor aún no ha confirmado
+  hasPendingWrites: boolean;
 }
 
 export const subscribeToCollection = <K extends UserCollection>(
@@ -55,7 +57,7 @@ export const subscribeToCollection = <K extends UserCollection>(
       // Las tareas anteriores a la 0.6.0 usan `completed` en lugar de `status`
       const items = (name === 'tasks' ? docs.map((d) => normalizeTask(d as TaskItem)) : docs) as UserData[K];
       items.sort(SORTERS[name] as (a: unknown, b: unknown) => number);
-      onData(items, { fromServer: !snapshot.metadata.fromCache });
+      onData(items, { fromServer: !snapshot.metadata.fromCache, hasPendingWrites: snapshot.metadata.hasPendingWrites });
     },
     onError
   );
