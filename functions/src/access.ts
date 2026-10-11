@@ -1,5 +1,4 @@
-import { getApps, initializeApp } from 'firebase-admin/app';
-import { getFirestore } from 'firebase-admin/firestore';
+import { adminDb } from './adminApp';
 import { HttpsError, onCall, type CallableRequest } from 'firebase-functions/https';
 import * as logger from 'firebase-functions/logger';
 import { defineSecret, defineString } from 'firebase-functions/params';
@@ -34,10 +33,7 @@ const isEmulator = process.env.FUNCTIONS_EMULATOR === 'true';
 // (cada intento bloquea la llamada varios segundos)
 const emailSecrets = isEmulator ? [] : [gmailAppPassword];
 
-const db = () => {
-  if (getApps().length === 0) initializeApp();
-  return getFirestore();
-};
+const db = adminDb;
 
 const isDemoProject = () => (process.env.GCLOUD_PROJECT ?? '').startsWith('demo-');
 const adminEmail = () => (isDemoProject() ? DEMO_ADMIN_EMAIL : adminEmailParam.value());
