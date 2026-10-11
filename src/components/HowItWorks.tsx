@@ -23,7 +23,8 @@ const SCREENS: { tab: AppTab; title: string; icon: React.ReactNode; points: stri
     icon: <Briefcase className="w-5 h-5 text-indigo-600" />,
     points: [
       'Dos listas separadas, Profesional y Personal, para no mezclar contextos. Cambia entre ellas con el selector de la barra superior.',
-      'Las 10 primeras tareas de la lista (por defecto, ordenada por prioridad) se destacan como tu Top 10; el resto queda en segundo plano.',
+      'Las 10 primeras tareas, según el orden y los filtros que elijas (prioridad, fecha límite, estimación, estado o área), forman tu Top 10; el resto queda en segundo plano.',
+      'Si la fecha límite está a más de una semana, la tarea cuenta un nivel menos de prioridad. También puedes indicar cuánto te llevará (estimación).',
       'Al crear una tarea, el analizador te pide una acción física concreta (por ejemplo «Llamar al taller…») en lugar de un tema abstracto.',
       'Cada tarea tiene un estado: Pendiente, En progreso, Bloqueada o Hecha. Al marcarla Hecha se archiva; desde «Archivadas» la reactivas cambiando su estado.',
       'Puedes darle una fecha límite o un intervalo, con hora opcional: el título se pone violeta cuando falta menos de una semana y rojo cuando ha vencido.',
