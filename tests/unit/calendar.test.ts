@@ -106,3 +106,24 @@ describe('buildIcs', () => {
     assert.match(long, /\r\n x/);
   });
 });
+
+describe('recurring tasks in calendars', () => {
+  const recurring = task({
+    dueDate: '2026-10-12',
+    recurrence: { frequency: 'MONTHLY', interval: 1, monthlyMode: 'NTH_WEEKDAY', nth: 2, weekday: 1 }
+  });
+
+  it('adds the series to the Google Calendar link and the .ics file', () => {
+    const event = buildCalendarEvent(recurring, APP)!;
+    assert.equal(event.rrule, 'RRULE:FREQ=MONTHLY;INTERVAL=1;BYDAY=2MO');
+    assert.equal(new URL(googleCalendarUrl(event)).searchParams.get('recur'), 'RRULE:FREQ=MONTHLY;INTERVAL=1;BYDAY=2MO');
+    assert.match(buildIcs(event), /\r\nRRULE:FREQ=MONTHLY;INTERVAL=1;BYDAY=2MO\r\n/);
+  });
+
+  it('has no series for one-off tasks', () => {
+    const event = buildCalendarEvent(task({ dueDate: '2026-10-12' }), APP)!;
+    assert.equal(event.rrule, undefined);
+    assert.equal(new URL(googleCalendarUrl(event)).searchParams.get('recur'), null);
+    assert.doesNotMatch(buildIcs(event), /RRULE/);
+  });
+});

@@ -6,7 +6,8 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { GoogleAuthProvider, deleteUser, reauthenticateWithPopup, type User } from 'firebase/auth';
 import { AppTab, ListContext, TaskItem, TaskStatus, WheelCategory, WheelOfLifeLog, MeetingGuard, EmailDraft, UserProfile } from './types';
-import { isArchived, withStatus } from './services/tasks';
+import { formatTaskDates, isArchived, withStatus } from './services/tasks';
+import { nextRecurringTask } from './services/recurrence';
 import { forceSync, signOutAndClearCache, type FirebaseServices } from './services/firebase';
 import {
   appendWheelLog,
@@ -249,9 +250,18 @@ export default function App({ user, services }: AppProps) {
   // "Hecha" archiva la tarea; cualquier otro estado la devuelve a su lista
   const handleChangeStatus = (task: TaskItem, status: TaskStatus) => {
     if (status === task.status) return;
-    saveTask(db, uid, withStatus(task, status)).catch(reportError('actualizar el estado'));
-    if (status === 'DONE') showToast('Tarea hecha y archivada. La encontrarás en «Archivadas».');
-    else if (isArchived(task)) showToast('Tarea reactivada: vuelve a su lista.');
+    // Tarea recurrente marcada como Hecha: se crea la siguiente repetición (una sola vez por tarea)
+    const next = status === 'DONE' && !task.nextOccurrenceId ? nextRecurringTask(task) : null;
+    const updated = withStatus(task, status);
+    saveTask(db, uid, next ? { ...updated, nextOccurrenceId: next.id } : updated).catch(reportError('actualizar el estado'));
+    if (next) {
+      saveTask(db, uid, next).catch(reportError('crear la siguiente repetición'));
+      showToast(`Tarea hecha y archivada. Siguiente repetición: ${formatTaskDates(next)?.replace('Vence: ', '')}.`);
+    } else if (status === 'DONE') {
+      showToast('Tarea hecha y archivada. La encontrarás en «Archivadas».');
+    } else if (isArchived(task)) {
+      showToast('Tarea reactivada: vuelve a su lista.');
+    }
   };
 
   const handleDeleteTask = (id: string) => {

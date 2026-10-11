@@ -36,6 +36,7 @@ interface NewTask {
   startDate?: string;
   priority?: 'CRITICAL' | 'HIGH' | 'MEDIUM' | 'LOW';
   estimateMinutes?: number;
+  repeat?: { frequency: 'DAILY' | 'WEEKLY' | 'MONTHLY' | 'YEARLY'; monthlyOption?: string | RegExp };
 }
 
 // Rellena y guarda el formulario de tarea, que ya debe estar abierto
@@ -49,6 +50,10 @@ export const fillAndSaveTask = async (page: Page, task: NewTask) => {
   if (task.startDate) await page.getByLabel('Fecha de inicio').fill(task.startDate);
   if (task.priority) await page.getByLabel('Nivel de Prioridad').selectOption(task.priority);
   if (task.estimateMinutes) await page.getByLabel('Estimación (duración)').selectOption(String(task.estimateMinutes));
+  if (task.repeat) {
+    await page.getByLabel('Repetir').selectOption(task.repeat.frequency);
+    if (task.repeat.monthlyOption) await page.getByRole('radio', { name: task.repeat.monthlyOption }).check();
+  }
   const saveButton = page.getByRole('button', { name: 'Guardar Acción Operativa' });
   await saveButton.scrollIntoViewIfNeeded();
   await saveButton.click();
