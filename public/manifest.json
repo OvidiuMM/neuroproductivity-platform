@@ -1,7 +1,7 @@
 {
   "name": "NeuroProductividad",
   "short_name": "NeuroProd",
-  "version": "0.6.1",
+  "version": "0.7.0",
   "description": "Plataforma de gestión del tiempo y neuroproductividad",
   "lang": "es",
   "start_url": "/",
