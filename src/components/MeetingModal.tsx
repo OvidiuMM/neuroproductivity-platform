@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { MeetingGuard } from '../types';
 import { X, Calendar, Clock, ShieldAlert, CheckCircle2, AlertTriangle, Plus, Trash2, Check } from 'lucide-react';
+import { DateField } from './DateField';
 
 interface MeetingModalProps {
   isOpen: boolean;
@@ -149,14 +150,16 @@ export const MeetingModal: React.FC<MeetingModalProps> = ({
           {/* HORARIOS: AUDITORÍA MATUTINA & END_TIME > START_TIME */}
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             <div>
-              <label className="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1">
+              <label htmlFor="meeting-date" className="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1">
                 Fecha
               </label>
-              <input
-                type="date"
+              <DateField
+                id="meeting-date"
+                label="Fecha de la reunión"
+                hasVisibleLabel
                 value={date}
-                onChange={(e) => setDate(e.target.value)}
-                className="w-full px-3 py-2 rounded-xl border border-slate-300 text-xs focus:outline-none focus:ring-2 focus:ring-indigo-400"
+                onChange={setDate}
+                inputClassName="px-3 py-2 rounded-xl border border-slate-300 text-xs focus:outline-none focus:ring-2 focus:ring-indigo-400"
               />
             </div>
 

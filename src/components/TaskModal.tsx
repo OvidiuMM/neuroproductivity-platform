@@ -26,6 +26,7 @@ const WEEKDAY_TOGGLES = [
   { day: 0, short: 'D', name: 'Domingo' }
 ];
 import { X, AlertTriangle, Sparkles, Check, CheckCircle2, ShieldAlert, ArrowRight, ListPlus, CalendarClock, Repeat } from 'lucide-react';
+import { DateField } from './DateField';
 
 export type TaskFormData = Omit<TaskItem, 'id' | 'createdAt' | 'updatedAt' | 'status' | 'doneAt'>;
 
@@ -583,12 +584,12 @@ export const TaskModal: React.FC<TaskModalProps> = ({
               <div className="space-y-1">
                 <span className="block text-[11px] font-semibold text-slate-700">Fecha límite</span>
                 <div className="flex gap-2">
-                  <input
-                    type="date"
+                  <DateField
+                    label="Fecha límite"
                     value={dueDate}
-                    onChange={(e) => setDueDate(e.target.value)}
-                    aria-label="Fecha límite"
-                    className="min-w-0 flex-1 px-2.5 py-1.5 rounded-lg border border-slate-300 text-xs focus:outline-none focus:ring-2 focus:ring-indigo-400"
+                    onChange={setDueDate}
+                    className="min-w-0 flex-1"
+                    inputClassName="px-2.5 py-1.5 rounded-lg border border-slate-300 text-xs focus:outline-none focus:ring-2 focus:ring-indigo-400"
                   />
                   <input
                     type="time"
@@ -603,12 +604,12 @@ export const TaskModal: React.FC<TaskModalProps> = ({
               <div className="space-y-1">
                 <span className="block text-[11px] font-semibold text-slate-700">Inicio (para un intervalo)</span>
                 <div className="flex gap-2">
-                  <input
-                    type="date"
+                  <DateField
+                    label="Fecha de inicio"
                     value={startDate}
-                    onChange={(e) => setStartDate(e.target.value)}
-                    aria-label="Fecha de inicio"
-                    className="min-w-0 flex-1 px-2.5 py-1.5 rounded-lg border border-slate-300 text-xs focus:outline-none focus:ring-2 focus:ring-indigo-400"
+                    onChange={setStartDate}
+                    className="min-w-0 flex-1"
+                    inputClassName="px-2.5 py-1.5 rounded-lg border border-slate-300 text-xs focus:outline-none focus:ring-2 focus:ring-indigo-400"
                   />
                   <input
                     type="time"
@@ -678,12 +679,13 @@ export const TaskModal: React.FC<TaskModalProps> = ({
                       <label htmlFor="task-repeat-until" className="block text-[11px] font-semibold text-slate-700">
                         Hasta (opcional)
                       </label>
-                      <input
+                      <DateField
                         id="task-repeat-until"
-                        type="date"
+                        label="Fin de la repetición"
+                        hasVisibleLabel
                         value={repeatUntil}
-                        onChange={(e) => setRepeatUntil(e.target.value)}
-                        className="w-full px-2.5 py-1.5 rounded-lg border border-slate-300 text-xs focus:outline-none focus:ring-2 focus:ring-indigo-400"
+                        onChange={setRepeatUntil}
+                        inputClassName="px-2.5 py-1.5 rounded-lg border border-slate-300 text-xs focus:outline-none focus:ring-2 focus:ring-indigo-400"
                       />
                     </div>
                   </>

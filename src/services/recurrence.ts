@@ -161,7 +161,12 @@ const RRULE_DAYS = ['SU', 'MO', 'TU', 'WE', 'TH', 'FR', 'SA'];
 
 export const toRRule = (rec: Recurrence, allDay: boolean): string => {
   const parts = [`FREQ=${rec.frequency}`, `INTERVAL=${Math.max(1, rec.interval || 1)}`];
-  if (rec.frequency === 'WEEKLY' && rec.weekdays?.length) parts.push(`BYDAY=${rec.weekdays.map((d) => RRULE_DAYS[d]).join(',')}`);
+  if (rec.frequency === 'WEEKLY') {
+    // La semana empieza en lunes, como en la app: decide qué días caen en cada semana cuando el intervalo es > 1
+    parts.push('WKST=MO');
+    const days = [...(rec.weekdays ?? [])].sort((a, b) => ((a + 6) % 7) - ((b + 6) % 7));
+    if (days.length) parts.push(`BYDAY=${days.map((d) => RRULE_DAYS[d]).join(',')}`);
+  }
   if (rec.frequency === 'MONTHLY') {
     if (rec.monthlyMode === 'NTH_WEEKDAY') parts.push(`BYDAY=${rec.nth ?? 1}${RRULE_DAYS[rec.weekday ?? 1]}`);
     else if (rec.monthlyMode === 'LAST_WEEKDAY') parts.push(`BYDAY=-1${RRULE_DAYS[rec.weekday ?? 1]}`);

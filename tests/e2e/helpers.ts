@@ -21,7 +21,7 @@ export const signInWithGoogle = async (page: Page, email = uniqueEmail(), name =
   return email;
 };
 
-// Fecha local (YYYY-MM-DD) a N días de hoy, como la escriben los campos de fecha
+// Fecha local (YYYY-MM-DD) a N días de hoy; los campos de fecha la aceptan escrita así
 export const localDateFromToday = (days: number) => {
   const d = new Date();
   d.setDate(d.getDate() + days);
@@ -47,7 +47,7 @@ export const fillAndSaveTask = async (page: Page, task: NewTask) => {
     .fill('Confirmar la fecha y hora de entrega.');
   if (task.dueDate) await page.getByLabel('Fecha límite', { exact: true }).fill(task.dueDate);
   if (task.dueTime) await page.getByLabel('Hora límite').fill(task.dueTime);
-  if (task.startDate) await page.getByLabel('Fecha de inicio').fill(task.startDate);
+  if (task.startDate) await page.getByLabel('Fecha de inicio', { exact: true }).fill(task.startDate);
   if (task.priority) await page.getByLabel('Nivel de Prioridad').selectOption(task.priority);
   if (task.estimateMinutes) await page.getByLabel('Estimación (duración)').selectOption(String(task.estimateMinutes));
   if (task.repeat) {
