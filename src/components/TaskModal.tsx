@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { TaskItem, ListContext, TaskPriority, WheelCategory, TaskObservation, MonthlyMode, RecurrenceFrequency } from '../types';
 import { analyzeImmediateActionSyntax, SyntaxAnalysisResult } from '../services/syntaxAnalyzer';
 import { inferWheelCategory, NLPSuggestionResult } from '../services/nlpEngine';
@@ -59,6 +59,8 @@ export const TaskModal: React.FC<TaskModalProps> = ({
 }) => {
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
+  // Identificador de la última inferencia NLP: invalida resultados que llegan tras cerrar o reiniciar el formulario
+  const nlpRequest = useRef(0);
   const [listContext, setListContext] = useState<ListContext>(initialContext);
   const [priority, setPriority] = useState<TaskPriority>('MEDIUM');
   const [isSomeday, setIsSomeday] = useState(false);
@@ -88,6 +90,8 @@ export const TaskModal: React.FC<TaskModalProps> = ({
 
   // Inicializar o limpiar al abrir modal
   useEffect(() => {
+    nlpRequest.current++; // descarta cualquier sugerencia NLP pendiente del formulario anterior
+    setNlpLoading(false);
     if (editingTask) {
       setTitle(editingTask.title);
       setDescription(editingTask.description);
@@ -151,8 +155,11 @@ export const TaskModal: React.FC<TaskModalProps> = ({
   const triggerNLPInference = () => {
     if (!description.trim() && !title.trim()) return;
     setNlpLoading(true);
+    const request = ++nlpRequest.current;
     // Simulación del microservicio asíncrono (< 350ms según especificación)
     setTimeout(() => {
+      // Si entretanto se guardó o se reinició el formulario, el resultado ya no corresponde a esta tarea
+      if (request !== nlpRequest.current) return;
       const res = inferWheelCategory(title, description);
       setNlpResult(res);
       setNlpLoading(false);

@@ -83,6 +83,20 @@ export const upcomingOccurrences = (dueDate: string, rec: Recurrence, count: num
   return dates;
 };
 
+// Repeticiones posteriores a `dueDate` entre `from` y `to` (incluidos) y dentro de `until`, para la agenda.
+// Se calculan hasta `to` sea cual sea la distancia a la fecha original (con un límite de seguridad de pasos).
+export const occurrencesBetween = (dueDate: string, rec: Recurrence, from: string, to: string): string[] => {
+  const dates: string[] = [];
+  let current = toLocalDate(dueDate);
+  for (let guard = 0; guard < 50_000; guard++) {
+    current = stepAfter(current, rec);
+    const value = toDateString(current);
+    if (value > to || (rec.until && value > rec.until)) break;
+    if (value >= from) dates.push(value);
+  }
+  return dates;
+};
+
 // Regla con los anclajes tomados de la fecha límite (día del mes, N.º y día de la semana)
 export const buildRecurrence = (
   frequency: RecurrenceFrequency,
