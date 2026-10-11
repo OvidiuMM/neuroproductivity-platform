@@ -4,6 +4,7 @@ import { FirebaseError } from 'firebase/app';
 import App from './App';
 import { AccessRequestScreen } from './components/AccessRequestScreen';
 import { requestAccess, subscribeToIsAdmin, subscribeToOwnAccess, syncAccess, type OwnAccessStatus } from './services/access';
+import { deleteAccount, downloadAccountData } from './services/account';
 import { signOutAndClearCache, type FirebaseServices } from './services/firebase';
 import { saveUserProfile } from './services/repository';
 
@@ -73,6 +74,8 @@ export const AccessGate: React.FC<AccessGateProps> = ({ user, services }) => {
       onRequest={handleRequest}
       onRetry={check}
       onSignOut={() => signOutAndClearCache(services)}
+      onDownloadData={() => downloadAccountData(services, user)}
+      onDeleteAccount={() => deleteAccount(services, user)}
     />
   );
 };

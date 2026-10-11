@@ -1,7 +1,7 @@
 {
   "name": "react-example",
   "private": true,
-  "version": "0.6.1",
+  "version": "0.7.0",
   "type": "module",
   "scripts": {
     "dev": "npm --prefix functions run build && firebase emulators:exec --only auth,firestore,functions --project demo-neuroproductivity \"npm run dev:app\"",
@@ -31,6 +31,7 @@
     "vite": "^8.3.0"
   },
   "devDependencies": {
+    "@axe-core/playwright": "^4.13.0",
     "@firebase/rules-unit-testing": "^6.0.0",
     "@playwright/test": "^1.63.0",
     "@types/node": "^22.14.0",

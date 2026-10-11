@@ -430,7 +430,7 @@ export const TaskList: React.FC<TaskListProps> = ({
                         </p>
 
                         {/* Fechas, metadatos y observaciones JSONB */}
-                        <div className="flex flex-wrap items-center gap-x-3 gap-y-1 pt-1 text-[11px] text-slate-400 font-mono">
+                        <div className="flex flex-wrap items-center gap-x-3 gap-y-1 pt-1 text-[11px] text-slate-500 font-mono">
                           <TaskDates task={task} now={now} />
 
                           <EstimateBadge minutes={task.estimateMinutes} className="text-slate-500" />
@@ -447,7 +447,7 @@ export const TaskList: React.FC<TaskListProps> = ({
                           )}
 
                           {task.linkedBy === 'AUTO_TFIDF' && (
-                            <span className="text-slate-400">
+                            <span className="text-slate-500">
                               · NLP ({Math.round((task.wheelCategoryConfidence || 0.8) * 100)}%)
                             </span>
                           )}
@@ -459,7 +459,7 @@ export const TaskList: React.FC<TaskListProps> = ({
                         <AddToCalendarMenu task={task} />
                         <button
                           onClick={() => onEditTask(task)}
-                          className="p-1.5 text-slate-400 hover:text-indigo-600 rounded-lg hover:bg-slate-100 transition-colors"
+                          className="p-1.5 text-slate-500 hover:text-indigo-600 rounded-lg hover:bg-slate-100 transition-colors"
                           title="Editar tarea"
                           aria-label={`Editar «${task.title}»`}
                         >
@@ -467,7 +467,7 @@ export const TaskList: React.FC<TaskListProps> = ({
                         </button>
                         <button
                           onClick={() => onDeleteTask(task.id)}
-                          className="p-1.5 text-slate-400 hover:text-red-600 rounded-lg hover:bg-slate-100 transition-colors"
+                          className="p-1.5 text-slate-500 hover:text-red-600 rounded-lg hover:bg-slate-100 transition-colors"
                           title="Eliminar tarea"
                           aria-label={`Eliminar «${task.title}»`}
                         >
@@ -489,7 +489,7 @@ export const TaskList: React.FC<TaskListProps> = ({
                 <h3 className="text-xs font-bold uppercase tracking-wider text-slate-500">
                   Inventario Secundario (Posición 11 en adelante · Campo Periférico)
                 </h3>
-                <span className="text-[11px] text-slate-400">
+                <span className="text-[11px] text-slate-500">
                   Tratamiento visual plano y desaturado para mitigar fatiga ocular
                 </span>
               </div>
@@ -501,14 +501,14 @@ export const TaskList: React.FC<TaskListProps> = ({
                     className="p-2.5 rounded-xl border border-slate-100 bg-slate-50/50 hover:bg-white text-slate-600 text-xs transition-colors flex flex-wrap items-center justify-between gap-x-3 gap-y-1.5"
                   >
                     <div className="flex items-center gap-3 min-w-0 flex-1">
-                      <span className="text-[10px] font-mono text-slate-400 w-5 text-right shrink-0">
+                      <span className="text-[10px] font-mono text-slate-500 w-5 text-right shrink-0">
                         {index + 11}.
                       </span>
                       <span className={`truncate ${titleColor(task, 'text-slate-700')}`}>
                         {task.title}
                       </span>
                       {task.wheelCategory && (
-                        <span className="hidden sm:inline text-[10px] text-slate-400 font-medium shrink-0">
+                        <span className="hidden sm:inline text-[10px] text-slate-500 font-medium shrink-0">
                           · {task.wheelCategory}
                         </span>
                       )}
@@ -523,20 +523,20 @@ export const TaskList: React.FC<TaskListProps> = ({
                         taskTitle={task.title}
                         onChange={(status) => onChangeStatus(task, status)}
                       />
-                      <span className="text-[10px] text-slate-400 uppercase font-mono">
+                      <span className="text-[10px] text-slate-500 uppercase font-mono">
                         {PRIORITY_LABEL[effectivePriority(task, now)]}
                       </span>
                       <AddToCalendarMenu task={task} />
                       <button
                         onClick={() => onEditTask(task)}
-                        className="p-1 text-slate-400 hover:text-indigo-600"
+                        className="p-1 text-slate-500 hover:text-indigo-600"
                         aria-label={`Editar «${task.title}»`}
                       >
                         <Edit2 className="w-3 h-3" />
                       </button>
                       <button
                         onClick={() => onDeleteTask(task.id)}
-                        className="p-1 text-slate-400 hover:text-red-600"
+                        className="p-1 text-slate-500 hover:text-red-600"
                         aria-label={`Eliminar «${task.title}»`}
                       >
                         <Trash2 className="w-3.5 h-3.5" />
@@ -606,7 +606,7 @@ export const TaskList: React.FC<TaskListProps> = ({
                     </button>
                     <button
                       onClick={() => onDeleteTask(task.id)}
-                      className="p-1.5 text-slate-400 hover:text-red-600"
+                      className="p-1.5 text-slate-500 hover:text-red-600"
                       aria-label={`Eliminar «${task.title}»`}
                     >
                       <Trash2 className="w-4 h-4" />

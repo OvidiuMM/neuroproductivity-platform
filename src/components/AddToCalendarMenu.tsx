@@ -53,7 +53,7 @@ export const AddToCalendarMenu: React.FC<AddToCalendarMenuProps> = ({ task }) =>
       <button
         type="button"
         onClick={() => setIsOpen((open) => !open)}
-        className="p-1.5 text-slate-400 hover:text-indigo-600 rounded-lg hover:bg-slate-100 transition-colors"
+        className="p-1.5 text-slate-500 hover:text-indigo-600 rounded-lg hover:bg-slate-100 transition-colors"
         title="Añadir al calendario"
         aria-label={`Añadir «${task.title}» al calendario`}
         aria-expanded={isOpen}
