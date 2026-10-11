@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useRef, useState } from 'react';
+import { useModalFocus } from '../hooks/useModalFocus';
 import { EmailDraft } from '../types';
 import { X, Mail, Paperclip, AlertTriangle, CheckCircle2, Lock, Unlock, Send, Plus, Trash2 } from 'lucide-react';
 
@@ -87,16 +88,25 @@ export const EmailModal: React.FC<EmailModalProps> = ({
     onClose();
   };
 
+  const dialogRef = useRef<HTMLDivElement>(null);
+  useModalFocus(isOpen, dialogRef, onClose);
+
   if (!isOpen) return null;
 
   return (
     <div className="fixed inset-0 z-50 flex justify-center p-4 sm:p-8 bg-slate-900/60 backdrop-blur-xs overflow-y-auto">
-      <div className="bg-white rounded-2xl shadow-2xl border border-slate-200 w-full max-w-xl my-auto overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+      <div
+        ref={dialogRef}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="email-modal-title"
+        className="bg-white rounded-2xl shadow-2xl border border-slate-200 w-full max-w-xl my-auto overflow-hidden animate-in fade-in zoom-in-95 duration-200"
+      >
         
         {/* Cabecera */}
         <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between bg-slate-50/70">
           <div>
-            <h2 className="text-base font-bold text-slate-900 flex items-center gap-2">
+            <h2 id="email-modal-title" className="text-base font-bold text-slate-900 flex items-center gap-2">
               <Mail className="w-5 h-5 text-indigo-600" />
               Cliente Asistido con Redacción Inversa
             </h2>
@@ -170,9 +180,10 @@ export const EmailModal: React.FC<EmailModalProps> = ({
                     <button
                       type="button"
                       onClick={() => handleRemoveAttachment(i)}
+                      aria-label={`Quitar el adjunto ${att.name}`}
                       className="text-slate-500 hover:text-red-600"
                     >
-                      <Trash2 className="w-3.5 h-3.5" />
+                      <Trash2 className="w-3.5 h-3.5" aria-hidden="true" />
                     </button>
                   </div>
                 ))}
@@ -259,7 +270,7 @@ export const EmailModal: React.FC<EmailModalProps> = ({
               </label>
 
               {!isRecipientsUnlocked ? (
-                <span className="text-[10px] font-bold uppercase px-2 py-0.5 bg-slate-100 text-slate-500 rounded-full">
+                <span className="text-[10px] font-bold uppercase px-2 py-0.5 bg-slate-100 text-slate-600 rounded-full">
                   Bloqueado hasta completar contenido
                 </span>
               ) : (

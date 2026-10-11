@@ -84,16 +84,35 @@ describe('firestore.rules', () => {
     await assertFails(setDoc(doc(ana, 'other/x'), { value: 1 }));
   });
 
-  it('denies a person their own data until their access is approved', async () => {
+  it('does not let a person create or change their data until their access is approved', async () => {
     for (const [uid, status] of [['carla', 'pending'], ['dani', 'rejected'], ['eva', 'revoked']]) {
       await grantAccess(uid, status);
     }
+    await env.withSecurityRulesDisabled(async (ctx) => {
+      await setDoc(doc(ctx.firestore(), 'users/eva/tasks/task-1'), task);
+    });
     for (const uid of ['carla', 'dani', 'eva', 'fran']) {
       const person = env.authenticatedContext(uid).firestore();
       await assertFails(setDoc(doc(person, `users/${uid}`), { name: uid }));
-      await assertFails(setDoc(doc(person, `users/${uid}/tasks/task-1`), task));
-      await assertFails(getDoc(doc(person, `users/${uid}/tasks/task-1`)));
+      await assertFails(setDoc(doc(person, `users/${uid}/tasks/task-2`), task));
     }
+    await assertFails(updateDoc(doc(env.authenticatedContext('eva').firestore(), 'users/eva/tasks/task-1'), { completed: true }));
+  });
+
+  it('still lets a person without approved access download and delete their own data', async () => {
+    await grantAccess('eva', 'revoked');
+    await env.withSecurityRulesDisabled(async (ctx) => {
+      await setDoc(doc(ctx.firestore(), 'users/eva'), { name: 'Eva' });
+      await setDoc(doc(ctx.firestore(), 'users/eva/tasks/task-1'), task);
+    });
+    const eva = env.authenticatedContext('eva').firestore();
+    await assertSucceeds(getDoc(doc(eva, 'users/eva')));
+    await assertSucceeds(getDocs(collection(eva, 'users/eva/tasks')));
+    await assertSucceeds(deleteDoc(doc(eva, 'users/eva/tasks/task-1')));
+    await assertSucceeds(deleteDoc(doc(eva, 'users/eva')));
+    // Pero nunca los de otra persona
+    const fran = env.authenticatedContext('fran').firestore();
+    await assertFails(getDocs(collection(fran, 'users/ana/tasks')));
   });
 
   it('lets each person read only their own access request, and the admin read all of them', async () => {

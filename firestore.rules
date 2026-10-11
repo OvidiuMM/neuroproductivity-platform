@@ -1,7 +1,8 @@
 rules_version = '2';
 
-// Cada persona solo puede leer y escribir sus propios datos en users/{uid}, y solo si la administración
-// ha aprobado su acceso (access/{uid}). Las solicitudes de acceso y la lista de administración solo las
+// Cada persona solo puede leer y escribir sus propios datos en users/{uid}. Crear y modificar exige que la
+// administración haya aprobado su acceso (access/{uid}); leer y borrar no, para que una cuenta pendiente o
+// retirada pueda descargar o eliminar lo suyo. Las solicitudes de acceso y la lista de administración solo las
 // escriben las Cloud Functions. Todo lo que no coincide con estas reglas queda denegado.
 service cloud.firestore {
   match /databases/{database}/documents {
@@ -33,10 +34,13 @@ service cloud.firestore {
     }
 
     match /users/{uid} {
-      allow read, write: if hasAccess(uid);
+      allow read, delete: if isOwner(uid);
+      allow create, update: if hasAccess(uid);
 
       match /{collection}/{docId} {
-        allow read, create, delete: if hasAccess(uid)
+        allow read, delete: if isOwner(uid)
+          && collection in ['tasks', 'wheelLogs', 'meetings', 'emails'];
+        allow create: if hasAccess(uid)
           && collection in ['tasks', 'wheelLogs', 'meetings', 'emails'];
 
         // Las evaluaciones de la Rueda de la Vida son append-only: no se modifican.

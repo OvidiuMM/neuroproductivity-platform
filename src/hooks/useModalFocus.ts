@@ -5,11 +5,19 @@ const FOCUSABLE =
 
 // Foco accesible para ventanas modales: al abrir lleva el foco dentro (al elemento con data-autofocus
 // o al primero enfocable), lo mantiene dentro con Tab / Mayús+Tab, cierra con Escape y, al cerrar,
-// devuelve el foco al elemento que abrió la ventana.
-export const useModalFocus = (isOpen: boolean, containerRef: RefObject<HTMLElement | null>, onClose: () => void) => {
+// devuelve el foco al elemento que abrió la ventana. Si ese elemento ya no existe o no se puede enfocar (p. ej.
+// cuando una ventana abre otra), el foco va a `returnFocusTo`.
+export const useModalFocus = (
+  isOpen: boolean,
+  containerRef: RefObject<HTMLElement | null>,
+  onClose: () => void,
+  returnFocusTo?: () => HTMLElement | null
+) => {
   // onClose suele ser una función nueva en cada render; con una ref el efecto no se repite por ello
   const onCloseRef = useRef(onClose);
   onCloseRef.current = onClose;
+  const returnFocusRef = useRef(returnFocusTo);
+  returnFocusRef.current = returnFocusTo;
 
   useEffect(() => {
     const container = containerRef.current;
@@ -20,6 +28,8 @@ export const useModalFocus = (isOpen: boolean, containerRef: RefObject<HTMLEleme
     (container.querySelector<HTMLElement>('[data-autofocus]') ?? focusables()[0])?.focus();
 
     const onKeyDown = (e: KeyboardEvent) => {
+      // Ya gestionada por un elemento de dentro (p. ej. el calendario de un campo de fecha, que cierra solo él)
+      if (e.defaultPrevented) return;
       if (e.key === 'Escape') {
         e.preventDefault();
         onCloseRef.current();
@@ -46,7 +56,8 @@ export const useModalFocus = (isOpen: boolean, containerRef: RefObject<HTMLEleme
     document.addEventListener('keydown', onKeyDown);
     return () => {
       document.removeEventListener('keydown', onKeyDown);
-      previouslyFocused?.focus();
+      const canReturn = previouslyFocused && previouslyFocused !== document.body && previouslyFocused.isConnected;
+      (canReturn ? previouslyFocused : returnFocusRef.current?.())?.focus();
     };
   }, [isOpen, containerRef]);
 };

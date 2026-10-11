@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useRef, useState } from 'react';
+import { useModalFocus } from '../hooks/useModalFocus';
 import { LocalProfileSummary } from '../services/localData';
 import { Upload, X } from 'lucide-react';
 
@@ -21,6 +22,9 @@ const describeCounts = ({ tasks, wheelLogs, meetings, emails }: LocalProfileSumm
 
 // Primer inicio de sesión en un navegador con datos de la versión sin cuentas: ofrece subirlos a la cuenta
 export const ImportLocalDataModal: React.FC<ImportLocalDataModalProps> = ({ profiles, onImport, onDiscard, onLater }) => {
+  const dialogRef = useRef<HTMLDivElement>(null);
+  // Solo se monta cuando hay datos que importar; Escape equivale a «Más tarde»
+  useModalFocus(true, dialogRef, onLater);
   const [selected, setSelected] = useState<Set<string>>(() => new Set(profiles.map((p) => p.id)));
   const [isImporting, setIsImporting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -53,7 +57,9 @@ export const ImportLocalDataModal: React.FC<ImportLocalDataModalProps> = ({ prof
   return (
     <div className="fixed inset-0 z-50 flex justify-center p-4 sm:p-8 bg-slate-900/70 backdrop-blur-xs overflow-y-auto">
       <div
+        ref={dialogRef}
         role="dialog"
+        aria-modal="true"
         aria-label="Importar datos de este navegador"
         className="bg-white rounded-3xl shadow-2xl border border-slate-200 w-full max-w-lg my-auto overflow-hidden animate-in fade-in zoom-in-95 duration-200"
       >
