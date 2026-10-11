@@ -65,7 +65,7 @@ export const ImportLocalDataModal: React.FC<ImportLocalDataModalProps> = ({ prof
           <button
             onClick={onLater}
             aria-label="Decidir más tarde"
-            className="p-1.5 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-200/60 transition-colors"
+            className="p-1.5 rounded-lg text-slate-500 hover:text-slate-600 hover:bg-slate-200/60 transition-colors"
           >
             <X className="w-5 h-5" />
           </button>

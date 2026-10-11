@@ -54,6 +54,8 @@ export const SplashScreen: React.FC<SplashScreenProps> = ({
           if (onFinish) onFinish();
         }, 200);
       }}
+      role="status"
+      aria-label="Cargando NeuroProductividad"
       className={`fixed inset-0 z-50 bg-slate-950 flex flex-col items-center justify-between p-8 select-none transition-all duration-300 ${
         isFadingOut ? 'opacity-0 scale-98 pointer-events-none' : 'opacity-100 scale-100'
       }`}

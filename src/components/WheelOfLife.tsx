@@ -277,7 +277,7 @@ export const WheelOfLife: React.FC<WheelOfLifeProps> = ({ logs, showFirstStep, o
               <h3 className="text-xs font-bold uppercase tracking-wider text-slate-700">
                 Puntuaciones por Segmento Vital
               </h3>
-              <span className="text-[11px] text-slate-400">Escala ordinal 0-10</span>
+              <span className="text-[11px] text-slate-500">Escala ordinal 0-10</span>
             </div>
 
             <div className="space-y-3 max-h-[300px] overflow-y-auto pr-2">
@@ -293,7 +293,7 @@ export const WheelOfLife: React.FC<WheelOfLifeProps> = ({ logs, showFirstStep, o
                       <div className="flex items-center gap-2 font-mono">
                         <span className="font-bold text-slate-900">{currentVal}/10</span>
                         {showHistoryOverlay && historicalLog && delta !== 0 && (
-                          <span className={`text-[10px] font-bold ${delta > 0 ? 'text-emerald-600' : 'text-red-500'}`}>
+                          <span className={`text-[10px] font-bold ${delta > 0 ? 'text-emerald-700' : 'text-red-600'}`}>
                             {delta > 0 ? `+${delta}` : delta}
                           </span>
                         )}
@@ -368,7 +368,7 @@ export const WheelOfLife: React.FC<WheelOfLifeProps> = ({ logs, showFirstStep, o
                 >
                   <div>
                     <span className="block truncate">{log.label || `Captura ${idx + 1}`}</span>
-                    <span className="text-[10px] text-slate-400 font-mono">
+                    <span className="text-[10px] text-slate-500 font-mono">
                       {new Date(log.timestamp).toLocaleDateString('es-ES', {
                         year: 'numeric',
                         month: 'short',

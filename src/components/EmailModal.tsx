@@ -107,7 +107,7 @@ export const EmailModal: React.FC<EmailModalProps> = ({
           <button
             onClick={onClose}
             aria-label="Cerrar"
-            className="p-1.5 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-200/60 transition-colors"
+            className="p-1.5 rounded-lg text-slate-500 hover:text-slate-600 hover:bg-slate-200/60 transition-colors"
           >
             <X className="w-5 h-5" />
           </button>
@@ -170,7 +170,7 @@ export const EmailModal: React.FC<EmailModalProps> = ({
                     <button
                       type="button"
                       onClick={() => handleRemoveAttachment(i)}
-                      className="text-slate-400 hover:text-red-600"
+                      className="text-slate-500 hover:text-red-600"
                     >
                       <Trash2 className="w-3.5 h-3.5" />
                     </button>
@@ -195,7 +195,7 @@ export const EmailModal: React.FC<EmailModalProps> = ({
               <div className="text-[11px] font-mono flex items-center gap-2 text-slate-500">
                 <span>{wordCount} palabras</span>
                 <span>·</span>
-                <span className={body.length > 550 ? 'text-amber-600 font-bold' : ''}>
+                <span className={body.length > 550 ? 'text-amber-700 font-bold' : ''}>
                   {body.length} caracteres
                 </span>
               </div>
@@ -252,7 +252,7 @@ export const EmailModal: React.FC<EmailModalProps> = ({
                 {isRecipientsUnlocked ? (
                   <Unlock className="w-4 h-4 text-emerald-600" />
                 ) : (
-                  <Lock className="w-4 h-4 text-slate-400" />
+                  <Lock className="w-4 h-4 text-slate-500" />
                 )}
                 <span>Paso 4: Destinatarios (Desbloqueo Final)</span>
                 <span className="text-red-500">*</span>
@@ -282,7 +282,7 @@ export const EmailModal: React.FC<EmailModalProps> = ({
               }
               className={`w-full px-3.5 py-2 rounded-xl border text-xs focus:outline-none focus:ring-2 ${
                 !isRecipientsUnlocked
-                  ? 'bg-slate-100 border-slate-200 text-slate-400 cursor-not-allowed'
+                  ? 'bg-slate-100 border-slate-200 text-slate-500 cursor-not-allowed'
                   : touched.recipients && !isRecipientsValid
                   ? 'border-red-400 bg-red-50/20 focus:ring-red-400'
                   : 'border-slate-300 focus:ring-indigo-400'
@@ -308,7 +308,7 @@ export const EmailModal: React.FC<EmailModalProps> = ({
                 ) : (
                   <span className="w-3.5 h-3.5 rounded-full border border-slate-300 inline-block" />
                 )}
-                <span className={isStep1AttachmentsValid ? 'text-slate-700' : 'text-slate-400'}>
+                <span className={isStep1AttachmentsValid ? 'text-slate-700' : 'text-slate-500'}>
                   Paso 1: Adjuntos verificados
                 </span>
               </div>
@@ -319,7 +319,7 @@ export const EmailModal: React.FC<EmailModalProps> = ({
                 ) : (
                   <span className="w-3.5 h-3.5 rounded-full border border-slate-300 inline-block" />
                 )}
-                <span className={isStep2BodyValid ? 'text-slate-700' : 'text-slate-400'}>
+                <span className={isStep2BodyValid ? 'text-slate-700' : 'text-slate-500'}>
                   Paso 2: Cuerpo redactado
                 </span>
               </div>
@@ -330,7 +330,7 @@ export const EmailModal: React.FC<EmailModalProps> = ({
                 ) : (
                   <span className="w-3.5 h-3.5 rounded-full border border-slate-300 inline-block" />
                 )}
-                <span className={isStep3SubjectValid ? 'text-slate-700' : 'text-slate-400'}>
+                <span className={isStep3SubjectValid ? 'text-slate-700' : 'text-slate-500'}>
                   Paso 3: Asunto definido
                 </span>
               </div>
@@ -341,7 +341,7 @@ export const EmailModal: React.FC<EmailModalProps> = ({
                 ) : (
                   <span className="w-3.5 h-3.5 rounded-full border border-slate-300 inline-block" />
                 )}
-                <span className={isRecipientsValid ? 'text-slate-700' : 'text-slate-400'}>
+                <span className={isRecipientsValid ? 'text-slate-700' : 'text-slate-500'}>
                   Paso 4: Destinatarios válidos
                 </span>
               </div>
@@ -363,7 +363,7 @@ export const EmailModal: React.FC<EmailModalProps> = ({
               className={`px-5 py-2.5 text-xs font-bold rounded-xl shadow-sm transition-all flex items-center gap-2 ${
                 isFormValid
                   ? 'bg-slate-900 text-white hover:bg-slate-800'
-                  : 'bg-slate-200 text-slate-400 cursor-not-allowed shadow-none'
+                  : 'bg-slate-200 text-slate-500 cursor-not-allowed shadow-none'
               }`}
             >
               <Send className="w-4 h-4" />

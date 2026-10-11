@@ -45,7 +45,7 @@ export const ArchivedTasksModal: React.FC<ArchivedTasksModalProps> = ({ isOpen, 
           <button
             onClick={onClose}
             aria-label="Cerrar"
-            className="p-1.5 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-200/60 transition-colors"
+            className="p-1.5 rounded-lg text-slate-500 hover:text-slate-600 hover:bg-slate-200/60 transition-colors"
           >
             <X className="w-5 h-5" />
           </button>
@@ -57,7 +57,7 @@ export const ArchivedTasksModal: React.FC<ArchivedTasksModalProps> = ({ isOpen, 
           </p>
 
           <label className="relative block">
-            <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+            <Search className="w-4 h-4 text-slate-500 absolute left-3 top-1/2 -translate-y-1/2" />
             <input
               type="search"
               value={query}
@@ -92,7 +92,7 @@ export const ArchivedTasksModal: React.FC<ArchivedTasksModalProps> = ({ isOpen, 
                       onClick={() => {
                         if (window.confirm(`¿Eliminar definitivamente «${task.title}»?`)) onDeleteTask(task.id);
                       }}
-                      className="p-1.5 text-slate-400 hover:text-red-600 rounded-lg hover:bg-slate-100"
+                      className="p-1.5 text-slate-500 hover:text-red-600 rounded-lg hover:bg-slate-100"
                       title="Eliminar tarea"
                       aria-label={`Eliminar «${task.title}»`}
                     >

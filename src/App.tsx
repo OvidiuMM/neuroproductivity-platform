@@ -39,6 +39,7 @@ import { ImportLocalDataModal } from './components/ImportLocalDataModal';
 import { HowItWorks } from './components/HowItWorks';
 import { AgendaView } from './components/AgendaView';
 import { AccessAdminView } from './components/AccessAdminView';
+import { AccessibilityPanel } from './components/AccessibilityPanel';
 import { forgetAccess, setAccess, subscribeToAccessRequests, type AccessRequest, type DecisionStatus } from './services/access';
 import {
   Brain,
@@ -94,6 +95,7 @@ export default function App({ user, services, isAdmin = false }: AppProps) {
     createdAt: user.metadata.creationTime ?? ''
   };
   const [isAccountMenuOpen, setIsAccountMenuOpen] = useState(false);
+  const [isAccessibilityOpen, setIsAccessibilityOpen] = useState(false);
 
   // Datos de la cuenta, sincronizados en tiempo real con Firestore (y disponibles sin conexión desde la caché)
   const [tasks, setTasks] = useState<TaskItem[]>([]);
@@ -363,6 +365,11 @@ export default function App({ user, services, isAdmin = false }: AppProps) {
     setLocalProfiles([]);
   };
 
+  const isImportOpen = localProfiles.length > 0 && !isImportPostponed;
+  // La pantalla de bienvenida no cuenta: es decorativa, se quita sola y deja pasar los clics mientras se desvanece
+  const isDialogOpen =
+    isTaskModalOpen || isArchiveOpen || isMeetingModalOpen || isEmailModalOpen || isAccountMenuOpen || isAccessibilityOpen || isImportOpen;
+
   // Conteo de tareas por contexto
   const archivedTasks = tasks.filter(isArchived);
   const workCount = tasks.filter((t) => t.listContext === 'WORK' && !t.isSomeday && !isArchived(t)).length;
@@ -378,6 +385,15 @@ export default function App({ user, services, isAdmin = false }: AppProps) {
   return (
     <div className="min-h-screen bg-slate-50 text-slate-900 font-sans flex flex-col antialiased selection:bg-indigo-500 selection:text-white">
       
+      <a
+        href="#main-content"
+        className="sr-only focus:not-sr-only focus:fixed focus:top-2 focus:left-2 focus:z-[60] focus:px-4 focus:py-2 focus:rounded-lg focus:bg-slate-900 focus:text-white focus:text-sm focus:font-semibold"
+      >
+        Saltar al contenido
+      </a>
+
+      {/* Con un diálogo abierto, el resto de la página queda inerte: ni el teclado ni los lectores de pantalla llegan */}
+      <div className="contents" inert={isDialogOpen}>
       {/* Barra de Navegación Superior con Contrato de 3 Zonas */}
       <Navbar
         activeTab={activeTab}
@@ -400,16 +416,8 @@ export default function App({ user, services, isAdmin = false }: AppProps) {
         pendingAccessCount={pendingAccessCount}
       />
 
-      {/* BANNER TOAST DE NOTIFICACIÓN */}
-      {toastMessage && (
-        <div className="fixed bottom-6 right-6 z-50 bg-slate-900 text-white text-xs px-4 py-3 rounded-2xl shadow-xl flex items-center gap-2.5 animate-in slide-in-from-bottom-3 duration-200">
-          <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
-          <span className="font-semibold">{toastMessage}</span>
-        </div>
-      )}
-
       {/* CONTENIDO PRINCIPAL */}
-      <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6">
+      <main id="main-content" tabIndex={-1} className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6 focus:outline-none">
 
         {/* HERO ESTRATÉGICO CON CONTEXTO Y MÉTRICAS BIOLÓGICAS */}
         <div className="bg-white rounded-3xl p-6 sm:p-8 border border-slate-200 shadow-xs relative overflow-hidden">
@@ -423,7 +431,7 @@ export default function App({ user, services, isAdmin = false }: AppProps) {
                 <span className="text-slate-300">·</span>
                 <span className="text-slate-500">
                   Contexto Activo:{' '}
-                  <strong className={activeContext === 'WORK' ? 'text-indigo-600' : 'text-emerald-600'}>
+                  <strong className={activeContext === 'WORK' ? 'text-indigo-600' : 'text-emerald-700'}>
                     {activeContext === 'WORK' ? 'Esfera Profesional' : 'Esfera Personal'}
                   </strong>
                 </span>
@@ -471,7 +479,7 @@ export default function App({ user, services, isAdmin = false }: AppProps) {
                 <div className="text-xl sm:text-2xl font-extrabold text-slate-900 font-mono">
                   {wheelAverage}/10
                 </div>
-                <div className="text-[10px] text-emerald-600 font-semibold mt-0.5">
+                <div className="text-[10px] text-emerald-700 font-semibold mt-0.5">
                   {wheelLogs.length} capturas
                 </div>
               </div>
@@ -483,7 +491,7 @@ export default function App({ user, services, isAdmin = false }: AppProps) {
                 <div className="text-xl sm:text-2xl font-extrabold text-slate-900 font-mono">
                   {meetings.length}
                 </div>
-                <div className="text-[10px] text-amber-600 font-semibold mt-0.5">
+                <div className="text-[10px] text-amber-700 font-semibold mt-0.5">
                   Mañanas libres
                 </div>
               </div>
@@ -584,6 +592,18 @@ export default function App({ user, services, isAdmin = false }: AppProps) {
           </div>
         </div>
       </footer>
+      </div>
+
+      {/* BANNER TOAST DE NOTIFICACIÓN: región viva siempre presente para que los lectores de pantalla lo anuncien */}
+      <div role="status" aria-live="polite">
+        {toastMessage && (
+          <div className="fixed bottom-6 right-6 z-50 bg-slate-900 text-white text-xs px-4 py-3 rounded-2xl shadow-xl flex items-center gap-2.5 animate-in slide-in-from-bottom-3 duration-200">
+            <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" aria-hidden="true" />
+            <span className="font-semibold">{toastMessage}</span>
+          </div>
+        )}
+      </div>
+
 
       {/* PANTALLA DE INICIO MÓVIL (SPLASH SCREEN) */}
       {showSplash && (
@@ -638,10 +658,16 @@ export default function App({ user, services, isAdmin = false }: AppProps) {
         onSignOut={() => signOutAndClearCache(services)}
         onExportData={handleExportData}
         onDeleteAccount={handleDeleteAccount}
+        onOpenAccessibility={() => {
+          setIsAccountMenuOpen(false);
+          setIsAccessibilityOpen(true);
+        }}
       />
 
+      <AccessibilityPanel isOpen={isAccessibilityOpen} onClose={() => setIsAccessibilityOpen(false)} />
+
       {/* MODAL 5: IMPORTAR DATOS DE LA VERSIÓN SIN CUENTAS */}
-      {localProfiles.length > 0 && !isImportPostponed && (
+      {isImportOpen && (
         <ImportLocalDataModal
           profiles={localProfiles}
           onImport={handleImportLocalData}

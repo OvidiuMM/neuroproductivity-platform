@@ -113,7 +113,7 @@ export const MeetingModal: React.FC<MeetingModalProps> = ({
           <button
             onClick={onClose}
             aria-label="Cerrar"
-            className="p-1.5 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-200/60 transition-colors"
+            className="p-1.5 rounded-lg text-slate-500 hover:text-slate-600 hover:bg-slate-200/60 transition-colors"
           >
             <X className="w-5 h-5" />
           </button>
@@ -127,7 +127,7 @@ export const MeetingModal: React.FC<MeetingModalProps> = ({
               <label className="text-xs font-bold uppercase tracking-wider text-slate-600">
                 Título de la Convocatoria <span className="text-red-500">*</span>
               </label>
-              <span className="text-[11px] text-slate-400">{title.length}/100</span>
+              <span className="text-[11px] text-slate-500">{title.length}/100</span>
             </div>
             <input
               type="text"
@@ -272,7 +272,7 @@ export const MeetingModal: React.FC<MeetingModalProps> = ({
                     <button
                       type="button"
                       onClick={() => handleRemoveAgendaPoint(i)}
-                      className="text-slate-400 hover:text-red-600"
+                      className="text-slate-500 hover:text-red-600"
                     >
                       <Trash2 className="w-3.5 h-3.5" />
                     </button>
@@ -331,7 +331,7 @@ export const MeetingModal: React.FC<MeetingModalProps> = ({
                 ) : (
                   <span className="w-3.5 h-3.5 rounded-full border border-slate-300 inline-block" />
                 )}
-                <span className={!isMorningMeeting ? 'text-slate-700' : 'text-slate-400'}>
+                <span className={!isMorningMeeting ? 'text-slate-700' : 'text-slate-500'}>
                   Horario valle (≥ 12:00 h) y fin estricto
                 </span>
               </div>
@@ -342,7 +342,7 @@ export const MeetingModal: React.FC<MeetingModalProps> = ({
                 ) : (
                   <span className="w-3.5 h-3.5 rounded-full border border-slate-300 inline-block" />
                 )}
-                <span className={isAgendaValid ? 'text-slate-700' : 'text-slate-400'}>
+                <span className={isAgendaValid ? 'text-slate-700' : 'text-slate-500'}>
                   Orden del día cerrado no vacío
                 </span>
               </div>
@@ -353,7 +353,7 @@ export const MeetingModal: React.FC<MeetingModalProps> = ({
                 ) : (
                   <span className="w-3.5 h-3.5 rounded-full border border-slate-300 inline-block" />
                 )}
-                <span className={isModeratorValid ? 'text-slate-700' : 'text-slate-400'}>
+                <span className={isModeratorValid ? 'text-slate-700' : 'text-slate-500'}>
                   Moderador nominal responsable
                 </span>
               </div>
@@ -364,7 +364,7 @@ export const MeetingModal: React.FC<MeetingModalProps> = ({
                 ) : (
                   <span className="w-3.5 h-3.5 rounded-full border border-slate-300 inline-block" />
                 )}
-                <span className={isTitleValid ? 'text-slate-700' : 'text-slate-400'}>
+                <span className={isTitleValid ? 'text-slate-700' : 'text-slate-500'}>
                   Título ≤ 100 caracteres
                 </span>
               </div>
@@ -386,7 +386,7 @@ export const MeetingModal: React.FC<MeetingModalProps> = ({
               className={`px-5 py-2.5 text-xs font-bold rounded-xl shadow-sm transition-all flex items-center gap-2 ${
                 isFormValid
                   ? 'bg-slate-900 text-white hover:bg-slate-800'
-                  : 'bg-slate-200 text-slate-400 cursor-not-allowed shadow-none'
+                  : 'bg-slate-200 text-slate-500 cursor-not-allowed shadow-none'
               }`}
             >
               <Check className="w-4 h-4" />
