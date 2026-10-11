@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Brain, Clock, LogOut, Send, ShieldAlert, WifiOff } from 'lucide-react';
 import { ACCESS_MESSAGE_MAX_LENGTH, type OwnAccessStatus } from '../services/access';
+import { AccessibilityButton } from './AccessibilityPanel';
 
 interface AccessRequestScreenProps {
   status: Exclude<OwnAccessStatus, 'approved'>;
@@ -137,6 +138,10 @@ export const AccessRequestScreen: React.FC<AccessRequestScreenProps> = ({ status
           <LogOut className="w-3.5 h-3.5" aria-hidden="true" />
           Cerrar sesión
         </button>
+
+        <div className="text-center">
+          <AccessibilityButton />
+        </div>
       </div>
     </main>
   );

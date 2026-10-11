@@ -24,12 +24,12 @@ const GROUPS: { id: string; title: string; matches: (r: AccessRequest) => boolea
 
 const ACTIONS: Record<AccessRequest['status'], { status: DecisionStatus; label: string; icon: typeof Check; style: string }[]> = {
   pending: [
-    { status: 'approved', label: 'Aprobar', icon: Check, style: 'bg-emerald-600 hover:bg-emerald-700 text-white' },
+    { status: 'approved', label: 'Aprobar', icon: Check, style: 'bg-emerald-700 hover:bg-emerald-800 text-white' },
     { status: 'rejected', label: 'Rechazar', icon: X, style: 'border border-slate-300 text-slate-700 hover:bg-slate-50' }
   ],
   approved: [{ status: 'revoked', label: 'Retirar acceso', icon: UserX, style: 'border border-red-300 text-red-700 hover:bg-red-50' }],
-  rejected: [{ status: 'approved', label: 'Aprobar', icon: Check, style: 'bg-emerald-600 hover:bg-emerald-700 text-white' }],
-  revoked: [{ status: 'approved', label: 'Aprobar', icon: Check, style: 'bg-emerald-600 hover:bg-emerald-700 text-white' }]
+  rejected: [{ status: 'approved', label: 'Aprobar', icon: Check, style: 'bg-emerald-700 hover:bg-emerald-800 text-white' }],
+  revoked: [{ status: 'approved', label: 'Aprobar', icon: Check, style: 'bg-emerald-700 hover:bg-emerald-800 text-white' }]
 };
 
 const STATUS_LABEL: Record<AccessRequest['status'], string> = {

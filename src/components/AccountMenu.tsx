@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { UserProfile } from '../types';
-import { X, LogOut, Download, Trash2, Cloud } from 'lucide-react';
+import { X, LogOut, Download, Trash2, Cloud, Accessibility } from 'lucide-react';
 
 interface AccountMenuProps {
   isOpen: boolean;
@@ -9,6 +9,7 @@ interface AccountMenuProps {
   onSignOut: () => void;
   onExportData: () => Promise<void>;
   onDeleteAccount: () => Promise<void>;
+  onOpenAccessibility: () => void;
 }
 
 export const AccountMenu: React.FC<AccountMenuProps> = ({
@@ -17,7 +18,8 @@ export const AccountMenu: React.FC<AccountMenuProps> = ({
   user,
   onSignOut,
   onExportData,
-  onDeleteAccount
+  onDeleteAccount,
+  onOpenAccessibility
 }) => {
   const [busy, setBusy] = useState<'export' | 'delete' | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -58,7 +60,7 @@ export const AccountMenu: React.FC<AccountMenuProps> = ({
           <button
             onClick={onClose}
             aria-label="Cerrar"
-            className="p-1.5 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-200/60 transition-colors"
+            className="p-1.5 rounded-lg text-slate-500 hover:text-slate-600 hover:bg-slate-200/60 transition-colors"
           >
             <X className="w-5 h-5" />
           </button>
@@ -93,6 +95,15 @@ export const AccountMenu: React.FC<AccountMenuProps> = ({
           )}
 
           <div className="space-y-2">
+            <button
+              type="button"
+              onClick={onOpenAccessibility}
+              disabled={busy !== null}
+              className="w-full py-2.5 px-4 text-xs font-bold text-slate-700 bg-white border border-slate-200 rounded-xl hover:bg-slate-50 disabled:opacity-60 flex items-center gap-2"
+            >
+              <Accessibility className="w-4 h-4 text-indigo-600" aria-hidden="true" />
+              Accesibilidad: tamaño del texto, contraste y animaciones
+            </button>
             <button
               type="button"
               onClick={() => run('export', onExportData)}

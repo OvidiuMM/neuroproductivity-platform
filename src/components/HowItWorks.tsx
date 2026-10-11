@@ -143,6 +143,14 @@ export const HowItWorks: React.FC<HowItWorksProps> = ({ onNavigate }) => {
         </p>
       </div>
 
+      {/* ACCESIBILIDAD */}
+      <div className="bg-white rounded-2xl p-6 border border-slate-200 shadow-xs space-y-2">
+        <h3 className="text-xs font-bold uppercase tracking-wider text-slate-700">Accesibilidad</h3>
+        <p className="text-sm text-slate-600 leading-relaxed">
+          En el menú de tu cuenta, <strong>Accesibilidad</strong> permite agrandar el texto, activar el alto contraste, reducir las animaciones y hacer más visible el foco del teclado. Las preferencias se guardan en cada dispositivo. Toda la app se puede usar con el teclado y se revisa automáticamente con las pautas WCAG 2.1 AA.
+        </p>
+      </div>
+
       {/* CRÉDITOS: única mención al autor, como cita de la fuente y sin dar a entender respaldo */}
       <div className="bg-white rounded-2xl p-6 border border-slate-200 shadow-xs space-y-2">
         <h3 className="text-xs font-bold uppercase tracking-wider text-slate-700">Créditos</h3>

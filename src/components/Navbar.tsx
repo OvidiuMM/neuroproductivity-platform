@@ -38,7 +38,7 @@ const PendingBadge: React.FC<{ count: number; corner?: boolean }> = ({ count, co
   count > 0 ? (
     <span
       aria-hidden="true"
-      className={`min-w-4 h-4 px-1 rounded-full bg-orange-500 text-white text-[10px] font-bold leading-4 text-center ${
+      className={`min-w-4 h-4 px-1 rounded-full bg-orange-700 text-white text-[10px] font-bold leading-4 text-center ${
         corner ? 'absolute -top-1.5 -right-1.5 ring-2 ring-white' : ''
       }`}
     >
@@ -92,7 +92,7 @@ export const Navbar: React.FC<NavbarProps> = ({
       {/* 3-Zone Top Bar Contract */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Por debajo de 1280 px las zonas pasan a la línea siguiente en lugar de desbordar; desde ahí caben en una fila */}
-        <div className="flex flex-wrap xl:flex-nowrap items-center justify-between min-h-16 py-2 gap-x-4 xl:gap-x-3 gap-y-2">
+        <div className="navbar-row flex flex-wrap xl:flex-nowrap items-center justify-between min-h-16 py-2 gap-x-4 xl:gap-x-3 gap-y-2">
 
           {/* Zone 1: Single text element wordmark */}
           {/* Puede estrecharse hasta el ancho del nombre y la versión (nunca menos, o los tapan las pestañas);
@@ -139,7 +139,8 @@ export const Navbar: React.FC<NavbarProps> = ({
           </nav>
 
           {/* Zone 3: Actions & Strict Context Switch */}
-          <div className="flex items-center gap-2">
+          {/* Con el texto muy grande en un móvil no cabe en una fila y pasa a la siguiente */}
+          <div className="flex flex-wrap items-center gap-2">
             {/* Context Switcher (Exclusión absoluta de esferas) */}
             <div className="flex items-center bg-slate-100 p-0.5 rounded-lg border border-slate-200">
               <button
@@ -204,7 +205,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                     {activeUser.initials}
                   </div>
                 )}
-                <ChevronDown className="w-3 h-3 text-slate-400" />
+                <ChevronDown className="w-3 h-3 text-slate-500" />
               </button>
             ) : (
               <button
@@ -238,7 +239,7 @@ export const Navbar: React.FC<NavbarProps> = ({
             >
               {isMenuOpen ? <X className="w-4 h-4" /> : <Menu className="w-4 h-4" />}
               {isAdmin && pendingAccessCount > 0 && (
-                <span aria-hidden="true" className="absolute -top-1 -right-1 w-2.5 h-2.5 rounded-full bg-orange-500 ring-2 ring-white" />
+                <span aria-hidden="true" className="absolute -top-1 -right-1 w-2.5 h-2.5 rounded-full bg-orange-600 ring-2 ring-white" />
               )}
             </button>
           </div>

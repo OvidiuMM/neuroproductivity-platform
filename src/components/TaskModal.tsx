@@ -303,7 +303,7 @@ export const TaskModal: React.FC<TaskModalProps> = ({
           <button
             onClick={onClose}
             aria-label="Cerrar"
-            className="p-1.5 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-200/60 transition-colors"
+            className="p-1.5 rounded-lg text-slate-500 hover:text-slate-600 hover:bg-slate-200/60 transition-colors"
           >
             <X className="w-5 h-5" />
           </button>
@@ -350,7 +350,7 @@ export const TaskModal: React.FC<TaskModalProps> = ({
               <label htmlFor="task-title" className="text-xs font-bold uppercase tracking-wider text-slate-600">
                 Acción Inmediata Siguiente <span className="text-red-500">*</span>
               </label>
-              <span className={`text-[11px] font-mono ${title.length > 100 ? 'text-red-600 font-bold' : 'text-slate-400'}`}>
+              <span className={`text-[11px] font-mono ${title.length > 100 ? 'text-red-600 font-bold' : 'text-slate-500'}`}>
                 {title.length}/100 caracteres
               </span>
             </div>
@@ -381,7 +381,7 @@ export const TaskModal: React.FC<TaskModalProps> = ({
                 }`}
               />
               {syntaxResult.isValid && (
-                <div className="absolute right-3 top-3 text-emerald-600 flex items-center gap-1 text-xs font-semibold">
+                <div className="absolute right-3 top-3 text-emerald-700 flex items-center gap-1 text-xs font-semibold">
                   <Check className="w-4 h-4" />
                   <span className="text-[11px]">Verbo físico: {syntaxResult.detectedVerb}</span>
                 </div>
@@ -443,7 +443,7 @@ export const TaskModal: React.FC<TaskModalProps> = ({
               <label className="text-xs font-bold uppercase tracking-wider text-slate-600">
                 Desglose Operativo <span className="text-red-500">*</span>
               </label>
-              <span className="text-[11px] text-slate-400">
+              <span className="text-[11px] text-slate-500">
                 Captura onBlur dispara inferencia NLP TF-IDF
               </span>
             </div>
@@ -810,7 +810,7 @@ export const TaskModal: React.FC<TaskModalProps> = ({
                     <button
                       type="button"
                       onClick={() => handleRemoveObservation(obs.id)}
-                      className="text-slate-400 hover:text-red-600 ml-2"
+                      className="text-slate-500 hover:text-red-600 ml-2"
                     >
                       <X className="w-3.5 h-3.5" />
                     </button>
@@ -832,7 +832,7 @@ export const TaskModal: React.FC<TaskModalProps> = ({
                 ) : (
                   <span className="w-3.5 h-3.5 rounded-full border border-slate-300 inline-block" />
                 )}
-                <span className={!isTitleEmpty ? 'text-slate-700' : 'text-slate-400'}>
+                <span className={!isTitleEmpty ? 'text-slate-700' : 'text-slate-500'}>
                   Título ≤ 100 caracteres
                 </span>
               </div>
@@ -843,7 +843,7 @@ export const TaskModal: React.FC<TaskModalProps> = ({
                 ) : (
                   <span className="w-3.5 h-3.5 rounded-full border border-slate-300 inline-block" />
                 )}
-                <span className={syntaxResult.isValid ? 'text-slate-700' : 'text-slate-400'}>
+                <span className={syntaxResult.isValid ? 'text-slate-700' : 'text-slate-500'}>
                   Verbo de acción física motora
                 </span>
               </div>
@@ -854,7 +854,7 @@ export const TaskModal: React.FC<TaskModalProps> = ({
                 ) : (
                   <span className="w-3.5 h-3.5 rounded-full border border-slate-300 inline-block" />
                 )}
-                <span className={!isDescriptionEmpty ? 'text-slate-700' : 'text-slate-400'}>
+                <span className={!isDescriptionEmpty ? 'text-slate-700' : 'text-slate-500'}>
                   Descripción operacional
                 </span>
               </div>
@@ -881,7 +881,7 @@ export const TaskModal: React.FC<TaskModalProps> = ({
               className={`px-5 py-2.5 text-xs font-bold rounded-xl shadow-sm transition-all flex items-center gap-2 ${
                 isFormValid
                   ? 'bg-slate-900 text-white hover:bg-slate-800'
-                  : 'bg-slate-200 text-slate-400 cursor-not-allowed shadow-none'
+                  : 'bg-slate-200 text-slate-500 cursor-not-allowed shadow-none'
               }`}
             >
               <Check className="w-4 h-4" />

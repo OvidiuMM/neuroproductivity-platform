@@ -108,7 +108,7 @@ La app estará disponible en `http://localhost:3000` y la interfaz de los emulad
 
 ### Pruebas automatizadas
 
-El banco de pruebas cubre lógica pura con el test runner de Node, la importación de datos locales, las reglas de seguridad de Firestore contra el emulador y flujos de extremo a extremo en Chromium con Playwright (inicio de sesión con el emulador de Auth, primer arranque, importación y tareas). `npm test` ejecuta todos los niveles; las rutas de la API se prueban aparte con `npm --prefix functions test`. GitHub Actions también valida tipos, compila la aplicación y la función, y ejecuta toda la suite en cada push y pull request.
+El banco de pruebas cubre lógica pura con el test runner de Node, la importación de datos locales, las reglas de seguridad de Firestore contra el emulador flujos de extremo a extremo en Chromium con Playwright (inicio de sesión con el emulador de Auth, primer arranque, importación, tareas, agenda y aprobación de accesos) y una auditoría automática de accesibilidad WCAG 2.1 A y AA con axe-core en cada pantalla, también con alto contraste y texto muy grande (`tests/e2e/a11y.spec.ts`). `npm test` ejecuta todos los niveles; las rutas de la API se prueban aparte con `npm --prefix functions test`. GitHub Actions también valida tipos, compila la aplicación y la función, y ejecuta toda la suite en cada push y pull request.
 
 ### Despliegue en Firebase (Hosting + Cloud Functions + Firestore)
 

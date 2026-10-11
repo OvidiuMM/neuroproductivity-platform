@@ -1,1 +1,55 @@
 @import "tailwindcss";
+
+/* ACCESIBILIDAD (panel propio, src/services/a11yPrefs.ts): clases en <html> */
+
+/* Tamaño del texto: las medidas van en rem, así que basta con el tamaño raíz */
+html.a11y-text-large {
+  font-size: 112.5%;
+}
+html.a11y-text-xlarge {
+  font-size: 125%;
+}
+/* Los puntos de corte no cambian con el tamaño raíz: con el texto ampliado la cabecera pasa a varias líneas */
+html.a11y-text-large .navbar-row,
+html.a11y-text-xlarge .navbar-row {
+  flex-wrap: wrap;
+}
+
+/* Alto contraste: grises de texto y bordes dos tonos más oscuros (valores de la paleta slate de Tailwind) */
+html.a11y-contrast {
+  --color-slate-200: oklch(70.4% 0.04 256.788);
+  --color-slate-300: oklch(55.4% 0.046 257.417);
+  --color-slate-400: oklch(44.6% 0.043 257.281);
+  --color-slate-500: oklch(37.2% 0.044 257.287);
+  --color-slate-600: oklch(27.9% 0.041 260.031);
+  --color-slate-700: oklch(20.8% 0.042 265.755);
+}
+html.a11y-contrast a {
+  text-decoration: underline;
+}
+
+/* Menos movimiento: por la preferencia del sistema o por el panel */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+html.a11y-reduce-motion *,
+html.a11y-reduce-motion *::before,
+html.a11y-reduce-motion *::after {
+  animation-duration: 0.01ms !important;
+  animation-iteration-count: 1 !important;
+  transition-duration: 0.01ms !important;
+  scroll-behavior: auto !important;
+}
+
+/* Foco muy visible: contorno grueso con separación en cualquier elemento enfocado con el teclado */
+html.a11y-focus :focus-visible {
+  outline: 3px solid var(--color-indigo-700) !important;
+  outline-offset: 3px !important;
+}

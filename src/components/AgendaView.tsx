@@ -168,13 +168,13 @@ export const AgendaView: React.FC<AgendaViewProps> = ({ tasks, meetings, onEditT
                 className={`min-h-28 rounded-2xl border p-2 space-y-2 ${isToday ? 'border-indigo-400 bg-indigo-50/40' : 'border-slate-200 bg-slate-50/60'}`}
               >
                 <div className="flex items-baseline justify-between px-0.5">
-                  <span className="text-[11px] font-bold uppercase text-slate-500">{weekdayFormat.format(toLocalDate(date))}</span>
+                  <span className="text-[11px] font-bold uppercase text-slate-600">{weekdayFormat.format(toLocalDate(date))}</span>
                   <span className={`text-sm font-extrabold ${isToday ? 'text-indigo-700' : 'text-slate-800'}`}>
                     {toLocalDate(date).getDate()}
                   </span>
                 </div>
                 {dayItems.length === 0 ? (
-                  <p className="text-[10px] text-slate-400 px-0.5">Sin nada programado</p>
+                  <p className="text-[10px] text-slate-600 px-0.5">Sin nada programado</p>
                 ) : (
                   <ul className="space-y-1.5">
                     {dayItems.map((item) => (

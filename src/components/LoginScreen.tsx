@@ -1,5 +1,6 @@
 import React from 'react';
 import { Brain, ShieldCheck, Compass, Briefcase, Cloud } from 'lucide-react';
+import { AccessibilityButton } from './AccessibilityPanel';
 
 interface LoginScreenProps {
   onSignIn: () => void;
@@ -72,6 +73,10 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onSignIn, isSigningIn,
         <p>
           El acceso se aprueba cuenta a cuenta: al entrar por primera vez podrás solicitarlo. Tus tareas, evaluaciones y agenda se guardan en tu cuenta, en servidores de Google Cloud en la Unión Europea (Bélgica). Solo tú puedes acceder a ellos, y puedes descargarlos o eliminarlos cuando quieras desde el menú de tu cuenta.
         </p>
+      </div>
+
+      <div className="text-center">
+        <AccessibilityButton />
       </div>
     </div>
   </div>
