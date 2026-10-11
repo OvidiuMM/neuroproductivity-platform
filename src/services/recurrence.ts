@@ -131,9 +131,10 @@ const cyrb53 = (text: string) => {
   return 4294967296 * (2097151 & h2) + (h1 >>> 0);
 };
 
-// Id de la siguiente repetición, el mismo en cualquier dispositivo: si dos pestañas marcan la tarea a la vez,
-// escriben el mismo documento en lugar de crear dos repeticiones
-export const successorId = (taskId: string, nextDue: string) => `task-r${cyrb53(`${taskId}|${nextDue}`).toString(36)}`;
+// Id de la siguiente repetición: depende solo de la tarea, no de la fecha calculada. Si dos pestañas o
+// dispositivos la marcan a la vez (aunque calculen fechas distintas, p. ej. a ambos lados de la hora límite),
+// escriben el mismo documento en lugar de crear dos repeticiones.
+export const successorId = (taskId: string) => `task-r${cyrb53(taskId).toString(36)}`;
 
 // Siguiente tarea de la serie: misma tarea con la nueva fecha (y el inicio desplazado igual), pendiente y sin marcar
 export const nextRecurringTask = (task: TaskItem, now = new Date()): TaskItem | null => {
@@ -144,7 +145,7 @@ export const nextRecurringTask = (task: TaskItem, now = new Date()): TaskItem | 
   const { doneAt: _doneAt, nextOccurrenceId: _nextOccurrenceId, ...rest } = task;
   return {
     ...rest,
-    id: successorId(task.id, nextDue),
+    id: successorId(task.id),
     status: 'PENDING',
     dueDate: nextDue,
     ...(task.startDate ? { startDate: toDateString(addDays(toLocalDate(task.startDate), shiftDays)) } : {}),
