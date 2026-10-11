@@ -105,6 +105,12 @@ describe('nextRecurringTask', () => {
     assert.equal(nextRecurringTask(base, past)!.id, nextRecurringTask(base, later)!.id);
     assert.notEqual(nextRecurringTask(base, past)!.id, nextRecurringTask({ ...base, id: 'task-2' }, past)!.id);
     assert.match(nextRecurringTask(base, past)!.id, /^task-r[0-9a-z]+$/);
+    // Aunque dos dispositivos calculen fechas distintas (a ambos lados de la hora límite), el id es el mismo
+    const daily = { ...base, startDate: undefined, dueDate: '2026-10-11', dueTime: '10:00', recurrence: buildRecurrence('DAILY', '2026-10-11') };
+    const before = nextRecurringTask(daily, new Date(2026, 9, 12, 8, 0))!;
+    const after = nextRecurringTask(daily, new Date(2026, 9, 12, 18, 0))!;
+    assert.notEqual(before.dueDate, after.dueDate);
+    assert.equal(before.id, after.id);
   });
 
   it('skips an occurrence whose due time has already passed when completing late', () => {
