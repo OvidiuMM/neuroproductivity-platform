@@ -72,6 +72,11 @@ const byPriorityDesc = (a: TaskItem, b: TaskItem, now: Date) =>
 const byDueAsc = (a: TaskItem, b: TaskItem) => (dueMoment(a)?.getTime() ?? Infinity) - (dueMoment(b)?.getTime() ?? Infinity);
 const byUpdatedDesc = (a: TaskItem, b: TaskItem) => b.updatedAt.localeCompare(a.updatedAt);
 const byEstimateAsc = (a: TaskItem, b: TaskItem) => (a.estimateMinutes ?? Infinity) - (b.estimateMinutes ?? Infinity);
+// Las tareas sin área van al final (un carácter centinela no sirve: localeCompare no lo ordena el último)
+const byCategoryAsc = (a: TaskItem, b: TaskItem) => {
+  if (a.wheelCategory && b.wheelCategory) return a.wheelCategory.localeCompare(b.wheelCategory, 'es');
+  return (a.wheelCategory ? 0 : 1) - (b.wheelCategory ? 0 : 1);
+};
 
 // Cada criterio desempata con los siguientes; lo que no tiene fecha o estimación va al final
 const COMPARATORS: Record<SortBy, (a: TaskItem, b: TaskItem, now: Date) => number> = {
@@ -79,8 +84,7 @@ const COMPARATORS: Record<SortBy, (a: TaskItem, b: TaskItem, now: Date) => numbe
   deadline: (a, b, now) => byDueAsc(a, b) || byPriorityDesc(a, b, now) || byUpdatedDesc(a, b),
   estimate: (a, b, now) => byEstimateAsc(a, b) || byPriorityDesc(a, b, now) || byDueAsc(a, b),
   date: (a, b) => byUpdatedDesc(a, b),
-  category: (a, b, now) =>
-    (a.wheelCategory ?? '￿').localeCompare(b.wheelCategory ?? '￿') || byPriorityDesc(a, b, now)
+  category: (a, b, now) => byCategoryAsc(a, b) || byPriorityDesc(a, b, now)
 };
 
 export const arrangeTasks = (tasks: TaskItem[], prefs: ListPrefs, now = new Date()) =>

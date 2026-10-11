@@ -76,6 +76,16 @@ describe('arrangeTasks', () => {
     assert.deepEqual(ids(arrangeTasks(tasks, prefs({ filters: { category: 'Finanzas' } }), now)), ['overdue-low']);
   });
 
+  it('sorts by area alphabetically, leaving tasks without an area last', () => {
+    const byArea = [
+      task('none'),
+      task('salud', { wheelCategory: 'Salud' }),
+      task('familia', { wheelCategory: 'Familia' }),
+      task('carrera', { wheelCategory: 'Carrera Profesional' })
+    ];
+    assert.deepEqual(ids(arrangeTasks(byArea, prefs({ sortBy: 'category' }), now)), ['carrera', 'familia', 'salud', 'none']);
+  });
+
   it('counts active filters', () => {
     assert.equal(countActiveFilters(DEFAULT_LIST_PREFS.filters), 0);
     assert.equal(countActiveFilters(prefs({ filters: { maxEstimate: 30, deadline: 'OVERDUE' } }).filters), 2);
