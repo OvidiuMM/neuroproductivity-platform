@@ -48,9 +48,13 @@ export const MeetingModal: React.FC<MeetingModalProps> = ({
   // Regla 5: Título obligatorio
   const isTitleValid = title.trim().length > 0 && title.length <= 100;
 
+  // Regla 6: fecha obligatoria (el calendario permite borrarla)
+  const isDateValid = /^\d{4}-\d{2}-\d{2}$/.test(date);
+
   // Validación consolidada global (Innegociable en persistencia)
   const isFormValid =
     isTitleValid &&
+    isDateValid &&
     !isMorningMeeting &&
     isTimeOrderValid &&
     isAgendaValid &&
@@ -157,10 +161,16 @@ export const MeetingModal: React.FC<MeetingModalProps> = ({
                 id="meeting-date"
                 label="Fecha de la reunión"
                 hasVisibleLabel
+                required
                 value={date}
                 onChange={setDate}
                 inputClassName="px-3 py-2 rounded-xl border border-slate-300 text-xs focus:outline-none focus:ring-2 focus:ring-indigo-400"
               />
+              {!isDateValid && (
+                <p role="alert" className="text-xs text-red-600 mt-1">
+                  La reunión necesita una fecha.
+                </p>
+              )}
             </div>
 
             <div>
