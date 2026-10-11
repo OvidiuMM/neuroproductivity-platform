@@ -3,6 +3,7 @@ import { TaskItem, ListContext, TaskPriority, WheelCategory, TaskObservation } f
 import { analyzeImmediateActionSyntax, SyntaxAnalysisResult } from '../services/syntaxAnalyzer';
 import { inferWheelCategory, NLPSuggestionResult } from '../services/nlpEngine';
 import { validateTaskDates } from '../services/tasks';
+import { ESTIMATE_OPTIONS } from '../services/taskListing';
 import { X, AlertTriangle, Sparkles, Check, CheckCircle2, ShieldAlert, ArrowRight, ListPlus, CalendarClock } from 'lucide-react';
 
 export type TaskFormData = Omit<TaskItem, 'id' | 'createdAt' | 'updatedAt' | 'status' | 'doneAt'>;
@@ -50,6 +51,7 @@ export const TaskModal: React.FC<TaskModalProps> = ({
   const [startTime, setStartTime] = useState('');
   const [dueDate, setDueDate] = useState('');
   const [dueTime, setDueTime] = useState('');
+  const [estimateMinutes, setEstimateMinutes] = useState<number | undefined>();
 
   // Estados de validación en tiempo real
   const [touched, setTouched] = useState<{ [key: string]: boolean }>({});
@@ -74,6 +76,7 @@ export const TaskModal: React.FC<TaskModalProps> = ({
       setStartTime(editingTask.startTime ?? '');
       setDueDate(editingTask.dueDate ?? '');
       setDueTime(editingTask.dueTime ?? '');
+      setEstimateMinutes(editingTask.estimateMinutes);
       setSyntaxResult(analyzeImmediateActionSyntax(editingTask.title));
       setOverrideSyntaxWarning(true);
     } else {
@@ -86,6 +89,7 @@ export const TaskModal: React.FC<TaskModalProps> = ({
       setStartTime('');
       setDueDate('');
       setDueTime('');
+      setEstimateMinutes(undefined);
       setWheelCategory(undefined);
       setWheelCategoryConfidence(undefined);
       setLinkedBy('MANUAL');
@@ -193,6 +197,7 @@ export const TaskModal: React.FC<TaskModalProps> = ({
       wheelCategoryConfidence,
       linkedBy,
       observations,
+      estimateMinutes,
       ...dates
     });
 
@@ -262,7 +267,7 @@ export const TaskModal: React.FC<TaskModalProps> = ({
           {/* CAMPO 2: Nombre de la Tarea + Analizador Sintáctico de Acción Inmediata (Módulo 4) */}
           <div>
             <div className="flex items-center justify-between mb-1.5">
-              <label className="text-xs font-bold uppercase tracking-wider text-slate-600">
+              <label htmlFor="task-title" className="text-xs font-bold uppercase tracking-wider text-slate-600">
                 Acción Inmediata Siguiente <span className="text-red-500">*</span>
               </label>
               <span className={`text-[11px] font-mono ${title.length > 100 ? 'text-red-600 font-bold' : 'text-slate-400'}`}>
@@ -270,8 +275,15 @@ export const TaskModal: React.FC<TaskModalProps> = ({
               </span>
             </div>
 
+            {/* Texto indicativo encima del campo: la acción empieza por un verbo físico */}
+            <p id="task-title-hint" className="text-[11px] text-slate-500 mb-1.5">
+              <strong className="text-slate-700">Verbo físico:</strong> empieza por una acción concreta que puedas hacer ya (Llamar, Enviar, Reservar…).
+            </p>
+
             <div className="relative">
               <input
+                id="task-title"
+                aria-describedby="task-title-hint"
                 type="text"
                 value={title}
                 onChange={(e) => {
@@ -410,15 +422,16 @@ export const TaskModal: React.FC<TaskModalProps> = ({
             )}
           </div>
 
-          {/* FILA: Prioridad Ordinal + Categoría de la Rueda (Enlace Cognitivo) */}
+          {/* FILA: Prioridad Ordinal + Estimación, y debajo la Categoría de la Rueda (Enlace Cognitivo) */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            
+
             {/* Prioridad Ordinal */}
             <div>
-              <label className="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1.5">
+              <label htmlFor="task-priority" className="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1.5">
                 Nivel de Prioridad <span className="text-red-500">*</span>
               </label>
               <select
+                id="task-priority"
                 value={priority}
                 onChange={(e) => setPriority(e.target.value as TaskPriority)}
                 className="w-full px-3 py-2 rounded-xl border border-slate-300 text-sm font-semibold bg-white focus:outline-none focus:ring-2 focus:ring-indigo-400"
@@ -428,14 +441,38 @@ export const TaskModal: React.FC<TaskModalProps> = ({
                 <option value="MEDIUM">⚖️ Media (Operatividad Regular)</option>
                 <option value="LOW">🌱 Baja (Baja Demanda Cognitiva)</option>
               </select>
+              <p className="text-[11px] text-slate-500 mt-1">
+                Con la fecha límite a más de una semana, cuenta un nivel por debajo.
+              </p>
+            </div>
+
+            {/* Estimación: duración prevista */}
+            <div>
+              <label htmlFor="task-estimate" className="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1.5">
+                Estimación (duración)
+              </label>
+              <select
+                id="task-estimate"
+                value={estimateMinutes ?? ''}
+                onChange={(e) => setEstimateMinutes(e.target.value ? Number(e.target.value) : undefined)}
+                className="w-full px-3 py-2 rounded-xl border border-slate-300 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-indigo-400"
+              >
+                <option value="">(Sin estimar)</option>
+                {ESTIMATE_OPTIONS.map((o) => (
+                  <option key={o.value} value={o.value}>
+                    {o.label}
+                  </option>
+                ))}
+              </select>
             </div>
 
             {/* Categoría Rueda de la Vida */}
-            <div>
-              <label className="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1.5">
+            <div className="sm:col-span-2">
+              <label htmlFor="task-category" className="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1.5">
                 Enlace Estratégico (Rueda de la Vida)
               </label>
               <select
+                id="task-category"
                 value={wheelCategory || ''}
                 onChange={(e) => {
                   setWheelCategory((e.target.value as WheelCategory) || undefined);

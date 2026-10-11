@@ -46,6 +46,7 @@ export interface TaskItem {
   startTime?: string; // HH:mm (opcional)
   dueDate?: string; // YYYY-MM-DD
   dueTime?: string; // HH:mm (opcional; sin hora, el plazo acaba al final del día)
+  estimateMinutes?: number; // duración estimada (opcional)
 }
 
 export interface WheelOfLifeLog {

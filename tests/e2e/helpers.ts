@@ -34,6 +34,8 @@ interface NewTask {
   dueDate?: string;
   dueTime?: string;
   startDate?: string;
+  priority?: 'CRITICAL' | 'HIGH' | 'MEDIUM' | 'LOW';
+  estimateMinutes?: number;
 }
 
 // Rellena y guarda el formulario de tarea, que ya debe estar abierto
@@ -45,6 +47,8 @@ export const fillAndSaveTask = async (page: Page, task: NewTask) => {
   if (task.dueDate) await page.getByLabel('Fecha límite', { exact: true }).fill(task.dueDate);
   if (task.dueTime) await page.getByLabel('Hora límite').fill(task.dueTime);
   if (task.startDate) await page.getByLabel('Fecha de inicio').fill(task.startDate);
+  if (task.priority) await page.getByLabel('Nivel de Prioridad').selectOption(task.priority);
+  if (task.estimateMinutes) await page.getByLabel('Estimación (duración)').selectOption(String(task.estimateMinutes));
   const saveButton = page.getByRole('button', { name: 'Guardar Acción Operativa' });
   await saveButton.scrollIntoViewIfNeeded();
   await saveButton.click();
