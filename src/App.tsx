@@ -174,7 +174,7 @@ export default function App({ user, services }: AppProps) {
   const handleForceSync = async () => {
     setIsSyncing(true);
     try {
-      const synced = await forceSync(db);
+      const synced = await forceSync(db, uid);
       showToast(
         synced
           ? 'Todo está sincronizado con el servidor.'
