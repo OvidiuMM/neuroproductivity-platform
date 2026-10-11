@@ -1,6 +1,7 @@
-import React from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { AppTab, ListContext, UserProfile } from '../types';
-import { Brain, Briefcase, User, Calendar, Mail, Compass, Plus, ShieldCheck, CheckCircle2, ChevronDown, BookOpen } from 'lucide-react';
+import { Brain, Briefcase, User, Compass, Plus, ShieldCheck, ChevronDown, BookOpen, Menu, X } from 'lucide-react';
+import { SyncIndicator, type SyncStatus } from './SyncIndicator';
 
 interface NavbarProps {
   activeTab: AppTab;
@@ -13,7 +14,18 @@ interface NavbarProps {
   onOpenNewMeeting: () => void;
   onOpenNewEmail: () => void;
   taskCounts: { work: number; personal: number; someday: number };
+  syncStatus: SyncStatus;
+  onForceSync: () => void;
 }
+
+// Secciones de la app: pestañas en escritorio y menú desplegable en el móvil
+const SECTIONS: { tab: AppTab; label: string; icon: typeof Briefcase; iconOnlyOnDesktop?: boolean }[] = [
+  { tab: 'tasks', label: 'Listas Duales', icon: Briefcase },
+  { tab: 'wheel', label: 'Rueda de la Vida', icon: Compass },
+  { tab: 'bermudas', label: 'Blindaje Bermudas', icon: ShieldCheck },
+  // Solo icono en escritorio: el contenido de la cabecera no pasa de 1280 px (max-w-7xl)
+  { tab: 'help', label: 'Cómo funciona', icon: BookOpen, iconOnlyOnDesktop: true }
+];
 
 export const Navbar: React.FC<NavbarProps> = ({
   activeTab,
@@ -23,17 +35,40 @@ export const Navbar: React.FC<NavbarProps> = ({
   activeUser,
   onOpenAccount,
   onOpenNewTask,
-  onOpenNewMeeting,
-  onOpenNewEmail,
-  taskCounts
+  taskCounts,
+  syncStatus,
+  onForceSync
 }) => {
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const menuRef = useRef<HTMLDivElement>(null);
+
+  // El menú del móvil se cierra con Escape o al pulsar fuera
+  useEffect(() => {
+    if (!isMenuOpen) return;
+    const onKeyDown = (e: KeyboardEvent) => e.key === 'Escape' && setIsMenuOpen(false);
+    const onPointerDown = (e: MouseEvent) => {
+      if (!menuRef.current?.contains(e.target as Node)) setIsMenuOpen(false);
+    };
+    document.addEventListener('keydown', onKeyDown);
+    document.addEventListener('mousedown', onPointerDown);
+    return () => {
+      document.removeEventListener('keydown', onKeyDown);
+      document.removeEventListener('mousedown', onPointerDown);
+    };
+  }, [isMenuOpen]);
+
+  const goTo = (tab: AppTab) => {
+    setActiveTab(tab);
+    setIsMenuOpen(false);
+  };
+
   return (
-    <header className="sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b border-slate-200">
+    <header ref={menuRef} className="sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b border-slate-200">
       {/* 3-Zone Top Bar Contract */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Por debajo de 1280 px las zonas pasan a la línea siguiente en lugar de desbordar; desde ahí caben en una fila */}
         <div className="flex flex-wrap xl:flex-nowrap items-center justify-between min-h-16 py-2 gap-x-4 gap-y-2">
-          
+
           {/* Zone 1: Single text element wordmark */}
           {/* Puede estrecharse hasta el ancho del nombre y la versión (nunca menos, o los tapan las pestañas);
               la línea de debajo pasa a dos líneas si falta espacio */}
@@ -56,69 +91,25 @@ export const Navbar: React.FC<NavbarProps> = ({
             </div>
           </div>
 
-          {/* Zone 2: Navigation Links */}
-          <nav className="hidden md:flex items-center gap-1">
-            <button
-              onClick={() => setActiveTab('tasks')}
-              className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors flex items-center gap-1.5 ${
-                activeTab === 'tasks'
-                  ? 'bg-slate-900 text-white shadow-sm'
-                  : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
-              }`}
-            >
-              <Briefcase className="w-3.5 h-3.5" />
-              <span>Listas Duales</span>
-            </button>
-
-            <button
-              onClick={() => setActiveTab('wheel')}
-              className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors flex items-center gap-1.5 ${
-                activeTab === 'wheel'
-                  ? 'bg-slate-900 text-white shadow-sm'
-                  : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
-              }`}
-            >
-              <Compass className="w-3.5 h-3.5" />
-              <span>Rueda de la Vida</span>
-            </button>
-
-            <button
-              onClick={() => setActiveTab('bermudas')}
-              className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors flex items-center gap-1.5 ${
-                activeTab === 'bermudas'
-                  ? 'bg-slate-900 text-white shadow-sm'
-                  : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
-              }`}
-            >
-              <ShieldCheck className="w-3.5 h-3.5" />
-              <span>Blindaje Bermudas</span>
-            </button>
-
-            <button
-              onClick={() => setActiveTab('requirements')}
-              className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors flex items-center gap-1.5 ${
-                activeTab === 'requirements'
-                  ? 'bg-indigo-700 text-white shadow-sm'
-                  : 'text-indigo-700 hover:bg-indigo-50 border border-indigo-200'
-              }`}
-            >
-              <CheckCircle2 className="w-3.5 h-3.5 text-indigo-300" />
-              <span>Requisitos</span>
-            </button>
-
-            {/* Solo icono: el contenido de la cabecera no pasa de 1280 px (max-w-7xl) y no cabe la etiqueta completa */}
-            <button
-              onClick={() => setActiveTab('help')}
-              aria-label="Cómo funciona"
-              title="Cómo funciona"
-              className={`px-2.5 py-1.5 rounded-lg text-xs font-semibold transition-colors flex items-center gap-1.5 ${
-                activeTab === 'help'
-                  ? 'bg-slate-900 text-white shadow-sm'
-                  : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
-              }`}
-            >
-              <BookOpen className="w-3.5 h-3.5" />
-            </button>
+          {/* Zone 2: Navigation Links (escritorio) */}
+          <nav aria-label="Secciones" className="hidden md:flex items-center gap-1">
+            {SECTIONS.map(({ tab, label, icon: Icon, iconOnlyOnDesktop }) => (
+              <button
+                key={tab}
+                onClick={() => setActiveTab(tab)}
+                aria-current={activeTab === tab ? 'page' : undefined}
+                aria-label={iconOnlyOnDesktop ? label : undefined}
+                title={iconOnlyOnDesktop ? label : undefined}
+                className={`${iconOnlyOnDesktop ? 'px-2.5' : 'px-3'} py-1.5 rounded-lg text-xs font-semibold transition-colors flex items-center gap-1.5 ${
+                  activeTab === tab
+                    ? 'bg-slate-900 text-white shadow-sm'
+                    : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
+                }`}
+              >
+                <Icon className="w-3.5 h-3.5" />
+                {!iconOnlyOnDesktop && <span>{label}</span>}
+              </button>
+            ))}
           </nav>
 
           {/* Zone 3: Actions & Strict Context Switch */}
@@ -158,6 +149,9 @@ export const Navbar: React.FC<NavbarProps> = ({
               </button>
             </div>
 
+            {/* Estado de sincronización con el servidor (pulsar fuerza la sincronización) */}
+            <SyncIndicator status={syncStatus} onSync={onForceSync} />
+
             {/* User Profile & Space Isolation Trigger */}
             {activeUser ? (
               <button
@@ -194,51 +188,53 @@ export const Navbar: React.FC<NavbarProps> = ({
             )}
 
             {/* Primary Action Button */}
+            {/* En pantallas estrechas solo el icono; el nombre accesible es siempre "Nueva Tarea" */}
             <button
               onClick={onOpenNewTask}
-              className="px-3 py-1.5 text-xs font-bold text-white bg-slate-900 hover:bg-slate-800 rounded-lg shadow-sm transition-colors flex items-center gap-1.5 whitespace-nowrap"
+              aria-label="Nueva Tarea"
+              className="h-8 px-2.5 sm:px-3 text-xs font-bold text-white bg-slate-900 hover:bg-slate-800 rounded-lg shadow-sm transition-colors flex items-center gap-1.5 whitespace-nowrap"
             >
-              <Plus className="w-3.5 h-3.5" />
+              <Plus className="w-3.5 h-3.5" aria-hidden="true" />
               <span className="hidden sm:inline">Nueva Tarea</span>
-              <span className="sm:hidden">Tarea</span>
+            </button>
+
+            {/* Menú de secciones en el móvil */}
+            <button
+              type="button"
+              onClick={() => setIsMenuOpen((open) => !open)}
+              aria-expanded={isMenuOpen}
+              aria-controls="mobile-sections-menu"
+              aria-label="Menú"
+              className="md:hidden w-8 h-8 shrink-0 rounded-lg border border-slate-200 text-slate-700 flex items-center justify-center hover:bg-slate-50"
+            >
+              {isMenuOpen ? <X className="w-4 h-4" /> : <Menu className="w-4 h-4" />}
             </button>
           </div>
 
         </div>
 
-        {/* Mobile Navigation bar */}
-        <div className="flex md:hidden items-center justify-around py-2 border-t border-slate-100 text-xs">
-          <button
-            onClick={() => setActiveTab('tasks')}
-            className={`px-2 py-1 font-semibold rounded ${activeTab === 'tasks' ? 'text-slate-900 bg-slate-100' : 'text-slate-500'}`}
-          >
-            Listas
-          </button>
-          <button
-            onClick={() => setActiveTab('wheel')}
-            className={`px-2 py-1 font-semibold rounded ${activeTab === 'wheel' ? 'text-slate-900 bg-slate-100' : 'text-slate-500'}`}
-          >
-            Rueda
-          </button>
-          <button
-            onClick={() => setActiveTab('bermudas')}
-            className={`px-2 py-1 font-semibold rounded ${activeTab === 'bermudas' ? 'text-slate-900 bg-slate-100' : 'text-slate-500'}`}
-          >
-            Bermudas
-          </button>
-          <button
-            onClick={() => setActiveTab('requirements')}
-            className={`px-2 py-1 font-semibold rounded ${activeTab === 'requirements' ? 'text-indigo-700 bg-indigo-50 font-bold' : 'text-slate-500'}`}
-          >
-            Requisitos
-          </button>
-          <button
-            onClick={() => setActiveTab('help')}
-            className={`px-2 py-1 font-semibold rounded ${activeTab === 'help' ? 'text-slate-900 bg-slate-100' : 'text-slate-500'}`}
-          >
-            Ayuda
-          </button>
-        </div>
+        {/* Menú desplegable del móvil con las secciones */}
+        {isMenuOpen && (
+          <nav id="mobile-sections-menu" aria-label="Secciones" className="md:hidden border-t border-slate-100 py-2">
+            <ul className="space-y-1">
+              {SECTIONS.map(({ tab, label, icon: Icon }) => (
+                <li key={tab}>
+                  <button
+                    type="button"
+                    onClick={() => goTo(tab)}
+                    aria-current={activeTab === tab ? 'page' : undefined}
+                    className={`w-full px-3 py-2.5 rounded-lg text-sm font-semibold flex items-center gap-2.5 ${
+                      activeTab === tab ? 'bg-slate-900 text-white' : 'text-slate-700 hover:bg-slate-100'
+                    }`}
+                  >
+                    <Icon className="w-4 h-4" />
+                    {label}
+                  </button>
+                </li>
+              ))}
+            </ul>
+          </nav>
+        )}
       </div>
     </header>
   );
