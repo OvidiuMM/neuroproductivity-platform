@@ -37,3 +37,19 @@ test('first sign-in opens the Wheel of Life at 0 with a first-step notice and a 
   await expect(page.getByText('Top 10 Operativo & Flujo Activo')).toBeVisible();
   await expect(page.getByText('Primer paso: evalúa tu Rueda de la Vida')).toBeHidden();
 });
+
+test('the first-run jump to the Wheel never pulls the person out of a section they already opened', async ({ page }) => {
+  await page.goto('/');
+  await signInWithGoogle(page);
+  // Respuestas de Firestore retrasadas: la confirmación del servidor llega después de abrir otra sección
+  await page.route('**/google.firestore.v1.Firestore/Listen/**', async (route) => {
+    await new Promise((resolve) => setTimeout(resolve, 1_500));
+    await route.continue().catch(() => {});
+  });
+  await page.reload();
+  await expect(page.getByRole('button', { name: 'Tu cuenta' })).toBeVisible();
+  await page.getByRole('button', { name: 'Listas Duales' }).click();
+  await expect(page.locator('header [data-sync-status]')).toHaveAttribute('data-sync-status', 'synced', { timeout: 20_000 });
+  await expect(page.getByRole('button', { name: 'Listas Duales' })).toHaveAttribute('aria-current', 'page');
+  await expect(page.getByRole('button', { name: 'Capturar Primera Acción' })).toBeVisible();
+});

@@ -120,6 +120,12 @@ export default function App({ user, services, isAdmin = false }: AppProps) {
   }, [listPrefs, listPrefsKey]);
   const now = useNow();
   const firstRunChecked = useRef(false);
+  // Secciones que abre la persona: una vez que navega, el primer arranque ya no la lleva a la Rueda
+  const hasNavigated = useRef(false);
+  const navigate = (tab: AppTab) => {
+    hasNavigated.current = true;
+    setActiveTab(tab);
+  };
 
   // ACCESOS (solo administración): solicitudes en vivo para la pestaña y su contador de pendientes
   const [accessRequests, setAccessRequests] = useState<AccessRequest[]>([]);
@@ -239,7 +245,7 @@ export default function App({ user, services, isAdmin = false }: AppProps) {
           // Primer arranque: sin evaluaciones confirmadas por el servidor, la app abre en la Rueda de la Vida
           if (!firstRunChecked.current && (fromServer || logs.length > 0)) {
             firstRunChecked.current = true;
-            if (logs.length === 0) setActiveTab('wheel');
+            if (logs.length === 0 && !hasNavigated.current) setActiveTab('wheel');
           }
         },
         onError
@@ -405,7 +411,7 @@ export default function App({ user, services, isAdmin = false }: AppProps) {
       {/* Barra de Navegación Superior con Contrato de 3 Zonas */}
       <Navbar
         activeTab={activeTab}
-        setActiveTab={setActiveTab}
+        setActiveTab={navigate}
         activeContext={activeContext}
         setActiveContext={setActiveContext}
         activeUser={profile}
@@ -555,7 +561,7 @@ export default function App({ user, services, isAdmin = false }: AppProps) {
             logs={wheelLogs}
             showFirstStep={wheelSynced && wheelLogs.length === 0}
             onAppendSnapshot={handleAppendWheelSnapshot}
-            onOpenHelp={() => setActiveTab('help')}
+            onOpenHelp={() => navigate('help')}
           />
         )}
 
@@ -570,7 +576,7 @@ export default function App({ user, services, isAdmin = false }: AppProps) {
         )}
 
         {/* PESTAÑA 4: CÓMO FUNCIONA LA APP */}
-        {activeTab === 'help' && <HowItWorks onNavigate={setActiveTab} />}
+        {activeTab === 'help' && <HowItWorks onNavigate={navigate} />}
 
         {activeTab === 'access' && isAdmin && (
           <AccessAdminView requests={accessRequests} currentUid={uid} error={accessError} onDecide={handleDecideAccess} />
@@ -597,7 +603,7 @@ export default function App({ user, services, isAdmin = false }: AppProps) {
             </button>
             <span className="text-slate-300">·</span>
             <button
-              onClick={() => setActiveTab('help')}
+              onClick={() => navigate('help')}
               className="text-[11px] text-indigo-600 hover:text-indigo-800 font-semibold"
             >
               Guía de uso
