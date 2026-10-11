@@ -131,9 +131,10 @@ const cyrb53 = (text: string) => {
   return 4294967296 * (2097151 & h2) + (h1 >>> 0);
 };
 
-// Id de la siguiente repetición, el mismo en cualquier dispositivo: si dos pestañas marcan la tarea a la vez,
-// escriben el mismo documento en lugar de crear dos repeticiones
-export const successorId = (taskId: string, nextDue: string) => `task-r${cyrb53(`${taskId}|${nextDue}`).toString(36)}`;
+// Id de la siguiente repetición: depende solo de la tarea, no de la fecha calculada. Si dos pestañas o
+// dispositivos la marcan a la vez (aunque calculen fechas distintas, p. ej. a ambos lados de la hora límite),
+// escriben el mismo documento en lugar de crear dos repeticiones.
+export const successorId = (taskId: string) => `task-r${cyrb53(taskId).toString(36)}`;
 
 // Siguiente tarea de la serie: misma tarea con la nueva fecha (y el inicio desplazado igual), pendiente y sin marcar
 export const nextRecurringTask = (task: TaskItem, now = new Date()): TaskItem | null => {
@@ -144,7 +145,7 @@ export const nextRecurringTask = (task: TaskItem, now = new Date()): TaskItem | 
   const { doneAt: _doneAt, nextOccurrenceId: _nextOccurrenceId, ...rest } = task;
   return {
     ...rest,
-    id: successorId(task.id, nextDue),
+    id: successorId(task.id),
     status: 'PENDING',
     dueDate: nextDue,
     ...(task.startDate ? { startDate: toDateString(addDays(toLocalDate(task.startDate), shiftDays)) } : {}),
@@ -211,7 +212,12 @@ const untilStamp = (until: string, allDay: boolean) => {
 // `anchorDate` (la fecha límite) da el mes de las repeticiones anuales: el 29 de febrero pasa al 28 en años no bisiestos
 export const toRRule = (rec: Recurrence, allDay: boolean, anchorDate?: string): string => {
   const parts = [`FREQ=${rec.frequency}`, `INTERVAL=${Math.max(1, rec.interval || 1)}`];
-  if (rec.frequency === 'WEEKLY' && rec.weekdays?.length) parts.push(`BYDAY=${rec.weekdays.map((d) => RRULE_DAYS[d]).join(',')}`);
+  if (rec.frequency === 'WEEKLY') {
+    // La semana empieza en lunes, como en la app: decide qué días caen en cada semana cuando el intervalo es > 1
+    parts.push('WKST=MO');
+    const days = [...(rec.weekdays ?? [])].sort((a, b) => ((a + 6) % 7) - ((b + 6) % 7));
+    if (days.length) parts.push(`BYDAY=${days.map((d) => RRULE_DAYS[d]).join(',')}`);
+  }
   if (rec.frequency === 'MONTHLY') {
     if (rec.monthlyMode === 'NTH_WEEKDAY') parts.push(`BYDAY=${rec.nth ?? 1}${RRULE_DAYS[rec.weekday ?? 1]}`);
     else if (rec.monthlyMode === 'LAST_WEEKDAY') parts.push(`BYDAY=-1${RRULE_DAYS[rec.weekday ?? 1]}`);
