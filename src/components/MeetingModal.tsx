@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useRef, useState } from 'react';
+import { useModalFocus } from '../hooks/useModalFocus';
 import { MeetingGuard } from '../types';
 import { X, Calendar, Clock, ShieldAlert, CheckCircle2, AlertTriangle, Plus, Trash2, Check } from 'lucide-react';
 import { DateField } from './DateField';
@@ -97,16 +98,25 @@ export const MeetingModal: React.FC<MeetingModalProps> = ({
     onClose();
   };
 
+  const dialogRef = useRef<HTMLDivElement>(null);
+  useModalFocus(isOpen, dialogRef, onClose);
+
   if (!isOpen) return null;
 
   return (
     <div className="fixed inset-0 z-50 flex justify-center p-4 sm:p-8 bg-slate-900/60 backdrop-blur-xs overflow-y-auto">
-      <div className="bg-white rounded-2xl shadow-2xl border border-slate-200 w-full max-w-xl my-auto overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+      <div
+        ref={dialogRef}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="meeting-modal-title"
+        className="bg-white rounded-2xl shadow-2xl border border-slate-200 w-full max-w-xl my-auto overflow-hidden animate-in fade-in zoom-in-95 duration-200"
+      >
         
         {/* Cabecera */}
         <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between bg-slate-50/70">
           <div>
-            <h2 className="text-base font-bold text-slate-900 flex items-center gap-2">
+            <h2 id="meeting-modal-title" className="text-base font-bold text-slate-900 flex items-center gap-2">
               <Calendar className="w-5 h-5 text-indigo-600" />
               Blindaje de Reunión (Triángulo de las Bermudas)
             </h2>
@@ -175,11 +185,12 @@ export const MeetingModal: React.FC<MeetingModalProps> = ({
             </div>
 
             <div>
-              <label className="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1">
+              <label htmlFor="meeting-start" className="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1">
                 Inicio <span className="text-red-500">*</span>
               </label>
               <div className="relative">
                 <input
+                  id="meeting-start"
                   type="time"
                   value={startTime}
                   onChange={(e) => setStartTime(e.target.value)}
@@ -193,10 +204,11 @@ export const MeetingModal: React.FC<MeetingModalProps> = ({
             </div>
 
             <div>
-              <label className="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1">
+              <label htmlFor="meeting-end" className="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1">
                 Fin Estricto <span className="text-red-500">*</span>
               </label>
               <input
+                id="meeting-end"
                 type="time"
                 value={endTime}
                 onChange={(e) => setEndTime(e.target.value)}
@@ -282,9 +294,10 @@ export const MeetingModal: React.FC<MeetingModalProps> = ({
                     <button
                       type="button"
                       onClick={() => handleRemoveAgendaPoint(i)}
+                      aria-label={`Quitar el punto ${i + 1}: ${pt}`}
                       className="text-slate-500 hover:text-red-600"
                     >
-                      <Trash2 className="w-3.5 h-3.5" />
+                      <Trash2 className="w-3.5 h-3.5" aria-hidden="true" />
                     </button>
                   </div>
                 ))}

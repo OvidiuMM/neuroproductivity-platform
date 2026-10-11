@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { useModalFocus } from '../hooks/useModalFocus';
 import { TaskItem, ListContext, TaskPriority, WheelCategory, TaskObservation, MonthlyMode, RecurrenceFrequency } from '../types';
 import { analyzeImmediateActionSyntax, SyntaxAnalysisResult } from '../services/syntaxAnalyzer';
 import { inferWheelCategory, NLPSuggestionResult } from '../services/nlpEngine';
@@ -283,16 +284,25 @@ export const TaskModal: React.FC<TaskModalProps> = ({
     onClose();
   };
 
+  const dialogRef = useRef<HTMLDivElement>(null);
+  useModalFocus(isOpen, dialogRef, onClose);
+
   if (!isOpen) return null;
 
   return (
     <div className="fixed inset-0 z-50 flex justify-center p-4 sm:p-8 bg-slate-900/60 backdrop-blur-xs overflow-y-auto">
-      <div className="bg-white rounded-2xl shadow-2xl border border-slate-200 w-full max-w-2xl my-auto overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+      <div
+        ref={dialogRef}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="task-modal-title"
+        className="bg-white rounded-2xl shadow-2xl border border-slate-200 w-full max-w-2xl my-auto overflow-hidden animate-in fade-in zoom-in-95 duration-200"
+      >
         
         {/* Cabecera del Modal */}
         <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between bg-slate-50/70">
           <div>
-            <h2 className="text-base font-bold text-slate-900 flex items-center gap-2">
+            <h2 id="task-modal-title" className="text-base font-bold text-slate-900 flex items-center gap-2">
               <ListPlus className="w-5 h-5 text-indigo-600" />
               {editingTask ? 'Editar Acción Operativa' : 'Captura de Nueva Acción Inmediata'}
             </h2>

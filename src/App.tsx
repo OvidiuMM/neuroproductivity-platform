@@ -4,7 +4,7 @@
  */
 
 import React, { useState, useEffect, useRef } from 'react';
-import { GoogleAuthProvider, deleteUser, reauthenticateWithPopup, type User } from 'firebase/auth';
+import type { User } from 'firebase/auth';
 import { AppTab, ListContext, TaskItem, TaskStatus, WheelCategory, WheelOfLifeLog, MeetingGuard, EmailDraft, UserProfile } from './types';
 import { formatTaskDates, isArchived, withStatus } from './services/tasks';
 import { nextRecurringTask } from './services/recurrence';
@@ -12,9 +12,7 @@ import { forceSync, signOutAndClearCache, type FirebaseServices } from './servic
 import {
   appendWheelLog,
   completeRecurringTask,
-  deleteAllUserData,
   deleteTask,
-  exportUserData,
   importUserData,
   saveEmail,
   saveMeeting,
@@ -43,7 +41,8 @@ import { HowItWorks } from './components/HowItWorks';
 import { AgendaView } from './components/AgendaView';
 import { AccessAdminView } from './components/AccessAdminView';
 import { AccessibilityPanel } from './components/AccessibilityPanel';
-import { forgetAccess, setAccess, subscribeToAccessRequests, type AccessRequest, type DecisionStatus } from './services/access';
+import { setAccess, subscribeToAccessRequests, type AccessRequest, type DecisionStatus } from './services/access';
+import { deleteAccount, downloadAccountData } from './services/account';
 import {
   Brain,
   Sparkles,
@@ -70,16 +69,6 @@ const initialsOf = (name: string) =>
     .slice(0, 2)
     .join('')
     .toUpperCase() || 'U';
-
-const downloadJson = (filename: string, data: unknown) => {
-  const url = URL.createObjectURL(new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' }));
-  const link = document.createElement('a');
-  link.href = url;
-  link.download = filename;
-  link.click();
-  // Revocar en el mismo instante cancela la descarga en algunos navegadores
-  setTimeout(() => URL.revokeObjectURL(url), 1_000);
-};
 
 export default function App({ user, services, isAdmin = false }: AppProps) {
   const { db } = services;
@@ -354,24 +343,8 @@ export default function App({ user, services, isAdmin = false }: AppProps) {
   };
 
   // CUENTA
-  const handleExportData = async () => {
-    const data = await exportUserData(db, uid);
-    downloadJson(`neuroproductividad-${new Date().toISOString().slice(0, 10)}.json`, {
-      exportedAt: new Date().toISOString(),
-      account: { name: user.displayName, email: user.email },
-      ...data
-    });
-  };
-
-  const handleDeleteAccount = async () => {
-    // Firebase exige un inicio de sesión reciente para eliminar la cuenta
-    await reauthenticateWithPopup(user, new GoogleAuthProvider());
-    await deleteAllUserData(db, uid);
-    // La solicitud de acceso se borra al final: hasta aquí hace falta para poder borrar los datos
-    await forgetAccess(services.functions);
-    await deleteUser(user);
-    await signOutAndClearCache(services);
-  };
+  const handleExportData = () => downloadAccountData(services, user);
+  const handleDeleteAccount = () => deleteAccount(services, user);
 
   // IMPORTACIÓN DE DATOS DE LA VERSIÓN SIN CUENTAS
   const handleImportLocalData = async (profileIds: string[]) => {
@@ -415,15 +388,15 @@ export default function App({ user, services, isAdmin = false }: AppProps) {
   return (
     <div className="min-h-screen bg-slate-50 text-slate-900 font-sans flex flex-col antialiased selection:bg-indigo-500 selection:text-white">
       
+
+      {/* Con un diálogo abierto, el resto de la página queda inerte: ni el teclado ni los lectores de pantalla llegan */}
+      <div className="contents" inert={isDialogOpen}>
       <a
         href="#main-content"
         className="sr-only focus:not-sr-only focus:fixed focus:top-2 focus:left-2 focus:z-[60] focus:px-4 focus:py-2 focus:rounded-lg focus:bg-slate-900 focus:text-white focus:text-sm focus:font-semibold"
       >
         Saltar al contenido
       </a>
-
-      {/* Con un diálogo abierto, el resto de la página queda inerte: ni el teclado ni los lectores de pantalla llegan */}
-      <div className="contents" inert={isDialogOpen}>
       {/* Barra de Navegación Superior con Contrato de 3 Zonas */}
       <Navbar
         activeTab={activeTab}
@@ -695,7 +668,12 @@ export default function App({ user, services, isAdmin = false }: AppProps) {
         }}
       />
 
-      <AccessibilityPanel isOpen={isAccessibilityOpen} onClose={() => setIsAccessibilityOpen(false)} />
+      {/* Se abre desde el menú de la cuenta, que ya no existe al cerrarse: el foco vuelve al botón de la cuenta */}
+      <AccessibilityPanel
+        isOpen={isAccessibilityOpen}
+        onClose={() => setIsAccessibilityOpen(false)}
+        returnFocusTo={() => document.getElementById('account-button')}
+      />
 
       {/* MODAL 5: IMPORTAR DATOS DE LA VERSIÓN SIN CUENTAS */}
       {isImportOpen && (

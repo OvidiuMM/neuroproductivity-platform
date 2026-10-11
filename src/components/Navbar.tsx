@@ -188,6 +188,7 @@ export const Navbar: React.FC<NavbarProps> = ({
             {/* User Profile & Space Isolation Trigger */}
             {activeUser ? (
               <button
+                id="account-button"
                 onClick={onOpenAccount}
                 className="flex items-center gap-2 p-1 pl-1.5 pr-2 rounded-xl border border-slate-200 hover:border-slate-300 hover:bg-slate-50 transition-all text-xs"
                 title={`Tu cuenta: ${activeUser.name}`}

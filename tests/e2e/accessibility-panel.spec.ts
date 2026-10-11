@@ -54,6 +54,36 @@ test('the panel is also available before signing in', async ({ page }) => {
   await expect(page.getByRole('button', { name: 'Accesibilidad' })).toBeFocused();
 });
 
+test('dialogs take the focus and give it back when they close', async ({ page }) => {
+  await page.goto('/');
+  await signInWithGoogle(page);
+  await expect(page.getByRole('status', { name: 'Cargando NeuroProductividad' })).toHaveCount(0);
+
+  // El formulario de tarea recibe el foco (su primer control); Escape lo cierra y el foco vuelve al botón que lo abrió
+  const newTask = page.getByRole('button', { name: 'Nueva Tarea' });
+  await newTask.click();
+  await expect(page.getByRole('dialog', { name: /Captura de Nueva Acción/ }).getByRole('button', { name: 'Cerrar' })).toBeFocused();
+  await page.keyboard.press('Escape');
+  await expect(page.getByRole('dialog', { name: /Captura de Nueva Acción/ })).toBeHidden();
+  await expect(newTask).toBeFocused();
+
+  // Del menú de la cuenta al panel de accesibilidad: al cerrar el panel, el foco vuelve al botón de la cuenta
+  await page.getByRole('button', { name: 'Tu cuenta' }).click();
+  await page.getByRole('button', { name: /^Accesibilidad/ }).click();
+  await page.keyboard.press('Escape');
+  await expect(page.getByRole('button', { name: 'Tu cuenta' })).toBeFocused();
+});
+
+test('with the panel open on the sign-in screen, the rest of the screen is inert', async ({ page }) => {
+  await page.goto('/');
+  const signIn = page.locator('button', { hasText: 'Continuar con Google' });
+  expect(await signIn.evaluate((el) => Boolean(el.closest('[inert]')))).toBe(false);
+  await page.getByRole('button', { name: 'Accesibilidad' }).click();
+  expect(await signIn.evaluate((el) => Boolean(el.closest('[inert]')))).toBe(true);
+  await page.keyboard.press('Escape');
+  expect(await signIn.evaluate((el) => Boolean(el.closest('[inert]')))).toBe(false);
+});
+
 test('a skip link jumps to the main content', async ({ page }) => {
   await page.goto('/');
   await signInWithGoogle(page);

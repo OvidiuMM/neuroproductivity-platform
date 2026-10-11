@@ -1,4 +1,6 @@
-import React, { useState } from 'react';
+import React, { useRef, useState } from 'react';
+import { useModalFocus } from '../hooks/useModalFocus';
+import { DELETE_ACCOUNT_CONFIRMATION } from '../services/account';
 import { UserProfile } from '../types';
 import { X, LogOut, Download, Trash2, Cloud, Accessibility } from 'lucide-react';
 
@@ -24,6 +26,9 @@ export const AccountMenu: React.FC<AccountMenuProps> = ({
   const [busy, setBusy] = useState<'export' | 'delete' | null>(null);
   const [error, setError] = useState<string | null>(null);
 
+  const dialogRef = useRef<HTMLDivElement>(null);
+  useModalFocus(isOpen, dialogRef, onClose);
+
   if (!isOpen) return null;
 
   const run = async (kind: 'export' | 'delete', action: () => Promise<void>) => {
@@ -40,9 +45,7 @@ export const AccountMenu: React.FC<AccountMenuProps> = ({
 
   const handleDelete = () => {
     if (
-      window.confirm(
-        'Se eliminarán tu cuenta y todos tus datos (tareas, evaluaciones, reuniones y correos). No se puede deshacer. ¿Continuar?'
-      )
+      window.confirm(DELETE_ACCOUNT_CONFIRMATION)
     ) {
       run('delete', onDeleteAccount);
     }
@@ -51,7 +54,9 @@ export const AccountMenu: React.FC<AccountMenuProps> = ({
   return (
     <div className="fixed inset-0 z-50 flex justify-center p-4 sm:p-8 bg-slate-900/70 backdrop-blur-xs overflow-y-auto">
       <div
+        ref={dialogRef}
         role="dialog"
+        aria-modal="true"
         aria-label="Tu cuenta"
         className="bg-white rounded-3xl shadow-2xl border border-slate-200 w-full max-w-md my-auto overflow-hidden animate-in fade-in zoom-in-95 duration-200"
       >

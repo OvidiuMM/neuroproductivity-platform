@@ -7,10 +7,14 @@ import { ADMIN_EMAIL, fillAndSaveTask, localDateFromToday, signInWithGoogle } fr
 const WCAG_TAGS = ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa'];
 test.use({ reducedMotion: 'reduce' });
 
-const expectNoViolations = async (page: Page, screen: string) => {
-  // La pantalla de bienvenida se desvanece sola; se audita lo que queda debajo
-  await expect(page.getByRole('status', { name: 'Cargando NeuroProductividad' })).toHaveCount(0);
-  const { violations } = await new AxeBuilder({ page }).withTags(WCAG_TAGS).analyze();
+const SPLASH = '[role="status"][aria-label="Cargando NeuroProductividad"]';
+
+// `include` limita la auditoría a una parte de la página (p. ej. la pantalla de bienvenida, que dura poco)
+const expectNoViolations = async (page: Page, screen: string, include?: string) => {
+  // Salvo que se audite ella misma, se espera a que la pantalla de bienvenida se quite y se audita lo de debajo
+  if (include !== SPLASH) await expect(page.locator(SPLASH)).toHaveCount(0);
+  const builder = new AxeBuilder({ page }).withTags(WCAG_TAGS);
+  const { violations } = await (include ? builder.include(include) : builder).analyze();
   const summary = violations.map(
     (v) => `${v.id} (${v.impact}): ${v.help}\n    ${v.nodes.slice(0, 4).map((n) => n.target.join(' ')).join('\n    ')}`
   );
@@ -62,6 +66,59 @@ test('main sections, forms and dialogs', async ({ page }) => {
   await page.getByRole('button', { name: /^Accesibilidad/ }).click();
   await expect(page.getByRole('dialog', { name: 'Accesibilidad' })).toBeVisible();
   await expectNoViolations(page, 'panel de accesibilidad');
+  await page.keyboard.press('Escape');
+
+  await page.getByRole('button', { name: 'Listas Duales', exact: true }).click();
+  await page.getByRole('button', { name: /Archivadas/ }).click();
+  await expect(page.getByRole('dialog', { name: 'Tareas archivadas' })).toBeVisible();
+  await expectNoViolations(page, 'tareas archivadas');
+  await page.keyboard.press('Escape');
+
+  await page.getByRole('button', { name: 'Blindaje Bermudas' }).click();
+  await page.getByRole('button', { name: 'Agendar Reunión Blindada' }).click();
+  await expect(page.getByRole('dialog', { name: /Blindaje de Reunión/ })).toBeVisible();
+  await expectNoViolations(page, 'formulario de reunión');
+  await page.keyboard.press('Escape');
+  await page.getByRole('button', { name: 'Redactar Inversamente' }).click();
+  await expect(page.getByRole('dialog')).toBeVisible();
+  await expectNoViolations(page, 'formulario de correo');
+  await page.keyboard.press('Escape');
+
+  // Pantalla de bienvenida: se abre desde el pie y dura poco, así que se audita solo ella
+  await page.getByRole('button', { name: /Ver Pantalla de Inicio Móvil/ }).click();
+  await expectNoViolations(page, 'pantalla de bienvenida', SPLASH);
+});
+
+test('import dialog for data saved by the version without accounts', async ({ page }) => {
+  await page.goto('/');
+  await page.evaluate(() => {
+    const created = '2026-10-01T09:00:00.000Z';
+    localStorage.setItem(
+      'neuro_users_v1',
+      JSON.stringify([{ id: 'user-ana', name: 'Ana', role: '', color: 'indigo', initials: 'A', authProvider: 'local', createdAt: created }])
+    );
+    localStorage.setItem(
+      'neuro_tasks_v1',
+      JSON.stringify([
+        {
+          id: 'task-local-1',
+          userId: 'user-ana',
+          listContext: 'WORK',
+          title: 'Llamar al taller para pedir presupuesto',
+          description: '',
+          priority: 'HIGH',
+          createdAt: created,
+          updatedAt: created,
+          observations: [],
+          isSomeday: false,
+          completed: false
+        }
+      ])
+    );
+  });
+  await signInWithGoogle(page);
+  await expect(page.getByRole('dialog', { name: 'Importar datos de este navegador' })).toBeVisible();
+  await expectNoViolations(page, 'importar datos de este navegador');
 });
 
 test('high contrast and very large text', async ({ page }) => {

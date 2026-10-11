@@ -12,6 +12,8 @@ import {
 interface AccessibilityPanelProps {
   isOpen: boolean;
   onClose: () => void;
+  // Dónde devolver el foco si el elemento que abrió el panel ya no existe
+  returnFocusTo?: () => HTMLElement | null;
 }
 
 const TEXT_SIZES: { value: TextSize; label: string; sample: string }[] = [
@@ -31,10 +33,10 @@ const SWITCHES: { key: 'highContrast' | 'reduceMotion' | 'strongFocus'; label: s
 ];
 
 // Panel de accesibilidad: los cambios se aplican al momento y se guardan en este dispositivo
-export const AccessibilityPanel: React.FC<AccessibilityPanelProps> = ({ isOpen, onClose }) => {
+export const AccessibilityPanel: React.FC<AccessibilityPanelProps> = ({ isOpen, onClose, returnFocusTo }) => {
   const dialogRef = useRef<HTMLDivElement>(null);
   const [prefs, setPrefs] = useState<A11yPrefs>(loadA11yPrefs);
-  useModalFocus(isOpen, dialogRef, onClose);
+  useModalFocus(isOpen, dialogRef, onClose, returnFocusTo);
 
   if (!isOpen) return null;
 
@@ -145,20 +147,27 @@ export const AccessibilityPanel: React.FC<AccessibilityPanelProps> = ({ isOpen, 
   );
 };
 
-// Botón con su propio panel, para las pantallas sin la app (inicio de sesión y solicitud de acceso)
-export const AccessibilityButton: React.FC<{ className?: string }> = ({ className = '' }) => {
+// Pantallas sin la app (inicio de sesión y solicitud de acceso): con el panel abierto, el resto de la pantalla
+// queda inerte, como con las ventanas de la app. `children` recibe la función que abre el panel.
+export const AccessibleScreen: React.FC<{ children: (openPanel: () => void) => React.ReactNode }> = ({ children }) => {
   const [isOpen, setIsOpen] = useState(false);
   return (
     <>
-      <button
-        type="button"
-        onClick={() => setIsOpen(true)}
-        className={`inline-flex items-center gap-1.5 text-xs font-semibold text-slate-600 hover:text-slate-900 underline-offset-2 hover:underline ${className}`}
-      >
-        <Accessibility className="w-3.5 h-3.5" aria-hidden="true" />
-        Accesibilidad
-      </button>
+      <div className="contents" inert={isOpen}>
+        {children(() => setIsOpen(true))}
+      </div>
       <AccessibilityPanel isOpen={isOpen} onClose={() => setIsOpen(false)} />
     </>
   );
 };
+
+export const AccessibilityTrigger: React.FC<{ onClick: () => void }> = ({ onClick }) => (
+  <button
+    type="button"
+    onClick={onClick}
+    className="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-600 hover:text-slate-900 underline-offset-2 hover:underline"
+  >
+    <Accessibility className="w-3.5 h-3.5" aria-hidden="true" />
+    Accesibilidad
+  </button>
+);
