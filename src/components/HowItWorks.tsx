@@ -1,6 +1,6 @@
 import React from 'react';
 import { AppTab } from '../types';
-import { BookOpen, Compass, Briefcase, ShieldCheck, ArrowRight, Database, Link2 } from 'lucide-react';
+import { BookOpen, Compass, Briefcase, ShieldCheck, ArrowRight, Database, Link2, CalendarDays } from 'lucide-react';
 
 interface HowItWorksProps {
   onNavigate: (tab: AppTab) => void;
@@ -31,6 +31,15 @@ const SCREENS: { tab: AppTab; title: string; icon: React.ReactNode; points: stri
       'Con fecha límite, el botón de calendario la añade a Google Calendar, Outlook o cualquier calendario (archivo .ics).',
       'Las tareas pueden repetirse (cada día, semana, mes o año; por ejemplo, «cada mes, el 2.º lunes»). Al marcarla Hecha se archiva y se crea la siguiente con su nueva fecha.',
       'Las ideas sin urgencia van a «Opciones Futuras» y no compiten con el Top 10.'
+    ]
+  },
+  {
+    tab: 'agenda',
+    title: 'Agenda',
+    icon: <CalendarDays className="w-5 h-5 text-indigo-600" />,
+    points: [
+      'Vista semanal y por días con las tareas con fecha de tus dos listas, los intervalos, las próximas repeticiones de las tareas recurrentes y las reuniones.',
+      'En la vista por días, las tareas vencidas aparecen aparte. Pulsa una tarea para editarla.'
     ]
   },
   {

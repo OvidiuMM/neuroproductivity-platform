@@ -37,6 +37,7 @@ import { SplashScreen } from './components/SplashScreen';
 import { AccountMenu } from './components/AccountMenu';
 import { ImportLocalDataModal } from './components/ImportLocalDataModal';
 import { HowItWorks } from './components/HowItWorks';
+import { AgendaView } from './components/AgendaView';
 import {
   Brain,
   Sparkles,
@@ -473,6 +474,18 @@ export default function App({ user, services }: AppProps) {
             }}
             onOpenNewTask={openNewTask}
             onOpenArchive={() => setIsArchiveOpen(true)}
+          />
+        )}
+
+        {/* AGENDA: tareas con fecha de las dos listas, repeticiones previstas y reuniones */}
+        {activeTab === 'agenda' && (
+          <AgendaView
+            tasks={tasks}
+            meetings={meetings}
+            onEditTask={(task) => {
+              setEditingTask(task);
+              setIsTaskModalOpen(true);
+            }}
           />
         )}
 

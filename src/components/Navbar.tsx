@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { AppTab, ListContext, UserProfile } from '../types';
-import { Brain, Briefcase, User, Compass, Plus, ShieldCheck, ChevronDown, BookOpen, Menu, X } from 'lucide-react';
+import { Brain, Briefcase, User, Compass, Plus, ShieldCheck, ChevronDown, BookOpen, Menu, X, CalendarDays } from 'lucide-react';
 import { SyncIndicator, type SyncStatus } from './SyncIndicator';
 
 interface NavbarProps {
@@ -21,6 +21,7 @@ interface NavbarProps {
 // Secciones de la app: pestañas en escritorio y menú desplegable en el móvil
 const SECTIONS: { tab: AppTab; label: string; icon: typeof Briefcase; iconOnlyOnDesktop?: boolean }[] = [
   { tab: 'tasks', label: 'Listas Duales', icon: Briefcase },
+  { tab: 'agenda', label: 'Agenda', icon: CalendarDays },
   { tab: 'wheel', label: 'Rueda de la Vida', icon: Compass },
   { tab: 'bermudas', label: 'Blindaje Bermudas', icon: ShieldCheck },
   // Solo icono en escritorio: el contenido de la cabecera no pasa de 1280 px (max-w-7xl)
