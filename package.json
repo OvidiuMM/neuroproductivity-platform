@@ -4,7 +4,7 @@
   "version": "0.6.1",
   "type": "module",
   "scripts": {
-    "dev": "firebase emulators:exec --only auth,firestore --project demo-neuroproductivity \"npm run dev:app\"",
+    "dev": "npm --prefix functions run build && firebase emulators:exec --only auth,firestore,functions --project demo-neuroproductivity \"npm run dev:app\"",
     "dev:app": "VITE_USE_FIREBASE_EMULATORS=true vite --port=3000 --host=0.0.0.0",
     "build": "vite build",
     "preview": "vite preview",

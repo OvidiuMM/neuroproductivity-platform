@@ -12,8 +12,9 @@ import {
   waitForPendingWrites,
   type Firestore
 } from 'firebase/firestore';
+import { connectFunctionsEmulator, getFunctions, type Functions } from 'firebase/functions';
 
-// En desarrollo y en los tests e2e la app habla con los emuladores de Auth y Firestore (proyecto demo)
+// En desarrollo y en los tests e2e la app habla con los emuladores de Auth, Firestore y Functions (proyecto demo)
 export const usingEmulators = import.meta.env.VITE_USE_FIREBASE_EMULATORS === 'true';
 
 const EMULATOR_CONFIG: FirebaseOptions = {
@@ -27,6 +28,7 @@ export interface FirebaseServices {
   app: FirebaseApp;
   auth: Auth;
   db: Firestore;
+  functions: Functions;
 }
 
 // En producción Firebase Hosting sirve la configuración en /__/firebase/init.json,
@@ -49,12 +51,15 @@ export const getFirebase = (): Promise<FirebaseServices> => {
       ignoreUndefinedProperties: true,
       localCache: persistentLocalCache({ tabManager: persistentMultipleTabManager() })
     });
+    // Misma región que las Cloud Functions (functions/src)
+    const functions = getFunctions(app, 'europe-west1');
     // Puertos de firebase.json, distintos de los de por defecto para convivir con otros proyectos de Firebase
     if (usingEmulators) {
       connectAuthEmulator(auth, 'http://127.0.0.1:9399', { disableWarnings: true });
       connectFirestoreEmulator(db, '127.0.0.1', 8281);
+      connectFunctionsEmulator(functions, '127.0.0.1', 5021);
     }
-    return { app, auth, db };
+    return { app, auth, db, functions };
   });
   return services;
 };
