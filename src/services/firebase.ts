@@ -3,10 +3,13 @@ import { connectAuthEmulator, getAuth, signOut, type Auth } from 'firebase/auth'
 import {
   clearIndexedDbPersistence,
   connectFirestoreEmulator,
+  disableNetwork,
+  enableNetwork,
   initializeFirestore,
   persistentLocalCache,
   persistentMultipleTabManager,
   terminate,
+  waitForPendingWrites,
   type Firestore
 } from 'firebase/firestore';
 
@@ -54,6 +57,17 @@ export const getFirebase = (): Promise<FirebaseServices> => {
     return { app, auth, db };
   });
   return services;
+};
+
+const SYNC_TIMEOUT_MS = 15_000;
+
+// Sincronización forzada: reabre la conexión con Firestore (útil si se quedó atascada tras perder la red)
+// y espera a que el servidor confirme todas las escrituras pendientes. Devuelve false si no lo consigue a tiempo.
+export const forceSync = async (db: Firestore): Promise<boolean> => {
+  await disableNetwork(db);
+  await enableNetwork(db);
+  const timeout = new Promise<false>((resolve) => setTimeout(() => resolve(false), SYNC_TIMEOUT_MS));
+  return Promise.race([waitForPendingWrites(db).then(() => true), timeout]);
 };
 
 // Al cerrar sesión se borra la copia local de los datos para no dejarlos en un dispositivo compartido

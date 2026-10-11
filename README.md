@@ -19,7 +19,8 @@ El sistema rechaza las restricciones coercitivas (como las rotaciones atencional
 
 ### 1. Motor Estratégico: Rueda de la Vida & Trazabilidad Temporal Inmutable (`M1`)
 * **Gráfico Polar Interactivo SVG:** Mapeo de 7 dominios vitales (*Salud, Carrera Profesional, Finanzas, Familia, Ocio, Relaciones, Espiritualidad*) evaluados del 0 al 10 con arrastre y redibujado en tiempo real.
-* **Cuentas y sincronización:** Inicio de sesión con Google; los datos de cada cuenta se guardan en Firestore (UE), funcionan sin conexión y se sincronizan entre dispositivos. En el primer inicio de sesión se ofrece importar los datos que la versión anterior guardaba solo en el navegador. Desde el menú de la cuenta se pueden descargar los datos o eliminar la cuenta con todo su contenido.
+* **Cuentas y sincronización:** Inicio de sesión con Google; los datos de cada cuenta se guardan en Firestore (UE), funcionan sin conexión y se sincronizan entre dispositivos. En el primer inicio de sesión se ofrece importar los datos que la versión anterior guardaba solo en el navegador. Desde el menú de la cuenta se pueden descargar los datos o eliminar la cuenta con todo su contenido. Un indicador en la cabecera está verde cuando todo está guardado en el servidor y naranja cuando hay cambios pendientes o no hay conexión; al pulsarlo se fuerza la sincronización.
+* **Navegación en el móvil:** las secciones están en un menú desplegable de la cabecera.
 * **Primer arranque guiado:** Una cuenta sin evaluaciones abre directamente la Rueda con todas las áreas a 0 y un aviso de primer paso que enlaza a la guía *Cómo funciona* (pantallas, relaciones entre módulos y dónde se guardan los datos).
 * **Persistencia Append-Only:** Prohibición estricta de sobrescritura (`UPDATE`). Cada consolidación genera un nuevo snapshot inmutable con sellos de tiempo precisos en formato UTC (Unix Epoch).
 * **Comparativa Histórica de Neuroplasticidad:** Superposición gráfica de polígonos translúcidos (actual vs. 30, 90 o 365 días) para verificar empíricamente el impacto del hábito sostenido y activar circuitos de recompensa dopaminérgicos.
@@ -231,7 +232,7 @@ El repositorio utiliza `package-lock.json` (en la raíz y en `functions/`) como 
 │       ├── AccountMenu.tsx      # Cerrar sesión, descargar datos y eliminar la cuenta
 │       ├── ImportLocalDataModal.tsx # Importación de datos locales en el primer inicio de sesión
 │       ├── HowItWorks.tsx       # Guía «Cómo funciona»: pantallas y relaciones entre módulos
-│       └── SystemRequirementsViewer.tsx # Banco de pruebas en vivo y specs BDD
+│       └── SyncIndicator.tsx    # Indicador de sincronización con el servidor (pulsar fuerza la sincronización)
 ```
 
 ---

@@ -7,7 +7,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { GoogleAuthProvider, deleteUser, reauthenticateWithPopup, type User } from 'firebase/auth';
 import { AppTab, ListContext, TaskItem, TaskStatus, WheelCategory, WheelOfLifeLog, MeetingGuard, EmailDraft, UserProfile } from './types';
 import { isArchived, withStatus } from './services/tasks';
-import { signOutAndClearCache, type FirebaseServices } from './services/firebase';
+import { forceSync, signOutAndClearCache, type FirebaseServices } from './services/firebase';
 import {
   appendWheelLog,
   deleteAllUserData,
@@ -17,10 +17,14 @@ import {
   saveEmail,
   saveMeeting,
   saveTask,
-  subscribeToCollection
+  subscribeToCollection,
+  USER_COLLECTIONS,
+  type SnapshotInfo,
+  type UserCollection
 } from './services/repository';
 import { buildImport, clearLocalData, getLocalProfiles, type LocalProfileSummary } from './services/localData';
 import { Navbar } from './components/Navbar';
+import type { SyncStatus } from './components/SyncIndicator';
 import { TaskList } from './components/TaskList';
 import { TaskModal, type TaskFormData } from './components/TaskModal';
 import { ArchivedTasksModal } from './components/ArchivedTasksModal';
@@ -28,7 +32,6 @@ import { WheelOfLife } from './components/WheelOfLife';
 import { BermudasShield } from './components/BermudasShield';
 import { MeetingModal } from './components/MeetingModal';
 import { EmailModal } from './components/EmailModal';
-import { SystemRequirementsViewer } from './components/SystemRequirementsViewer';
 import { SplashScreen } from './components/SplashScreen';
 import { AccountMenu } from './components/AccountMenu';
 import { ImportLocalDataModal } from './components/ImportLocalDataModal';
@@ -126,17 +129,70 @@ export default function App({ user, services }: AppProps) {
     showToast(`No se pudo ${action}. Revisa tu conexión e inténtalo de nuevo.`);
   };
 
+  // SINCRONIZACIÓN: verde solo si las cuatro colecciones están confirmadas por el servidor y sin escrituras pendientes
+  const [syncByCollection, setSyncByCollection] = useState<Record<UserCollection, SnapshotInfo>>(
+    () => Object.fromEntries(USER_COLLECTIONS.map((name) => [name, { fromServer: false, hasPendingWrites: false }])) as Record<UserCollection, SnapshotInfo>
+  );
+  const [isOnline, setIsOnline] = useState(() => navigator.onLine);
+  const [isSyncing, setIsSyncing] = useState(false);
+
+  useEffect(() => {
+    const update = () => setIsOnline(navigator.onLine);
+    window.addEventListener('online', update);
+    window.addEventListener('offline', update);
+    return () => {
+      window.removeEventListener('online', update);
+      window.removeEventListener('offline', update);
+    };
+  }, []);
+
+  const trackSync = (name: UserCollection, info: SnapshotInfo) =>
+    setSyncByCollection((current) =>
+      current[name].fromServer === info.fromServer && current[name].hasPendingWrites === info.hasPendingWrites
+        ? current
+        : { ...current, [name]: info }
+    );
+
+  const syncStatus: SyncStatus = isSyncing
+    ? 'syncing'
+    : !isOnline
+    ? 'offline'
+    : Object.values(syncByCollection).every((s) => s.fromServer && !s.hasPendingWrites)
+    ? 'synced'
+    : 'pending';
+
+  const handleForceSync = async () => {
+    setIsSyncing(true);
+    try {
+      const synced = await forceSync(db);
+      showToast(
+        synced
+          ? 'Todo está sincronizado con el servidor.'
+          : 'No se pudo sincronizar. Revisa tu conexión: tus cambios siguen guardados en este dispositivo.'
+      );
+    } catch (e) {
+      reportError('sincronizar')(e);
+    } finally {
+      setIsSyncing(false);
+    }
+  };
+
   // Suscripción en tiempo real a los datos de la cuenta
   useEffect(() => {
     const onError = reportError('cargar tus datos');
     const unsubscribers = [
-      subscribeToCollection(db, uid, 'tasks', setTasks, onError),
+      subscribeToCollection(db, uid, 'tasks', (items, info) => {
+        setTasks(items);
+        trackSync('tasks', info);
+      }, onError),
       subscribeToCollection(
         db,
         uid,
         'wheelLogs',
-        (logs, { fromServer }) => {
+        (logs, info) => {
+          const { fromServer } = info;
           setWheelLogs(logs);
+          trackSync('wheelLogs', info);
           if (fromServer) setWheelSynced(true);
           // Primer arranque: sin evaluaciones confirmadas por el servidor, la app abre en la Rueda de la Vida
           if (!firstRunChecked.current && (fromServer || logs.length > 0)) {
@@ -146,8 +202,14 @@ export default function App({ user, services }: AppProps) {
         },
         onError
       ),
-      subscribeToCollection(db, uid, 'meetings', setMeetings, onError),
-      subscribeToCollection(db, uid, 'emails', setEmails, onError)
+      subscribeToCollection(db, uid, 'meetings', (items, info) => {
+        setMeetings(items);
+        trackSync('meetings', info);
+      }, onError),
+      subscribeToCollection(db, uid, 'emails', (items, info) => {
+        setEmails(items);
+        trackSync('emails', info);
+      }, onError)
     ];
     return () => unsubscribers.forEach((unsubscribe) => unsubscribe());
   }, [db, uid]);
@@ -290,6 +352,8 @@ export default function App({ user, services }: AppProps) {
           personal: personalCount,
           someday: somedayCount
         }}
+        syncStatus={syncStatus}
+        onForceSync={handleForceSync}
       />
 
       {/* BANNER TOAST DE NOTIFICACIÓN */}
@@ -424,10 +488,7 @@ export default function App({ user, services }: AppProps) {
           />
         )}
 
-        {/* PESTAÑA 4: ESPECIFICACIÓN TÉCNICA & BANCO DE PRUEBAS */}
-        {activeTab === 'requirements' && <SystemRequirementsViewer />}
-
-        {/* PESTAÑA 5: CÓMO FUNCIONA LA APP */}
+        {/* PESTAÑA 4: CÓMO FUNCIONA LA APP */}
         {activeTab === 'help' && <HowItWorks onNavigate={setActiveTab} />}
 
       </main>
