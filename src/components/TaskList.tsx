@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import { TaskItem, ListContext, TaskPriority, TaskStatus, WheelCategory } from '../types';
 import { DEADLINE_TITLE_CLASS, effectivePriority, getDeadlineState } from '../services/tasks';
 import {
@@ -7,7 +7,6 @@ import {
   arrangeTasks,
   countActiveFilters,
   formatEstimate,
-  parseListPrefs,
   type DeadlineFilter,
   type ListFilters,
   type ListPrefs,
@@ -46,11 +45,22 @@ const DEADLINE_FILTERS: { value: DeadlineFilter; label: string }[] = [
   { value: 'NO_DATE', label: 'Sin fecha límite' }
 ];
 
+// Estimación de la tarea, en las tres listas (Top 10, posición 11 en adelante y «Quizá»)
+const EstimateBadge: React.FC<{ minutes?: number; className?: string }> = ({ minutes, className = '' }) =>
+  minutes === undefined ? null : (
+    <span className={`flex items-center gap-1 font-semibold ${className}`}>
+      <Timer className="w-3 h-3" aria-hidden="true" />
+      <span className="sr-only">Estimación:</span>
+      {formatEstimate(minutes)}
+    </span>
+  );
+
 interface TaskListProps {
   tasks: TaskItem[];
   activeContext: ListContext;
-  // Clave de localStorage para guardar el orden y los filtros del Top 10 de esta cuenta
-  prefsStorageKey: string;
+  // Orden y filtros del Top 10: los guarda App, que también los usa para el resumen «Top 10 Foco»
+  prefs: ListPrefs;
+  onPrefsChange: (update: (prefs: ListPrefs) => ListPrefs) => void;
   archivedCount: number;
   onChangeStatus: (task: TaskItem, status: TaskStatus) => void;
   onDeleteTask: (id: string) => void;
@@ -62,7 +72,8 @@ interface TaskListProps {
 export const TaskList: React.FC<TaskListProps> = ({
   tasks,
   activeContext,
-  prefsStorageKey,
+  prefs,
+  onPrefsChange,
   archivedCount,
   onChangeStatus,
   onDeleteTask,
@@ -71,14 +82,9 @@ export const TaskList: React.FC<TaskListProps> = ({
   onOpenArchive
 }) => {
   const [viewMode, setViewMode] = useState<'active' | 'someday'>('active');
-  // Orden y filtros del Top 10, guardados en este dispositivo para cada cuenta
-  const [prefs, setPrefs] = useState<ListPrefs>(() => parseListPrefs(localStorage.getItem(prefsStorageKey)));
+  const setPrefs = onPrefsChange;
   const activeFilterCount = countActiveFilters(prefs.filters);
   const [showFilters, setShowFilters] = useState(activeFilterCount > 0);
-
-  useEffect(() => {
-    localStorage.setItem(prefsStorageKey, JSON.stringify(prefs));
-  }, [prefs, prefsStorageKey]);
 
   const setFilter = <K extends keyof ListFilters>(key: K, value: ListFilters[K]) =>
     setPrefs((p) => ({ ...p, filters: { ...p.filters, [key]: value } }));
@@ -357,7 +363,20 @@ export const TaskList: React.FC<TaskListProps> = ({
               </span>
             </div>
 
-            {top10Tasks.length === 0 ? (
+            {top10Tasks.length === 0 && activeTasks.length > 0 ? (
+              // Hay tareas, pero los filtros las ocultan todas: no se invita a crear otra
+              <div className="p-8 text-center bg-white rounded-2xl border border-slate-200 text-slate-600 space-y-3">
+                <p className="text-sm font-semibold">
+                  Ninguna tarea coincide con los filtros ({hiddenByFilters} {hiddenByFilters === 1 ? 'oculta' : 'ocultas'}).
+                </p>
+                <button
+                  onClick={() => setPrefs((p) => ({ ...p, filters: DEFAULT_LIST_PREFS.filters }))}
+                  className="px-4 py-2 bg-slate-900 text-white rounded-xl text-xs font-bold inline-flex items-center gap-2"
+                >
+                  <SlidersHorizontal className="w-4 h-4" aria-hidden="true" /> Mostrar todas las tareas
+                </button>
+              </div>
+            ) : top10Tasks.length === 0 ? (
               <div className="p-8 text-center bg-white rounded-2xl border border-slate-200 text-slate-500 space-y-3">
                 <p className="text-sm font-semibold">No hay acciones operativas activas en esta lista.</p>
                 <button
@@ -414,13 +433,7 @@ export const TaskList: React.FC<TaskListProps> = ({
                         <div className="flex flex-wrap items-center gap-x-3 gap-y-1 pt-1 text-[11px] text-slate-400 font-mono">
                           <TaskDates task={task} now={now} />
 
-                          {task.estimateMinutes !== undefined && (
-                            <span className="flex items-center gap-1 text-slate-500 font-semibold">
-                              <Timer className="w-3 h-3" />
-                              <span className="sr-only">Estimación:</span>
-                              {formatEstimate(task.estimateMinutes)}
-                            </span>
-                          )}
+                          <EstimateBadge minutes={task.estimateMinutes} className="text-slate-500" />
 
                           <span className="flex items-center gap-1">
                             <Clock className="w-3 h-3" />
@@ -503,6 +516,7 @@ export const TaskList: React.FC<TaskListProps> = ({
 
                     <div className="flex flex-wrap items-center gap-1.5 shrink-0 text-[10px]">
                       <TaskDates task={task} now={now} />
+                      <EstimateBadge minutes={task.estimateMinutes} className="text-slate-500" />
                       <TaskStatusSelect
                         size="xs"
                         status={task.status}
@@ -573,6 +587,7 @@ export const TaskList: React.FC<TaskListProps> = ({
                         </span>
                       )}
                       <TaskDates task={task} now={now} />
+                      <EstimateBadge minutes={task.estimateMinutes} className="text-slate-500" />
                     </div>
                   </div>
 
