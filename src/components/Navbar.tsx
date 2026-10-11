@@ -35,13 +35,14 @@ export const Navbar: React.FC<NavbarProps> = ({
         <div className="flex flex-wrap xl:flex-nowrap items-center justify-between min-h-16 py-2 gap-x-4 gap-y-2">
           
           {/* Zone 1: Single text element wordmark */}
-          {/* Puede estrecharse: si falta espacio, la línea de atribución pasa a dos líneas en lugar de desbordar */}
-          <div className="flex items-center gap-3 min-w-0">
+          {/* Puede estrecharse hasta el ancho del nombre y la versión (nunca menos, o los tapan las pestañas);
+              la línea de debajo pasa a dos líneas si falta espacio */}
+          <div className="flex items-center gap-3">
             <div className="w-9 h-9 rounded-xl bg-slate-900 text-white flex items-center justify-center shadow-sm shrink-0">
               <Brain className="w-5 h-5 text-indigo-400" />
             </div>
-            <div className="min-w-0">
-              <div className="flex items-center gap-2">
+            <div>
+              <div className="flex items-center gap-2 whitespace-nowrap">
                 <span className="text-lg font-bold tracking-tight text-slate-900 block leading-tight">
                   NeuroProductividad
                 </span>
