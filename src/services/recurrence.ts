@@ -54,12 +54,18 @@ const stepAfter = (from: Date, rec: Recurrence): Date => {
   }
 };
 
+// Momento en que vence una fecha de la serie: a la hora límite o, sin hora, al final del día
+const deadlineOf = (d: Date, dueTime?: string) => {
+  if (!dueTime) return addDays(d, 1);
+  const [hh, mm] = dueTime.split(':').map(Number);
+  return new Date(d.getFullYear(), d.getMonth(), d.getDate(), hh, mm);
+};
+
 // Próxima fecha de la tarea tras `dueDate`. Si se completa con retraso, salta hasta la primera fecha que no haya
-// pasado (no se crean repeticiones ya vencidas). Devuelve null si supera `until`.
-export const nextOccurrence = (dueDate: string, rec: Recurrence, today = new Date()): string | null => {
-  const todayDate = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+// vencido, teniendo en cuenta la hora límite (no se crean repeticiones ya vencidas). Devuelve null si supera `until`.
+export const nextOccurrence = (dueDate: string, rec: Recurrence, now = new Date(), dueTime?: string): string | null => {
   let next = stepAfter(toLocalDate(dueDate), rec);
-  for (let guard = 0; next < todayDate && guard < 10_000; guard++) next = stepAfter(next, rec);
+  for (let guard = 0; deadlineOf(next, dueTime) <= now && guard < 10_000; guard++) next = stepAfter(next, rec);
   if (rec.until && toDateString(next) > rec.until) return null;
   return toDateString(next);
 };
@@ -73,6 +79,20 @@ export const upcomingOccurrences = (dueDate: string, rec: Recurrence, count: num
     const value = toDateString(current);
     if (rec.until && value > rec.until) break;
     dates.push(value);
+  }
+  return dates;
+};
+
+// Repeticiones posteriores a `dueDate` entre `from` y `to` (incluidos) y dentro de `until`, para la agenda.
+// Se calculan hasta `to` sea cual sea la distancia a la fecha original (con un límite de seguridad de pasos).
+export const occurrencesBetween = (dueDate: string, rec: Recurrence, from: string, to: string): string[] => {
+  const dates: string[] = [];
+  let current = toLocalDate(dueDate);
+  for (let guard = 0; guard < 50_000; guard++) {
+    current = stepAfter(current, rec);
+    const value = toDateString(current);
+    if (value > to || (rec.until && value > rec.until)) break;
+    if (value >= from) dates.push(value);
   }
   return dates;
 };
@@ -97,16 +117,34 @@ export const buildRecurrence = (
   return base;
 };
 
+// Hash cyrb53 (53 bits): identificador estable sin depender del reloj ni de un generador aleatorio
+const cyrb53 = (text: string) => {
+  let h1 = 0xdeadbeef;
+  let h2 = 0x41c6ce57;
+  for (let i = 0; i < text.length; i++) {
+    const ch = text.charCodeAt(i);
+    h1 = Math.imul(h1 ^ ch, 2654435761);
+    h2 = Math.imul(h2 ^ ch, 1597334677);
+  }
+  h1 = Math.imul(h1 ^ (h1 >>> 16), 2246822507) ^ Math.imul(h2 ^ (h2 >>> 13), 3266489909);
+  h2 = Math.imul(h2 ^ (h2 >>> 16), 2246822507) ^ Math.imul(h1 ^ (h1 >>> 13), 3266489909);
+  return 4294967296 * (2097151 & h2) + (h1 >>> 0);
+};
+
+// Id de la siguiente repetición, el mismo en cualquier dispositivo: si dos pestañas marcan la tarea a la vez,
+// escriben el mismo documento en lugar de crear dos repeticiones
+export const successorId = (taskId: string, nextDue: string) => `task-r${cyrb53(`${taskId}|${nextDue}`).toString(36)}`;
+
 // Siguiente tarea de la serie: misma tarea con la nueva fecha (y el inicio desplazado igual), pendiente y sin marcar
 export const nextRecurringTask = (task: TaskItem, now = new Date()): TaskItem | null => {
   if (!task.recurrence || !task.dueDate) return null;
-  const nextDue = nextOccurrence(task.dueDate, task.recurrence, now);
+  const nextDue = nextOccurrence(task.dueDate, task.recurrence, now, task.dueTime);
   if (!nextDue) return null;
   const shiftDays = Math.round((toLocalDate(nextDue).getTime() - toLocalDate(task.dueDate).getTime()) / 86_400_000);
   const { doneAt: _doneAt, nextOccurrenceId: _nextOccurrenceId, ...rest } = task;
   return {
     ...rest,
-    id: `task-${now.getTime()}`,
+    id: successorId(task.id, nextDue),
     status: 'PENDING',
     dueDate: nextDue,
     ...(task.startDate ? { startDate: toDateString(addDays(toLocalDate(task.startDate), shiftDays)) } : {}),
@@ -159,7 +197,19 @@ export const describeRecurrence = (rec: Recurrence, dueDate?: string): string =>
 // RRULE (RFC 5545) para exportar la serie al calendario
 const RRULE_DAYS = ['SU', 'MO', 'TU', 'WE', 'TH', 'FR', 'SA'];
 
-export const toRRule = (rec: Recurrence, allDay: boolean): string => {
+// Días 29–31: la app usa el último día de los meses más cortos; en RRULE eso es «el último de los días 28…N»
+const lastDayFallback = (monthDay: number) =>
+  `BYMONTHDAY=${Array.from({ length: monthDay - 27 }, (_, i) => 28 + i).join(',')};BYSETPOS=-1`;
+
+// UNTIL con hora: fin del día local de `until`, en UTC (23:59:59 UTC dejaría fuera horas tardías al oeste de UTC)
+const untilStamp = (until: string, allDay: boolean) => {
+  if (allDay) return until.replace(/-/g, '');
+  const [y, m, d] = until.split('-').map(Number);
+  return new Date(y, m - 1, d, 23, 59, 59).toISOString().replace(/[-:]/g, '').replace(/\.\d{3}/, '');
+};
+
+// `anchorDate` (la fecha límite) da el mes de las repeticiones anuales: el 29 de febrero pasa al 28 en años no bisiestos
+export const toRRule = (rec: Recurrence, allDay: boolean, anchorDate?: string): string => {
   const parts = [`FREQ=${rec.frequency}`, `INTERVAL=${Math.max(1, rec.interval || 1)}`];
   if (rec.frequency === 'WEEKLY') {
     // La semana empieza en lunes, como en la app: decide qué días caen en cada semana cuando el intervalo es > 1
@@ -170,8 +220,11 @@ export const toRRule = (rec: Recurrence, allDay: boolean): string => {
   if (rec.frequency === 'MONTHLY') {
     if (rec.monthlyMode === 'NTH_WEEKDAY') parts.push(`BYDAY=${rec.nth ?? 1}${RRULE_DAYS[rec.weekday ?? 1]}`);
     else if (rec.monthlyMode === 'LAST_WEEKDAY') parts.push(`BYDAY=-1${RRULE_DAYS[rec.weekday ?? 1]}`);
-    else if (rec.monthDay) parts.push(`BYMONTHDAY=${rec.monthDay}`);
+    else if (rec.monthDay) parts.push(rec.monthDay > 28 ? lastDayFallback(rec.monthDay) : `BYMONTHDAY=${rec.monthDay}`);
   }
-  if (rec.until) parts.push(`UNTIL=${rec.until.replace(/-/g, '')}${allDay ? '' : 'T235959Z'}`);
+  if (rec.frequency === 'YEARLY' && rec.monthDay === 29 && anchorDate && toLocalDate(anchorDate).getMonth() === 1) {
+    parts.push(`BYMONTH=2;${lastDayFallback(29)}`);
+  }
+  if (rec.until) parts.push(`UNTIL=${untilStamp(rec.until, allDay)}`);
   return `RRULE:${parts.join(';')}`;
 };

@@ -43,6 +43,10 @@ export const profileOf = (token: AuthToken) => ({
 export const isAdminToken = (token: AuthToken | undefined, adminEmail: string) =>
   Boolean(adminEmail) && token?.email_verified === true && normalizeEmail(token.email) === normalizeEmail(adminEmail);
 
+// Marca admins/{uid} válida: la de la cuenta configurada. Las demás (p. ej. tras cambiar ADMIN_EMAIL) se borran.
+export const isCurrentAdminMarker = (marker: { email?: unknown } | undefined, adminEmail: string) =>
+  Boolean(adminEmail) && typeof marker?.email === 'string' && normalizeEmail(marker.email) === normalizeEmail(adminEmail);
+
 export type RequestDecision =
   | { action: 'create' }
   | { action: 'keep'; status: AccessStatus }
