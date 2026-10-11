@@ -11,6 +11,7 @@ import {
   DEMO_ADMIN_EMAIL,
   buildEmail,
   isAdminToken,
+  isCurrentAdminMarker,
   normalizeEmail,
   normalizeMessage,
   profileOf,
@@ -43,11 +44,11 @@ const adminEmail = () => (isDemoProject() ? DEMO_ADMIN_EMAIL : adminEmailParam.v
 const appUrl = () => `https://${process.env.GCLOUD_PROJECT}.web.app`;
 
 // Avisos por email (Gmail con contraseña de aplicación). En los emuladores no se envía nada. Un fallo del
-// correo no deshace la solicitud ni la decisión: queda en los logs, sin datos personales.
-const sendAccessEmail = async (kind: AccessEmail, record: AccessRecord, uid: string) => {
+// correo no deshace la solicitud ni la decisión: queda en los logs, sin datos personales (ni el uid).
+const sendAccessEmail = async (kind: AccessEmail, record: AccessRecord) => {
   const to = kind === 'new-request' ? adminEmail() : record.email;
   if (isEmulator || !gmailUser.value() || !to) {
-    logger.info('Access email skipped', { uid, kind, emulator: isEmulator });
+    logger.info('Access email skipped', { kind, emulator: isEmulator });
     return;
   }
   try {
@@ -57,10 +58,17 @@ const sendAccessEmail = async (kind: AccessEmail, record: AccessRecord, uid: str
     });
     const { subject, text } = buildEmail(kind, record, appUrl());
     await transport.sendMail({ from: `NeuroProductividad <${gmailUser.value()}>`, to, subject, text });
-    logger.info('Access email sent', { uid, kind });
+    logger.info('Access email sent', { kind });
   } catch (error) {
-    logger.error('Access email failed', { uid, kind, code: (error as { code?: string }).code ?? 'unknown' });
+    logger.error('Access email failed', { kind, code: (error as { code?: string }).code ?? 'unknown' });
   }
+};
+
+// Borra las marcas de administración que no son de la cuenta configurada. Se hace en cada llamada, así una
+// cuenta que deja de ser administración pierde la lectura de las solicitudes aunque no vuelva a entrar.
+const removeStaleAdminMarkers = async () => {
+  const markers = await db().collection('admins').get();
+  await Promise.all(markers.docs.filter((d) => !isCurrentAdminMarker(d.data(), adminEmail())).map((d) => d.ref.delete()));
 };
 
 const requireAuth = (request: CallableRequest) => {
@@ -73,6 +81,7 @@ export const syncAccess = onCall({ region: REGION }, async (request) => {
   const auth = requireAuth(request);
   const accessRef = db().doc(`access/${auth.uid}`);
   const adminRef = db().doc(`admins/${auth.uid}`);
+  await removeStaleAdminMarkers();
 
   if (isAdminToken(auth.token, adminEmail())) {
     await db().runTransaction(async (tx) => {
@@ -88,14 +97,13 @@ export const syncAccess = onCall({ region: REGION }, async (request) => {
         };
         tx.set(accessRef, record);
       }
-      if (!admin.exists) tx.set(adminRef, { since: now });
+      // Con el email: las reglas comprueban que coincide con el de quien lee
+      if (!isCurrentAdminMarker(admin.data(), adminEmail())) tx.set(adminRef, { email: normalizeEmail(auth.token.email), since: now });
     });
     return { status: 'approved', isAdmin: true };
   }
 
-  // Si cambia el email de administración, la cuenta anterior deja de serlo
-  const [access, admin] = await Promise.all([accessRef.get(), adminRef.get()]);
-  if (admin.exists) await adminRef.delete();
+  const access = await accessRef.get();
   return { status: access.exists ? (access.data() as AccessRecord).status : 'none', isAdmin: false };
 });
 
@@ -123,14 +131,15 @@ export const requestAccess = onCall({ region: REGION, secrets: emailSecrets }, a
   });
 
   if ('record' in created && created.record) {
-    logger.info('Access requested', { uid: auth.uid, hasMessage: message.length > 0 });
-    await sendAccessEmail('new-request', created.record, auth.uid);
+    logger.info('Access requested', { hasMessage: message.length > 0 });
+    await sendAccessEmail('new-request', created.record);
   }
   return { status: created.status };
 });
 
 export const setAccess = onCall({ region: REGION, secrets: emailSecrets }, async (request) => {
   const auth = requireAuth(request);
+  await removeStaleAdminMarkers();
   if (!isAdminToken(auth.token, adminEmail())) {
     throw new HttpsError('permission-denied', 'Solo la administración puede decidir los accesos.');
   }
@@ -152,10 +161,10 @@ export const setAccess = onCall({ region: REGION, secrets: emailSecrets }, async
     tx.update(ref, { status, decidedAt });
     return { ...data, status: status as DecisionStatus, decidedAt };
   });
-  logger.info('Access decided', { uid, status });
+  logger.info('Access decided', { status });
   // La persona recibe un aviso cuando se aprueba su acceso (rechazos y retiradas se ven al entrar)
   if (record.status === 'approved' && normalizeEmail(record.email) !== normalizeEmail(adminEmail())) {
-    await sendAccessEmail('approved', record, uid);
+    await sendAccessEmail('approved', record);
   }
   return { status };
 });

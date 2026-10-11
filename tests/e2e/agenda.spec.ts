@@ -31,6 +31,11 @@ test('agenda shows dated tasks of both lists, projected repetitions, and opens a
 
   // Vista por días: cada tarea en su día, con su hora y su lista
   await page.getByRole('button', { name: 'Por días' }).click();
+  // Están los 14 días, también hoy aunque no tenga nada
+  const todayRegion = page.getByRole('region', { name: new RegExp(dayLabel(0), 'i') });
+  await expect(todayRegion).toHaveAttribute('aria-current', 'date');
+  await expect(todayRegion).toContainText('Sin nada programado');
+  await expect(page.getByRole('region', { name: new RegExp(dayLabel(13), 'i') })).toBeVisible();
   const tomorrow = page.getByRole('region', { name: new RegExp(dayLabel(1), 'i') });
   await expect(tomorrow.getByRole('button', { name: new RegExp(work) })).toContainText('10:00');
   await expect(tomorrow.getByRole('button', { name: new RegExp(work) })).toContainText('Profesional');
