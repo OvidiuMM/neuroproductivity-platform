@@ -63,8 +63,9 @@ export const buildAgenda = (
       add({ ...base, key: task.id, kind: 'task', date: task.dueDate, time: task.dueTime, label: 'Vence' });
     }
 
-    // Repeticiones previstas (las crea la app al completar cada una; aquí solo se anticipan)
-    if (task.recurrence) {
+    // Repeticiones previstas (las crea la app al completar cada una; aquí solo se anticipan). Solo desde la
+    // última tarea de la serie: una repetición reactivada ya tiene sucesora, que proyecta las mismas fechas.
+    if (task.recurrence && !task.nextOccurrenceId) {
       for (const date of occurrencesBetween(task.dueDate, task.recurrence, first, last)) {
         add({
           ...base,
