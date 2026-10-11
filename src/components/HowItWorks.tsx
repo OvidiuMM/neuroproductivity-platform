@@ -27,7 +27,7 @@ const SCREENS: { tab: AppTab; title: string; icon: React.ReactNode; points: stri
       'Si la fecha límite está a más de una semana, la tarea cuenta un nivel menos de prioridad. También puedes indicar cuánto te llevará (estimación).',
       'Al crear una tarea, el analizador te pide una acción física concreta (por ejemplo «Llamar al taller…») en lugar de un tema abstracto.',
       'Cada tarea tiene un estado: Pendiente, En progreso, Bloqueada o Hecha. Al marcarla Hecha se archiva; desde «Archivadas» la reactivas cambiando su estado.',
-      'Puedes darle una fecha límite o un intervalo, con hora opcional: el título se pone violeta cuando falta menos de una semana y rojo cuando ha vencido.',
+      'Puedes darle una fecha límite o un intervalo, con hora opcional: el título se pone violeta cuando falta menos de una semana y rojo cuando ha vencido. Las fechas se escriben como dd/mm/aaaa o se eligen en el calendario, con la semana empezando en lunes.',
       'Con fecha límite, el botón de calendario la añade a Google Calendar, Outlook o cualquier calendario (archivo .ics).',
       'Las tareas pueden repetirse (cada día, semana, mes o año; por ejemplo, «cada mes, el 2.º lunes»). Al marcarla Hecha se archiva y se crea la siguiente con su nueva fecha.',
       'Las ideas sin urgencia van a «Opciones Futuras» y no compiten con el Top 10.'
@@ -38,7 +38,7 @@ const SCREENS: { tab: AppTab; title: string; icon: React.ReactNode; points: stri
     title: 'Agenda',
     icon: <CalendarDays className="w-5 h-5 text-indigo-600" />,
     points: [
-      'Vista semanal y por días con las tareas con fecha de tus dos listas, los intervalos, las próximas repeticiones de las tareas recurrentes y las reuniones.',
+      'Vista semanal (de lunes a domingo) y por días con las tareas con fecha de tus dos listas, los intervalos, las próximas repeticiones de las tareas recurrentes y las reuniones.',
       'En la vista por días, las tareas vencidas aparecen aparte. Pulsa una tarea para editarla.'
     ]
   },
