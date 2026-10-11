@@ -120,6 +120,16 @@ describe('recurring tasks in calendars', () => {
     assert.match(buildIcs(event), /\r\nRRULE:FREQ=MONTHLY;INTERVAL=1;BYDAY=2MO\r\n/);
   });
 
+  it('exports only the current occurrence of a recurring interval, whose start is another day', () => {
+    // Del viernes 9 al 2.º lunes: una regla BYDAY=2MO con inicio en viernes desplazaría la serie
+    const event = buildCalendarEvent({ ...recurring, startDate: '2026-10-09' }, APP)!;
+    assert.equal(event.rrule, undefined);
+    assert.match(event.description, /Se repite: cada mes, el 2\.º lunes\./);
+    // Un intervalo dentro del mismo día sí lleva la serie
+    const sameDay = buildCalendarEvent({ ...recurring, startDate: '2026-10-12', startTime: '09:00', dueTime: '10:00' }, APP)!;
+    assert.equal(sameDay.rrule, 'RRULE:FREQ=MONTHLY;INTERVAL=1;BYDAY=2MO');
+  });
+
   it('has no series for one-off tasks', () => {
     const event = buildCalendarEvent(task({ dueDate: '2026-10-12' }), APP)!;
     assert.equal(event.rrule, undefined);
