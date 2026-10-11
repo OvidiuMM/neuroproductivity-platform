@@ -105,6 +105,12 @@ describe('nextRecurringTask', () => {
     assert.equal(nextRecurringTask(base, past)!.id, nextRecurringTask(base, later)!.id);
     assert.notEqual(nextRecurringTask(base, past)!.id, nextRecurringTask({ ...base, id: 'task-2' }, past)!.id);
     assert.match(nextRecurringTask(base, past)!.id, /^task-r[0-9a-z]+$/);
+    // Aunque dos dispositivos calculen fechas distintas (a ambos lados de la hora límite), el id es el mismo
+    const daily = { ...base, startDate: undefined, dueDate: '2026-10-11', dueTime: '10:00', recurrence: buildRecurrence('DAILY', '2026-10-11') };
+    const before = nextRecurringTask(daily, new Date(2026, 9, 12, 8, 0))!;
+    const after = nextRecurringTask(daily, new Date(2026, 9, 12, 18, 0))!;
+    assert.notEqual(before.dueDate, after.dueDate);
+    assert.equal(before.id, after.id);
   });
 
   it('skips an occurrence whose due time has already passed when completing late', () => {
@@ -138,7 +144,9 @@ describe('describeRecurrence and toRRule', () => {
   it('exports an RRULE for calendars', () => {
     assert.equal(toRRule(buildRecurrence('MONTHLY', '2026-10-12', { monthlyMode: 'NTH_WEEKDAY' }), true), 'RRULE:FREQ=MONTHLY;INTERVAL=1;BYDAY=2MO');
     assert.equal(toRRule(buildRecurrence('MONTHLY', '2026-10-30', { monthlyMode: 'LAST_WEEKDAY' }), true), 'RRULE:FREQ=MONTHLY;INTERVAL=1;BYDAY=-1FR');
-    assert.equal(toRRule(buildRecurrence('WEEKLY', '2026-10-12', { weekdays: [1, 3] }), true), 'RRULE:FREQ=WEEKLY;INTERVAL=1;BYDAY=MO,WE');
+    assert.equal(toRRule(buildRecurrence('WEEKLY', '2026-10-12', { weekdays: [1, 3] }), true), 'RRULE:FREQ=WEEKLY;INTERVAL=1;WKST=MO;BYDAY=MO,WE');
+    // Domingo va al final: la semana empieza en lunes
+    assert.equal(toRRule(buildRecurrence('WEEKLY', '2026-10-11', { interval: 2, weekdays: [0, 1] }), true), 'RRULE:FREQ=WEEKLY;INTERVAL=2;WKST=MO;BYDAY=MO,SU');
     // UNTIL con hora: fin del día local, expresado en UTC
     const endOfDayUtc = new Date(2027, 5, 30, 23, 59, 59).toISOString().replace(/[-:]/g, '').replace(/\.\d{3}/, '');
     assert.equal(toRRule(buildRecurrence('MONTHLY', '2026-10-15', { until: '2027-06-30' }), false), `RRULE:FREQ=MONTHLY;INTERVAL=1;BYMONTHDAY=15;UNTIL=${endOfDayUtc}`);

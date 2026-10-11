@@ -3,6 +3,7 @@
   "short_name": "NeuroProd",
   "version": "0.6.1",
   "description": "Plataforma de gestión del tiempo y neuroproductividad",
+  "lang": "es",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#0f172a",

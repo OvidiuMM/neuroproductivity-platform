@@ -56,3 +56,19 @@ test('agenda shows dated tasks of both lists, projected repetitions, and opens a
   await tomorrow.getByRole('button', { name: new RegExp(work) }).click();
   await expect(page.getByRole('heading', { name: 'Editar Acción Operativa' })).toBeVisible();
 });
+
+test('in the by-days view an overdue task is listed once, under «Vencidas»', async ({ page }) => {
+  await page.goto('/');
+  await signInWithGoogle(page);
+  await page.getByRole('button', { name: 'Listas Duales' }).click();
+  const title = `Pagar la factura ${Date.now().toString(36)}`;
+  await page.getByRole('button', { name: 'Capturar Primera Acción' }).click();
+  await fillAndSaveTask(page, { title, dueDate: localDateFromToday(-1) });
+
+  await page.getByRole('button', { name: 'Agenda', exact: true }).click();
+  await page.getByRole('button', { name: 'Por días' }).click();
+  // La semana anterior incluye el día de vencimiento: la tarea no se repite en ese día
+  await page.getByRole('button', { name: 'Semana anterior' }).click();
+  await expect(page.getByRole('region', { name: /Vencidas/ }).getByRole('button', { name: new RegExp(title) })).toBeVisible();
+  await expect(page.getByRole('button', { name: new RegExp(title) })).toHaveCount(1);
+});

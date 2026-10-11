@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { MeetingGuard } from '../types';
 import { X, Calendar, Clock, ShieldAlert, CheckCircle2, AlertTriangle, Plus, Trash2, Check } from 'lucide-react';
+import { DateField } from './DateField';
 
 interface MeetingModalProps {
   isOpen: boolean;
@@ -47,9 +48,13 @@ export const MeetingModal: React.FC<MeetingModalProps> = ({
   // Regla 5: Título obligatorio
   const isTitleValid = title.trim().length > 0 && title.length <= 100;
 
+  // Regla 6: fecha obligatoria (el calendario permite borrarla)
+  const isDateValid = /^\d{4}-\d{2}-\d{2}$/.test(date);
+
   // Validación consolidada global (Innegociable en persistencia)
   const isFormValid =
     isTitleValid &&
+    isDateValid &&
     !isMorningMeeting &&
     isTimeOrderValid &&
     isAgendaValid &&
@@ -150,15 +155,23 @@ export const MeetingModal: React.FC<MeetingModalProps> = ({
           {/* HORARIOS: AUDITORÍA MATUTINA & END_TIME > START_TIME */}
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             <div>
-              <label className="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1">
+              <label htmlFor="meeting-date" className="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1">
                 Fecha
               </label>
-              <input
-                type="date"
+              <DateField
+                id="meeting-date"
+                label="Fecha de la reunión"
+                hasVisibleLabel
+                required
                 value={date}
-                onChange={(e) => setDate(e.target.value)}
-                className="w-full px-3 py-2 rounded-xl border border-slate-300 text-xs focus:outline-none focus:ring-2 focus:ring-indigo-400"
+                onChange={setDate}
+                inputClassName="px-3 py-2 rounded-xl border border-slate-300 text-xs focus:outline-none focus:ring-2 focus:ring-indigo-400"
               />
+              {!isDateValid && (
+                <p role="alert" className="text-xs text-red-600 mt-1">
+                  La reunión necesita una fecha.
+                </p>
+              )}
             </div>
 
             <div>
