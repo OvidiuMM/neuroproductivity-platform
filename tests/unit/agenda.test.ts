@@ -69,6 +69,15 @@ describe('buildAgenda', () => {
     assert.equal((agenda.get('2026-10-16')![0] as { label: string }).label, 'Repetición prevista');
   });
 
+  it('projects only from the last task of a series, not from a reactivated earlier one', () => {
+    const rule = { frequency: 'WEEKLY' as const, interval: 1, weekdays: [1] };
+    const reactivated = task('week-1', { dueDate: '2026-10-05', recurrence: rule, nextOccurrenceId: 'week-2' });
+    const tail = task('week-2', { dueDate: '2026-10-12', recurrence: rule });
+    const nextWeek = daysFrom(new Date(2026, 9, 19), 7);
+    const agenda = buildAgenda([reactivated, tail], [], nextWeek, now);
+    assert.deepEqual(items(agenda, '2026-10-19'), ['week-2:next:2026-10-19']);
+  });
+
   it('shows the visible part of intervals of any length', () => {
     // Más de 400 días: el día de vencimiento sigue apareciendo
     const long = task('mortgage', { startDate: '2025-01-01', dueDate: '2026-10-16' });
