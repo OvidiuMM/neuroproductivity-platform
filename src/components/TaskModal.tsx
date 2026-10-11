@@ -1,10 +1,31 @@
 import React, { useState, useEffect } from 'react';
-import { TaskItem, ListContext, TaskPriority, WheelCategory, TaskObservation } from '../types';
+import { TaskItem, ListContext, TaskPriority, WheelCategory, TaskObservation, MonthlyMode, RecurrenceFrequency } from '../types';
 import { analyzeImmediateActionSyntax, SyntaxAnalysisResult } from '../services/syntaxAnalyzer';
 import { inferWheelCategory, NLPSuggestionResult } from '../services/nlpEngine';
-import { validateTaskDates } from '../services/tasks';
+import { formatTaskDates, toLocalDate, validateTaskDates } from '../services/tasks';
 import { ESTIMATE_OPTIONS } from '../services/taskListing';
-import { X, AlertTriangle, Sparkles, Check, CheckCircle2, ShieldAlert, ArrowRight, ListPlus, CalendarClock } from 'lucide-react';
+import {
+  buildRecurrence,
+  describeRecurrence,
+  isLastWeekdayOfMonth,
+  nextOccurrence,
+  nthOfMonth
+} from '../services/recurrence';
+
+const REPEAT_UNITS: Record<RecurrenceFrequency, string> = { DAILY: 'días', WEEKLY: 'semanas', MONTHLY: 'meses', YEARLY: 'años' };
+const WEEKDAY_NAMES = ['domingo', 'lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado'];
+const ORDINAL_LABELS = ['', '1.er', '2.º', '3.er', '4.º'];
+// Semana empezando en lunes; `day` es el número de JavaScript (0 = domingo)
+const WEEKDAY_TOGGLES = [
+  { day: 1, short: 'L', name: 'Lunes' },
+  { day: 2, short: 'M', name: 'Martes' },
+  { day: 3, short: 'X', name: 'Miércoles' },
+  { day: 4, short: 'J', name: 'Jueves' },
+  { day: 5, short: 'V', name: 'Viernes' },
+  { day: 6, short: 'S', name: 'Sábado' },
+  { day: 0, short: 'D', name: 'Domingo' }
+];
+import { X, AlertTriangle, Sparkles, Check, CheckCircle2, ShieldAlert, ArrowRight, ListPlus, CalendarClock, Repeat } from 'lucide-react';
 
 export type TaskFormData = Omit<TaskItem, 'id' | 'createdAt' | 'updatedAt' | 'status' | 'doneAt'>;
 
@@ -52,6 +73,11 @@ export const TaskModal: React.FC<TaskModalProps> = ({
   const [dueDate, setDueDate] = useState('');
   const [dueTime, setDueTime] = useState('');
   const [estimateMinutes, setEstimateMinutes] = useState<number | undefined>();
+  const [repeatFrequency, setRepeatFrequency] = useState<RecurrenceFrequency | ''>('');
+  const [repeatInterval, setRepeatInterval] = useState(1);
+  const [repeatWeekdays, setRepeatWeekdays] = useState<number[]>([]);
+  const [repeatMonthlyMode, setRepeatMonthlyMode] = useState<MonthlyMode>('DAY_OF_MONTH');
+  const [repeatUntil, setRepeatUntil] = useState('');
 
   // Estados de validación en tiempo real
   const [touched, setTouched] = useState<{ [key: string]: boolean }>({});
@@ -77,6 +103,11 @@ export const TaskModal: React.FC<TaskModalProps> = ({
       setDueDate(editingTask.dueDate ?? '');
       setDueTime(editingTask.dueTime ?? '');
       setEstimateMinutes(editingTask.estimateMinutes);
+      setRepeatFrequency(editingTask.recurrence?.frequency ?? '');
+      setRepeatInterval(editingTask.recurrence?.interval ?? 1);
+      setRepeatWeekdays(editingTask.recurrence?.weekdays ?? []);
+      setRepeatMonthlyMode(editingTask.recurrence?.monthlyMode ?? 'DAY_OF_MONTH');
+      setRepeatUntil(editingTask.recurrence?.until ?? '');
       setSyntaxResult(analyzeImmediateActionSyntax(editingTask.title));
       setOverrideSyntaxWarning(true);
     } else {
@@ -90,6 +121,11 @@ export const TaskModal: React.FC<TaskModalProps> = ({
       setDueDate('');
       setDueTime('');
       setEstimateMinutes(undefined);
+      setRepeatFrequency('');
+      setRepeatInterval(1);
+      setRepeatWeekdays([]);
+      setRepeatMonthlyMode('DAY_OF_MONTH');
+      setRepeatUntil('');
       setWheelCategory(undefined);
       setWheelCategoryConfidence(undefined);
       setLinkedBy('MANUAL');
@@ -169,12 +205,46 @@ export const TaskModal: React.FC<TaskModalProps> = ({
   };
   const datesError = validateTaskDates(dates);
 
+  // Repetición: los anclajes (día del mes, N.º día de la semana) salen de la fecha límite
+  const dueDateValue = dueDate ? toLocalDate(dueDate) : null;
+  const monthlyOptions: { mode: MonthlyMode; label: string }[] = dueDateValue
+    ? [
+        { mode: 'DAY_OF_MONTH', label: `El día ${dueDateValue.getDate()}` },
+        ...(nthOfMonth(dueDateValue) <= 4
+          ? [{ mode: 'NTH_WEEKDAY' as const, label: `El ${ORDINAL_LABELS[nthOfMonth(dueDateValue)]} ${WEEKDAY_NAMES[dueDateValue.getDay()]}` }]
+          : []),
+        ...(isLastWeekdayOfMonth(dueDateValue)
+          ? [{ mode: 'LAST_WEEKDAY' as const, label: `El último ${WEEKDAY_NAMES[dueDateValue.getDay()]}` }]
+          : [])
+      ]
+    : [];
+  // Si al cambiar la fecha el modo elegido deja de existir (p. ej. ya no es el último lunes), se usa el día del mes
+  const effectiveMonthlyMode = monthlyOptions.some((o) => o.mode === repeatMonthlyMode) ? repeatMonthlyMode : 'DAY_OF_MONTH';
+  const recurrence =
+    repeatFrequency && dueDate
+      ? buildRecurrence(repeatFrequency, dueDate, {
+          interval: repeatInterval,
+          weekdays: repeatWeekdays,
+          monthlyMode: effectiveMonthlyMode,
+          until: repeatUntil || undefined
+        })
+      : undefined;
+  const recurrenceError = !repeatFrequency
+    ? null
+    : !dueDate
+    ? 'Para repetir la tarea indica la fecha límite.'
+    : repeatUntil && repeatUntil < dueDate
+    ? 'La fecha «hasta» no puede ser anterior a la fecha límite.'
+    : null;
+  const nextRepetition = recurrence && dueDate ? nextOccurrence(dueDate, recurrence, toLocalDate(dueDate)) : null;
+
   const isFormValid =
     !isTitleEmpty &&
     !isTitleTooLong &&
     !isSyntaxInvalid &&
     !isDescriptionEmpty &&
     !datesError &&
+    !recurrenceError &&
     Boolean(listContext) &&
     Boolean(priority);
 
@@ -198,6 +268,7 @@ export const TaskModal: React.FC<TaskModalProps> = ({
       linkedBy,
       observations,
       estimateMinutes,
+      recurrence,
       ...dates
     });
 
@@ -553,6 +624,125 @@ export const TaskModal: React.FC<TaskModalProps> = ({
                 {datesError}
               </p>
             )}
+
+            {/* REPETICIÓN: al marcarla Hecha se archiva y se crea la siguiente con la nueva fecha */}
+            <div className="pt-2 border-t border-slate-100 space-y-3">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <div className="space-y-1">
+                  <label htmlFor="task-repeat" className="flex items-center gap-1 text-[11px] font-semibold text-slate-700">
+                    <Repeat className="w-3.5 h-3.5 text-indigo-600" aria-hidden="true" />
+                    Repetir
+                  </label>
+                  <select
+                    id="task-repeat"
+                    value={repeatFrequency}
+                    onChange={(e) => {
+                      const value = e.target.value as RecurrenceFrequency | '';
+                      setRepeatFrequency(value);
+                      if (value === 'WEEKLY' && repeatWeekdays.length === 0 && dueDate) {
+                        setRepeatWeekdays([toLocalDate(dueDate).getDay()]);
+                      }
+                    }}
+                    className="w-full px-2.5 py-1.5 rounded-lg border border-slate-300 text-xs bg-white focus:outline-none focus:ring-2 focus:ring-indigo-400"
+                  >
+                    <option value="">No se repite</option>
+                    <option value="DAILY">Cada día</option>
+                    <option value="WEEKLY">Cada semana</option>
+                    <option value="MONTHLY">Cada mes</option>
+                    <option value="YEARLY">Cada año</option>
+                  </select>
+                </div>
+                {repeatFrequency && (
+                  <>
+                    <div className="space-y-1">
+                      <label htmlFor="task-repeat-interval" className="block text-[11px] font-semibold text-slate-700">
+                        Cada cuántos ({REPEAT_UNITS[repeatFrequency]})
+                      </label>
+                      <input
+                        id="task-repeat-interval"
+                        type="number"
+                        min={1}
+                        max={99}
+                        value={repeatInterval}
+                        onChange={(e) => setRepeatInterval(Math.max(1, Math.min(99, Number(e.target.value) || 1)))}
+                        className="w-full px-2.5 py-1.5 rounded-lg border border-slate-300 text-xs focus:outline-none focus:ring-2 focus:ring-indigo-400"
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <label htmlFor="task-repeat-until" className="block text-[11px] font-semibold text-slate-700">
+                        Hasta (opcional)
+                      </label>
+                      <input
+                        id="task-repeat-until"
+                        type="date"
+                        value={repeatUntil}
+                        onChange={(e) => setRepeatUntil(e.target.value)}
+                        className="w-full px-2.5 py-1.5 rounded-lg border border-slate-300 text-xs focus:outline-none focus:ring-2 focus:ring-indigo-400"
+                      />
+                    </div>
+                  </>
+                )}
+              </div>
+
+              {repeatFrequency === 'WEEKLY' && (
+                <fieldset className="space-y-1">
+                  <legend className="text-[11px] font-semibold text-slate-700">Días de la semana</legend>
+                  <div className="flex flex-wrap gap-1.5">
+                    {WEEKDAY_TOGGLES.map(({ day, short, name }) => (
+                      <label
+                        key={day}
+                        className={`px-2.5 py-1 rounded-lg border text-xs font-semibold cursor-pointer has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-indigo-400 ${
+                          repeatWeekdays.includes(day) ? 'bg-indigo-600 text-white border-indigo-600' : 'bg-white text-slate-700 border-slate-300'
+                        }`}
+                      >
+                        <input
+                          type="checkbox"
+                          className="sr-only"
+                          checked={repeatWeekdays.includes(day)}
+                          onChange={(e) =>
+                            setRepeatWeekdays((days) => (e.target.checked ? [...days, day] : days.filter((d) => d !== day)))
+                          }
+                          aria-label={name}
+                        />
+                        {short}
+                      </label>
+                    ))}
+                  </div>
+                </fieldset>
+              )}
+
+              {repeatFrequency === 'MONTHLY' && dueDateValue && (
+                <fieldset className="space-y-1">
+                  <legend className="text-[11px] font-semibold text-slate-700">Qué día del mes</legend>
+                  <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-slate-700">
+                    {monthlyOptions.map((option) => (
+                      <label key={option.mode} className="flex items-center gap-1.5 cursor-pointer">
+                        <input
+                          type="radio"
+                          name="task-repeat-monthly"
+                          checked={effectiveMonthlyMode === option.mode}
+                          onChange={() => setRepeatMonthlyMode(option.mode)}
+                        />
+                        {option.label}
+                      </label>
+                    ))}
+                  </div>
+                </fieldset>
+              )}
+
+              {recurrence && dueDate && (
+                <p className="text-[11px] text-indigo-700 font-medium" role="status">
+                  {describeRecurrence(recurrence, dueDate)}
+                  {nextRepetition ? ` · Al completarla, la siguiente vencerá el ${formatTaskDates({ dueDate: nextRepetition })?.replace('Vence: ', '')}` : ' · No habrá más repeticiones'}
+                </p>
+              )}
+              {recurrenceError && (
+                <p role="alert" className="text-xs text-red-600 font-medium flex items-center gap-1">
+                  <AlertTriangle className="w-3.5 h-3.5" />
+                  {recurrenceError}
+                </p>
+              )}
+            </div>
           </fieldset>
 
           {/* CAMPO 4: Sumidero Cognitivo ("Quizá" / "Algún día" - HU-03) */}

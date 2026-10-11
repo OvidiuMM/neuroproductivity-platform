@@ -23,6 +23,12 @@ test('phones use a sections menu in the header instead of a tab row', async ({ p
   await expect(menu.getByRole('button', { name: 'Blindaje Bermudas' })).toHaveAttribute('aria-current', 'page');
   await page.keyboard.press('Escape');
   await expect(menu).toBeHidden();
+
+  // Pulsar otro control de la cabecera también lo cierra
+  await menuButton.click();
+  await expect(menu).toBeVisible();
+  await page.getByRole('button', { name: 'Nueva Tarea' }).click();
+  await expect(menu).toBeHidden();
 });
 
 test('the requirements view no longer exists', async ({ page }) => {
@@ -40,6 +46,10 @@ test('sync indicator turns orange without connection and green after forcing a s
 
   await context.setOffline(true);
   await expect(indicator).toHaveAttribute('data-sync-status', 'offline');
+
+  // Sin conexión, forzar la sincronización no da por bueno nada aunque no haya cambios pendientes
+  await indicator.click();
+  await expect(page.getByText(/^No se pudo sincronizar/)).toBeVisible({ timeout: 20_000 });
 
   // Sin conexión la tarea se guarda en el dispositivo y se ve al instante
   const title = `Llamar al fontanero ${Date.now().toString(36)}`;
