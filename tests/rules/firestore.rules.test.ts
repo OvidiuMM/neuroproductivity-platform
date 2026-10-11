@@ -6,7 +6,7 @@ import {
   initializeTestEnvironment,
   type RulesTestEnvironment
 } from '@firebase/rules-unit-testing';
-import { deleteDoc, doc, getDoc, setDoc, updateDoc } from 'firebase/firestore';
+import { collection, deleteDoc, doc, getDoc, getDocs, setDoc, updateDoc } from 'firebase/firestore';
 
 // Se ejecuta contra el emulador de Firestore: npm run test:rules
 describe('firestore.rules', () => {
@@ -19,8 +19,16 @@ describe('firestore.rules', () => {
     });
   });
 
+  // Ana y Bruno tienen el acceso aprobado; las solicitudes solo las escriben las Cloud Functions
+  const grantAccess = (uid: string, status = 'approved') =>
+    env.withSecurityRulesDisabled(async (ctx) => {
+      await setDoc(doc(ctx.firestore(), `access/${uid}`), { status, email: `${uid}@example.com` });
+    });
+
   beforeEach(async () => {
     await env.clearFirestore();
+    await grantAccess('ana');
+    await grantAccess('bruno');
   });
 
   after(async () => {
@@ -74,5 +82,55 @@ describe('firestore.rules', () => {
 
     await assertFails(setDoc(doc(ana, 'users/ana/secrets/x'), { value: 1 }));
     await assertFails(setDoc(doc(ana, 'other/x'), { value: 1 }));
+  });
+
+  it('denies a person their own data until their access is approved', async () => {
+    for (const [uid, status] of [['carla', 'pending'], ['dani', 'rejected'], ['eva', 'revoked']]) {
+      await grantAccess(uid, status);
+    }
+    for (const uid of ['carla', 'dani', 'eva', 'fran']) {
+      const person = env.authenticatedContext(uid).firestore();
+      await assertFails(setDoc(doc(person, `users/${uid}`), { name: uid }));
+      await assertFails(setDoc(doc(person, `users/${uid}/tasks/task-1`), task));
+      await assertFails(getDoc(doc(person, `users/${uid}/tasks/task-1`)));
+    }
+  });
+
+  it('lets each person read only their own access request, and the admin read all of them', async () => {
+    await env.withSecurityRulesDisabled(async (ctx) => {
+      await setDoc(doc(ctx.firestore(), 'admins/admin'), { email: 'admin@example.com', since: '2026-10-11T10:00:00.000Z' });
+    });
+    const ana = env.authenticatedContext('ana').firestore();
+    const admin = env.authenticatedContext('admin', { email: 'admin@example.com' }).firestore();
+
+    await assertSucceeds(getDoc(doc(ana, 'access/ana')));
+    await assertFails(getDoc(doc(ana, 'access/bruno')));
+    await assertSucceeds(getDocs(collection(admin, 'access')));
+    await assertFails(getDocs(collection(ana, 'access')));
+    await assertSucceeds(getDoc(doc(admin, 'admins/admin')));
+    await assertFails(getDoc(doc(ana, 'admins/admin')));
+  });
+
+  it('ignores an admin marker whose email is not the reader’s (e.g. after changing the admin account)', async () => {
+    await env.withSecurityRulesDisabled(async (ctx) => {
+      await setDoc(doc(ctx.firestore(), 'admins/former'), { email: 'antes@example.com', since: '2026-10-01T10:00:00.000Z' });
+    });
+    const former = env.authenticatedContext('former', { email: 'otra@example.com' }).firestore();
+    await assertFails(getDocs(collection(former, 'access')));
+    const noEmail = env.authenticatedContext('former').firestore();
+    await assertFails(getDocs(collection(noEmail, 'access')));
+  });
+
+  it('never lets a client write access requests or the admin list, not even the admin', async () => {
+    await env.withSecurityRulesDisabled(async (ctx) => {
+      await setDoc(doc(ctx.firestore(), 'admins/admin'), { email: 'admin@example.com', since: '2026-10-11T10:00:00.000Z' });
+    });
+    const carla = env.authenticatedContext('carla').firestore();
+    const admin = env.authenticatedContext('admin', { email: 'admin@example.com' }).firestore();
+
+    await assertFails(setDoc(doc(carla, 'access/carla'), { status: 'approved' }));
+    await assertFails(updateDoc(doc(admin, 'access/ana'), { status: 'revoked' }));
+    await assertFails(deleteDoc(doc(admin, 'access/ana')));
+    await assertFails(setDoc(doc(carla, 'admins/carla'), { since: 'now' }));
   });
 });

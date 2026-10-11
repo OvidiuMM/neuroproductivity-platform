@@ -4,3 +4,6 @@ import { app } from './app';
 // Firebase Hosting reescribe /api/** y /.well-known/assetlinks.json hacia esta función (ver firebase.json).
 // cors: true mantiene el acceso desde clientes móviles (Android Capacitor / TWA / WebView).
 export const api = onRequest({ region: 'europe-west1', cors: true, maxInstances: 10 }, app);
+
+// Aprobación de accesos: solicitud, decisión de la administración y avisos por email
+export { forgetAccess, requestAccess, setAccess, syncAccess } from './access';

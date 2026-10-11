@@ -41,6 +41,8 @@ import { AccountMenu } from './components/AccountMenu';
 import { ImportLocalDataModal } from './components/ImportLocalDataModal';
 import { HowItWorks } from './components/HowItWorks';
 import { AgendaView } from './components/AgendaView';
+import { AccessAdminView } from './components/AccessAdminView';
+import { forgetAccess, setAccess, subscribeToAccessRequests, type AccessRequest, type DecisionStatus } from './services/access';
 import {
   Brain,
   Sparkles,
@@ -56,6 +58,7 @@ import {
 interface AppProps {
   user: User;
   services: FirebaseServices;
+  isAdmin?: boolean;
 }
 
 const initialsOf = (name: string) =>
@@ -77,7 +80,7 @@ const downloadJson = (filename: string, data: unknown) => {
   setTimeout(() => URL.revokeObjectURL(url), 1_000);
 };
 
-export default function App({ user, services }: AppProps) {
+export default function App({ user, services, isAdmin = false }: AppProps) {
   const { db } = services;
   const uid = user.uid;
 
@@ -122,6 +125,32 @@ export default function App({ user, services }: AppProps) {
   const navigate = (tab: AppTab) => {
     hasNavigated.current = true;
     setActiveTab(tab);
+  };
+
+  // ACCESOS (solo administración): solicitudes en vivo para la pestaña y su contador de pendientes
+  const [accessRequests, setAccessRequests] = useState<AccessRequest[]>([]);
+  const [accessError, setAccessError] = useState<string | null>(null);
+  useEffect(() => {
+    if (!isAdmin) {
+      setAccessRequests([]);
+      setActiveTab((tab) => (tab === 'access' ? 'tasks' : tab));
+      return;
+    }
+    return subscribeToAccessRequests(db, setAccessRequests, (e) => {
+      console.error('Error loading access requests:', e);
+      setAccessError('No se pudieron cargar las solicitudes de acceso.');
+    });
+  }, [db, isAdmin]);
+  const pendingAccessCount = accessRequests.filter((r) => r.status === 'pending').length;
+
+  const handleDecideAccess = async (targetUid: string, status: DecisionStatus) => {
+    setAccessError(null);
+    try {
+      await setAccess(services.functions, targetUid, status);
+    } catch (e) {
+      console.error('Error deciding access:', e);
+      setAccessError('No se pudo guardar la decisión. Revisa tu conexión e inténtalo de nuevo.');
+    }
   };
 
   // Estado de pantalla de inicio móvil (Splash Screen)
@@ -336,6 +365,8 @@ export default function App({ user, services }: AppProps) {
     // Firebase exige un inicio de sesión reciente para eliminar la cuenta
     await reauthenticateWithPopup(user, new GoogleAuthProvider());
     await deleteAllUserData(db, uid);
+    // La solicitud de acceso se borra al final: hasta aquí hace falta para poder borrar los datos
+    await forgetAccess(services.functions);
     await deleteUser(user);
     await signOutAndClearCache(services);
   };
@@ -395,6 +426,8 @@ export default function App({ user, services }: AppProps) {
         }}
         syncStatus={syncStatus}
         onForceSync={handleForceSync}
+        isAdmin={isAdmin}
+        pendingAccessCount={pendingAccessCount}
       />
 
       {/* BANNER TOAST DE NOTIFICACIÓN */}
@@ -544,6 +577,10 @@ export default function App({ user, services }: AppProps) {
 
         {/* PESTAÑA 4: CÓMO FUNCIONA LA APP */}
         {activeTab === 'help' && <HowItWorks onNavigate={navigate} />}
+
+        {activeTab === 'access' && isAdmin && (
+          <AccessAdminView requests={accessRequests} currentUid={uid} error={accessError} onDecide={handleDecideAccess} />
+        )}
 
       </main>
 

@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { AppTab, ListContext, UserProfile } from '../types';
-import { Brain, Briefcase, User, Compass, Plus, ShieldCheck, ChevronDown, BookOpen, Menu, X, CalendarDays } from 'lucide-react';
+import { Brain, Briefcase, User, Compass, Plus, ShieldCheck, ChevronDown, BookOpen, Menu, X, CalendarDays, UserCheck } from 'lucide-react';
 import { SyncIndicator, type SyncStatus } from './SyncIndicator';
 
 interface NavbarProps {
@@ -16,6 +16,8 @@ interface NavbarProps {
   taskCounts: { work: number; personal: number; someday: number };
   syncStatus: SyncStatus;
   onForceSync: () => void;
+  isAdmin?: boolean;
+  pendingAccessCount?: number;
 }
 
 // Secciones de la app: pestañas en escritorio y menú desplegable en el móvil
@@ -28,6 +30,22 @@ const SECTIONS: { tab: AppTab; label: string; icon: typeof Briefcase; iconOnlyOn
   { tab: 'help', label: 'Cómo funciona', icon: BookOpen, iconOnlyOnDesktop: true }
 ];
 
+// Solo para la administración, delante de «Cómo funciona»
+const ACCESS_SECTION = { tab: 'access' as const, label: 'Accesos', icon: UserCheck, iconOnlyOnDesktop: true };
+
+// En la pestaña de escritorio va sobre la esquina del icono para no ensanchar la cabecera
+const PendingBadge: React.FC<{ count: number; corner?: boolean }> = ({ count, corner = false }) =>
+  count > 0 ? (
+    <span
+      aria-hidden="true"
+      className={`min-w-4 h-4 px-1 rounded-full bg-orange-500 text-white text-[10px] font-bold leading-4 text-center ${
+        corner ? 'absolute -top-1.5 -right-1.5 ring-2 ring-white' : ''
+      }`}
+    >
+      {count}
+    </span>
+  ) : null;
+
 export const Navbar: React.FC<NavbarProps> = ({
   activeTab,
   setActiveTab,
@@ -38,9 +56,15 @@ export const Navbar: React.FC<NavbarProps> = ({
   onOpenNewTask,
   taskCounts,
   syncStatus,
-  onForceSync
+  onForceSync,
+  isAdmin = false,
+  pendingAccessCount = 0
 }) => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const sections = isAdmin ? [...SECTIONS.slice(0, -1), ACCESS_SECTION, ...SECTIONS.slice(-1)] : SECTIONS;
+  // Nombre accesible con el número de solicitudes pendientes (el globo es solo visual)
+  const accessibleLabel = (tab: AppTab, label: string) =>
+    tab === 'access' && pendingAccessCount > 0 ? `${label}, ${pendingAccessCount} pendientes` : label;
   const menuButtonRef = useRef<HTMLButtonElement>(null);
   const menuRef = useRef<HTMLElement>(null);
 
@@ -71,7 +95,7 @@ export const Navbar: React.FC<NavbarProps> = ({
       {/* 3-Zone Top Bar Contract */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Por debajo de 1280 px las zonas pasan a la línea siguiente en lugar de desbordar; desde ahí caben en una fila */}
-        <div className="flex flex-wrap xl:flex-nowrap items-center justify-between min-h-16 py-2 gap-x-4 gap-y-2">
+        <div className="flex flex-wrap xl:flex-nowrap items-center justify-between min-h-16 py-2 gap-x-4 xl:gap-x-3 gap-y-2">
 
           {/* Zone 1: Single text element wordmark */}
           {/* Puede estrecharse hasta el ancho del nombre y la versión (nunca menos, o los tapan las pestañas);
@@ -96,22 +120,23 @@ export const Navbar: React.FC<NavbarProps> = ({
           </div>
 
           {/* Zone 2: Navigation Links (escritorio) */}
-          <nav aria-label="Secciones" className="hidden md:flex items-center gap-1">
-            {SECTIONS.map(({ tab, label, icon: Icon, iconOnlyOnDesktop }) => (
+          <nav aria-label="Secciones" className="hidden md:flex items-center gap-0.5">
+            {sections.map(({ tab, label, icon: Icon, iconOnlyOnDesktop }) => (
               <button
                 key={tab}
                 onClick={() => setActiveTab(tab)}
                 aria-current={activeTab === tab ? 'page' : undefined}
-                aria-label={iconOnlyOnDesktop ? label : undefined}
-                title={iconOnlyOnDesktop ? label : undefined}
-                className={`${iconOnlyOnDesktop ? 'px-2.5' : 'px-3'} py-1.5 rounded-lg text-xs font-semibold transition-colors flex items-center gap-1.5 ${
+                aria-label={iconOnlyOnDesktop || tab === 'access' ? accessibleLabel(tab, label) : undefined}
+                title={iconOnlyOnDesktop ? accessibleLabel(tab, label) : undefined}
+                className={`relative ${iconOnlyOnDesktop ? 'px-2' : 'px-2.5'} py-1.5 rounded-lg text-xs font-semibold transition-colors flex items-center gap-1.5 ${
                   activeTab === tab
                     ? 'bg-slate-900 text-white shadow-sm'
                     : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
                 }`}
               >
                 <Icon className="w-3.5 h-3.5" />
-                {!iconOnlyOnDesktop && <span>{label}</span>}
+                {!iconOnlyOnDesktop && <span className="whitespace-nowrap">{label}</span>}
+                {tab === 'access' && <PendingBadge count={pendingAccessCount} corner />}
               </button>
             ))}
           </nav>
@@ -128,9 +153,11 @@ export const Navbar: React.FC<NavbarProps> = ({
                     : 'text-slate-600 hover:text-slate-900'
                 }`}
                 title="Esfera Profesional: Tareas de trabajo"
+                aria-label={`Profesional, ${taskCounts.work} tareas`}
               >
-                <Briefcase className="w-3 h-3 text-indigo-600" />
-                <span className="hidden sm:inline">Profesional</span>
+                <Briefcase className="w-3 h-3 text-indigo-600" aria-hidden="true" />
+                {/* Desde 1280 px todo va en una fila: el nombre se queda en el aria-label y el title */}
+                <span className="hidden sm:inline xl:hidden">Profesional</span>
                 <span className="text-[10px] bg-slate-200 px-1.5 py-0.2 rounded-full font-mono">
                   {taskCounts.work}
                 </span>
@@ -144,9 +171,10 @@ export const Navbar: React.FC<NavbarProps> = ({
                     : 'text-slate-600 hover:text-slate-900'
                 }`}
                 title="Esfera Personal: Tareas de vida personal"
+                aria-label={`Personal, ${taskCounts.personal} tareas`}
               >
-                <User className="w-3 h-3 text-emerald-600" />
-                <span className="hidden sm:inline">Personal</span>
+                <User className="w-3 h-3 text-emerald-600" aria-hidden="true" />
+                <span className="hidden sm:inline xl:hidden">Personal</span>
                 <span className="text-[10px] bg-slate-200 px-1.5 py-0.2 rounded-full font-mono">
                   {taskCounts.personal}
                 </span>
@@ -209,10 +237,13 @@ export const Navbar: React.FC<NavbarProps> = ({
               onClick={() => setIsMenuOpen((open) => !open)}
               aria-expanded={isMenuOpen}
               aria-controls="mobile-sections-menu"
-              aria-label="Menú"
-              className="md:hidden w-8 h-8 shrink-0 rounded-lg border border-slate-200 text-slate-700 flex items-center justify-center hover:bg-slate-50"
+              aria-label={isAdmin && pendingAccessCount > 0 ? `Menú, ${pendingAccessCount} solicitudes de acceso pendientes` : 'Menú'}
+              className="relative md:hidden w-8 h-8 shrink-0 rounded-lg border border-slate-200 text-slate-700 flex items-center justify-center hover:bg-slate-50"
             >
               {isMenuOpen ? <X className="w-4 h-4" /> : <Menu className="w-4 h-4" />}
+              {isAdmin && pendingAccessCount > 0 && (
+                <span aria-hidden="true" className="absolute -top-1 -right-1 w-2.5 h-2.5 rounded-full bg-orange-500 ring-2 ring-white" />
+              )}
             </button>
           </div>
 
@@ -222,18 +253,20 @@ export const Navbar: React.FC<NavbarProps> = ({
         {isMenuOpen && (
           <nav ref={menuRef} id="mobile-sections-menu" aria-label="Secciones" className="md:hidden border-t border-slate-100 py-2">
             <ul className="space-y-1">
-              {SECTIONS.map(({ tab, label, icon: Icon }) => (
+              {sections.map(({ tab, label, icon: Icon }) => (
                 <li key={tab}>
                   <button
                     type="button"
                     onClick={() => goTo(tab)}
                     aria-current={activeTab === tab ? 'page' : undefined}
+                    aria-label={tab === 'access' ? accessibleLabel(tab, label) : undefined}
                     className={`w-full px-3 py-2.5 rounded-lg text-sm font-semibold flex items-center gap-2.5 ${
                       activeTab === tab ? 'bg-slate-900 text-white' : 'text-slate-700 hover:bg-slate-100'
                     }`}
                   >
                     <Icon className="w-4 h-4" />
                     {label}
+                    {tab === 'access' && <PendingBadge count={pendingAccessCount} />}
                   </button>
                 </li>
               ))}

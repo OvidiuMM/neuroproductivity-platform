@@ -3,8 +3,60 @@ import { expect, type Page } from '@playwright/test';
 // Cada test usa una cuenta nueva en el emulador de Auth para no compartir datos
 export const uniqueEmail = () => `e2e-${Date.now()}-${Math.random().toString(36).slice(2, 8)}@example.com`;
 
-// Inicio de sesión con Google a través de la ventana emergente del emulador de Auth
-export const signInWithGoogle = async (page: Page, email = uniqueEmail(), name = 'Persona de Prueba') => {
+const EMULATOR_PROJECT = 'demo-neuroproductivity';
+// Cuenta que hace de administración en los emuladores (DEMO_ADMIN_EMAIL en functions/src/accessLogic.ts)
+export const ADMIN_EMAIL = 'admin@example.com';
+
+// Aprueba el acceso de una cuenta escribiendo access/{uid} en el emulador como lo haría la Cloud Function.
+// "Bearer owner" es la credencial de administración de los emuladores y salta las reglas.
+export const approveAccess = async (email: string) => {
+  const headers = { Authorization: 'Bearer owner', 'Content-Type': 'application/json' };
+  // La cuenta aparece en el emulador de Auth al terminar el inicio de sesión: se reintenta hasta encontrarla
+  let uid: string | undefined;
+  await expect
+    .poll(
+      async () => {
+        const lookup = await fetch(
+          `http://127.0.0.1:9399/identitytoolkit.googleapis.com/v1/projects/${EMULATOR_PROJECT}/accounts:lookup`,
+          { method: 'POST', headers, body: JSON.stringify({ email: [email] }) }
+        );
+        uid = (await lookup.json()).users?.[0]?.localId;
+        return uid;
+      },
+      { message: `cuenta ${email} en el emulador de Auth` }
+    )
+    .toBeTruthy();
+  const text = (value: string) => ({ stringValue: value });
+  const now = new Date().toISOString();
+  const res = await fetch(
+    `http://127.0.0.1:8281/v1/projects/${EMULATOR_PROJECT}/databases/(default)/documents/access/${uid}`,
+    {
+      method: 'PATCH',
+      headers,
+      body: JSON.stringify({
+        fields: {
+          status: text('approved'),
+          email: text(email),
+          name: text(''),
+          photoUrl: text(''),
+          message: text(''),
+          requestedAt: text(now),
+          decidedAt: text(now)
+        }
+      })
+    }
+  );
+  expect(res.ok, await res.text()).toBe(true);
+};
+
+// Inicio de sesión con Google a través de la ventana emergente del emulador de Auth. Por defecto aprueba
+// el acceso de la cuenta para entrar directamente en la app; con approve: false se queda en la solicitud.
+export const signInWithGoogle = async (
+  page: Page,
+  email = uniqueEmail(),
+  name = 'Persona de Prueba',
+  { approve = true }: { approve?: boolean } = {}
+) => {
   const popupPromise = page.waitForEvent('popup');
   await page.getByRole('button', { name: 'Continuar con Google' }).click();
   const popup = await popupPromise;
@@ -17,7 +69,10 @@ export const signInWithGoogle = async (page: Page, email = uniqueEmail(), name =
   await popup.locator('#email-input').fill(email);
   await popup.locator('#display-name-input').fill(name);
   await popup.locator('#sign-in').click();
-  await expect(page.getByRole('button', { name: 'Tu cuenta' })).toBeVisible();
+  if (approve) {
+    await approveAccess(email);
+    await expect(page.getByRole('button', { name: 'Tu cuenta' })).toBeVisible();
+  }
   return email;
 };
 
