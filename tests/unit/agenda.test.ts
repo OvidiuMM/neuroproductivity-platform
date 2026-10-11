@@ -69,6 +69,25 @@ describe('buildAgenda', () => {
     assert.equal((agenda.get('2026-10-16')![0] as { label: string }).label, 'Repetición prevista');
   });
 
+  it('shows the visible part of intervals of any length', () => {
+    // Más de 400 días: el día de vencimiento sigue apareciendo
+    const long = task('mortgage', { startDate: '2025-01-01', dueDate: '2026-10-16' });
+    const agenda = buildAgenda([long], [], week, now);
+    assert.deepEqual(items(agenda, '2026-10-12'), ['mortgage:2026-10-12']);
+    assert.equal((agenda.get('2026-10-16')![0] as { label: string }).label, 'Vence');
+    assert.deepEqual(items(agenda, '2026-10-17'), []);
+  });
+
+  it('projects repetitions however far the visible range is from the original date', () => {
+    // Tarea diaria vencida hace casi un año: sus repeticiones siguen apareciendo en la semana actual
+    const daily = task('water', { dueDate: '2025-11-01', recurrence: { frequency: 'DAILY', interval: 1 } });
+    const agenda = buildAgenda([daily], [], week, now);
+    assert.deepEqual(week.map((d) => items(agenda, d).length), [1, 1, 1, 1, 1, 1, 1]);
+    // Y también varios años hacia delante
+    const future = daysFrom(new Date(2029, 0, 1), 3);
+    assert.deepEqual(items(buildAgenda([daily], [], future, now), '2029-01-02'), ['water:next:2029-01-02']);
+  });
+
   it('includes meetings with their local time range', () => {
     const start = new Date(2026, 9, 13, 13, 0);
     const meeting: MeetingGuard = {
