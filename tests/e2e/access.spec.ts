@@ -48,6 +48,11 @@ test('a new account asks for access, the admin approves it and later revokes it'
   await approved.getByRole('button', { name: /^Retirar acceso/ }).click();
   await expect(userPage.getByRole('heading', { name: 'Acceso retirado' })).toBeVisible();
   await expect(userPage.getByRole('button', { name: 'Tu cuenta' })).toHaveCount(0);
+
+  // Sin acceso puede seguir llevándose sus datos
+  const download = userPage.waitForEvent('download');
+  await userPage.getByRole('button', { name: 'Descargar mis datos' }).click();
+  expect((await download).suggestedFilename()).toMatch(/^neuroproductividad-\d{4}-\d{2}-\d{2}\.json$/);
   await expect(entryIn(adminPage, /^Rechazadas o retiradas/, email)).toContainText('Retirada');
 });
 

@@ -62,7 +62,7 @@ export const BermudasShield: React.FC<BermudasShieldProps> = ({
 
           <div className="space-y-3">
             {meetings.length === 0 ? (
-              <div className="p-6 text-center text-slate-400 text-xs">
+              <div className="p-6 text-center text-slate-500 text-xs">
                 No hay reuniones programadas.
               </div>
             ) : (
@@ -82,7 +82,7 @@ export const BermudasShield: React.FC<BermudasShieldProps> = ({
 
                     <div className="flex flex-wrap items-center gap-3 text-[11px] text-slate-600 font-mono">
                       <span className="flex items-center gap-1">
-                        <Clock className="w-3 h-3 text-slate-400" />
+                        <Clock className="w-3 h-3 text-slate-500" />
                         {start.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })} -{' '}
                         {end.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })}
                       </span>
@@ -142,7 +142,7 @@ export const BermudasShield: React.FC<BermudasShieldProps> = ({
 
           <div className="space-y-3">
             {emails.length === 0 ? (
-              <div className="p-6 text-center text-slate-400 text-xs">
+              <div className="p-6 text-center text-slate-500 text-xs">
                 No hay correos registrados.
               </div>
             ) : (
@@ -150,7 +150,7 @@ export const BermudasShield: React.FC<BermudasShieldProps> = ({
                 <div key={e.id} className="p-4 rounded-xl border border-slate-200 bg-slate-50/40 space-y-2">
                   <div className="flex items-start justify-between gap-2">
                     <h4 className="text-xs font-bold text-slate-900">{e.subject}</h4>
-                    <span className="text-[10px] text-slate-400 font-mono">
+                    <span className="text-[10px] text-slate-500 font-mono">
                       {new Date(e.sentAt || '').toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })}
                     </span>
                   </div>
@@ -161,7 +161,7 @@ export const BermudasShield: React.FC<BermudasShieldProps> = ({
 
                   <div className="flex flex-wrap items-center justify-between gap-2 pt-1 border-t border-slate-200/60 text-[11px]">
                     <div className="flex items-center gap-1.5 text-slate-500">
-                      <Paperclip className="w-3.5 h-3.5 text-slate-400" />
+                      <Paperclip className="w-3.5 h-3.5 text-slate-500" />
                       <span>
                         {e.attachments.length > 0
                           ? `${e.attachments.length} adjunto(s)`

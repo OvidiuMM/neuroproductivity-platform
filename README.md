@@ -1,9 +1,9 @@
 # NeuroProductividad — Plataforma de Gestión del Tiempo y Neurociencia Aplicada
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
-[![Version](https://img.shields.io/badge/Version-0.6.1-indigo.svg)](#)
+[![Version](https://img.shields.io/badge/Version-0.7.0-indigo.svg)](#)
 [![React](https://img.shields.io/badge/React-19.0-61dafb.svg?logo=react&logoColor=black)](https://react.dev/)
-[![TypeScript](https://img.shields.io/badge/TypeScript-5.x-3178c6.svg?logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
+[![TypeScript](https://img.shields.io/badge/TypeScript-7.x-3178c6.svg?logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
 [![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-4.x-38bdf8.svg?logo=tailwindcss&logoColor=white)](https://tailwindcss.com/)
 [![Architecture](https://img.shields.io/badge/Architecture-Offline--First-emerald.svg)](#arquitectura-técnica)
 
@@ -20,8 +20,10 @@ El sistema rechaza las restricciones coercitivas (como las rotaciones atencional
 ### 1. Motor Estratégico: Rueda de la Vida & Trazabilidad Temporal Inmutable (`M1`)
 * **Gráfico Polar Interactivo SVG:** Mapeo de 7 dominios vitales (*Salud, Carrera Profesional, Finanzas, Familia, Ocio, Relaciones, Espiritualidad*) evaluados del 0 al 10 con arrastre y redibujado en tiempo real.
 * **Cuentas y sincronización:** Inicio de sesión con Google; los datos de cada cuenta se guardan en Firestore (UE), funcionan sin conexión y se sincronizan entre dispositivos. En el primer inicio de sesión se ofrece importar los datos que la versión anterior guardaba solo en el navegador. Desde el menú de la cuenta se pueden descargar los datos o eliminar la cuenta con todo su contenido. Un indicador en la cabecera está verde cuando todo está guardado en el servidor y naranja cuando hay cambios pendientes o no hay conexión; al pulsarlo se fuerza la sincronización.
+* **Acceso con aprobación:** cada cuenta, también las que ya existían, necesita la aprobación de la administración. Sin ella se ve una pantalla para solicitar acceso con un mensaje opcional, desde la que también se pueden descargar o eliminar los datos guardados. La administración decide en la pestaña «Accesos» y recibe un email por cada solicitud; la persona recibe otro cuando se aprueba (detalles en [Aprobación de accesos](#aprobación-de-accesos)).
+* **Accesibilidad:** panel propio (menú de la cuenta y pantallas de inicio de sesión y acceso) con tamaño del texto, alto contraste, reducir animaciones y foco muy visible, guardados en cada dispositivo. Toda la app se usa con el teclado (los diálogos atrapan y devuelven el foco, enlace para saltar al contenido) y una auditoría automática WCAG 2.1 AA revisa cada pantalla en CI.
 * **Navegación en el móvil:** las secciones están en un menú desplegable de la cabecera.
-* **Agenda:** vista semanal y por días con las tareas con fecha de las dos listas, los intervalos, las repeticiones previstas de las tareas recurrentes y las reuniones. En la vista por días las tareas vencidas aparecen aparte; al pulsar una tarea se edita.
+* **Agenda:** vista semanal (de lunes a domingo) y por días (14 días, también los vacíos) con las tareas con fecha de las dos listas, los intervalos, las repeticiones previstas de las tareas recurrentes y las reuniones. En la vista por días las tareas vencidas aparecen aparte; al pulsar una tarea se edita.
 * **Primer arranque guiado:** Una cuenta sin evaluaciones abre directamente la Rueda con todas las áreas a 0 y un aviso de primer paso que enlaza a la guía *Cómo funciona* (pantallas, relaciones entre módulos y dónde se guardan los datos).
 * **Persistencia Append-Only:** Prohibición estricta de sobrescritura (`UPDATE`). Cada consolidación genera un nuevo snapshot inmutable con sellos de tiempo precisos en formato UTC (Unix Epoch).
 * **Comparativa Histórica de Neuroplasticidad:** Superposición gráfica de polígonos translúcidos (actual vs. 30, 90 o 365 días) para verificar empíricamente el impacto del hábito sostenido y activar circuitos de recompensa dopaminérgicos.
@@ -29,11 +31,14 @@ El sistema rechaza las restricciones coercitivas (como las rotaciones atencional
 ### 2. Gestor Dual de Listas & Jerarquía Visual Gestalt (`M2`)
 * **Segregación Estricta:** Separación absoluta entre la **Lista Profesional** y la **Lista Personal** para erradicar el coste metabólico asociado al cambio de contexto (*context-switching*).
 * **Algoritmo de Jerarquía Visual (Top 10):** En lugar de limitar artificialmente el inventario, los primeros 10 elementos se destacan visualmente mediante tipografía en negrita (`font-weight: 700`), sombras de elevación paralela (`shadow-md`), colores cálidos y márgenes expandidos. Los elementos 11+ se renderizan con diseño minimalista y desaturado.
+* **Orden y filtros del Top 10:** por prioridad efectiva, fecha límite, estimación, actualización o área, y filtros por prioridad, estimación máxima, estado, plazo y área. Se guardan en cada dispositivo y el resumen «Top 10 Foco» cuenta lo mismo que muestra la lista.
+* **Prioridad efectiva y estimación:** si la fecha límite está a más de una semana, la tarea cuenta un nivel menos de prioridad (las tareas sin fecha mantienen la suya). Cada tarea puede llevar una estimación de duración, visible en todas las listas.
+* **Verbo físico:** el campo de la acción indica encima que empiece por una acción concreta (Llamar, Enviar, Reservar…).
 * **Sumidero Cognitivo "Quizá" / "Algún día" (HU-03):** Externalización de iniciativas embrionarias sin urgencia operativa, excluidas del Top 10 diario mediante índices parciales pero preservadas en "Opciones Futuras".
 * **Estado y archivo:** Cada tarea tiene un estado manual (Pendiente, En progreso, Bloqueada, Hecha). Las tareas hechas se archivan y se consultan en la ventana «Archivadas», desde donde se reactivan cambiando su estado.
-* **Fechas y alertas:** Fecha límite o intervalo opcional, con hora opcional. El título se pone violeta cuando falta menos de una semana y rojo cuando ha vencido.
-* **Tareas recurrentes:** cada día, semana (eligiendo los días), mes (día del mes, «el 2.º lunes» o «el último viernes») o año, cada N periodos y con fecha final opcional. Al marcar una repetición como Hecha se archiva y se crea la siguiente; las ya vencidas se saltan si se completa con retraso.
-* **Calendario:** Las tareas con fecha límite se añaden a Google Calendar, Outlook.com, Outlook de Microsoft 365 o cualquier calendario (`.ics`), mediante enlaces y sin conectar cuentas.
+* **Fechas y alertas:** Fecha límite o intervalo opcional, con hora opcional. El título se pone violeta cuando falta menos de una semana y rojo cuando ha vencido. Los campos de fecha usan un calendario propio con la semana empezando en lunes (se escriben como dd/mm/aaaa y se manejan con el teclado), sea cual sea el idioma del navegador.
+* **Tareas recurrentes:** cada día, semana (eligiendo los días), mes (día del mes, «el 2.º lunes» o «el último viernes») o año, cada N periodos y con fecha final opcional. Al marcar una repetición como Hecha se archiva y se crea la siguiente en la misma operación (sin duplicados aunque se marque desde dos dispositivos); las ya vencidas, hora límite incluida, se saltan si se completa con retraso.
+* **Calendario:** Las tareas con fecha límite se añaden a Google Calendar, Outlook.com, Outlook de Microsoft 365 o cualquier calendario (`.ics`), mediante enlaces y sin conectar cuentas. Las recurrentes exportan la serie (RRULE con semanas que empiezan en lunes y el último día del mes cuando el día no existe); las de un intervalo de varios días exportan solo la repetición actual.
 
 ### 3. Motor NLP de Enlace Cognitivo (`M3`)
 * **Vectorización TF-IDF Asíncrona:** Limpieza léxica y cálculo de frecuencia de término ponderada por frecuencia inversa de documento al perder el foco (`onBlur`) en los formularios.
@@ -108,11 +113,11 @@ La app estará disponible en `http://localhost:3000` y la interfaz de los emulad
 
 ### Pruebas automatizadas
 
-El banco de pruebas cubre lógica pura con el test runner de Node, la importación de datos locales, las reglas de seguridad de Firestore contra el emulador y flujos de extremo a extremo en Chromium con Playwright (inicio de sesión con el emulador de Auth, primer arranque, importación y tareas). `npm test` ejecuta todos los niveles; las rutas de la API se prueban aparte con `npm --prefix functions test`. GitHub Actions también valida tipos, compila la aplicación y la función, y ejecuta toda la suite en cada push y pull request.
+El banco de pruebas cubre lógica pura con el test runner de Node, la importación de datos locales, las reglas de seguridad de Firestore contra el emulador, flujos de extremo a extremo en Chromium con Playwright (inicio de sesión con el emulador de Auth, primer arranque, importación, tareas, agenda y aprobación de accesos) y una auditoría automática de accesibilidad WCAG 2.1 A y AA con axe-core en cada pantalla, también con alto contraste y texto muy grande (`tests/e2e/a11y.spec.ts`). `npm test` ejecuta todos los niveles; las rutas de la API se prueban aparte con `npm --prefix functions test`. GitHub Actions también valida tipos, compila la aplicación y la función, y ejecuta toda la suite en cada push y pull request.
 
 ### Despliegue en Firebase (Hosting + Cloud Functions + Firestore)
 
-Firebase Hosting sirve la SPA compilada (`dist/`), la función `api` (Cloud Functions 2.ª gen, región `europe-west1`) atiende el backend y Firestore guarda los datos de cada cuenta en `users/{uid}/…`. Las reglas (`firestore.rules`) solo permiten a cada persona acceder a sus propios datos, y solo con su acceso aprobado, y hacen las evaluaciones de la Rueda *append-only*. La app lee su configuración de Firebase de `/__/firebase/init.json`, que sirve el propio Hosting, así que el ID del proyecto no está en el código. Las rutas se definen en `firebase.json`:
+Firebase Hosting sirve la SPA compilada (`dist/`), la función `api` (Cloud Functions 2.ª gen, región `europe-west1`) atiende el backend y Firestore guarda los datos de cada cuenta en `users/{uid}/…`. Las reglas (`firestore.rules`) solo permiten a cada persona acceder a sus propios datos (crear y modificar exige el acceso aprobado; leer y borrar no, para que una cuenta sin acceso pueda llevarse o eliminar lo suyo) y hacen las evaluaciones de la Rueda *append-only*. La app lee su configuración de Firebase de `/__/firebase/init.json`, que sirve el propio Hosting, así que el ID del proyecto no está en el código. Las rutas se definen en `firebase.json`:
 
 | Ruta | Destino |
 | :--- | :--- |
@@ -134,7 +139,7 @@ La función usa dos parámetros, `ANDROID_PACKAGE_NAME` y `ANDROID_SHA256_FINGER
 
 Cada cuenta necesita la aprobación de la administración antes de usar la app, también las que ya existían. Al entrar sin acceso, la persona ve una pantalla para solicitarlo con un mensaje opcional; la administración decide en la pestaña **Accesos** (aprobar, rechazar o retirar) y el cambio se aplica al momento. Tras un rechazo o una retirada se puede volver a solicitar pasado un día.
 
-- Las Cloud Functions `syncAccess`, `requestAccess`, `setAccess` y `forgetAccess` (`functions/src/access.ts`) son las únicas que escriben `access/{uid}` y `admins/{uid}`. Las reglas consultan `access/{uid}` para dejar pasar a `users/{uid}/…`.
+- Las Cloud Functions `syncAccess`, `requestAccess`, `setAccess` y `forgetAccess` (`functions/src/access.ts`) son las únicas que escriben `access/{uid}` y `admins/{uid}`. Las reglas consultan `access/{uid}` para dejar crear y modificar en `users/{uid}/…`, y la marca `admins/{uid}` (con el email de la administración, que debe coincidir con el de quien lee) para la lista de solicitudes.
 - La administración es la cuenta de Google cuyo email coincide con el parámetro `ADMIN_EMAIL`; se aprueba sola al entrar. En los emuladores (proyecto demo) es `admin@example.com`.
 - Avisos por email con Gmail y una contraseña de aplicación: a la administración por cada solicitud nueva y a la persona cuando se aprueba. Los envía la cuenta del parámetro `GMAIL_USER`; la contraseña está en Secret Manager como `GMAIL_APP_PASSWORD` y nunca en el repositorio ni en los `.env`. En los emuladores no se envía nada.
 
@@ -225,44 +230,66 @@ El repositorio utiliza `package-lock.json` (en la raíz y en `functions/`) como 
 ## 📂 Estructura del Proyecto
 
 ```text
-├── index.html                   # Entry point HTML con tipografía Plus Jakarta Sans
+├── index.html                   # Entry point HTML (lang="es")
 ├── package.json                 # Dependencias y scripts
 ├── vite.config.ts               # Configuración de Vite y Tailwind
 ├── tsconfig.json                # Configuración de TypeScript estricto
 ├── firebase.json                # Firebase Hosting (rewrites y caché), Cloud Functions, Firestore y emuladores
-├── firestore.rules              # Reglas de seguridad: cada cuenta solo accede a users/{uid}
-├── functions/                   # Cloud Functions for Firebase (API)
+├── firestore.rules              # Reglas: cada cuenta solo accede a users/{uid}; crear y modificar exige acceso aprobado
+├── functions/                   # Cloud Functions for Firebase (región europe-west1)
 │   ├── src/
-│   │   ├── index.ts             # Función HTTP `api` (región europe-west1)
-│   │   └── app.ts               # Rutas Express: /api/health, /api/nlp/infer y assetlinks.json
-│   └── test/
-│       └── app.test.ts          # Pruebas de las rutas de la API
+│   │   ├── index.ts             # Exporta la función HTTP `api` y las de acceso
+│   │   ├── app.ts               # Rutas Express: /api/health, /api/nlp/infer y assetlinks.json
+│   │   ├── access.ts            # syncAccess, requestAccess, setAccess, forgetAccess y avisos por Gmail
+│   │   └── accessLogic.ts       # Reglas puras de la aprobación (estados, esperas, correos)
+│   └── test/                    # Pruebas de la API y de la lógica de acceso
 ├── src/
-│   ├── main.tsx                 # Montaje de la aplicación React
-│   ├── AuthGate.tsx             # Inicio de sesión obligatorio antes de mostrar la app
+│   ├── main.tsx                 # Montaje de React y preferencias de accesibilidad antes del primer render
+│   ├── AuthGate.tsx             # Inicio de sesión obligatorio
+│   ├── AccessGate.tsx           # La app solo se abre con el acceso aprobado (estado en vivo)
 │   ├── App.tsx                  # Orquestador principal de estado y vistas
-│   ├── index.css                # Estilos base con Tailwind CSS
-│   ├── types/
-│   │   └── index.ts             # Modelos de datos (TaskItem, WheelLog, MeetingGuard, etc.)
+│   ├── index.css                # Tailwind CSS y estilos de accesibilidad (texto, contraste, movimiento, foco)
+│   ├── types/index.ts           # Modelos de datos (TaskItem, Recurrence, WheelLog, MeetingGuard, etc.)
+│   ├── hooks/
+│   │   ├── useModalFocus.ts     # Foco de los diálogos: entra, se queda dentro y vuelve al cerrar
+│   │   └── useNow.ts            # Reloj por minutos para plazos y prioridad efectiva
 │   ├── services/
+│   │   ├── firebase.ts          # Firebase (Auth, Firestore con caché sin conexión, Functions) y sincronización forzada
+│   │   ├── repository.ts        # Lectura en tiempo real y escritura de los datos de cada cuenta
+│   │   ├── access.ts            # Solicitudes de acceso y llamadas a las Cloud Functions
+│   │   ├── account.ts           # Descarga de los datos y eliminación de la cuenta
+│   │   ├── tasks.ts             # Estados, plazos y prioridad efectiva
+│   │   ├── taskListing.ts       # Orden, filtros y estimación del Top 10
+│   │   ├── recurrence.ts        # Tareas recurrentes y su exportación RRULE
+│   │   ├── agenda.ts            # Agenda por días: plazos, intervalos, repeticiones y reuniones
+│   │   ├── calendar.ts          # Enlaces de Google y Outlook y archivos .ics
+│   │   ├── dateInput.ts         # Fechas dd/mm/aaaa y meses de lunes a domingo
+│   │   ├── a11yPrefs.ts         # Preferencias del panel de accesibilidad
 │   │   ├── nlpEngine.ts         # Motor TF-IDF y Similitud del Coseno
 │   │   ├── syntaxAnalyzer.ts    # Analizador de verbos de acción física
-│   │   ├── firebase.ts          # Configuración de Firebase, Auth y Firestore con caché sin conexión
-│   │   ├── repository.ts        # Lectura en tiempo real y escritura de los datos de cada cuenta
 │   │   └── localData.ts         # Importación de los datos de la versión sin cuentas (localStorage)
 │   └── components/
-│       ├── Navbar.tsx           # Barra superior (Contrato de 3 Zonas)
-│       ├── TaskList.tsx         # Jerarquía Visual Gestalt (Top 10 vs Periférico)
-│       ├── TaskModal.tsx        # Captura con validación sintáctica y TF-IDF
+│       ├── Navbar.tsx           # Barra superior (secciones, selector de lista, sincronización y cuenta)
+│       ├── TaskList.tsx         # Jerarquía Visual Gestalt (Top 10 vs Periférico) con orden y filtros
+│       ├── TaskModal.tsx        # Captura con validación sintáctica, TF-IDF, fechas y repetición
+│       ├── DateField.tsx        # Campo de fecha con calendario propio (lunes primero)
+│       ├── TaskDates.tsx · TaskStatusSelect.tsx · AddToCalendarMenu.tsx · ArchivedTasksModal.tsx
+│       ├── AgendaView.tsx       # Agenda semanal y por días
 │       ├── WheelOfLife.tsx      # Rueda de la Vida polar SVG interactiva
-│       ├── BermudasShield.tsx   # Blindaje de Agenda y Correo Inverso
-│       ├── MeetingModal.tsx     # Agendamiento con bloqueo matutino y triple validación
-│       ├── EmailModal.tsx       # Cliente con redacción inversa y alerta no-scroll
+│       ├── BermudasShield.tsx · MeetingModal.tsx · EmailModal.tsx   # Reuniones blindadas y correo inverso
 │       ├── LoginScreen.tsx      # Inicio de sesión con Google y aviso de privacidad
-│       ├── AccountMenu.tsx      # Cerrar sesión, descargar datos y eliminar la cuenta
+│       ├── AccessRequestScreen.tsx # Solicitud de acceso, su estado y los datos de la cuenta
+│       ├── AccessAdminView.tsx  # Pestaña «Accesos» de la administración
+│       ├── AccessibilityPanel.tsx # Panel de accesibilidad
+│       ├── AccountMenu.tsx      # Accesibilidad, descargar datos, cerrar sesión y eliminar la cuenta
 │       ├── ImportLocalDataModal.tsx # Importación de datos locales en el primer inicio de sesión
-│       ├── HowItWorks.tsx       # Guía «Cómo funciona»: pantallas y relaciones entre módulos
-│       └── SyncIndicator.tsx    # Indicador de sincronización con el servidor (pulsar fuerza la sincronización)
+│       ├── HowItWorks.tsx       # Guía «Cómo funciona»
+│       ├── SyncIndicator.tsx    # Indicador de sincronización (pulsar fuerza la sincronización)
+│       └── SplashScreen.tsx     # Pantalla de bienvenida
+└── tests/
+    ├── unit/ · integration/     # Lógica pura e importación de datos locales (node:test)
+    ├── rules/                   # Reglas de Firestore contra el emulador
+    └── e2e/                     # Playwright: flujos completos y auditoría WCAG (axe-core)
 ```
 
 ---

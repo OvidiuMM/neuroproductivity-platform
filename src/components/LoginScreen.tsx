@@ -1,5 +1,6 @@
 import React from 'react';
 import { Brain, ShieldCheck, Compass, Briefcase, Cloud } from 'lucide-react';
+import { AccessibilityTrigger, AccessibleScreen } from './AccessibilityPanel';
 
 interface LoginScreenProps {
   onSignIn: () => void;
@@ -19,60 +20,68 @@ const GoogleIcon = () => (
 );
 
 export const LoginScreen: React.FC<LoginScreenProps> = ({ onSignIn, isSigningIn, error, version }) => (
-  <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4 antialiased">
-    <div className="w-full max-w-md bg-white rounded-3xl border border-slate-200 shadow-xl p-8 space-y-6">
-      <div className="flex items-center gap-3">
-        <div className="w-11 h-11 rounded-2xl bg-slate-900 text-white flex items-center justify-center shadow-sm">
-          <Brain className="w-6 h-6 text-indigo-400" />
-        </div>
-        <div>
-          <h1 className="text-xl font-bold tracking-tight text-slate-900 flex items-center gap-2">
-            NeuroProductividad
-            <span className="text-[10px] font-mono font-bold bg-indigo-50 text-indigo-700 px-1.5 py-0.5 rounded border border-indigo-200">
-              v{version}
-            </span>
-          </h1>
-          <p className="text-xs text-slate-500">Gestión del tiempo y neuroproductividad</p>
+  <AccessibleScreen>
+    {(openAccessibility) => (
+      <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4 antialiased">
+        <div className="w-full max-w-md bg-white rounded-3xl border border-slate-200 shadow-xl p-8 space-y-6">
+          <div className="flex items-center gap-3">
+            <div className="w-11 h-11 rounded-2xl bg-slate-900 text-white flex items-center justify-center shadow-sm">
+              <Brain className="w-6 h-6 text-indigo-400" />
+            </div>
+            <div>
+              <h1 className="text-xl font-bold tracking-tight text-slate-900 flex items-center gap-2">
+                NeuroProductividad
+                <span className="text-[10px] font-mono font-bold bg-indigo-50 text-indigo-700 px-1.5 py-0.5 rounded border border-indigo-200">
+                  v{version}
+                </span>
+              </h1>
+              <p className="text-xs text-slate-500">Gestión del tiempo y neuroproductividad</p>
+            </div>
+          </div>
+
+          <ul className="space-y-2.5 text-sm text-slate-700">
+            <li className="flex items-start gap-2.5">
+              <Compass className="w-4 h-4 text-indigo-600 mt-0.5 shrink-0" />
+              Evalúa tu Rueda de la Vida y mide tu progreso.
+            </li>
+            <li className="flex items-start gap-2.5">
+              <Briefcase className="w-4 h-4 text-indigo-600 mt-0.5 shrink-0" />
+              Convierte tus metas en acciones concretas, separadas en lista profesional y personal.
+            </li>
+            <li className="flex items-start gap-2.5">
+              <ShieldCheck className="w-4 h-4 text-indigo-600 mt-0.5 shrink-0" />
+              Protege tus mañanas de reuniones e interrupciones.
+            </li>
+          </ul>
+
+          <button
+            type="button"
+            onClick={onSignIn}
+            disabled={isSigningIn}
+            className="w-full py-3 px-4 bg-white hover:bg-slate-50 disabled:opacity-60 text-slate-800 border-2 border-slate-200 rounded-2xl text-sm font-bold shadow-2xs flex items-center justify-center gap-2.5 transition-all"
+          >
+            <GoogleIcon />
+            <span>{isSigningIn ? 'Abriendo Google…' : 'Continuar con Google'}</span>
+          </button>
+
+          {error && (
+            <p role="alert" className="text-xs text-red-700 bg-red-50 border border-red-200 rounded-xl p-3">
+              {error}
+            </p>
+          )}
+
+          <div className="p-3.5 bg-slate-50 border border-slate-200 rounded-2xl text-[11px] text-slate-600 leading-relaxed flex items-start gap-2.5">
+            <Cloud className="w-4 h-4 text-slate-500 shrink-0 mt-0.5" />
+            <p>
+              El acceso se aprueba cuenta a cuenta: al entrar por primera vez podrás solicitarlo. Tus tareas, evaluaciones y agenda se guardan en tu cuenta, en servidores de Google Cloud en la Unión Europea (Bélgica). Solo tú puedes acceder a ellos, y puedes descargarlos o eliminarlos cuando quieras desde el menú de tu cuenta.
+            </p>
+          </div>
+
+          <div className="text-center">
+            <AccessibilityTrigger onClick={openAccessibility} />
+          </div>
         </div>
       </div>
-
-      <ul className="space-y-2.5 text-sm text-slate-700">
-        <li className="flex items-start gap-2.5">
-          <Compass className="w-4 h-4 text-indigo-600 mt-0.5 shrink-0" />
-          Evalúa tu Rueda de la Vida y mide tu progreso.
-        </li>
-        <li className="flex items-start gap-2.5">
-          <Briefcase className="w-4 h-4 text-indigo-600 mt-0.5 shrink-0" />
-          Convierte tus metas en acciones concretas, separadas en lista profesional y personal.
-        </li>
-        <li className="flex items-start gap-2.5">
-          <ShieldCheck className="w-4 h-4 text-indigo-600 mt-0.5 shrink-0" />
-          Protege tus mañanas de reuniones e interrupciones.
-        </li>
-      </ul>
-
-      <button
-        type="button"
-        onClick={onSignIn}
-        disabled={isSigningIn}
-        className="w-full py-3 px-4 bg-white hover:bg-slate-50 disabled:opacity-60 text-slate-800 border-2 border-slate-200 rounded-2xl text-sm font-bold shadow-2xs flex items-center justify-center gap-2.5 transition-all"
-      >
-        <GoogleIcon />
-        <span>{isSigningIn ? 'Abriendo Google…' : 'Continuar con Google'}</span>
-      </button>
-
-      {error && (
-        <p role="alert" className="text-xs text-red-700 bg-red-50 border border-red-200 rounded-xl p-3">
-          {error}
-        </p>
-      )}
-
-      <div className="p-3.5 bg-slate-50 border border-slate-200 rounded-2xl text-[11px] text-slate-600 leading-relaxed flex items-start gap-2.5">
-        <Cloud className="w-4 h-4 text-slate-500 shrink-0 mt-0.5" />
-        <p>
-          El acceso se aprueba cuenta a cuenta: al entrar por primera vez podrás solicitarlo. Tus tareas, evaluaciones y agenda se guardan en tu cuenta, en servidores de Google Cloud en la Unión Europea (Bélgica). Solo tú puedes acceder a ellos, y puedes descargarlos o eliminarlos cuando quieras desde el menú de tu cuenta.
-        </p>
-      </div>
-    </div>
-  </div>
+    )}
+  </AccessibleScreen>
 );

@@ -27,7 +27,7 @@ const SCREENS: { tab: AppTab; title: string; icon: React.ReactNode; points: stri
       'Si la fecha límite está a más de una semana, la tarea cuenta un nivel menos de prioridad. También puedes indicar cuánto te llevará (estimación).',
       'Al crear una tarea, el analizador te pide una acción física concreta (por ejemplo «Llamar al taller…») en lugar de un tema abstracto.',
       'Cada tarea tiene un estado: Pendiente, En progreso, Bloqueada o Hecha. Al marcarla Hecha se archiva; desde «Archivadas» la reactivas cambiando su estado.',
-      'Puedes darle una fecha límite o un intervalo, con hora opcional: el título se pone violeta cuando falta menos de una semana y rojo cuando ha vencido.',
+      'Puedes darle una fecha límite o un intervalo, con hora opcional: el título se pone violeta cuando falta menos de una semana y rojo cuando ha vencido. Las fechas se escriben como dd/mm/aaaa o se eligen en el calendario, con la semana empezando en lunes.',
       'Con fecha límite, el botón de calendario la añade a Google Calendar, Outlook o cualquier calendario (archivo .ics).',
       'Las tareas pueden repetirse (cada día, semana, mes o año; por ejemplo, «cada mes, el 2.º lunes»). Al marcarla Hecha se archiva y se crea la siguiente con su nueva fecha.',
       'Las ideas sin urgencia van a «Opciones Futuras» y no compiten con el Top 10.'
@@ -38,7 +38,7 @@ const SCREENS: { tab: AppTab; title: string; icon: React.ReactNode; points: stri
     title: 'Agenda',
     icon: <CalendarDays className="w-5 h-5 text-indigo-600" />,
     points: [
-      'Vista semanal y por días con las tareas con fecha de tus dos listas, los intervalos, las próximas repeticiones de las tareas recurrentes y las reuniones.',
+      'Vista semanal (de lunes a domingo) y por días con las tareas con fecha de tus dos listas, los intervalos, las próximas repeticiones de las tareas recurrentes y las reuniones.',
       'En la vista por días, las tareas vencidas aparecen aparte. Pulsa una tarea para editarla.'
     ]
   },
@@ -140,6 +140,14 @@ export const HowItWorks: React.FC<HowItWorksProps> = ({ onNavigate }) => {
         </h3>
         <p className="text-sm text-amber-950 leading-relaxed">
           Todo se guarda en tu cuenta de Google, en servidores de Google Cloud en la Unión Europea (Bélgica), y solo tú puedes acceder. La administración aprueba cada cuenta antes de su primer uso; para ello ve tu nombre, tu email, tu foto de perfil y el mensaje de la solicitud, nunca tus datos. Se sincroniza entre tus dispositivos y la app sigue funcionando sin conexión: los cambios se envían al recuperarla. El indicador de la cabecera está verde cuando todo está guardado en el servidor y naranja cuando hay cambios pendientes o no hay conexión; púlsalo para forzar la sincronización. Desde el menú de tu cuenta puedes descargar tus datos o eliminar la cuenta con todo su contenido.
+        </p>
+      </div>
+
+      {/* ACCESIBILIDAD */}
+      <div className="bg-white rounded-2xl p-6 border border-slate-200 shadow-xs space-y-2">
+        <h3 className="text-xs font-bold uppercase tracking-wider text-slate-700">Accesibilidad</h3>
+        <p className="text-sm text-slate-600 leading-relaxed">
+          En el menú de tu cuenta, <strong>Accesibilidad</strong> permite agrandar el texto, activar el alto contraste, reducir las animaciones y hacer más visible el foco del teclado. Las preferencias se guardan en cada dispositivo. Toda la app se puede usar con el teclado y se revisa automáticamente con las pautas WCAG 2.1 AA.
         </p>
       </div>
 

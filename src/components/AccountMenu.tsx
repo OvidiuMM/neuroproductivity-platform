@@ -1,6 +1,8 @@
-import React, { useState } from 'react';
+import React, { useRef, useState } from 'react';
+import { useModalFocus } from '../hooks/useModalFocus';
+import { DELETE_ACCOUNT_CONFIRMATION } from '../services/account';
 import { UserProfile } from '../types';
-import { X, LogOut, Download, Trash2, Cloud } from 'lucide-react';
+import { X, LogOut, Download, Trash2, Cloud, Accessibility } from 'lucide-react';
 
 interface AccountMenuProps {
   isOpen: boolean;
@@ -9,6 +11,7 @@ interface AccountMenuProps {
   onSignOut: () => void;
   onExportData: () => Promise<void>;
   onDeleteAccount: () => Promise<void>;
+  onOpenAccessibility: () => void;
 }
 
 export const AccountMenu: React.FC<AccountMenuProps> = ({
@@ -17,10 +20,14 @@ export const AccountMenu: React.FC<AccountMenuProps> = ({
   user,
   onSignOut,
   onExportData,
-  onDeleteAccount
+  onDeleteAccount,
+  onOpenAccessibility
 }) => {
   const [busy, setBusy] = useState<'export' | 'delete' | null>(null);
   const [error, setError] = useState<string | null>(null);
+
+  const dialogRef = useRef<HTMLDivElement>(null);
+  useModalFocus(isOpen, dialogRef, onClose);
 
   if (!isOpen) return null;
 
@@ -38,9 +45,7 @@ export const AccountMenu: React.FC<AccountMenuProps> = ({
 
   const handleDelete = () => {
     if (
-      window.confirm(
-        'Se eliminarán tu cuenta y todos tus datos (tareas, evaluaciones, reuniones y correos). No se puede deshacer. ¿Continuar?'
-      )
+      window.confirm(DELETE_ACCOUNT_CONFIRMATION)
     ) {
       run('delete', onDeleteAccount);
     }
@@ -49,7 +54,9 @@ export const AccountMenu: React.FC<AccountMenuProps> = ({
   return (
     <div className="fixed inset-0 z-50 flex justify-center p-4 sm:p-8 bg-slate-900/70 backdrop-blur-xs overflow-y-auto">
       <div
+        ref={dialogRef}
         role="dialog"
+        aria-modal="true"
         aria-label="Tu cuenta"
         className="bg-white rounded-3xl shadow-2xl border border-slate-200 w-full max-w-md my-auto overflow-hidden animate-in fade-in zoom-in-95 duration-200"
       >
@@ -58,7 +65,7 @@ export const AccountMenu: React.FC<AccountMenuProps> = ({
           <button
             onClick={onClose}
             aria-label="Cerrar"
-            className="p-1.5 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-200/60 transition-colors"
+            className="p-1.5 rounded-lg text-slate-500 hover:text-slate-600 hover:bg-slate-200/60 transition-colors"
           >
             <X className="w-5 h-5" />
           </button>
@@ -93,6 +100,15 @@ export const AccountMenu: React.FC<AccountMenuProps> = ({
           )}
 
           <div className="space-y-2">
+            <button
+              type="button"
+              onClick={onOpenAccessibility}
+              disabled={busy !== null}
+              className="w-full py-2.5 px-4 text-xs font-bold text-slate-700 bg-white border border-slate-200 rounded-xl hover:bg-slate-50 disabled:opacity-60 flex items-center gap-2"
+            >
+              <Accessibility className="w-4 h-4 text-indigo-600" aria-hidden="true" />
+              Accesibilidad: tamaño del texto, contraste y animaciones
+            </button>
             <button
               type="button"
               onClick={() => run('export', onExportData)}
