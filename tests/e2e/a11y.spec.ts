@@ -2,6 +2,9 @@ import AxeBuilder from '@axe-core/playwright';
 import { expect, test, type Page } from '@playwright/test';
 import { ADMIN_EMAIL, fillAndSaveTask, localDateFromToday, signInWithGoogle, uniqueEmail } from './helpers';
 
+// Esperas que pasan por una Cloud Function del emulador: con la suite en paralelo su arranque puede tardar
+const SERVER_CALL = { timeout: 15_000 };
+
 // Auditoría automática WCAG 2.1 A y AA con axe-core en cada pantalla. Sin animaciones, para que axe no mida
 // colores a mitad de una transición.
 const WCAG_TAGS = ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa'];
@@ -27,7 +30,7 @@ test('login and access request screens', async ({ page }) => {
   await expectNoViolations(page, 'inicio de sesión');
 
   await signInWithGoogle(page, undefined, undefined, { approve: false });
-  await expect(page.getByRole('heading', { name: 'Solicita acceso' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Solicita acceso' })).toBeVisible(SERVER_CALL);
   await expectNoViolations(page, 'solicitud de acceso');
 });
 
