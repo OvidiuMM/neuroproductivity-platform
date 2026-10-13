@@ -69,6 +69,16 @@ describe('buildAgenda', () => {
     assert.equal((agenda.get('2026-10-16')![0] as { label: string }).label, 'Repetición prevista');
   });
 
+  it('shows a repeated task only on its days, even with an old start date (no «in progress» days)', () => {
+    const repeated = task('mail', {
+      startDate: '2026-10-12',
+      dueDate: '2026-10-14',
+      recurrence: { frequency: 'WEEKLY', interval: 1, weekdays: [1, 3, 5] }
+    });
+    const agenda = buildAgenda([repeated], [], week, now);
+    assert.deepEqual(week.map((d) => items(agenda, d).length), [0, 0, 1, 0, 1, 0, 0]);
+  });
+
   it('projects only from the last task of a series, not from a reactivated earlier one', () => {
     const rule = { frequency: 'WEEKLY' as const, interval: 1, weekdays: [1] };
     const reactivated = task('week-1', { dueDate: '2026-10-05', recurrence: rule, nextOccurrenceId: 'week-2' });

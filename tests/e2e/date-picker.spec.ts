@@ -90,9 +90,9 @@ test('the calendar stays inside the screen on a phone', async ({ page }) => {
   await page.getByRole('button', { name: 'Capturar Primera Acción' }).click();
   await page.getByLabel('Repetir').selectOption('MONTHLY');
 
-  for (const name of ['Calendario: Fecha límite', 'Calendario: Fin de la repetición']) {
+  for (const name of ['Calendario: Fecha límite', 'Calendario: Fecha de inicio']) {
     await page.getByRole('button', { name }).click();
-    const box = await page.getByRole('dialog', { name: /Calendario|Fecha límite|Fin de la repetición/ }).boundingBox();
+    const box = await page.getByRole('dialog', { name: /Fecha límite|Fecha de inicio/ }).boundingBox();
     expect(box, name).not.toBeNull();
     expect(box!.x).toBeGreaterThanOrEqual(0);
     expect(box!.y).toBeGreaterThanOrEqual(0);

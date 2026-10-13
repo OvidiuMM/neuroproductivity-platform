@@ -3,6 +3,10 @@ import { CalendarPlus } from 'lucide-react';
 import { TaskItem } from '../types';
 import { buildCalendarEvent, buildIcs, googleCalendarUrl, outlookCalendarUrl } from '../services/calendar';
 
+// Botones de acción de cada tarea (calendario, editar, eliminar): 40×40 px, fáciles de pulsar también en el móvil
+export const TASK_ACTION_BUTTON =
+  'w-10 h-10 shrink-0 inline-flex items-center justify-center rounded-xl border border-slate-200 bg-white transition-colors';
+
 interface AddToCalendarMenuProps {
   task: TaskItem;
 }
@@ -37,11 +41,11 @@ export const AddToCalendarMenu: React.FC<AddToCalendarMenuProps> = ({ task }) =>
       <button
         type="button"
         disabled
-        className="p-1.5 text-slate-300 rounded-lg cursor-not-allowed"
+        className={`${TASK_ACTION_BUTTON} text-slate-400 cursor-not-allowed`}
         title="Pon una fecha límite para añadir la tarea al calendario"
         aria-label={`Añadir «${task.title}» al calendario (necesita fecha límite)`}
       >
-        <CalendarPlus className="w-4 h-4" />
+        <CalendarPlus className="w-5 h-5" aria-hidden="true" />
       </button>
     );
   }
@@ -53,12 +57,12 @@ export const AddToCalendarMenu: React.FC<AddToCalendarMenuProps> = ({ task }) =>
       <button
         type="button"
         onClick={() => setIsOpen((open) => !open)}
-        className="p-1.5 text-slate-500 hover:text-indigo-600 rounded-lg hover:bg-slate-100 transition-colors"
+        className={`${TASK_ACTION_BUTTON} text-slate-600 hover:text-indigo-700 hover:bg-indigo-50`}
         title="Añadir al calendario"
         aria-label={`Añadir «${task.title}» al calendario`}
         aria-expanded={isOpen}
       >
-        <CalendarPlus className="w-4 h-4" />
+        <CalendarPlus className="w-5 h-5" aria-hidden="true" />
       </button>
       {isOpen && (
         <div

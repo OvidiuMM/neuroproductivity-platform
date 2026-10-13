@@ -126,3 +126,16 @@ export const expectNoHorizontalOverflow = async (page: Page, where: string) => {
   });
   expect(overflow.scrollWidth, `${where}: ${overflow.offenders.join(' | ')}`).toBeLessThanOrEqual(overflow.width);
 };
+
+// Ningún elemento visible tiene contenido que se salga de su caja (p. ej. una cifra más ancha que su tarjeta)
+export const expectNoInnerOverflow = async (page: Page, where: string) => {
+  const offenders = await page.evaluate(() =>
+    [...document.querySelectorAll('header *, main *')]
+      // Los elementos SVG no son cajas: su scrollWidth no indica desbordamiento
+      .filter((el) => !(el instanceof SVGElement))
+      .filter((el) => getComputedStyle(el).overflowX === 'visible' && el.clientWidth > 0 && el.scrollWidth > el.clientWidth + 1)
+      .slice(0, 5)
+      .map((el) => `${el.tagName.toLowerCase()}«${(el.textContent ?? '').trim().slice(0, 30)}» ${el.scrollWidth}>${el.clientWidth}`)
+  );
+  expect(offenders, where).toEqual([]);
+};
