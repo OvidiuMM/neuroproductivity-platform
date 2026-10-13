@@ -20,7 +20,10 @@ test('agenda shows dated tasks of both lists, projected repetitions, and opens a
   await fillAndSaveTask(page, { title: work, dueDate: localDateFromToday(1), dueTime: '10:00' });
 
   // Con la lista Personal activa, el formulario se abre ya en esa lista
-  await page.locator('header').getByRole('button', { name: /^Personal/ }).click();
+  await page
+    .locator('header')
+    .getByRole('button', { name: /^Personal/ })
+    .click();
   await page.getByRole('button', { name: 'Nueva Tarea' }).click();
   // Semanal desde dentro de dos días, sin fin
   await page.getByLabel('Repetir').selectOption('WEEKLY');
@@ -45,7 +48,9 @@ test('agenda shows dated tasks of both lists, projected repetitions, and opens a
 
   // Vista semanal: la repetición prevista de la tarea semanal aparece una semana después
   await page.getByRole('button', { name: 'Semana', exact: true }).click();
-  const projected = page.getByRole('listitem', { name: new RegExp(dayLabel(9), 'i') }).getByRole('button', { name: new RegExp(personal) });
+  const projected = page
+    .getByRole('listitem', { name: new RegExp(dayLabel(9), 'i') })
+    .getByRole('button', { name: new RegExp(personal) });
   for (let i = 0; i < 2 && !(await projected.isVisible()); i++) {
     await page.getByRole('button', { name: 'Semana siguiente' }).click();
   }
@@ -70,11 +75,15 @@ test('in the by-days view an overdue task is listed once, under «Vencidas»', a
   await page.getByRole('button', { name: 'Por días' }).click();
   // La semana anterior incluye el día de vencimiento: la tarea no se repite en ese día
   await page.getByRole('button', { name: 'Semana anterior' }).click();
-  await expect(page.getByRole('region', { name: /Vencidas/ }).getByRole('button', { name: new RegExp(title) })).toBeVisible();
+  await expect(
+    page.getByRole('region', { name: /Vencidas/ }).getByRole('button', { name: new RegExp(title) })
+  ).toBeVisible();
   await expect(page.getByRole('button', { name: new RegExp(title) })).toHaveCount(1);
 });
 
-test('a repeated task with a start and a due date shows only its days, from the start to the due date', async ({ page }) => {
+test('a repeated task with a start and a due date shows only its days, from the start to the due date', async ({
+  page
+}) => {
   await page.goto('/');
   await signInWithGoogle(page);
   await page.getByRole('button', { name: 'Listas Duales' }).click();
@@ -99,8 +108,16 @@ test('a repeated task with a start and a due date shows only its days, from the 
 
   await page.getByRole('button', { name: 'Agenda', exact: true }).click();
   const countPerDay = async () =>
-    page.getByRole('list', { name: 'Semana' }).locator(':scope > li').evaluateAll((els, t) =>
-      els.map((el) => [...el.querySelectorAll('button')].filter((b) => b.textContent?.includes(t as string)).length), title);
+    page
+      .getByRole('list', { name: 'Semana' })
+      .locator(':scope > li')
+      .evaluateAll(
+        (els, t) =>
+          els.map(
+            (el) => [...el.querySelectorAll('button')].filter((b) => b.textContent?.includes(t as string)).length
+          ),
+        title
+      );
   await page.getByRole('button', { name: 'Semana siguiente' }).click();
   // Ningún día «En curso»: solo lunes, miércoles y viernes
   await expect.poll(countPerDay).toEqual([1, 0, 1, 0, 1, 0, 0]);

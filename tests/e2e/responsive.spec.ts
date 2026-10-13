@@ -29,7 +29,10 @@ for (const width of [360, 375, 768, 1280]) {
 
     // En escritorio, el nombre y la versión no pueden quedar debajo de la primera pestaña
     if (width >= 1280) {
-      const version = await page.locator('header').getByText(/^v\d+\.\d+\.\d+$/).boundingBox();
+      const version = await page
+        .locator('header')
+        .getByText(/^v\d+\.\d+\.\d+$/)
+        .boundingBox();
       const firstTab = await page.getByRole('button', { name: SECTIONS[0], exact: true }).boundingBox();
       expect(version!.x + version!.width).toBeLessThanOrEqual(firstTab!.x);
     }

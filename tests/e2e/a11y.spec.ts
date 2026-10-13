@@ -19,7 +19,11 @@ const expectNoViolations = async (page: Page, screen: string, include?: string) 
   const builder = new AxeBuilder({ page }).withTags(WCAG_TAGS);
   const { violations } = await (include ? builder.include(include) : builder).analyze();
   const summary = violations.map(
-    (v) => `${v.id} (${v.impact}): ${v.help}\n    ${v.nodes.slice(0, 4).map((n) => n.target.join(' ')).join('\n    ')}`
+    (v) =>
+      `${v.id} (${v.impact}): ${v.help}\n    ${v.nodes
+        .slice(0, 4)
+        .map((n) => n.target.join(' '))
+        .join('\n    ')}`
   );
   expect.soft(summary, `${screen}\n${summary.join('\n')}`).toEqual([]);
 };
@@ -53,7 +57,11 @@ test('main sections, forms and dialogs', async ({ page }) => {
   await expectNoViolations(page, 'calendario');
   await page.keyboard.press('Escape');
 
-  await fillAndSaveTask(page, { title: 'Llamar al cliente para revisar la propuesta', dueDate: localDateFromToday(1), dueTime: '10:00' });
+  await fillAndSaveTask(page, {
+    title: 'Llamar al cliente para revisar la propuesta',
+    dueDate: localDateFromToday(1),
+    dueTime: '10:00'
+  });
   await expectNoViolations(page, 'listas duales');
 
   await page.getByRole('button', { name: 'Agenda', exact: true }).click();
@@ -105,7 +113,17 @@ test('import dialog for data saved by the version without accounts', async ({ pa
     const created = '2026-10-01T09:00:00.000Z';
     localStorage.setItem(
       'neuro_users_v1',
-      JSON.stringify([{ id: 'user-ana', name: 'Ana', role: '', color: 'indigo', initials: 'A', authProvider: 'local', createdAt: created }])
+      JSON.stringify([
+        {
+          id: 'user-ana',
+          name: 'Ana',
+          role: '',
+          color: 'indigo',
+          initials: 'A',
+          authProvider: 'local',
+          createdAt: created
+        }
+      ])
     );
     localStorage.setItem(
       'neuro_tasks_v1',
@@ -133,7 +151,10 @@ test('import dialog for data saved by the version without accounts', async ({ pa
 
 test('high contrast and very large text', async ({ page }) => {
   await page.addInitScript(() =>
-    localStorage.setItem('neuro_a11y_v1', JSON.stringify({ textSize: 'xlarge', highContrast: true, reduceMotion: true, strongFocus: true }))
+    localStorage.setItem(
+      'neuro_a11y_v1',
+      JSON.stringify({ textSize: 'xlarge', highContrast: true, reduceMotion: true, strongFocus: true })
+    )
   );
   await page.goto('/');
   await expectNoViolations(page, 'inicio de sesión (alto contraste)');

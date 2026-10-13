@@ -64,7 +64,9 @@ const sendAccessEmail = async (kind: AccessEmail, record: AccessRecord) => {
 // cuenta que deja de ser administración pierde la lectura de las solicitudes aunque no vuelva a entrar.
 const removeStaleAdminMarkers = async () => {
   const markers = await db().collection('admins').get();
-  await Promise.all(markers.docs.filter((d) => !isCurrentAdminMarker(d.data(), adminEmail())).map((d) => d.ref.delete()));
+  await Promise.all(
+    markers.docs.filter((d) => !isCurrentAdminMarker(d.data(), adminEmail())).map((d) => d.ref.delete())
+  );
 };
 
 const requireAuth = (request: CallableRequest) => {
@@ -94,7 +96,8 @@ export const syncAccess = onCall({ region: REGION }, async (request) => {
         tx.set(accessRef, record);
       }
       // Con el email: las reglas comprueban que coincide con el de quien lee
-      if (!isCurrentAdminMarker(admin.data(), adminEmail())) tx.set(adminRef, { email: normalizeEmail(auth.token.email), since: now });
+      if (!isCurrentAdminMarker(admin.data(), adminEmail()))
+        tx.set(adminRef, { email: normalizeEmail(auth.token.email), since: now });
     });
     return { status: 'approved', isAdmin: true };
   }
@@ -107,7 +110,8 @@ export const requestAccess = onCall({ region: REGION, secrets: emailSecrets }, a
   const auth = requireAuth(request);
   if (!auth.token.email) throw new HttpsError('failed-precondition', 'Tu cuenta no tiene email.');
   // Las cuentas con contraseña confirman antes su email (las de Google ya vienen verificadas)
-  if (auth.token.email_verified !== true) throw new HttpsError('permission-denied', 'Verifica tu email antes de solicitar acceso.');
+  if (auth.token.email_verified !== true)
+    throw new HttpsError('permission-denied', 'Verifica tu email antes de solicitar acceso.');
   const message = normalizeMessage((request.data as { message?: unknown } | null)?.message);
   const ref = db().doc(`access/${auth.uid}`);
 
@@ -116,7 +120,9 @@ export const requestAccess = onCall({ region: REGION, secrets: emailSecrets }, a
     const decision = decideRequest(current.data() as AccessRecord | undefined, new Date());
     if (decision.action === 'keep') return { status: decision.status };
     if (decision.action === 'wait') {
-      throw new HttpsError('resource-exhausted', 'Podrás volver a pedir acceso más adelante.', { retryAt: decision.retryAt });
+      throw new HttpsError('resource-exhausted', 'Podrás volver a pedir acceso más adelante.', {
+        retryAt: decision.retryAt
+      });
     }
     const record: AccessRecord = {
       ...profileOf(auth.token),

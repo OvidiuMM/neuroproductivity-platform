@@ -41,11 +41,11 @@ export const AddToCalendarMenu: React.FC<AddToCalendarMenuProps> = ({ task }) =>
       <button
         type="button"
         disabled
-        className={`${TASK_ACTION_BUTTON} text-slate-400 cursor-not-allowed`}
+        className={`${TASK_ACTION_BUTTON} cursor-not-allowed text-slate-400`}
         title="Pon una fecha límite para añadir la tarea al calendario"
         aria-label={`Añadir «${task.title}» al calendario (necesita fecha límite)`}
       >
-        <CalendarPlus className="w-5 h-5" aria-hidden="true" />
+        <CalendarPlus className="h-5 w-5" aria-hidden="true" />
       </button>
     );
   }
@@ -57,25 +57,46 @@ export const AddToCalendarMenu: React.FC<AddToCalendarMenuProps> = ({ task }) =>
       <button
         type="button"
         onClick={() => setIsOpen((open) => !open)}
-        className={`${TASK_ACTION_BUTTON} text-slate-600 hover:text-indigo-700 hover:bg-indigo-50`}
+        className={`${TASK_ACTION_BUTTON} text-slate-600 hover:bg-indigo-50 hover:text-indigo-700`}
         title="Añadir al calendario"
         aria-label={`Añadir «${task.title}» al calendario`}
         aria-expanded={isOpen}
       >
-        <CalendarPlus className="w-5 h-5" aria-hidden="true" />
+        <CalendarPlus className="h-5 w-5" aria-hidden="true" />
       </button>
       {isOpen && (
         <div
           role="menu"
-          className="absolute right-0 top-full mt-1 z-30 w-56 bg-white border border-slate-200 rounded-xl shadow-lg py-1 overflow-hidden"
+          className="absolute top-full right-0 z-30 mt-1 w-56 overflow-hidden rounded-xl border border-slate-200 bg-white py-1 shadow-lg"
         >
-          <a role="menuitem" className={linkClass} href={googleCalendarUrl(event)} target="_blank" rel="noopener noreferrer" onClick={() => setIsOpen(false)}>
+          <a
+            role="menuitem"
+            className={linkClass}
+            href={googleCalendarUrl(event)}
+            target="_blank"
+            rel="noopener noreferrer"
+            onClick={() => setIsOpen(false)}
+          >
             Google Calendar
           </a>
-          <a role="menuitem" className={linkClass} href={outlookCalendarUrl(event, 'personal')} target="_blank" rel="noopener noreferrer" onClick={() => setIsOpen(false)}>
+          <a
+            role="menuitem"
+            className={linkClass}
+            href={outlookCalendarUrl(event, 'personal')}
+            target="_blank"
+            rel="noopener noreferrer"
+            onClick={() => setIsOpen(false)}
+          >
             Outlook.com (cuenta personal)
           </a>
-          <a role="menuitem" className={linkClass} href={outlookCalendarUrl(event, 'work')} target="_blank" rel="noopener noreferrer" onClick={() => setIsOpen(false)}>
+          <a
+            role="menuitem"
+            className={linkClass}
+            href={outlookCalendarUrl(event, 'work')}
+            target="_blank"
+            rel="noopener noreferrer"
+            onClick={() => setIsOpen(false)}
+          >
             Outlook / Microsoft 365 (trabajo)
           </a>
           <button
@@ -83,7 +104,10 @@ export const AddToCalendarMenu: React.FC<AddToCalendarMenuProps> = ({ task }) =>
             role="menuitem"
             className={linkClass}
             onClick={() => {
-              downloadIcs(`${task.title.slice(0, 40).replace(/[^\p{L}\p{N}]+/gu, '-') || 'tarea'}.ics`, buildIcs(event));
+              downloadIcs(
+                `${task.title.slice(0, 40).replace(/[^\p{L}\p{N}]+/gu, '-') || 'tarea'}.ics`,
+                buildIcs(event)
+              );
               setIsOpen(false);
             }}
           >

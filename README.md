@@ -9,7 +9,7 @@
 
 Plataforma web de **gestión del tiempo y neuroproductividad**. Hasta la versión 0.7 se llamaba NeuroProductividad.
 
-> Algunas ideas de esta app se inspiran en el libro *Gestiona tu tiempo, disfruta de la vida*, de Jonathan Benito Sipos. Este proyecto no está afiliado ni respaldado por el autor.
+> Algunas ideas de esta app se inspiran en el libro _Gestiona tu tiempo, disfruta de la vida_, de Jonathan Benito Sipos. Este proyecto no está afiliado ni respaldado por el autor.
 
 El sistema rechaza las restricciones coercitivas (como las rotaciones atencionales arbitrarias o las "Tareas Muro" matutinas únicas), sustituyéndolas por un **andamiaje digital para la corteza prefrontal** que combina evaluación holística de la satisfacción vital, jerarquía visual basada en leyes de Gestalt, inferencia léxica TF-IDF y blindaje de la atención frente a interrupciones crónicas.
 
@@ -21,16 +21,17 @@ El sistema rechaza las restricciones coercitivas (como las rotaciones atencional
 - **Símbolo:** una lente enfocada, un anillo índigo sobre un cuadrado pizarra con un brillo blanco. Está en `src/components/BrandMark.tsx` y `public/icon.svg`. Los PNG para Android e iOS (`public/icon-192.png`, `icon-512.png`, `icon-maskable-512.png` y `apple-touch-icon.png`) salen del mismo dibujo.
 - **Colores:**
 
-  | Uso | Color | Tailwind |
-  | :--- | :--- | :--- |
-  | Fondo de marca, botones principales y texto | `#0f172a` | `slate-900` |
-  | Anillo del símbolo y acento | `#818cf8` · `#4f46e5` | `indigo-400` · `indigo-600` |
-  | Lista Profesional | `#4f46e5` | `indigo-600` |
-  | Lista Personal | `#059669` · `#047857` | `emerald-600` · `emerald-700` (texto) |
-  | Plazo cercano · vencido | `#7c3aed` · `#dc2626` | `violet-600` · `red-600` |
-  | Pendiente de sincronizar o de aprobar | `#ea580c` · `#c2410c` | `orange-600` · `orange-700` |
+  | Uso                                         | Color                 | Tailwind                              |
+  | :------------------------------------------ | :-------------------- | :------------------------------------ |
+  | Fondo de marca, botones principales y texto | `#0f172a`             | `slate-900`                           |
+  | Anillo del símbolo y acento                 | `#818cf8` · `#4f46e5` | `indigo-400` · `indigo-600`           |
+  | Lista Profesional                           | `#4f46e5`             | `indigo-600`                          |
+  | Lista Personal                              | `#059669` · `#047857` | `emerald-600` · `emerald-700` (texto) |
+  | Plazo cercano · vencido                     | `#7c3aed` · `#dc2626` | `violet-600` · `red-600`              |
+  | Pendiente de sincronizar o de aprobar       | `#ea580c` · `#c2410c` | `orange-600` · `orange-700`           |
 
   Los textos pequeños usan como mínimo `slate-500` sobre blanco para cumplir el contraste WCAG AA.
+
 - **Tipografía:** Plus Jakarta Sans para la interfaz y JetBrains Mono para cifras y versiones.
 - **Lema:** «Gestión del tiempo y neuroproductividad».
 
@@ -39,68 +40,75 @@ El sistema rechaza las restricciones coercitivas (como las rotaciones atencional
 ## 🧠 Fundamentos Metodológicos y Módulos del Sistema
 
 ### 1. Motor Estratégico: Rueda de la Vida & Trazabilidad Temporal Inmutable (`M1`)
-* **Gráfico Polar Interactivo SVG:** Mapeo de 7 dominios vitales (*Salud, Carrera Profesional, Finanzas, Familia, Ocio, Relaciones, Espiritualidad*) evaluados del 0 al 10 con arrastre y redibujado en tiempo real.
-* **Cuentas y sincronización:** Inicio de sesión con Google o con email y contraseña (con verificación del email antes de solicitar acceso y recuperación de la contraseña por email); los datos de cada cuenta se guardan en Firestore (UE), funcionan sin conexión y se sincronizan entre dispositivos. En el primer inicio de sesión se ofrece importar los datos que la versión anterior guardaba solo en el navegador. Desde el menú de la cuenta se pueden descargar los datos o eliminar la cuenta con todo su contenido. Un indicador en la cabecera está verde cuando todo está guardado en el servidor y naranja cuando hay cambios pendientes o no hay conexión; al pulsarlo se fuerza la sincronización.
-* **Cuenta autogestionada:** desde el menú de la cuenta se cambia la contraseña, se cierra la sesión en todos los dispositivos (los demás pierden el acceso en menos de una hora), se descargan los datos y se elimina la cuenta, confirmándolo con la contraseña o con Google.
-* **Acceso con aprobación:** cada cuenta, también las que ya existían, necesita la aprobación de la administración. Sin ella se ve una pantalla para solicitar acceso con un mensaje opcional, desde la que también se pueden descargar o eliminar los datos guardados. La administración decide en la pestaña «Accesos» y recibe un email por cada solicitud; la persona recibe otro cuando se aprueba (detalles en [Aprobación de accesos](#aprobación-de-accesos)).
-* **Accesibilidad:** panel propio (menú de la cuenta y pantallas de inicio de sesión y acceso) con tamaño del texto, alto contraste, reducir animaciones y foco muy visible, guardados en cada dispositivo. Toda la app se usa con el teclado (los diálogos atrapan y devuelven el foco, enlace para saltar al contenido) y una auditoría automática WCAG 2.1 AA revisa cada pantalla en CI.
-* **Inicio:** pantalla principal con el foco de la lista activa y estadísticas de las tareas (hechas por día, semana y mes; antes o después del plazo; velocidad en tareas y horas estimadas por semana; tiempo medio hasta completarlas; racha; pendientes y vencidas; reparto por área), con recomendaciones según esos datos.
-* **Cabecera de una sola línea:** en escritorio y tableta, las secciones (solo con icono hasta 1280 px), las dos listas, la sincronización y la cuenta; en el móvil, la versión, las dos listas y un menú desplegable con las secciones, la sincronización y la cuenta. «Nueva tarea» está debajo de la cabecera.
-* **Agenda:** vista semanal (de lunes a domingo) y por días (14 días, también los vacíos) con las tareas con fecha de las dos listas, los intervalos, las repeticiones previstas de las tareas recurrentes y las reuniones. En la vista por días las tareas vencidas aparecen aparte; al pulsar una tarea se edita.
-* **Primer arranque guiado:** Una cuenta sin evaluaciones abre directamente la Rueda con todas las áreas a 0 y un aviso de primer paso que enlaza a la guía *Cómo funciona* (pantallas, relaciones entre módulos y dónde se guardan los datos).
-* **Persistencia Append-Only:** Prohibición estricta de sobrescritura (`UPDATE`). Cada consolidación genera un nuevo snapshot inmutable con sellos de tiempo precisos en formato UTC (Unix Epoch).
-* **Comparativa Histórica de Neuroplasticidad:** Superposición gráfica de polígonos translúcidos (actual vs. 30, 90 o 365 días) para verificar empíricamente el impacto del hábito sostenido y activar circuitos de recompensa dopaminérgicos.
+
+- **Gráfico Polar Interactivo SVG:** Mapeo de 7 dominios vitales (_Salud, Carrera Profesional, Finanzas, Familia, Ocio, Relaciones, Espiritualidad_) evaluados del 0 al 10 con arrastre y redibujado en tiempo real.
+- **Cuentas y sincronización:** Inicio de sesión con Google o con email y contraseña (con verificación del email antes de solicitar acceso y recuperación de la contraseña por email); los datos de cada cuenta se guardan en Firestore (UE), funcionan sin conexión y se sincronizan entre dispositivos. En el primer inicio de sesión se ofrece importar los datos que la versión anterior guardaba solo en el navegador. Desde el menú de la cuenta se pueden descargar los datos o eliminar la cuenta con todo su contenido. Un indicador en la cabecera está verde cuando todo está guardado en el servidor y naranja cuando hay cambios pendientes o no hay conexión; al pulsarlo se fuerza la sincronización.
+- **Cuenta autogestionada:** desde el menú de la cuenta se cambia la contraseña, se cierra la sesión en todos los dispositivos (los demás pierden el acceso en menos de una hora), se descargan los datos y se elimina la cuenta, confirmándolo con la contraseña o con Google.
+- **Acceso con aprobación:** cada cuenta, también las que ya existían, necesita la aprobación de la administración. Sin ella se ve una pantalla para solicitar acceso con un mensaje opcional, desde la que también se pueden descargar o eliminar los datos guardados. La administración decide en la pestaña «Accesos» y recibe un email por cada solicitud; la persona recibe otro cuando se aprueba (detalles en [Aprobación de accesos](#aprobación-de-accesos)).
+- **Accesibilidad:** panel propio (menú de la cuenta y pantallas de inicio de sesión y acceso) con tamaño del texto, alto contraste, reducir animaciones y foco muy visible, guardados en cada dispositivo. Toda la app se usa con el teclado (los diálogos atrapan y devuelven el foco, enlace para saltar al contenido) y una auditoría automática WCAG 2.1 AA revisa cada pantalla en CI.
+- **Inicio:** pantalla principal con el foco de la lista activa y estadísticas de las tareas (hechas por día, semana y mes; antes o después del plazo; velocidad en tareas y horas estimadas por semana; tiempo medio hasta completarlas; racha; pendientes y vencidas; reparto por área), con recomendaciones según esos datos.
+- **Cabecera de una sola línea:** en escritorio y tableta, las secciones (solo con icono hasta 1280 px), las dos listas, la sincronización y la cuenta; en el móvil, la versión, las dos listas y un menú desplegable con las secciones, la sincronización y la cuenta. «Nueva tarea» está debajo de la cabecera.
+- **Agenda:** vista semanal (de lunes a domingo) y por días (14 días, también los vacíos) con las tareas con fecha de las dos listas, los intervalos, las repeticiones previstas de las tareas recurrentes y las reuniones. En la vista por días las tareas vencidas aparecen aparte; al pulsar una tarea se edita.
+- **Primer arranque guiado:** Una cuenta sin evaluaciones abre directamente la Rueda con todas las áreas a 0 y un aviso de primer paso que enlaza a la guía _Cómo funciona_ (pantallas, relaciones entre módulos y dónde se guardan los datos).
+- **Persistencia Append-Only:** Prohibición estricta de sobrescritura (`UPDATE`). Cada consolidación genera un nuevo snapshot inmutable con sellos de tiempo precisos en formato UTC (Unix Epoch).
+- **Comparativa Histórica de Neuroplasticidad:** Superposición gráfica de polígonos translúcidos (actual vs. 30, 90 o 365 días) para verificar empíricamente el impacto del hábito sostenido y activar circuitos de recompensa dopaminérgicos.
 
 ### 2. Gestor Dual de Listas & Jerarquía Visual Gestalt (`M2`)
-* **Segregación Estricta:** Separación absoluta entre la **Lista Profesional** y la **Lista Personal** para erradicar el coste metabólico asociado al cambio de contexto (*context-switching*).
-* **Algoritmo de Jerarquía Visual (Top 10):** En lugar de limitar artificialmente el inventario, los primeros 10 elementos se destacan visualmente mediante tipografía en negrita (`font-weight: 700`), sombras de elevación paralela (`shadow-md`), colores cálidos y márgenes expandidos. Los elementos 11+ se renderizan con diseño minimalista y desaturado.
-* **Orden y filtros del Top 10:** por prioridad efectiva, fecha límite, estimación, actualización o área, y filtros por prioridad, estimación máxima, estado, plazo y área. Se guardan en cada dispositivo y el resumen «Top 10 Foco» cuenta lo mismo que muestra la lista.
-* **Prioridad efectiva y estimación:** si la fecha límite está a más de una semana, la tarea cuenta un nivel menos de prioridad (las tareas sin fecha mantienen la suya). Cada tarea puede llevar una estimación de duración, visible en todas las listas.
-* **Verbo físico:** el campo de la acción indica encima que empiece por una acción concreta (Llamar, Enviar, Reservar…).
-* **Sumidero Cognitivo "Quizá" / "Algún día" (HU-03):** Externalización de iniciativas embrionarias sin urgencia operativa, excluidas del Top 10 diario mediante índices parciales pero preservadas en "Opciones Futuras".
-* **Estado y archivo:** Cada tarea tiene un estado manual (Pendiente, En progreso, Bloqueada, Hecha). Las tareas hechas se archivan y se consultan en la ventana «Archivadas», desde donde se reactivan cambiando su estado.
-* **Fechas y alertas:** Fecha límite o intervalo opcional, con hora opcional. El título se pone violeta cuando falta menos de una semana y rojo cuando ha vencido. Los campos de fecha usan un calendario propio con la semana empezando en lunes (se escriben como dd/mm/aaaa y se manejan con el teclado), sea cual sea el idioma del navegador.
-* **Tareas recurrentes:** cada día, semana (eligiendo los días), mes (día del mes, «el 2.º lunes» o «el último viernes») o año, cada N periodos. Al repetir, «Inicio» es desde cuándo se repite y la fecha límite hasta cuándo (opcional); cada repetición vence su propio día, nunca como un intervalo. Al marcar una repetición como Hecha se archiva y se crea la siguiente en la misma operación (sin duplicados aunque se marque desde dos dispositivos); las ya vencidas, hora límite incluida, se saltan si se completa con retraso.
-* **Calendario:** Las tareas con fecha límite se añaden a Google Calendar, Outlook.com, Outlook de Microsoft 365 o cualquier calendario (`.ics`), mediante enlaces y sin conectar cuentas. Las recurrentes exportan la serie (RRULE con semanas que empiezan en lunes y el último día del mes cuando el día no existe); las de un intervalo de varios días exportan solo la repetición actual.
+
+- **Segregación Estricta:** Separación absoluta entre la **Lista Profesional** y la **Lista Personal** para erradicar el coste metabólico asociado al cambio de contexto (_context-switching_).
+- **Algoritmo de Jerarquía Visual (Top 10):** En lugar de limitar artificialmente el inventario, los primeros 10 elementos se destacan visualmente mediante tipografía en negrita (`font-weight: 700`), sombras de elevación paralela (`shadow-md`), colores cálidos y márgenes expandidos. Los elementos 11+ se renderizan con diseño minimalista y desaturado.
+- **Orden y filtros del Top 10:** por prioridad efectiva, fecha límite, estimación, actualización o área, y filtros por prioridad, estimación máxima, estado, plazo y área. Se guardan en cada dispositivo y el resumen «Top 10 Foco» cuenta lo mismo que muestra la lista.
+- **Prioridad efectiva y estimación:** si la fecha límite está a más de una semana, la tarea cuenta un nivel menos de prioridad (las tareas sin fecha mantienen la suya). Cada tarea puede llevar una estimación de duración, visible en todas las listas.
+- **Verbo físico:** el campo de la acción indica encima que empiece por una acción concreta (Llamar, Enviar, Reservar…).
+- **Sumidero Cognitivo "Quizá" / "Algún día" (HU-03):** Externalización de iniciativas embrionarias sin urgencia operativa, excluidas del Top 10 diario mediante índices parciales pero preservadas en "Opciones Futuras".
+- **Estado y archivo:** Cada tarea tiene un estado manual (Pendiente, En progreso, Bloqueada, Hecha). Las tareas hechas se archivan y se consultan en la ventana «Archivadas», desde donde se reactivan cambiando su estado.
+- **Fechas y alertas:** Fecha límite o intervalo opcional, con hora opcional. El título se pone violeta cuando falta menos de una semana y rojo cuando ha vencido. Los campos de fecha usan un calendario propio con la semana empezando en lunes (se escriben como dd/mm/aaaa y se manejan con el teclado), sea cual sea el idioma del navegador.
+- **Tareas recurrentes:** cada día, semana (eligiendo los días), mes (día del mes, «el 2.º lunes» o «el último viernes») o año, cada N periodos. Al repetir, «Inicio» es desde cuándo se repite y la fecha límite hasta cuándo (opcional); cada repetición vence su propio día, nunca como un intervalo. Al marcar una repetición como Hecha se archiva y se crea la siguiente en la misma operación (sin duplicados aunque se marque desde dos dispositivos); las ya vencidas, hora límite incluida, se saltan si se completa con retraso.
+- **Calendario:** Las tareas con fecha límite se añaden a Google Calendar, Outlook.com, Outlook de Microsoft 365 o cualquier calendario (`.ics`), mediante enlaces y sin conectar cuentas. Las recurrentes exportan la serie (RRULE con semanas que empiezan en lunes y el último día del mes cuando el día no existe); las de un intervalo de varios días exportan solo la repetición actual.
 
 ### 3. Motor NLP de Enlace Cognitivo (`M3`)
-* **Vectorización TF-IDF Asíncrona:** Limpieza léxica y cálculo de frecuencia de término ponderada por frecuencia inversa de documento al perder el foco (`onBlur`) en los formularios.
-* **Similitud del Coseno:** Comparación del vector resultante contra centroides pre-entrenados de las 7 áreas de la Rueda de la Vida.
-* **Insignia Interactiva:** Sugerencia automática (*"¿Vincular a: Finanzas? [Validar]"*) si la confianza estadística supera el umbral empírico $\ge 0.65$.
+
+- **Vectorización TF-IDF Asíncrona:** Limpieza léxica y cálculo de frecuencia de término ponderada por frecuencia inversa de documento al perder el foco (`onBlur`) en los formularios.
+- **Similitud del Coseno:** Comparación del vector resultante contra centroides pre-entrenados de las 7 áreas de la Rueda de la Vida.
+- **Insignia Interactiva:** Sugerencia automática (_"¿Vincular a: Finanzas? [Validar]"_) si la confianza estadística supera el umbral empírico $\ge 0.65$.
 
 ### 4. Analizador Sintáctico de la Acción Inmediata Siguiente (`M4`)
-* **Filtro contra Proyectos Amorfos:** Intercepta descriptores abstractos como *"Marketing"*, *"Coche"* o *"Finanzas"*.
-* **Asistente Contextual Prefrontal:** Pregunta activamente *"¿Cuál es el primer paso físico e indivisible? Convierte la meta en una acción (ej. Llamar al taller para pedir presupuesto)"*, exigiendo un verbo transitivo de acción física motora.
+
+- **Filtro contra Proyectos Amorfos:** Intercepta descriptores abstractos como _"Marketing"_, _"Coche"_ o _"Finanzas"_.
+- **Asistente Contextual Prefrontal:** Pregunta activamente _"¿Cuál es el primer paso físico e indivisible? Convierte la meta en una acción (ej. Llamar al taller para pedir presupuesto)"_, exigiendo un verbo transitivo de acción física motora.
 
 ### 5. Blindaje del Triángulo de las Bermudas (`M5`)
-* **Auditoría y Bloqueo de Reuniones Matutinas:** Bloqueo heurístico inquebrantable de reuniones convocadas antes de las 12:00 h (franja biológica de máxima demanda cognitiva y concentración profunda), sugiriendo su reubicación hacia las 13:00 h (hora valle).
-* **Triple Validación Obligatoria:** Toda reunión exige hora de inicio y fin inamovibles (`end_time > start_time`), orden del día cerrado no vacío y un moderador nominal responsable.
-* **Redacción Inversa de Correo Electrónico:** Secuencia contra-intuitiva donde los adjuntos y el cuerpo del mensaje deben redactarse primero, manteniendo bloqueado el campo de **Destinatarios** hasta que el contenido esté validado. Alerta en tiempo real si el texto supera la dimensión estándar libre de scroll (*no-scroll*).
+
+- **Auditoría y Bloqueo de Reuniones Matutinas:** Bloqueo heurístico inquebrantable de reuniones convocadas antes de las 12:00 h (franja biológica de máxima demanda cognitiva y concentración profunda), sugiriendo su reubicación hacia las 13:00 h (hora valle).
+- **Triple Validación Obligatoria:** Toda reunión exige hora de inicio y fin inamovibles (`end_time > start_time`), orden del día cerrado no vacío y un moderador nominal responsable.
+- **Redacción Inversa de Correo Electrónico:** Secuencia contra-intuitiva donde los adjuntos y el cuerpo del mensaje deben redactarse primero, manteniendo bloqueado el campo de **Destinatarios** hasta que el contenido esté validado. Alerta en tiempo real si el texto supera la dimensión estándar libre de scroll (_no-scroll_).
 
 ---
 
 ## 🛠️ Stack Tecnológico
 
-| Capa | Tecnologías |
-| :--- | :--- |
-| **Frontend** | React 19, TypeScript, Vite, Tailwind CSS v4, Lucide Icons |
-| **Algoritmia** | Motor TF-IDF & Cosine Similarity en TS, Parser sintáctico de verbos en español |
-| **Visualización** | SVG interactivo polar / radar, Matemáticas polares de deformación poligonal |
-| **Cuentas y datos** | Firebase Authentication (Google) y Cloud Firestore (`europe-west1`) con caché persistente: funciona sin conexión y sincroniza entre dispositivos |
-| **Hosting y API** | Firebase Hosting (SPA) y Cloud Functions for Firebase 2.ª gen con Express (`europe-west1`) |
-| **Referencia Backend** | PostgreSQL (Esquema DDL relacional con índices parciales B-Tree y tipos JSONB) |
+| Capa                   | Tecnologías                                                                                                                                      |
+| :--------------------- | :----------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Frontend**           | React 19, TypeScript, Vite, Tailwind CSS v4, Lucide Icons                                                                                        |
+| **Algoritmia**         | Motor TF-IDF & Cosine Similarity en TS, Parser sintáctico de verbos en español                                                                   |
+| **Visualización**      | SVG interactivo polar / radar, Matemáticas polares de deformación poligonal                                                                      |
+| **Cuentas y datos**    | Firebase Authentication (Google) y Cloud Firestore (`europe-west1`) con caché persistente: funciona sin conexión y sincroniza entre dispositivos |
+| **Hosting y API**      | Firebase Hosting (SPA) y Cloud Functions for Firebase 2.ª gen con Express (`europe-west1`)                                                       |
+| **Referencia Backend** | PostgreSQL (Esquema DDL relacional con índices parciales B-Tree y tipos JSONB)                                                                   |
 
 ---
 
 ## 🚀 Instalación y Puesta en Marcha
 
 ### Prerrequisitos
-* Node.js $\ge 22.12$
-* npm (el gestor utilizado por CI y el despliegue)
-* Java 21 o superior para el emulador de Firestore (desarrollo local y pruebas)
-* La Firebase CLI se instala con `npm ci` (`firebase-tools` en `devDependencies`); `npx firebase …` usa esa versión
+
+- Node.js $\ge 22.12$
+- npm (el gestor utilizado por CI y el despliegue)
+- Java 21 o superior para el emulador de Firestore (desarrollo local y pruebas)
+- La Firebase CLI se instala con `npm ci` (`firebase-tools` en `devDependencies`); `npx firebase …` usa esa versión
 
 ### Pasos
+
 ```bash
 # 1. Clonar el repositorio
 git clone https://github.com/OvidiuMM/neuroproductivity-platform.git
@@ -144,13 +152,13 @@ El banco de pruebas cubre lógica pura con el test runner de Node, la importaci�
 
 ### Despliegue en Firebase (Hosting + Cloud Functions + Firestore)
 
-Firebase Hosting sirve la SPA compilada (`dist/`), la función `api` (Cloud Functions 2.ª gen, región `europe-west1`) atiende el backend y Firestore guarda los datos de cada cuenta en `users/{uid}/…`. Las reglas (`firestore.rules`) solo permiten a cada persona acceder a sus propios datos (crear y modificar exige el acceso aprobado; leer y borrar no, para que una cuenta sin acceso pueda llevarse o eliminar lo suyo) y hacen las evaluaciones de la Rueda *append-only*. La app lee su configuración de Firebase de `/__/firebase/init.json`, que sirve el propio Hosting, así que el ID del proyecto no está en el código. Las rutas se definen en `firebase.json`:
+Firebase Hosting sirve la SPA compilada (`dist/`), la función `api` (Cloud Functions 2.ª gen, región `europe-west1`) atiende el backend y Firestore guarda los datos de cada cuenta en `users/{uid}/…`. Las reglas (`firestore.rules`) solo permiten a cada persona acceder a sus propios datos (crear y modificar exige el acceso aprobado; leer y borrar no, para que una cuenta sin acceso pueda llevarse o eliminar lo suyo) y hacen las evaluaciones de la Rueda _append-only_. La app lee su configuración de Firebase de `/__/firebase/init.json`, que sirve el propio Hosting, así que el ID del proyecto no está en el código. Las rutas se definen en `firebase.json`:
 
-| Ruta | Destino |
-| :--- | :--- |
-| `/api/**` | Función `api` (`functions/src/app.ts`) |
+| Ruta                           | Destino                                               |
+| :----------------------------- | :---------------------------------------------------- |
+| `/api/**`                      | Función `api` (`functions/src/app.ts`)                |
 | `/.well-known/assetlinks.json` | Función `api` (Digital Asset Links de la APK Android) |
-| `**` | `index.html` (fallback de la SPA) |
+| `**`                           | `index.html` (fallback de la SPA)                     |
 
 Requisitos: un proyecto de Firebase en plan Blaze (Cloud Functions lo exige), una base de datos de Firestore `(default)` en `europe-west1`, los proveedores de inicio de sesión **Google** y **Correo electrónico/contraseña** activados en Authentication y la Firebase CLI con sesión iniciada (`npx firebase login`).
 
@@ -200,15 +208,15 @@ Cada push a `main` (por ejemplo, al mergear un pull request) despliega Hosting, 
 
 El workflow necesita estos valores en el repositorio. Los secrets se ocultan en los logs, así que el ID del proyecto tampoco aparece ahí.
 
-| Tipo | Nombre | Valor |
-| :--- | :--- | :--- |
-| Secret | `FIREBASE_PROJECT_ID` | ID del proyecto de Firebase |
-| Secret | `GCP_SERVICE_ACCOUNT` | Email de la cuenta de servicio `github-deployer` |
-| Secret | `GCP_WORKLOAD_IDENTITY_PROVIDER` | Ruta completa del proveedor de identidad |
-| Variable | `ANDROID_PACKAGE_NAME` | Package name de la APK |
-| Variable | `ANDROID_SHA256_FINGERPRINT` | Huella SHA-256 del certificado de firma de la APK |
-| Secret | `ADMIN_EMAIL` | Email de la cuenta de Google que aprueba los accesos |
-| Secret | `GMAIL_USER` | Cuenta de Gmail que envía los avisos de acceso |
+| Tipo     | Nombre                           | Valor                                                |
+| :------- | :------------------------------- | :--------------------------------------------------- |
+| Secret   | `FIREBASE_PROJECT_ID`            | ID del proyecto de Firebase                          |
+| Secret   | `GCP_SERVICE_ACCOUNT`            | Email de la cuenta de servicio `github-deployer`     |
+| Secret   | `GCP_WORKLOAD_IDENTITY_PROVIDER` | Ruta completa del proveedor de identidad             |
+| Variable | `ANDROID_PACKAGE_NAME`           | Package name de la APK                               |
+| Variable | `ANDROID_SHA256_FINGERPRINT`     | Huella SHA-256 del certificado de firma de la APK    |
+| Secret   | `ADMIN_EMAIL`                    | Email de la cuenta de Google que aprueba los accesos |
+| Secret   | `GMAIL_USER`                     | Cuenta de Gmail que envía los avisos de acceso       |
 
 Configuración inicial, una sola vez, con una cuenta propietaria del proyecto:
 
@@ -384,6 +392,7 @@ CREATE TABLE meeting_guard (
 ## 🤝 Contribuciones
 
 Las contribuciones son bienvenidas. Para contribuir:
+
 1. Haz un Fork del repositorio.
 2. Crea una rama para tu funcionalidad (`git checkout -b feature/nueva-funcionalidad`).
 3. Realiza tus cambios y verifica la compilación (`npm run build && npm run typecheck && npm run lint && npm run format:check`).

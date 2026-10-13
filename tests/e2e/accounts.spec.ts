@@ -63,11 +63,14 @@ test('a new account with email and password confirms its email before asking for
 
 test('the server refuses an access request from an account whose email is not confirmed', async () => {
   // Cuenta con contraseña creada en el emulador de Auth, sin confirmar el email, que llama a la función sin pasar por la app
-  const signUp = await fetch('http://127.0.0.1:9399/identitytoolkit.googleapis.com/v1/accounts:signUp?key=demo-api-key', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ email: uniqueEmail(), password: PASSWORD, returnSecureToken: true })
-  });
+  const signUp = await fetch(
+    'http://127.0.0.1:9399/identitytoolkit.googleapis.com/v1/accounts:signUp?key=demo-api-key',
+    {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email: uniqueEmail(), password: PASSWORD, returnSecureToken: true })
+    }
+  );
   expect(signUp.ok).toBe(true);
   const { idToken, localId } = (await signUp.json()) as { idToken: string; localId: string };
 
@@ -99,11 +102,14 @@ test('wrong passwords are rejected and a forgotten password can be reset by emai
 
   // El enlace del email permite poner una contraseña nueva
   const { oobCode } = await emulatorOobCode(email, 'PASSWORD_RESET');
-  const reset = await fetch('http://127.0.0.1:9399/identitytoolkit.googleapis.com/v1/accounts:resetPassword?key=demo-api-key', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ oobCode, newPassword: 'clave-nueva-22' })
-  });
+  const reset = await fetch(
+    'http://127.0.0.1:9399/identitytoolkit.googleapis.com/v1/accounts:resetPassword?key=demo-api-key',
+    {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ oobCode, newPassword: 'clave-nueva-22' })
+    }
+  );
   expect(reset.ok).toBe(true);
 
   await page.getByRole('button', { name: 'Volver a entrar' }).click();
@@ -114,7 +120,9 @@ test('wrong passwords are rejected and a forgotten password can be reset by emai
   await expect(page.getByRole('heading', { name: 'Solicita acceso' })).toBeVisible(SERVER_CALL);
 });
 
-test('the account changes its password, closes every session and deletes itself with its password', async ({ page }) => {
+test('the account changes its password, closes every session and deletes itself with its password', async ({
+  page
+}) => {
   const email = uniqueEmail();
   await signUp(page, email);
   const { oobLink } = await emulatorOobCode(email, 'VERIFY_EMAIL');

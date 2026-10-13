@@ -25,7 +25,9 @@ test('the accessibility panel changes text size, contrast, motion and focus, and
 
   await panel.getByRole('switch', { name: 'Reducir animaciones' }).click();
   await panel.getByRole('switch', { name: 'Foco muy visible' }).click();
-  expect(await htmlClasses(page)).toEqual(expect.arrayContaining(['a11y-text-xlarge', 'a11y-contrast', 'a11y-reduce-motion', 'a11y-focus']));
+  expect(await htmlClasses(page)).toEqual(
+    expect.arrayContaining(['a11y-text-xlarge', 'a11y-contrast', 'a11y-reduce-motion', 'a11y-focus'])
+  );
 
   // Escape cierra el panel; las preferencias siguen al recargar
   await page.keyboard.press('Escape');
@@ -33,7 +35,9 @@ test('the accessibility panel changes text size, contrast, motion and focus, and
   await page.reload();
   await expect(page.getByRole('button', { name: 'Tu cuenta' })).toBeVisible();
   expect(await rootFontSize(page)).toBe('20px');
-  expect(await htmlClasses(page)).toEqual(expect.arrayContaining(['a11y-contrast', 'a11y-reduce-motion', 'a11y-focus']));
+  expect(await htmlClasses(page)).toEqual(
+    expect.arrayContaining(['a11y-contrast', 'a11y-reduce-motion', 'a11y-focus'])
+  );
 
   // Restablecer vuelve a los valores por defecto
   await page.getByRole('button', { name: 'Tu cuenta' }).click();
@@ -62,7 +66,9 @@ test('dialogs take the focus and give it back when they close', async ({ page })
   // El formulario de tarea recibe el foco (su primer control); Escape lo cierra y el foco vuelve al botón que lo abrió
   const newTask = page.getByRole('button', { name: 'Nueva Tarea' });
   await newTask.click();
-  await expect(page.getByRole('dialog', { name: /Captura de Nueva Acción/ }).getByRole('button', { name: 'Cerrar' })).toBeFocused();
+  await expect(
+    page.getByRole('dialog', { name: /Captura de Nueva Acción/ }).getByRole('button', { name: 'Cerrar' })
+  ).toBeFocused();
   await page.keyboard.press('Escape');
   await expect(page.getByRole('dialog', { name: /Captura de Nueva Acción/ })).toBeHidden();
   await expect(newTask).toBeFocused();

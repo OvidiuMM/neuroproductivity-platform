@@ -116,7 +116,10 @@ describe('recurring tasks in calendars', () => {
   it('adds the series to the Google Calendar link and the .ics file', () => {
     const event = buildCalendarEvent(recurring, APP)!;
     assert.equal(event.rrule, 'RRULE:FREQ=MONTHLY;INTERVAL=1;BYDAY=2MO');
-    assert.equal(new URL(googleCalendarUrl(event)).searchParams.get('recur'), 'RRULE:FREQ=MONTHLY;INTERVAL=1;BYDAY=2MO');
+    assert.equal(
+      new URL(googleCalendarUrl(event)).searchParams.get('recur'),
+      'RRULE:FREQ=MONTHLY;INTERVAL=1;BYDAY=2MO'
+    );
     assert.match(buildIcs(event), /\r\nRRULE:FREQ=MONTHLY;INTERVAL=1;BYDAY=2MO\r\n/);
   });
 

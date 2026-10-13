@@ -46,9 +46,9 @@ export const SyncIndicator: React.FC<{ status: SyncStatus; onSync: () => void; w
         onClick={onSync}
         disabled={status === 'syncing'}
         aria-label={label}
-        className={`w-full px-3 py-2.5 rounded-lg border text-sm font-semibold flex items-center gap-2.5 disabled:cursor-wait ${className}`}
+        className={`flex w-full items-center gap-2.5 rounded-lg border px-3 py-2.5 text-sm font-semibold disabled:cursor-wait ${className}`}
       >
-        <Icon className={`w-4 h-4 ${status === 'syncing' ? 'animate-spin' : ''}`} aria-hidden="true" />
+        <Icon className={`h-4 w-4 ${status === 'syncing' ? 'animate-spin' : ''}`} aria-hidden="true" />
         {short}
       </button>
     );
@@ -61,9 +61,9 @@ export const SyncIndicator: React.FC<{ status: SyncStatus; onSync: () => void; w
       title={label}
       aria-label={label}
       data-sync-status={status}
-      className={`w-8 h-8 shrink-0 rounded-full border flex items-center justify-center transition-colors disabled:cursor-wait ${className}`}
+      className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full border transition-colors disabled:cursor-wait ${className}`}
     >
-      <Icon className={`w-4 h-4 ${status === 'syncing' ? 'animate-spin' : ''}`} aria-hidden="true" />
+      <Icon className={`h-4 w-4 ${status === 'syncing' ? 'animate-spin' : ''}`} aria-hidden="true" />
     </button>
   );
 };

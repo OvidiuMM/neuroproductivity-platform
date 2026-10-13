@@ -58,7 +58,9 @@ export const EmailAuthForm: React.FC<EmailAuthFormProps> = ({ onSignIn, onSignUp
       else if (mode === 'signup') await onSignUp({ name, email, password });
       else {
         await onReset(email);
-        setInfo('Si hay una cuenta con ese email, te hemos enviado un enlace para crear una contraseña nueva. Revisa también el correo no deseado.');
+        setInfo(
+          'Si hay una cuenta con ese email, te hemos enviado un enlace para crear una contraseña nueva. Revisa también el correo no deseado.'
+        );
       }
     } catch (err) {
       setError(describeAuthError(err, 'No se pudo completar. Inténtalo de nuevo.'));
@@ -69,8 +71,8 @@ export const EmailAuthForm: React.FC<EmailAuthFormProps> = ({ onSignIn, onSignUp
 
   return (
     <form onSubmit={handleSubmit} aria-labelledby="email-auth-title" className="space-y-3">
-      <h2 id="email-auth-title" className="text-sm font-bold text-slate-900 flex items-center gap-2">
-        <Mail className="w-4 h-4 text-indigo-600" aria-hidden="true" />
+      <h2 id="email-auth-title" className="flex items-center gap-2 text-sm font-bold text-slate-900">
+        <Mail className="h-4 w-4 text-indigo-600" aria-hidden="true" />
         {TITLES[mode]}
       </h2>
 
@@ -79,7 +81,14 @@ export const EmailAuthForm: React.FC<EmailAuthFormProps> = ({ onSignIn, onSignUp
           <label htmlFor="auth-name" className="block text-xs font-semibold text-slate-700">
             Nombre (opcional)
           </label>
-          <input id="auth-name" type="text" autoComplete="name" value={name} onChange={(e) => setName(e.target.value)} className={inputClass} />
+          <input
+            id="auth-name"
+            type="text"
+            autoComplete="name"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            className={inputClass}
+          />
         </div>
       )}
 
@@ -120,9 +129,13 @@ export const EmailAuthForm: React.FC<EmailAuthFormProps> = ({ onSignIn, onSignUp
               onClick={() => setShowPassword((show) => !show)}
               aria-label={showPassword ? 'Ocultar la contraseña' : 'Mostrar la contraseña'}
               aria-pressed={showPassword}
-              className="absolute right-1.5 top-1/2 -translate-y-1/2 w-8 h-8 rounded-lg text-slate-600 hover:bg-slate-100 flex items-center justify-center"
+              className="absolute top-1/2 right-1.5 flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-lg text-slate-600 hover:bg-slate-100"
             >
-              {showPassword ? <EyeOff className="w-4 h-4" aria-hidden="true" /> : <Eye className="w-4 h-4" aria-hidden="true" />}
+              {showPassword ? (
+                <EyeOff className="h-4 w-4" aria-hidden="true" />
+              ) : (
+                <Eye className="h-4 w-4" aria-hidden="true" />
+              )}
             </button>
           </div>
           {mode === 'signup' && (
@@ -135,17 +148,19 @@ export const EmailAuthForm: React.FC<EmailAuthFormProps> = ({ onSignIn, onSignUp
 
       <div aria-live="polite">
         {error && (
-          <p role="alert" className="text-xs text-red-700 bg-red-50 border border-red-200 rounded-xl p-3">
+          <p role="alert" className="rounded-xl border border-red-200 bg-red-50 p-3 text-xs text-red-700">
             {error}
           </p>
         )}
-        {info && <p className="text-xs text-emerald-800 bg-emerald-50 border border-emerald-200 rounded-xl p-3">{info}</p>}
+        {info && (
+          <p className="rounded-xl border border-emerald-200 bg-emerald-50 p-3 text-xs text-emerald-800">{info}</p>
+        )}
       </div>
 
       <button
         type="submit"
         disabled={busy}
-        className="w-full py-3 px-4 bg-slate-900 hover:bg-slate-800 disabled:opacity-60 text-white rounded-2xl text-sm font-bold"
+        className="w-full rounded-2xl bg-slate-900 px-4 py-3 text-sm font-bold text-white hover:bg-slate-800 disabled:opacity-60"
       >
         {busy ? SUBMIT[mode][1] : SUBMIT[mode][0]}
       </button>

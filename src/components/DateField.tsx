@@ -31,7 +31,12 @@ const VIEWPORT_MARGIN = 8;
 const INVALID_MESSAGE = `Escribe la fecha como ${DATE_INPUT_PLACEHOLDER}`;
 const REQUIRED_MESSAGE = 'Elige una fecha';
 const monthFormat = new Intl.DateTimeFormat('es-ES', { month: 'long', year: 'numeric' });
-const fullDayFormat = new Intl.DateTimeFormat('es-ES', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+const fullDayFormat = new Intl.DateTimeFormat('es-ES', {
+  weekday: 'long',
+  day: 'numeric',
+  month: 'long',
+  year: 'numeric'
+});
 
 const GRID_KEYS: Record<string, (date: string, shift: boolean) => string> = {
   ArrowLeft: (d) => addDaysTo(d, -1),
@@ -206,9 +211,9 @@ export const DateField: React.FC<DateFieldProps> = ({
         aria-haspopup="dialog"
         aria-expanded={open}
         aria-controls={open ? dialogId : undefined}
-        className="absolute right-1 top-1/2 -translate-y-1/2 p-1 rounded-md text-slate-500 hover:text-indigo-700 hover:bg-indigo-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400"
+        className="absolute top-1/2 right-1 -translate-y-1/2 rounded-md p-1 text-slate-500 hover:bg-indigo-50 hover:text-indigo-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400"
       >
-        <CalendarDays className="w-4 h-4" aria-hidden="true" />
+        <CalendarDays className="h-4 w-4" aria-hidden="true" />
       </button>
 
       {open &&
@@ -220,17 +225,21 @@ export const DateField: React.FC<DateFieldProps> = ({
             aria-modal="true"
             aria-labelledby={titleId}
             onKeyDown={onDialogKeyDown}
-            style={{ top: position.top, left: position.left, width: Math.min(POPOVER_WIDTH, window.innerWidth - 2 * VIEWPORT_MARGIN) }}
-            className="fixed z-60 p-3 bg-white rounded-xl border border-slate-200 shadow-xl text-xs"
+            style={{
+              top: position.top,
+              left: position.left,
+              width: Math.min(POPOVER_WIDTH, window.innerWidth - 2 * VIEWPORT_MARGIN)
+            }}
+            className="fixed z-60 rounded-xl border border-slate-200 bg-white p-3 text-xs shadow-xl"
           >
-            <div className="flex items-center justify-between gap-2 mb-2">
+            <div className="mb-2 flex items-center justify-between gap-2">
               <button
                 type="button"
                 onClick={() => setFocusDate((d) => addMonthsTo(d, -1))}
                 aria-label="Mes anterior"
-                className="p-1.5 rounded-lg text-slate-700 hover:bg-slate-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400"
+                className="rounded-lg p-1.5 text-slate-700 hover:bg-slate-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400"
               >
-                <ChevronLeft className="w-4 h-4" aria-hidden="true" />
+                <ChevronLeft className="h-4 w-4" aria-hidden="true" />
               </button>
               <h2 id={titleId} aria-live="polite" className="text-sm font-bold text-slate-900 first-letter:uppercase">
                 <span className="sr-only">{label}: </span>
@@ -240,13 +249,18 @@ export const DateField: React.FC<DateFieldProps> = ({
                 type="button"
                 onClick={() => setFocusDate((d) => addMonthsTo(d, 1))}
                 aria-label="Mes siguiente"
-                className="p-1.5 rounded-lg text-slate-700 hover:bg-slate-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400"
+                className="rounded-lg p-1.5 text-slate-700 hover:bg-slate-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400"
               >
-                <ChevronRight className="w-4 h-4" aria-hidden="true" />
+                <ChevronRight className="h-4 w-4" aria-hidden="true" />
               </button>
             </div>
 
-            <table role="grid" aria-labelledby={titleId} onKeyDown={onGridKeyDown} className="w-full table-fixed border-collapse">
+            <table
+              role="grid"
+              aria-labelledby={titleId}
+              onKeyDown={onGridKeyDown}
+              className="w-full table-fixed border-collapse"
+            >
               <thead>
                 <tr>
                   {WEEKDAYS_MONDAY_FIRST.map(({ short, name }) => (
@@ -271,7 +285,7 @@ export const DateField: React.FC<DateFieldProps> = ({
                             onClick={() => select(date)}
                             aria-label={fullDayFormat.format(toLocalDate(date))}
                             aria-current={date === today ? 'date' : undefined}
-                            className={`w-full aspect-square rounded-lg text-xs font-semibold focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 ${
+                            className={`aspect-square w-full rounded-lg text-xs font-semibold focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 ${
                               date === value
                                 ? 'bg-indigo-600 text-white hover:bg-indigo-700'
                                 : date === today
@@ -291,18 +305,18 @@ export const DateField: React.FC<DateFieldProps> = ({
               </tbody>
             </table>
 
-            <div className="flex items-center justify-between mt-2 pt-2 border-t border-slate-100">
+            <div className="mt-2 flex items-center justify-between border-t border-slate-100 pt-2">
               <button
                 type="button"
                 onClick={() => select(today)}
-                className="px-2.5 py-1 rounded-lg font-semibold text-indigo-700 hover:bg-indigo-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400"
+                className="rounded-lg px-2.5 py-1 font-semibold text-indigo-700 hover:bg-indigo-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400"
               >
                 Hoy
               </button>
               <button
                 type="button"
                 onClick={() => select('')}
-                className="px-2.5 py-1 rounded-lg font-semibold text-slate-600 hover:bg-slate-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400"
+                className="rounded-lg px-2.5 py-1 font-semibold text-slate-600 hover:bg-slate-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400"
               >
                 Borrar
               </button>

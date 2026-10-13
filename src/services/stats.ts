@@ -71,10 +71,16 @@ export const computeStats = (tasks: TaskItem[], now = new Date()): TaskStats => 
   const weeksElapsed = VELOCITY_WEEKS + (now.getTime() - weekStart.getTime()) / DAY_MS / 7;
   const estimatedMinutes = velocityTasks.reduce((sum, t) => sum + (t.estimateMinutes ?? 0), 0);
 
-  const cycles = recent.map((t) => (doneMoment(t)!.getTime() - new Date(t.createdAt).getTime()) / DAY_MS).filter((d) => d >= 0);
+  const cycles = recent
+    .map((t) => (doneMoment(t)!.getTime() - new Date(t.createdAt).getTime()) / DAY_MS)
+    .filter((d) => d >= 0);
 
   let streak = 0;
-  for (let day = countsByDay.get(toDateString(today)) ? today : addDays(today, -1); countsByDay.get(toDateString(day)); day = addDays(day, -1)) {
+  for (
+    let day = countsByDay.get(toDateString(today)) ? today : addDays(today, -1);
+    countsByDay.get(toDateString(day));
+    day = addDays(day, -1)
+  ) {
     streak++;
   }
 

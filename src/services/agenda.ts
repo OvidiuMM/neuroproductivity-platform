@@ -22,10 +22,12 @@ const pad = (n: number) => String(n).padStart(2, '0');
 const localTime = (d: Date) => `${pad(d.getHours())}:${pad(d.getMinutes())}`;
 
 // Lunes de la semana de una fecha
-export const startOfWeek = (d: Date) => addDays(new Date(d.getFullYear(), d.getMonth(), d.getDate()), -((d.getDay() + 6) % 7));
+export const startOfWeek = (d: Date) =>
+  addDays(new Date(d.getFullYear(), d.getMonth(), d.getDate()), -((d.getDay() + 6) % 7));
 
 // Días (YYYY-MM-DD) desde `start` incluido durante `count` días
-export const daysFrom = (start: Date, count: number) => Array.from({ length: count }, (_, i) => toDateString(addDays(start, i)));
+export const daysFrom = (start: Date, count: number) =>
+  Array.from({ length: count }, (_, i) => toDateString(addDays(start, i)));
 
 // Agrupa por día las tareas activas con fecha (plazos, intervalos y repeticiones previstas) y las reuniones
 export const buildAgenda = (

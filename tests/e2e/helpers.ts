@@ -133,9 +133,15 @@ export const expectNoInnerOverflow = async (page: Page, where: string) => {
     [...document.querySelectorAll('header *, main *')]
       // Los elementos SVG no son cajas: su scrollWidth no indica desbordamiento
       .filter((el) => !(el instanceof SVGElement))
-      .filter((el) => getComputedStyle(el).overflowX === 'visible' && el.clientWidth > 0 && el.scrollWidth > el.clientWidth + 1)
+      .filter(
+        (el) =>
+          getComputedStyle(el).overflowX === 'visible' && el.clientWidth > 0 && el.scrollWidth > el.clientWidth + 1
+      )
       .slice(0, 5)
-      .map((el) => `${el.tagName.toLowerCase()}«${(el.textContent ?? '').trim().slice(0, 30)}» ${el.scrollWidth}>${el.clientWidth}`)
+      .map(
+        (el) =>
+          `${el.tagName.toLowerCase()}«${(el.textContent ?? '').trim().slice(0, 30)}» ${el.scrollWidth}>${el.clientWidth}`
+      )
   );
   expect(offenders, where).toEqual([]);
 };
@@ -147,7 +153,9 @@ export const emulatorOobCode = async (email: string, requestType: 'VERIFY_EMAIL'
     .poll(
       async () => {
         const res = await fetch(`http://127.0.0.1:9399/emulator/v1/projects/${EMULATOR_PROJECT}/oobCodes`);
-        const { oobCodes } = (await res.json()) as { oobCodes: { email: string; requestType: string; oobCode: string; oobLink: string }[] };
+        const { oobCodes } = (await res.json()) as {
+          oobCodes: { email: string; requestType: string; oobCode: string; oobLink: string }[];
+        };
         code = oobCodes.filter((c) => c.email === email && c.requestType === requestType).at(-1);
         return Boolean(code);
       },

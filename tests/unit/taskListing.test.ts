@@ -28,7 +28,9 @@ const task = (id: string, overrides: Partial<TaskItem> = {}): TaskItem => ({
   ...overrides
 });
 
-const prefs = (overrides: { sortBy?: ListPrefs['sortBy']; filters?: Partial<ListPrefs['filters']> } = {}): ListPrefs => ({
+const prefs = (
+  overrides: { sortBy?: ListPrefs['sortBy']; filters?: Partial<ListPrefs['filters']> } = {}
+): ListPrefs => ({
   sortBy: overrides.sortBy ?? 'priority',
   filters: { ...DEFAULT_LIST_PREFS.filters, ...overrides.filters }
 });
@@ -58,17 +60,38 @@ describe('arrangeTasks', () => {
 
   it('sorts by effective priority, then by due date', () => {
     // far-high cuenta como MEDIA; empata con soon-medium, que vence antes
-    assert.deepEqual(ids(arrangeTasks(tasks, prefs(), now)), ['no-date-high', 'soon-medium', 'far-high', 'overdue-low']);
+    assert.deepEqual(ids(arrangeTasks(tasks, prefs(), now)), [
+      'no-date-high',
+      'soon-medium',
+      'far-high',
+      'overdue-low'
+    ]);
   });
 
   it('sorts by due date and by shortest estimate, leaving missing values last', () => {
-    assert.deepEqual(ids(arrangeTasks(tasks, prefs({ sortBy: 'deadline' }), now)), ['overdue-low', 'soon-medium', 'far-high', 'no-date-high']);
-    assert.deepEqual(ids(arrangeTasks(tasks, prefs({ sortBy: 'estimate' }), now)), ['soon-medium', 'overdue-low', 'far-high', 'no-date-high']);
+    assert.deepEqual(ids(arrangeTasks(tasks, prefs({ sortBy: 'deadline' }), now)), [
+      'overdue-low',
+      'soon-medium',
+      'far-high',
+      'no-date-high'
+    ]);
+    assert.deepEqual(ids(arrangeTasks(tasks, prefs({ sortBy: 'estimate' }), now)), [
+      'soon-medium',
+      'overdue-low',
+      'far-high',
+      'no-date-high'
+    ]);
   });
 
   it('filters by effective priority, estimate, status, deadline and area', () => {
-    assert.deepEqual(ids(arrangeTasks(tasks, prefs({ filters: { priority: 'MEDIUM' } }), now)), ['soon-medium', 'far-high']);
-    assert.deepEqual(ids(arrangeTasks(tasks, prefs({ filters: { maxEstimate: 30 } }), now)), ['soon-medium', 'overdue-low']);
+    assert.deepEqual(ids(arrangeTasks(tasks, prefs({ filters: { priority: 'MEDIUM' } }), now)), [
+      'soon-medium',
+      'far-high'
+    ]);
+    assert.deepEqual(ids(arrangeTasks(tasks, prefs({ filters: { maxEstimate: 30 } }), now)), [
+      'soon-medium',
+      'overdue-low'
+    ]);
     assert.deepEqual(ids(arrangeTasks(tasks, prefs({ filters: { status: 'BLOCKED' } }), now)), ['no-date-high']);
     assert.deepEqual(ids(arrangeTasks(tasks, prefs({ filters: { deadline: 'OVERDUE' } }), now)), ['overdue-low']);
     assert.deepEqual(ids(arrangeTasks(tasks, prefs({ filters: { deadline: 'NEXT_7_DAYS' } }), now)), ['soon-medium']);
@@ -83,7 +106,12 @@ describe('arrangeTasks', () => {
       task('familia', { wheelCategory: 'Familia' }),
       task('carrera', { wheelCategory: 'Carrera Profesional' })
     ];
-    assert.deepEqual(ids(arrangeTasks(byArea, prefs({ sortBy: 'category' }), now)), ['carrera', 'familia', 'salud', 'none']);
+    assert.deepEqual(ids(arrangeTasks(byArea, prefs({ sortBy: 'category' }), now)), [
+      'carrera',
+      'familia',
+      'salud',
+      'none'
+    ]);
   });
 
   it('counts active filters', () => {
@@ -121,17 +149,19 @@ describe('formatEstimate and parseListPrefs', () => {
   });
 
   it('defaults invalid filters without discarding valid preferences or keeping extra keys', () => {
-    const stored = parseListPrefs(JSON.stringify({
-      sortBy: 'deadline',
-      filters: {
-        priority: 'UNKNOWN',
-        maxEstimate: '60',
-        status: 'DONE',
-        deadline: 'UNKNOWN',
-        category: 'UNKNOWN',
-        extra: 'HIGH'
-      }
-    }));
+    const stored = parseListPrefs(
+      JSON.stringify({
+        sortBy: 'deadline',
+        filters: {
+          priority: 'UNKNOWN',
+          maxEstimate: '60',
+          status: 'DONE',
+          deadline: 'UNKNOWN',
+          category: 'UNKNOWN',
+          extra: 'HIGH'
+        }
+      })
+    );
     assert.deepEqual(stored, prefs({ sortBy: 'deadline' }));
     assert.equal(countActiveFilters(stored.filters), 0);
     assert.equal(arrangeTasks([task('a')], stored, now).length, 1);

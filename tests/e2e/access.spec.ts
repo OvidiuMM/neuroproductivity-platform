@@ -66,7 +66,9 @@ test('a rejected account sees it and cannot ask again right away', async ({ brow
 
   await requestAccessAs(userPage, email, 'Quiero probar la app');
   await openAccessTab(adminPage);
-  await entryIn(adminPage, /^Pendientes/, email).getByRole('button', { name: /^Rechazar/ }).click();
+  await entryIn(adminPage, /^Pendientes/, email)
+    .getByRole('button', { name: /^Rechazar/ })
+    .click();
 
   await expect(userPage.getByRole('heading', { name: 'Solicitud no aprobada' })).toBeVisible();
   await userPage.getByRole('button', { name: 'Volver a solicitar acceso' }).click();

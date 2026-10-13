@@ -28,7 +28,9 @@ test('date fields use a Monday-first calendar and dd/mm/aaaa, with keyboard supp
   const today = new Date();
   const firstOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
   const firstWeek = calendar.getByRole('row').nth(1).getByRole('gridcell');
-  await expect(firstWeek.nth((firstOfMonth.getDay() + 6) % 7).getByRole('button')).toHaveAccessibleName(fullDay.format(firstOfMonth));
+  await expect(firstWeek.nth((firstOfMonth.getDay() + 6) % 7).getByRole('button')).toHaveAccessibleName(
+    fullDay.format(firstOfMonth)
+  );
 
   // Sin fecha, el foco empieza en hoy; Inicio y Fin van al lunes y al domingo de la semana
   await expect(calendar.getByRole('button', { name: fullDay.format(today) })).toBeFocused();
@@ -58,7 +60,9 @@ test('date fields use a Monday-first calendar and dd/mm/aaaa, with keyboard supp
   await expect(dueDate).toHaveAttribute('aria-invalid', 'true');
   await page.getByRole('button', { name: 'Guardar Acción Operativa' }).click();
   await expect(page.getByRole('heading', { name: 'Captura de Nueva Acción Inmediata' })).toBeVisible();
-  expect(await dueDate.evaluate((el: HTMLInputElement) => el.validationMessage)).toBe('Escribe la fecha como dd/mm/aaaa');
+  expect(await dueDate.evaluate((el: HTMLInputElement) => el.validationMessage)).toBe(
+    'Escribe la fecha como dd/mm/aaaa'
+  );
 
   // Con el teclado: mañana con flecha derecha + Intro
   await dueDate.fill('');
@@ -67,7 +71,9 @@ test('date fields use a Monday-first calendar and dd/mm/aaaa, with keyboard supp
   await page.keyboard.press('Enter');
   await expect(calendar).toBeHidden();
   const tomorrow = fromToday(1);
-  await expect(dueDate).toHaveValue(`${pad(tomorrow.getDate())}/${pad(tomorrow.getMonth() + 1)}/${tomorrow.getFullYear()}`);
+  await expect(dueDate).toHaveValue(
+    `${pad(tomorrow.getDate())}/${pad(tomorrow.getMonth() + 1)}/${tomorrow.getFullYear()}`
+  );
 
   await page.getByRole('button', { name: 'Guardar Acción Operativa' }).click();
   await expect(page.getByRole('button', { name: 'Guardar Acción Operativa' })).toBeHidden();
@@ -77,7 +83,9 @@ test('date fields use a Monday-first calendar and dd/mm/aaaa, with keyboard supp
   await expect(page.getByRole('list', { name: 'Semana' }).getByRole('listitem').first()).toHaveAccessibleName(/^lunes/);
   await page.getByRole('button', { name: 'Por días' }).click();
   await expect(
-    page.getByRole('region', { name: new RegExp(longDay.format(tomorrow), 'i') }).getByRole('button', { name: new RegExp(title) })
+    page
+      .getByRole('region', { name: new RegExp(longDay.format(tomorrow), 'i') })
+      .getByRole('button', { name: new RegExp(title) })
   ).toBeVisible();
 });
 
@@ -108,7 +116,10 @@ test('a meeting needs a date: clearing it disables saving and says why', async (
   await page.getByRole('button', { name: 'Blindaje Bermudas' }).click();
   await page.getByRole('button', { name: 'Agendar Reunión Blindada' }).click();
   await page.getByRole('button', { name: 'Calendario: Fecha de la reunión' }).click();
-  await page.getByRole('dialog', { name: /Fecha de la reunión/ }).getByRole('button', { name: 'Borrar' }).click();
+  await page
+    .getByRole('dialog', { name: /Fecha de la reunión/ })
+    .getByRole('button', { name: 'Borrar' })
+    .click();
   await expect(page.getByLabel('Fecha', { exact: true })).toHaveAttribute('aria-invalid', 'true');
   await expect(page.getByRole('alert').filter({ hasText: 'La reunión necesita una fecha.' })).toBeVisible();
   await expect(page.getByRole('button', { name: /Guardar Convocatoria Blindada/ })).toBeDisabled();

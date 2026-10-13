@@ -1,6 +1,14 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useModalFocus } from '../hooks/useModalFocus';
-import { TaskItem, ListContext, TaskPriority, WheelCategory, TaskObservation, MonthlyMode, RecurrenceFrequency } from '../types';
+import {
+  TaskItem,
+  ListContext,
+  TaskPriority,
+  WheelCategory,
+  TaskObservation,
+  MonthlyMode,
+  RecurrenceFrequency
+} from '../types';
 import { analyzeImmediateActionSyntax, SyntaxAnalysisResult } from '../services/syntaxAnalyzer';
 import { inferWheelCategory, NLPSuggestionResult } from '../services/nlpEngine';
 import { formatTaskDates, toLocalDate, validateTaskDates } from '../services/tasks';
@@ -15,7 +23,12 @@ import {
   toDateString
 } from '../services/recurrence';
 
-const REPEAT_UNITS: Record<RecurrenceFrequency, string> = { DAILY: 'días', WEEKLY: 'semanas', MONTHLY: 'meses', YEARLY: 'años' };
+const REPEAT_UNITS: Record<RecurrenceFrequency, string> = {
+  DAILY: 'días',
+  WEEKLY: 'semanas',
+  MONTHLY: 'meses',
+  YEARLY: 'años'
+};
 const WEEKDAY_NAMES = ['domingo', 'lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado'];
 const ORDINAL_LABELS = ['', '1.er', '2.º', '3.er', '4.º'];
 // Semana empezando en lunes; `day` es el número de JavaScript (0 = domingo)
@@ -28,7 +41,18 @@ const WEEKDAY_TOGGLES = [
   { day: 6, short: 'S', name: 'Sábado' },
   { day: 0, short: 'D', name: 'Domingo' }
 ];
-import { X, AlertTriangle, Sparkles, Check, CheckCircle2, ShieldAlert, ArrowRight, ListPlus, CalendarClock, Repeat } from 'lucide-react';
+import {
+  X,
+  AlertTriangle,
+  Sparkles,
+  Check,
+  CheckCircle2,
+  ShieldAlert,
+  ArrowRight,
+  ListPlus,
+  CalendarClock,
+  Repeat
+} from 'lucide-react';
 import { DateField } from './DateField';
 
 export type TaskFormData = Omit<TaskItem, 'id' | 'createdAt' | 'updatedAt' | 'status' | 'doneAt'>;
@@ -197,7 +221,7 @@ export const TaskModal: React.FC<TaskModalProps> = ({
   };
 
   const handleRemoveObservation = (id: string) => {
-    setObservations(observations.filter(o => o.id !== id));
+    setObservations(observations.filter((o) => o.id !== id));
   };
 
   // Reglas de Validación de Entrada (Estricto cumplimiento de especificaciones)
@@ -216,18 +240,30 @@ export const TaskModal: React.FC<TaskModalProps> = ({
   // se conserva el día de la serie mientras no se cambie el inicio ni la frecuencia.
   const storedRecurrence = editingTask?.recurrence;
   const keepsStoredDay = Boolean(
-    storedRecurrence?.monthDay && editingTask?.dueDate && startDate === editingTask.dueDate && repeatFrequency === storedRecurrence.frequency
+    storedRecurrence?.monthDay &&
+    editingTask?.dueDate &&
+    startDate === editingTask.dueDate &&
+    repeatFrequency === storedRecurrence.frequency
   );
   const anchorDay = keepsStoredDay ? storedRecurrence!.monthDay! : anchor.getDate();
   const monthlyOptions: { mode: MonthlyMode; label: string }[] = [
     { mode: 'DAY_OF_MONTH', label: `El día ${anchorDay}` },
     ...(nthOfMonth(anchor) <= 4
-      ? [{ mode: 'NTH_WEEKDAY' as const, label: `El ${ORDINAL_LABELS[nthOfMonth(anchor)]} ${WEEKDAY_NAMES[anchor.getDay()]}` }]
+      ? [
+          {
+            mode: 'NTH_WEEKDAY' as const,
+            label: `El ${ORDINAL_LABELS[nthOfMonth(anchor)]} ${WEEKDAY_NAMES[anchor.getDay()]}`
+          }
+        ]
       : []),
-    ...(isLastWeekdayOfMonth(anchor) ? [{ mode: 'LAST_WEEKDAY' as const, label: `El último ${WEEKDAY_NAMES[anchor.getDay()]}` }] : [])
+    ...(isLastWeekdayOfMonth(anchor)
+      ? [{ mode: 'LAST_WEEKDAY' as const, label: `El último ${WEEKDAY_NAMES[anchor.getDay()]}` }]
+      : [])
   ];
   // Si al cambiar la fecha el modo elegido deja de existir (p. ej. ya no es el último lunes), se usa el día del mes
-  const effectiveMonthlyMode = monthlyOptions.some((o) => o.mode === repeatMonthlyMode) ? repeatMonthlyMode : 'DAY_OF_MONTH';
+  const effectiveMonthlyMode = monthlyOptions.some((o) => o.mode === repeatMonthlyMode)
+    ? repeatMonthlyMode
+    : 'DAY_OF_MONTH';
   // Semanal: mientras no se elijan días, se repite el mismo día de la semana que el inicio (y sigue al inicio si cambia)
   const weekdays = repeatWeekdays.length ? repeatWeekdays : [anchor.getDay()];
   const built = repeatFrequency
@@ -240,16 +276,17 @@ export const TaskModal: React.FC<TaskModalProps> = ({
     : undefined;
   const recurrence = built?.monthDay !== undefined ? { ...built, monthDay: anchorDay } : built;
   const firstRepetition = recurrence ? firstOccurrence(seriesStart, recurrence) : null;
-  const nextRepetition = recurrence && firstRepetition ? nextOccurrence(firstRepetition, recurrence, toLocalDate(firstRepetition)) : null;
+  const nextRepetition =
+    recurrence && firstRepetition ? nextOccurrence(firstRepetition, recurrence, toLocalDate(firstRepetition)) : null;
   const recurrenceError = !isRepeating
     ? null
     : dueDate && dueDate < seriesStart
-    ? 'La fecha límite (fin de la repetición) no puede ser anterior al inicio.'
-    : !firstRepetition
-    ? 'No hay ninguna repetición entre el inicio y la fecha límite.'
-    : startTime && dueTime && startTime > dueTime
-    ? 'La hora de inicio no puede ser posterior a la hora límite.'
-    : null;
+      ? 'La fecha límite (fin de la repetición) no puede ser anterior al inicio.'
+      : !firstRepetition
+        ? 'No hay ninguna repetición entre el inicio y la fecha límite.'
+        : startTime && dueTime && startTime > dueTime
+          ? 'La hora de inicio no puede ser posterior a la hora límite.'
+          : null;
 
   // Fechas que se guardan. Una hora sin fecha no tiene sentido y se descarta; en una tarea repetida, la fecha
   // límite guardada es la de la repetición actual (el fin de la serie va en la regla).
@@ -306,65 +343,63 @@ export const TaskModal: React.FC<TaskModalProps> = ({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex justify-center p-4 sm:p-8 bg-slate-900/60 backdrop-blur-xs overflow-y-auto">
+    <div className="fixed inset-0 z-50 flex justify-center overflow-y-auto bg-slate-900/60 p-4 backdrop-blur-xs sm:p-8">
       <div
         ref={dialogRef}
         role="dialog"
         aria-modal="true"
         aria-labelledby="task-modal-title"
-        className="bg-white rounded-2xl shadow-2xl border border-slate-200 w-full max-w-2xl my-auto overflow-hidden animate-in fade-in zoom-in-95 duration-200"
+        className="animate-in fade-in zoom-in-95 my-auto w-full max-w-2xl overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl duration-200"
       >
-        
         {/* Cabecera del Modal */}
-        <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between bg-slate-50/70">
+        <div className="flex items-center justify-between border-b border-slate-100 bg-slate-50/70 px-6 py-4">
           <div>
-            <h2 id="task-modal-title" className="text-base font-bold text-slate-900 flex items-center gap-2">
-              <ListPlus className="w-5 h-5 text-indigo-600" />
+            <h2 id="task-modal-title" className="flex items-center gap-2 text-base font-bold text-slate-900">
+              <ListPlus className="h-5 w-5 text-indigo-600" />
               {editingTask ? 'Editar Acción Operativa' : 'Captura de Nueva Acción Inmediata'}
             </h2>
-            <p className="text-xs text-slate-500 mt-0.5">
+            <p className="mt-0.5 text-xs text-slate-500">
               Filtro sintáctico prefrontal y enlace cognitivo con la Rueda de la Vida
             </p>
           </div>
           <button
             onClick={onClose}
             aria-label="Cerrar"
-            className="p-1.5 rounded-lg text-slate-500 hover:text-slate-600 hover:bg-slate-200/60 transition-colors"
+            className="rounded-lg p-1.5 text-slate-500 transition-colors hover:bg-slate-200/60 hover:text-slate-600"
           >
-            <X className="w-5 h-5" />
+            <X className="h-5 w-5" />
           </button>
         </div>
 
-        <form onSubmit={handleSubmit} className="p-6 space-y-5">
-          
+        <form onSubmit={handleSubmit} className="space-y-5 p-6">
           {/* CAMPO 1: Contexto de Lista (Segregación Estricta Módulo 2) */}
           <div>
-            <label className="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1.5">
+            <label className="mb-1.5 block text-xs font-bold tracking-wider text-slate-600 uppercase">
               Contexto Excluyente <span className="text-red-500">*</span>
             </label>
             <div className="grid grid-cols-2 gap-3">
               <button
                 type="button"
                 onClick={() => setListContext('WORK')}
-                className={`py-2 px-3 rounded-xl border text-xs font-semibold flex items-center justify-center gap-2 transition-all ${
+                className={`flex items-center justify-center gap-2 rounded-xl border px-3 py-2 text-xs font-semibold transition-all ${
                   listContext === 'WORK'
                     ? 'border-indigo-600 bg-indigo-50 text-indigo-900 shadow-xs'
                     : 'border-slate-200 text-slate-600 hover:bg-slate-50'
                 }`}
               >
-                <span className="w-2 h-2 rounded-full bg-indigo-600" />
+                <span className="h-2 w-2 rounded-full bg-indigo-600" />
                 Esfera Profesional (Trabajo)
               </button>
               <button
                 type="button"
                 onClick={() => setListContext('PERSONAL')}
-                className={`py-2 px-3 rounded-xl border text-xs font-semibold flex items-center justify-center gap-2 transition-all ${
+                className={`flex items-center justify-center gap-2 rounded-xl border px-3 py-2 text-xs font-semibold transition-all ${
                   listContext === 'PERSONAL'
                     ? 'border-emerald-600 bg-emerald-50 text-emerald-900 shadow-xs'
                     : 'border-slate-200 text-slate-600 hover:bg-slate-50'
                 }`}
               >
-                <span className="w-2 h-2 rounded-full bg-emerald-600" />
+                <span className="h-2 w-2 rounded-full bg-emerald-600" />
                 Esfera Personal (Vida)
               </button>
             </div>
@@ -372,18 +407,21 @@ export const TaskModal: React.FC<TaskModalProps> = ({
 
           {/* CAMPO 2: Nombre de la Tarea + Analizador Sintáctico de Acción Inmediata (Módulo 4) */}
           <div>
-            <div className="flex items-center justify-between mb-1.5">
-              <label htmlFor="task-title" className="text-xs font-bold uppercase tracking-wider text-slate-600">
+            <div className="mb-1.5 flex items-center justify-between">
+              <label htmlFor="task-title" className="text-xs font-bold tracking-wider text-slate-600 uppercase">
                 Acción Inmediata Siguiente <span className="text-red-500">*</span>
               </label>
-              <span className={`text-[11px] font-mono ${title.length > 100 ? 'text-red-600 font-bold' : 'text-slate-500'}`}>
+              <span
+                className={`font-mono text-[11px] ${title.length > 100 ? 'font-bold text-red-600' : 'text-slate-500'}`}
+              >
                 {title.length}/100 caracteres
               </span>
             </div>
 
             {/* Texto indicativo encima del campo: la acción empieza por un verbo físico */}
-            <p id="task-title-hint" className="text-[11px] text-slate-500 mb-1.5">
-              <strong className="text-slate-700">Verbo físico:</strong> empieza por una acción concreta que puedas hacer ya (Llamar, Enviar, Reservar…).
+            <p id="task-title-hint" className="mb-1.5 text-[11px] text-slate-500">
+              <strong className="text-slate-700">Verbo físico:</strong> empieza por una acción concreta que puedas hacer
+              ya (Llamar, Enviar, Reservar…).
             </p>
 
             <div className="relative">
@@ -398,17 +436,17 @@ export const TaskModal: React.FC<TaskModalProps> = ({
                 }}
                 onBlur={() => setTouched({ ...touched, title: true })}
                 placeholder="ej. Llamar al proveedor para acordar el plazo de entrega"
-                className={`w-full px-3.5 py-2.5 rounded-xl border text-sm transition-all focus:outline-none focus:ring-2 ${
+                className={`w-full rounded-xl border px-3.5 py-2.5 text-sm transition-all focus:ring-2 focus:outline-none ${
                   touched.title && (isTitleEmpty || isTitleTooLong || isSyntaxInvalid)
                     ? 'border-red-400 bg-red-50/20 focus:ring-red-400'
                     : syntaxResult.isValid
-                    ? 'border-emerald-300 focus:ring-emerald-400 bg-emerald-50/10'
-                    : 'border-slate-300 focus:ring-indigo-400'
+                      ? 'border-emerald-300 bg-emerald-50/10 focus:ring-emerald-400'
+                      : 'border-slate-300 focus:ring-indigo-400'
                 }`}
               />
               {syntaxResult.isValid && (
-                <div className="absolute right-3 top-3 text-emerald-700 flex items-center gap-1 text-xs font-semibold">
-                  <Check className="w-4 h-4" />
+                <div className="absolute top-3 right-3 flex items-center gap-1 text-xs font-semibold text-emerald-700">
+                  <Check className="h-4 w-4" />
                   <span className="text-[11px]">Verbo físico: {syntaxResult.detectedVerb}</span>
                 </div>
               )}
@@ -416,37 +454,39 @@ export const TaskModal: React.FC<TaskModalProps> = ({
 
             {/* Error por longitud o vacío */}
             {touched.title && isTitleEmpty && (
-              <p className="text-xs text-red-600 mt-1 flex items-center gap-1">
-                <AlertTriangle className="w-3.5 h-3.5" /> El nombre de la acción inmediata es obligatorio.
+              <p className="mt-1 flex items-center gap-1 text-xs text-red-600">
+                <AlertTriangle className="h-3.5 w-3.5" /> El nombre de la acción inmediata es obligatorio.
               </p>
             )}
             {isTitleTooLong && (
-              <p className="text-xs text-red-600 mt-1 flex items-center gap-1">
-                <AlertTriangle className="w-3.5 h-3.5" /> Supera el límite de 100 caracteres recomendado para legibilidad.
+              <p className="mt-1 flex items-center gap-1 text-xs text-red-600">
+                <AlertTriangle className="h-3.5 w-3.5" /> Supera el límite de 100 caracteres recomendado para
+                legibilidad.
               </p>
             )}
 
             {/* ASISTENTE CONTEXTUAL DEL ANALIZADOR SINTÁCTICO (Módulo 4: Antídoto a Proyectos Amorfos) */}
             {!syntaxResult.isValid && title.trim().length > 0 && !overrideSyntaxWarning && (
-              <div className="mt-2.5 p-3 rounded-xl bg-amber-50 border border-amber-200 text-amber-900 text-xs">
+              <div className="mt-2.5 rounded-xl border border-amber-200 bg-amber-50 p-3 text-xs text-amber-900">
                 <div className="flex items-start gap-2">
-                  <ShieldAlert className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
-                  <div className="space-y-1.5 flex-1">
+                  <ShieldAlert className="mt-0.5 h-4 w-4 shrink-0 text-amber-600" />
+                  <div className="flex-1 space-y-1.5">
                     <p className="font-bold">
                       {syntaxResult.warning || 'Falta un verbo transitivo de acción física motora.'}
                     </p>
                     <p className="text-amber-800">
-                      {syntaxResult.assistantQuestion || '¿Cuál es el primer paso físico e indivisible? Convierte la meta en una acción concreta.'}
+                      {syntaxResult.assistantQuestion ||
+                        '¿Cuál es el primer paso físico e indivisible? Convierte la meta en una acción concreta.'}
                     </p>
                     {syntaxResult.suggestion && (
                       <div className="flex items-center gap-2 pt-1">
                         <button
                           type="button"
                           onClick={() => applySyntaxSuggestion(syntaxResult.suggestion!)}
-                          className="px-2.5 py-1 bg-amber-700 hover:bg-amber-800 text-white font-semibold rounded-lg text-[11px] flex items-center gap-1 transition-colors"
+                          className="flex items-center gap-1 rounded-lg bg-amber-700 px-2.5 py-1 text-[11px] font-semibold text-white transition-colors hover:bg-amber-800"
                         >
                           <span>Usar sugerencia: "{syntaxResult.suggestion}"</span>
-                          <ArrowRight className="w-3 h-3" />
+                          <ArrowRight className="h-3 w-3" />
                         </button>
                         <button
                           type="button"
@@ -465,13 +505,11 @@ export const TaskModal: React.FC<TaskModalProps> = ({
 
           {/* CAMPO 3: Descripción Detallada + Motor NLP TF-IDF (Módulo 3) */}
           <div>
-            <div className="flex items-center justify-between mb-1.5">
-              <label className="text-xs font-bold uppercase tracking-wider text-slate-600">
+            <div className="mb-1.5 flex items-center justify-between">
+              <label className="text-xs font-bold tracking-wider text-slate-600 uppercase">
                 Desglose Operativo <span className="text-red-500">*</span>
               </label>
-              <span className="text-[11px] text-slate-500">
-                Captura onBlur dispara inferencia NLP TF-IDF
-              </span>
+              <span className="text-[11px] text-slate-500">Captura onBlur dispara inferencia NLP TF-IDF</span>
             </div>
             <textarea
               rows={3}
@@ -485,33 +523,35 @@ export const TaskModal: React.FC<TaskModalProps> = ({
                 triggerNLPInference();
               }}
               placeholder="Detalla el resultado esperado, personas involucradas o requerimientos físicos previos..."
-              className={`w-full px-3.5 py-2.5 rounded-xl border text-sm transition-all focus:outline-none focus:ring-2 ${
+              className={`w-full rounded-xl border px-3.5 py-2.5 text-sm transition-all focus:ring-2 focus:outline-none ${
                 touched.description && isDescriptionEmpty
                   ? 'border-red-400 bg-red-50/20 focus:ring-red-400'
                   : 'border-slate-300 focus:ring-indigo-400'
               }`}
             />
             {touched.description && isDescriptionEmpty && (
-              <p className="text-xs text-red-600 mt-1 flex items-center gap-1">
-                <AlertTriangle className="w-3.5 h-3.5" /> La descripción de la acción física es obligatoria.
+              <p className="mt-1 flex items-center gap-1 text-xs text-red-600">
+                <AlertTriangle className="h-3.5 w-3.5" /> La descripción de la acción física es obligatoria.
               </p>
             )}
 
             {/* INSIGNIA INTERACTIVA DE PROPUESTA NLP TF-IDF (Módulo 3) */}
             {nlpLoading && (
-              <p className="text-[11px] text-indigo-600 mt-1 flex items-center gap-1 animate-pulse">
-                <Sparkles className="w-3.5 h-3.5" /> Vectorizando texto y calculando similitud de cosenos...
+              <p className="mt-1 flex animate-pulse items-center gap-1 text-[11px] text-indigo-600">
+                <Sparkles className="h-3.5 w-3.5" /> Vectorizando texto y calculando similitud de cosenos...
               </p>
             )}
 
             {nlpResult && nlpResult.category && nlpResult.isAboveThreshold && (
-              <div className="mt-2 p-2.5 bg-indigo-50 border border-indigo-200 rounded-xl flex items-center justify-between text-xs animate-in fade-in">
+              <div className="animate-in fade-in mt-2 flex items-center justify-between rounded-xl border border-indigo-200 bg-indigo-50 p-2.5 text-xs">
                 <div className="flex items-center gap-2 text-indigo-950">
-                  <Sparkles className="w-4 h-4 text-indigo-600" />
+                  <Sparkles className="h-4 w-4 text-indigo-600" />
                   <div>
                     <span className="font-semibold">Sugerencia NLP TF-IDF:</span>{' '}
-                    <span>¿Vincular a <strong>{nlpResult.category}</strong>?</span>
-                    <span className="text-[11px] text-indigo-600 ml-1.5 font-mono">
+                    <span>
+                      ¿Vincular a <strong>{nlpResult.category}</strong>?
+                    </span>
+                    <span className="ml-1.5 font-mono text-[11px] text-indigo-600">
                       ({Math.round(nlpResult.confidenceScore * 100)}% de confianza)
                     </span>
                   </div>
@@ -519,9 +559,9 @@ export const TaskModal: React.FC<TaskModalProps> = ({
                 <button
                   type="button"
                   onClick={() => applyNlpSuggestion(nlpResult.category!, nlpResult.confidenceScore)}
-                  className="px-2.5 py-1 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-lg text-xs flex items-center gap-1 transition-colors"
+                  className="flex items-center gap-1 rounded-lg bg-indigo-600 px-2.5 py-1 text-xs font-bold text-white transition-colors hover:bg-indigo-700"
                 >
-                  <Check className="w-3 h-3" />
+                  <Check className="h-3 w-3" />
                   <span>Validar Vínculo</span>
                 </button>
               </div>
@@ -529,39 +569,44 @@ export const TaskModal: React.FC<TaskModalProps> = ({
           </div>
 
           {/* FILA: Prioridad Ordinal + Estimación, y debajo la Categoría de la Rueda (Enlace Cognitivo) */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             {/* Prioridad Ordinal */}
             <div>
-              <label htmlFor="task-priority" className="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1.5">
+              <label
+                htmlFor="task-priority"
+                className="mb-1.5 block text-xs font-bold tracking-wider text-slate-600 uppercase"
+              >
                 Nivel de Prioridad <span className="text-red-500">*</span>
               </label>
               <select
                 id="task-priority"
                 value={priority}
                 onChange={(e) => setPriority(e.target.value as TaskPriority)}
-                className="w-full px-3 py-2 rounded-xl border border-slate-300 text-sm font-semibold bg-white focus:outline-none focus:ring-2 focus:ring-indigo-400"
+                className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm font-semibold focus:ring-2 focus:ring-indigo-400 focus:outline-none"
               >
                 <option value="CRITICAL">🔥 Crítica (Impacto Prefrontal Máximo)</option>
                 <option value="HIGH">⚡ Alta (Ejecución Prioritaria)</option>
                 <option value="MEDIUM">⚖️ Media (Operatividad Regular)</option>
                 <option value="LOW">🌱 Baja (Baja Demanda Cognitiva)</option>
               </select>
-              <p className="text-[11px] text-slate-500 mt-1">
+              <p className="mt-1 text-[11px] text-slate-500">
                 Con la fecha límite a más de una semana, cuenta un nivel por debajo.
               </p>
             </div>
 
             {/* Estimación: duración prevista */}
             <div>
-              <label htmlFor="task-estimate" className="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1.5">
+              <label
+                htmlFor="task-estimate"
+                className="mb-1.5 block text-xs font-bold tracking-wider text-slate-600 uppercase"
+              >
                 Estimación (duración)
               </label>
               <select
                 id="task-estimate"
                 value={estimateMinutes ?? ''}
                 onChange={(e) => setEstimateMinutes(e.target.value ? Number(e.target.value) : undefined)}
-                className="w-full px-3 py-2 rounded-xl border border-slate-300 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-indigo-400"
+                className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-400 focus:outline-none"
               >
                 <option value="">(Sin estimar)</option>
                 {ESTIMATE_OPTIONS.map((o) => (
@@ -574,7 +619,10 @@ export const TaskModal: React.FC<TaskModalProps> = ({
 
             {/* Categoría Rueda de la Vida */}
             <div className="sm:col-span-2">
-              <label htmlFor="task-category" className="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1.5">
+              <label
+                htmlFor="task-category"
+                className="mb-1.5 block text-xs font-bold tracking-wider text-slate-600 uppercase"
+              >
                 Enlace Estratégico (Rueda de la Vida)
               </label>
               <select
@@ -584,7 +632,7 @@ export const TaskModal: React.FC<TaskModalProps> = ({
                   setWheelCategory((e.target.value as WheelCategory) || undefined);
                   setLinkedBy('MANUAL');
                 }}
-                className="w-full px-3 py-2 rounded-xl border border-slate-300 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-indigo-400"
+                className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-400 focus:outline-none"
               >
                 <option value="">(Sin vinculación específica)</option>
                 {WHEEL_CATEGORIES_LIST.map((cat) => (
@@ -594,23 +642,27 @@ export const TaskModal: React.FC<TaskModalProps> = ({
                 ))}
               </select>
               {wheelCategory && (
-                <p className="text-[11px] text-slate-500 mt-1">
-                  Enlace: <strong>{wheelCategory}</strong> ({linkedBy === 'AUTO_TFIDF' ? 'Inferencia TF-IDF' : 'Manual'})
+                <p className="mt-1 text-[11px] text-slate-500">
+                  Enlace: <strong>{wheelCategory}</strong> ({linkedBy === 'AUTO_TFIDF' ? 'Inferencia TF-IDF' : 'Manual'}
+                  )
                 </p>
               )}
             </div>
           </div>
 
           {/* FECHAS OPCIONALES: plazo (solo fecha límite) o intervalo (inicio + fecha límite), con hora opcional */}
-          <fieldset className="p-3.5 rounded-xl border border-slate-200 space-y-3">
-            <legend className="px-1 text-xs font-bold uppercase tracking-wider text-slate-600 flex items-center gap-1.5">
-              <CalendarClock className="w-3.5 h-3.5 text-indigo-600" />
+          <fieldset className="space-y-3 rounded-xl border border-slate-200 p-3.5">
+            <legend className="flex items-center gap-1.5 px-1 text-xs font-bold tracking-wider text-slate-600 uppercase">
+              <CalendarClock className="h-3.5 w-3.5 text-indigo-600" />
               Fechas (opcional)
             </legend>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
               <div className="space-y-1">
                 <span className="block text-[11px] font-semibold text-slate-700">
-                  Fecha límite{isRepeating && <span className="font-normal text-slate-600"> · fin de la repetición (opcional)</span>}
+                  Fecha límite
+                  {isRepeating && (
+                    <span className="font-normal text-slate-600"> · fin de la repetición (opcional)</span>
+                  )}
                 </span>
                 <div className="flex gap-2">
                   <DateField
@@ -626,7 +678,7 @@ export const TaskModal: React.FC<TaskModalProps> = ({
                     onChange={(e) => setDueTime(e.target.value)}
                     disabled={!dueDate && !isRepeating}
                     aria-label="Hora límite"
-                    className="w-24 px-2 py-1.5 rounded-lg border border-slate-300 text-xs disabled:bg-slate-100 disabled:text-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-400"
+                    className="w-24 rounded-lg border border-slate-300 px-2 py-1.5 text-xs focus:ring-2 focus:ring-indigo-400 focus:outline-none disabled:bg-slate-100 disabled:text-slate-400"
                   />
                 </div>
               </div>
@@ -634,7 +686,8 @@ export const TaskModal: React.FC<TaskModalProps> = ({
                 <span className="block text-[11px] font-semibold text-slate-700">
                   {isRepeating ? (
                     <>
-                      Inicio de la repetición<span className="font-normal text-slate-600"> (hoy si lo dejas vacío)</span>
+                      Inicio de la repetición
+                      <span className="font-normal text-slate-600"> (hoy si lo dejas vacío)</span>
                     </>
                   ) : (
                     'Inicio (para un intervalo)'
@@ -654,28 +707,33 @@ export const TaskModal: React.FC<TaskModalProps> = ({
                     onChange={(e) => setStartTime(e.target.value)}
                     disabled={!startDate && !isRepeating}
                     aria-label="Hora de inicio"
-                    className="w-24 px-2 py-1.5 rounded-lg border border-slate-300 text-xs disabled:bg-slate-100 disabled:text-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-400"
+                    className="w-24 rounded-lg border border-slate-300 px-2 py-1.5 text-xs focus:ring-2 focus:ring-indigo-400 focus:outline-none disabled:bg-slate-100 disabled:text-slate-400"
                   />
                 </div>
               </div>
             </div>
-            <p className="text-[11px] text-slate-500 leading-relaxed">
+            <p className="text-[11px] leading-relaxed text-slate-500">
               {isRepeating && 'Al repetir, cada repetición vence su propio día, con las horas indicadas. '}
-              Sin hora, el plazo termina al final del día. El título se pone <span className="text-violet-600 font-semibold">violeta</span> cuando falta menos de una semana y <span className="text-red-600 font-semibold">rojo</span> cuando ha vencido.
+              Sin hora, el plazo termina al final del día. El título se pone{' '}
+              <span className="font-semibold text-violet-600">violeta</span> cuando falta menos de una semana y{' '}
+              <span className="font-semibold text-red-600">rojo</span> cuando ha vencido.
             </p>
             {datesError && (
-              <p role="alert" className="text-xs text-red-600 font-medium flex items-center gap-1">
-                <AlertTriangle className="w-3.5 h-3.5" />
+              <p role="alert" className="flex items-center gap-1 text-xs font-medium text-red-600">
+                <AlertTriangle className="h-3.5 w-3.5" />
                 {datesError}
               </p>
             )}
 
             {/* REPETICIÓN: al marcarla Hecha se archiva y se crea la siguiente con la nueva fecha */}
-            <div className="pt-2 border-t border-slate-100 space-y-3">
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div className="space-y-3 border-t border-slate-100 pt-2">
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                 <div className="space-y-1">
-                  <label htmlFor="task-repeat" className="flex items-center gap-1 text-[11px] font-semibold text-slate-700">
-                    <Repeat className="w-3.5 h-3.5 text-indigo-600" aria-hidden="true" />
+                  <label
+                    htmlFor="task-repeat"
+                    className="flex items-center gap-1 text-[11px] font-semibold text-slate-700"
+                  >
+                    <Repeat className="h-3.5 w-3.5 text-indigo-600" aria-hidden="true" />
                     Repetir
                   </label>
                   <select
@@ -691,7 +749,7 @@ export const TaskModal: React.FC<TaskModalProps> = ({
                       }
                       setRepeatFrequency(value);
                     }}
-                    className="w-full px-2.5 py-1.5 rounded-lg border border-slate-300 text-xs bg-white focus:outline-none focus:ring-2 focus:ring-indigo-400"
+                    className="w-full rounded-lg border border-slate-300 bg-white px-2.5 py-1.5 text-xs focus:ring-2 focus:ring-indigo-400 focus:outline-none"
                   >
                     <option value="">No se repite</option>
                     <option value="DAILY">Cada día</option>
@@ -702,18 +760,18 @@ export const TaskModal: React.FC<TaskModalProps> = ({
                 </div>
                 {repeatFrequency && (
                   <div className="space-y-1">
-                      <label htmlFor="task-repeat-interval" className="block text-[11px] font-semibold text-slate-700">
-                        Cada cuántos ({REPEAT_UNITS[repeatFrequency]})
-                      </label>
-                      <input
-                        id="task-repeat-interval"
-                        type="number"
-                        min={1}
-                        max={99}
-                        value={repeatInterval}
-                        onChange={(e) => setRepeatInterval(Math.max(1, Math.min(99, Number(e.target.value) || 1)))}
-                        className="w-full px-2.5 py-1.5 rounded-lg border border-slate-300 text-xs focus:outline-none focus:ring-2 focus:ring-indigo-400"
-                      />
+                    <label htmlFor="task-repeat-interval" className="block text-[11px] font-semibold text-slate-700">
+                      Cada cuántos ({REPEAT_UNITS[repeatFrequency]})
+                    </label>
+                    <input
+                      id="task-repeat-interval"
+                      type="number"
+                      min={1}
+                      max={99}
+                      value={repeatInterval}
+                      onChange={(e) => setRepeatInterval(Math.max(1, Math.min(99, Number(e.target.value) || 1)))}
+                      className="w-full rounded-lg border border-slate-300 px-2.5 py-1.5 text-xs focus:ring-2 focus:ring-indigo-400 focus:outline-none"
+                    />
                   </div>
                 )}
               </div>
@@ -725,15 +783,19 @@ export const TaskModal: React.FC<TaskModalProps> = ({
                     {WEEKDAY_TOGGLES.map(({ day, short, name }) => (
                       <label
                         key={day}
-                        className={`px-2.5 py-1 rounded-lg border text-xs font-semibold cursor-pointer has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-indigo-400 ${
-                          weekdays.includes(day) ? 'bg-indigo-600 text-white border-indigo-600' : 'bg-white text-slate-700 border-slate-300'
+                        className={`cursor-pointer rounded-lg border px-2.5 py-1 text-xs font-semibold has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-indigo-400 ${
+                          weekdays.includes(day)
+                            ? 'border-indigo-600 bg-indigo-600 text-white'
+                            : 'border-slate-300 bg-white text-slate-700'
                         }`}
                       >
                         <input
                           type="checkbox"
                           className="sr-only"
                           checked={weekdays.includes(day)}
-                          onChange={(e) => setRepeatWeekdays(e.target.checked ? [...weekdays, day] : weekdays.filter((d) => d !== day))}
+                          onChange={(e) =>
+                            setRepeatWeekdays(e.target.checked ? [...weekdays, day] : weekdays.filter((d) => d !== day))
+                          }
                           aria-label={name}
                         />
                         {short}
@@ -748,7 +810,7 @@ export const TaskModal: React.FC<TaskModalProps> = ({
                   <legend className="text-[11px] font-semibold text-slate-700">Qué día del mes</legend>
                   <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-slate-700">
                     {monthlyOptions.map((option) => (
-                      <label key={option.mode} className="flex items-center gap-1.5 cursor-pointer">
+                      <label key={option.mode} className="flex cursor-pointer items-center gap-1.5">
                         <input
                           type="radio"
                           name="task-repeat-monthly"
@@ -763,7 +825,7 @@ export const TaskModal: React.FC<TaskModalProps> = ({
               )}
 
               {recurrence && firstRepetition && (
-                <p className="text-[11px] text-indigo-700 font-medium" role="status">
+                <p className="text-[11px] font-medium text-indigo-700" role="status">
                   {describeRecurrence(recurrence, firstRepetition)}
                   {` · Primera: ${formatTaskDates({ dueDate: firstRepetition })?.replace('Vence: ', '')}`}
                   {nextRepetition
@@ -772,8 +834,8 @@ export const TaskModal: React.FC<TaskModalProps> = ({
                 </p>
               )}
               {recurrenceError && (
-                <p role="alert" className="text-xs text-red-600 font-medium flex items-center gap-1">
-                  <AlertTriangle className="w-3.5 h-3.5" />
+                <p role="alert" className="flex items-center gap-1 text-xs font-medium text-red-600">
+                  <AlertTriangle className="h-3.5 w-3.5" />
                   {recurrenceError}
                 </p>
               )}
@@ -781,20 +843,21 @@ export const TaskModal: React.FC<TaskModalProps> = ({
           </fieldset>
 
           {/* CAMPO 4: Sumidero Cognitivo ("Quizá" / "Algún día" - HU-03) */}
-          <div className="p-3.5 rounded-xl border border-slate-200 bg-slate-50/60">
-            <label className="flex items-start gap-3 cursor-pointer">
+          <div className="rounded-xl border border-slate-200 bg-slate-50/60 p-3.5">
+            <label className="flex cursor-pointer items-start gap-3">
               <input
                 type="checkbox"
                 checked={isSomeday}
                 onChange={(e) => setIsSomeday(e.target.checked)}
-                className="mt-0.5 w-4 h-4 rounded text-indigo-600 focus:ring-indigo-500 border-slate-300"
+                className="mt-0.5 h-4 w-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
               />
               <div>
-                <span className="text-xs font-bold text-slate-800 block">
+                <span className="block text-xs font-bold text-slate-800">
                   Catalogar como "Quizá" / "Algún día" (Sumidero Cognitivo)
                 </span>
-                <span className="text-[11px] text-slate-500 block leading-relaxed mt-0.5">
-                  Externaliza deseos o iniciativas latentes sin urgencia operativa. Desaparece del Top 10 diario para liberar ancho de banda mental, pero permanece indexado en "Opciones Futuras".
+                <span className="mt-0.5 block text-[11px] leading-relaxed text-slate-500">
+                  Externaliza deseos o iniciativas latentes sin urgencia operativa. Desaparece del Top 10 diario para
+                  liberar ancho de banda mental, pero permanece indexado en "Opciones Futuras".
                 </span>
               </div>
             </label>
@@ -802,16 +865,16 @@ export const TaskModal: React.FC<TaskModalProps> = ({
 
           {/* CAMPO 5: Observaciones Ricas (JSONB) */}
           <div>
-            <label className="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1.5">
+            <label className="mb-1.5 block text-xs font-bold tracking-wider text-slate-600 uppercase">
               Observaciones y Metadatos (JSONB)
             </label>
-            <div className="flex gap-2 mb-2">
+            <div className="mb-2 flex gap-2">
               <input
                 type="text"
                 value={newObsText}
                 onChange={(e) => setNewObsText(e.target.value)}
                 placeholder="Añadir nota, enlace o sub-requisito..."
-                className="min-w-0 flex-1 px-3 py-1.5 text-xs rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-indigo-400"
+                className="min-w-0 flex-1 rounded-xl border border-slate-300 px-3 py-1.5 text-xs focus:ring-2 focus:ring-indigo-400 focus:outline-none"
                 onKeyDown={(e) => {
                   if (e.key === 'Enter') {
                     e.preventDefault();
@@ -822,23 +885,26 @@ export const TaskModal: React.FC<TaskModalProps> = ({
               <button
                 type="button"
                 onClick={handleAddObservation}
-                className="px-3 py-1.5 text-xs font-semibold bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl transition-colors"
+                className="rounded-xl bg-slate-100 px-3 py-1.5 text-xs font-semibold text-slate-700 transition-colors hover:bg-slate-200"
               >
                 Añadir
               </button>
             </div>
 
             {observations.length > 0 && (
-              <div className="space-y-1.5 max-h-28 overflow-y-auto pr-1">
+              <div className="max-h-28 space-y-1.5 overflow-y-auto pr-1">
                 {observations.map((obs) => (
-                  <div key={obs.id} className="flex items-center justify-between px-2.5 py-1 bg-slate-100 rounded-lg text-xs text-slate-700">
+                  <div
+                    key={obs.id}
+                    className="flex items-center justify-between rounded-lg bg-slate-100 px-2.5 py-1 text-xs text-slate-700"
+                  >
                     <span className="truncate">{obs.text}</span>
                     <button
                       type="button"
                       onClick={() => handleRemoveObservation(obs.id)}
-                      className="text-slate-500 hover:text-red-600 ml-2"
+                      className="ml-2 text-slate-500 hover:text-red-600"
                     >
-                      <X className="w-3.5 h-3.5" />
+                      <X className="h-3.5 w-3.5" />
                     </button>
                   </div>
                 ))}
@@ -847,27 +913,23 @@ export const TaskModal: React.FC<TaskModalProps> = ({
           </div>
 
           {/* CHECKLIST DE VALIDACIÓN EN TIEMPO REAL ANTES DE ENVIAR */}
-          <div className="p-3 bg-slate-50 border border-slate-200 rounded-xl space-y-1 text-xs">
-            <span className="font-bold text-slate-700 block mb-1">
-              Verificación de Requisitos de Entrada:
-            </span>
+          <div className="space-y-1 rounded-xl border border-slate-200 bg-slate-50 p-3 text-xs">
+            <span className="mb-1 block font-bold text-slate-700">Verificación de Requisitos de Entrada:</span>
             <div className="grid grid-cols-2 gap-2 text-[11px]">
               <div className="flex items-center gap-1.5">
                 {!isTitleEmpty && !isTitleTooLong ? (
-                  <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                  <CheckCircle2 className="h-3.5 w-3.5 shrink-0 text-emerald-600" />
                 ) : (
-                  <span className="w-3.5 h-3.5 rounded-full border border-slate-300 inline-block" />
+                  <span className="inline-block h-3.5 w-3.5 rounded-full border border-slate-300" />
                 )}
-                <span className={!isTitleEmpty ? 'text-slate-700' : 'text-slate-500'}>
-                  Título ≤ 100 caracteres
-                </span>
+                <span className={!isTitleEmpty ? 'text-slate-700' : 'text-slate-500'}>Título ≤ 100 caracteres</span>
               </div>
 
               <div className="flex items-center gap-1.5">
                 {syntaxResult.isValid || overrideSyntaxWarning ? (
-                  <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                  <CheckCircle2 className="h-3.5 w-3.5 shrink-0 text-emerald-600" />
                 ) : (
-                  <span className="w-3.5 h-3.5 rounded-full border border-slate-300 inline-block" />
+                  <span className="inline-block h-3.5 w-3.5 rounded-full border border-slate-300" />
                 )}
                 <span className={syntaxResult.isValid ? 'text-slate-700' : 'text-slate-500'}>
                   Verbo de acción física motora
@@ -876,9 +938,9 @@ export const TaskModal: React.FC<TaskModalProps> = ({
 
               <div className="flex items-center gap-1.5">
                 {!isDescriptionEmpty ? (
-                  <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                  <CheckCircle2 className="h-3.5 w-3.5 shrink-0 text-emerald-600" />
                 ) : (
-                  <span className="w-3.5 h-3.5 rounded-full border border-slate-300 inline-block" />
+                  <span className="inline-block h-3.5 w-3.5 rounded-full border border-slate-300" />
                 )}
                 <span className={!isDescriptionEmpty ? 'text-slate-700' : 'text-slate-500'}>
                   Descripción operacional
@@ -886,35 +948,34 @@ export const TaskModal: React.FC<TaskModalProps> = ({
               </div>
 
               <div className="flex items-center gap-1.5">
-                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                <CheckCircle2 className="h-3.5 w-3.5 shrink-0 text-emerald-600" />
                 <span className="text-slate-700">Contexto y Prioridad</span>
               </div>
             </div>
           </div>
 
           {/* BOTONES DE ACCIÓN */}
-          <div className="pt-2 flex items-center justify-end gap-3 border-t border-slate-100">
+          <div className="flex items-center justify-end gap-3 border-t border-slate-100 pt-2">
             <button
               type="button"
               onClick={onClose}
-              className="px-4 py-2 text-xs font-semibold text-slate-600 hover:text-slate-900 hover:bg-slate-100 rounded-xl transition-colors"
+              className="rounded-xl px-4 py-2 text-xs font-semibold text-slate-600 transition-colors hover:bg-slate-100 hover:text-slate-900"
             >
               Cancelar
             </button>
             <button
               type="submit"
               disabled={!isFormValid}
-              className={`px-5 py-2.5 text-xs font-bold rounded-xl shadow-sm transition-all flex items-center gap-2 ${
+              className={`flex items-center gap-2 rounded-xl px-5 py-2.5 text-xs font-bold shadow-sm transition-all ${
                 isFormValid
                   ? 'bg-slate-900 text-white hover:bg-slate-800'
-                  : 'bg-slate-200 text-slate-500 cursor-not-allowed shadow-none'
+                  : 'cursor-not-allowed bg-slate-200 text-slate-500 shadow-none'
               }`}
             >
-              <Check className="w-4 h-4" />
+              <Check className="h-4 w-4" />
               <span>{editingTask ? 'Actualizar Acción' : 'Guardar Acción Operativa'}</span>
             </button>
           </div>
-
         </form>
       </div>
     </div>
