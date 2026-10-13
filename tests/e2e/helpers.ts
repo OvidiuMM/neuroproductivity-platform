@@ -139,3 +139,20 @@ export const expectNoInnerOverflow = async (page: Page, where: string) => {
   );
   expect(offenders, where).toEqual([]);
 };
+
+// Enlace de un email de Firebase Auth (verificación o recuperación) que el emulador guarda en lugar de enviarlo
+export const emulatorOobCode = async (email: string, requestType: 'VERIFY_EMAIL' | 'PASSWORD_RESET') => {
+  let code: { oobCode: string; oobLink: string } | undefined;
+  await expect
+    .poll(
+      async () => {
+        const res = await fetch(`http://127.0.0.1:9399/emulator/v1/projects/${EMULATOR_PROJECT}/oobCodes`);
+        const { oobCodes } = (await res.json()) as { oobCodes: { email: string; requestType: string; oobCode: string; oobLink: string }[] };
+        code = oobCodes.filter((c) => c.email === email && c.requestType === requestType).at(-1);
+        return Boolean(code);
+      },
+      { message: `email ${requestType} para ${email}` }
+    )
+    .toBe(true);
+  return code!;
+};

@@ -43,7 +43,8 @@ import { HomeView } from './components/HomeView';
 import { AccessAdminView } from './components/AccessAdminView';
 import { AccessibilityPanel } from './components/AccessibilityPanel';
 import { setAccess, subscribeToAccessRequests, type AccessRequest, type DecisionStatus } from './services/access';
-import { deleteAccount, downloadAccountData } from './services/account';
+import { deleteAccount, downloadAccountData, signOutEverywhere } from './services/account';
+import { changePassword, hasPassword } from './services/auth';
 import { CheckCircle2, Plus } from 'lucide-react';
 
 interface AppProps {
@@ -335,7 +336,7 @@ export default function App({ user, services, isAdmin = false }: AppProps) {
 
   // CUENTA
   const handleExportData = () => downloadAccountData(services, user);
-  const handleDeleteAccount = () => deleteAccount(services, user);
+  const handleDeleteAccount = (password?: string) => deleteAccount(services, user, password);
 
   // IMPORTACIÓN DE DATOS DE LA VERSIÓN SIN CUENTAS
   const handleImportLocalData = async (profileIds: string[]) => {
@@ -586,8 +587,11 @@ export default function App({ user, services, isAdmin = false }: AppProps) {
         onClose={() => setIsAccountMenuOpen(false)}
         user={profile}
         onSignOut={() => signOutAndClearCache(services)}
+        hasPassword={hasPassword(user)}
         onExportData={handleExportData}
         onDeleteAccount={handleDeleteAccount}
+        onChangePassword={(currentPassword, newPassword) => changePassword(user, currentPassword, newPassword)}
+        onSignOutEverywhere={() => signOutEverywhere(services)}
         onOpenAccessibility={() => {
           setIsAccountMenuOpen(false);
           setIsAccessibilityOpen(true);

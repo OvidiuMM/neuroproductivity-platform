@@ -1,6 +1,6 @@
 import AxeBuilder from '@axe-core/playwright';
 import { expect, test, type Page } from '@playwright/test';
-import { ADMIN_EMAIL, fillAndSaveTask, localDateFromToday, signInWithGoogle } from './helpers';
+import { ADMIN_EMAIL, fillAndSaveTask, localDateFromToday, signInWithGoogle, uniqueEmail } from './helpers';
 
 // Auditoría automática WCAG 2.1 A y AA con axe-core en cada pantalla. Sin animaciones, para que axe no mida
 // colores a mitad de una transición.
@@ -66,6 +66,9 @@ test('main sections, forms and dialogs', async ({ page }) => {
 
   await page.getByRole('button', { name: 'Tu cuenta' }).click();
   await expectNoViolations(page, 'menú de la cuenta');
+  await page.getByRole('button', { name: 'Cerrar sesión en todos los dispositivos' }).click();
+  await page.getByRole('button', { name: 'Eliminar mi cuenta y todos mis datos' }).click();
+  await expectNoViolations(page, 'menú de la cuenta con la seguridad y la eliminación abiertas');
 
   await page.getByRole('button', { name: /^Accesibilidad/ }).click();
   await expect(page.getByRole('dialog', { name: 'Accesibilidad' })).toBeVisible();
@@ -136,6 +139,22 @@ test('high contrast and very large text', async ({ page }) => {
   await expectNoViolations(page, 'listas duales (alto contraste)');
   await page.getByRole('button', { name: 'Agenda', exact: true }).click();
   await expectNoViolations(page, 'agenda (alto contraste)');
+});
+
+test('email sign-up and email confirmation screens', async ({ page }) => {
+  await page.goto('/');
+  await page.getByRole('button', { name: 'Crear una cuenta' }).click();
+  await expectNoViolations(page, 'crear una cuenta');
+  await page.getByRole('button', { name: 'Ya tengo cuenta: entrar' }).click();
+  await page.getByRole('button', { name: '¿Olvidaste tu contraseña?' }).click();
+  await expectNoViolations(page, 'recuperar la contraseña');
+  await page.getByRole('button', { name: 'Volver a entrar' }).click();
+  await page.getByRole('button', { name: 'Crear una cuenta' }).click();
+  await page.getByLabel('Email', { exact: true }).fill(uniqueEmail());
+  await page.getByLabel('Contraseña', { exact: true }).fill('clave-segura-1');
+  await page.getByRole('button', { name: 'Crear cuenta' }).click();
+  await expect(page.getByRole('heading', { name: 'Confirma tu email' })).toBeVisible();
+  await expectNoViolations(page, 'confirmar el email');
 });
 
 test('admin access tab', async ({ page }) => {
