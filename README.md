@@ -1,4 +1,4 @@
-# NeuroProductividad — Plataforma de Gestión del Tiempo y Neurociencia Aplicada
+# CLAR — Plataforma de Gestión del Tiempo y Neurociencia Aplicada
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
 [![Version](https://img.shields.io/badge/Version-0.7.0-indigo.svg)](#)
@@ -7,11 +7,32 @@
 [![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-4.x-38bdf8.svg?logo=tailwindcss&logoColor=white)](https://tailwindcss.com/)
 [![Architecture](https://img.shields.io/badge/Architecture-Offline--First-emerald.svg)](#arquitectura-técnica)
 
-Plataforma web de **gestión del tiempo y neuroproductividad**.
+Plataforma web de **gestión del tiempo y neuroproductividad**. Hasta la versión 0.7 se llamaba NeuroProductividad.
 
 > Algunas ideas de esta app se inspiran en el libro *Gestiona tu tiempo, disfruta de la vida*, de Jonathan Benito Sipos. Este proyecto no está afiliado ni respaldado por el autor.
 
 El sistema rechaza las restricciones coercitivas (como las rotaciones atencionales arbitrarias o las "Tareas Muro" matutinas únicas), sustituyéndolas por un **andamiaje digital para la corteza prefrontal** que combina evaluación holística de la satisfacción vital, jerarquía visual basada en leyes de Gestalt, inferencia léxica TF-IDF y blindaje de la atención frente a interrupciones crónicas.
+
+---
+
+## 🎨 Marca
+
+- **Nombre:** CLAR, como «claro» sin la O: ver con claridad qué hacer ahora. Se escribe siempre en mayúsculas y con algo de espacio entre letras.
+- **Símbolo:** una lente enfocada, un anillo índigo sobre un cuadrado pizarra con un brillo blanco. Está en `src/components/BrandMark.tsx` y `public/icon.svg`. Los PNG para Android e iOS (`public/icon-192.png`, `icon-512.png`, `icon-maskable-512.png` y `apple-touch-icon.png`) salen del mismo dibujo.
+- **Colores:**
+
+  | Uso | Color | Tailwind |
+  | :--- | :--- | :--- |
+  | Fondo de marca, botones principales y texto | `#0f172a` | `slate-900` |
+  | Anillo del símbolo y acento | `#818cf8` · `#4f46e5` | `indigo-400` · `indigo-600` |
+  | Lista Profesional | `#4f46e5` | `indigo-600` |
+  | Lista Personal | `#059669` · `#047857` | `emerald-600` · `emerald-700` (texto) |
+  | Plazo cercano · vencido | `#7c3aed` · `#dc2626` | `violet-600` · `red-600` |
+  | Pendiente de sincronizar o de aprobar | `#ea580c` · `#c2410c` | `orange-600` · `orange-700` |
+
+  Los textos pequeños usan como mínimo `slate-500` sobre blanco para cumplir el contraste WCAG AA.
+- **Tipografía:** Plus Jakarta Sans para la interfaz y JetBrains Mono para cifras y versiones.
+- **Lema:** «Gestión del tiempo y neuroproductividad».
 
 ---
 
@@ -271,7 +292,8 @@ El repositorio utiliza `package-lock.json` (en la raíz y en `functions/`) como 
 │   │   ├── syntaxAnalyzer.ts    # Analizador de verbos de acción física
 │   │   └── localData.ts         # Importación de los datos de la versión sin cuentas (localStorage)
 │   └── components/
-│       ├── Navbar.tsx           # Barra superior (secciones, selector de lista, sincronización y cuenta)
+│       ├── Navbar.tsx           # Cabecera de una línea (secciones, listas, sincronización y cuenta)
+│       ├── BrandMark.tsx        # Símbolo de CLAR (lente), nombre y lema
 │       ├── TaskList.tsx         # Jerarquía Visual Gestalt (Top 10 vs Periférico) con orden y filtros
 │       ├── TaskModal.tsx        # Captura con validación sintáctica, TF-IDF, fechas y repetición
 │       ├── DateField.tsx        # Campo de fecha con calendario propio (lunes primero)

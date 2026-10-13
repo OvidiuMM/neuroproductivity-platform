@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
-import { Brain, Sparkles, CheckCircle2 } from 'lucide-react';
+import { Sparkles, CheckCircle2 } from 'lucide-react';
+import { BRAND_NAME, BRAND_TAGLINE, BrandMark } from './BrandMark';
 
 interface SplashScreenProps {
   onFinish?: () => void;
@@ -55,7 +56,7 @@ export const SplashScreen: React.FC<SplashScreenProps> = ({
         }, 200);
       }}
       role="status"
-      aria-label="Cargando NeuroProductividad"
+      aria-label={`Cargando ${BRAND_NAME}`}
       className={`fixed inset-0 z-50 bg-slate-950 flex flex-col items-center justify-between p-8 select-none transition-all duration-300 ${
         isFadingOut ? 'opacity-0 scale-98 pointer-events-none' : 'opacity-100 scale-100'
       }`}
@@ -76,21 +77,15 @@ export const SplashScreen: React.FC<SplashScreenProps> = ({
         {/* Isotipo con pulso y halo */}
         <div className="relative">
           <div className="absolute -inset-4 bg-indigo-500/20 rounded-full blur-xl animate-pulse" />
-          <div className="relative w-24 h-24 rounded-3xl bg-gradient-to-br from-indigo-500 via-indigo-600 to-slate-900 p-0.5 shadow-2xl shadow-indigo-500/30 flex items-center justify-center">
-            <div className="w-full h-full bg-slate-950 rounded-[22px] flex items-center justify-center">
-              <Brain className="w-12 h-12 text-indigo-400" />
-            </div>
+          <div className="relative shadow-2xl shadow-indigo-500/30 rounded-3xl">
+            <BrandMark size={96} />
           </div>
         </div>
 
         {/* Título de la Plataforma */}
         <div className="space-y-1.5">
-          <h1 className="text-2xl font-extrabold tracking-tight text-white">
-            NeuroProductividad
-          </h1>
-          <p className="text-xs text-indigo-300 font-medium tracking-wide">
-            Gestión del tiempo y neuroproductividad
-          </p>
+          <h1 className="text-3xl font-extrabold tracking-[0.3em] text-white">{BRAND_NAME}</h1>
+          <p className="text-xs text-indigo-300 font-medium tracking-wide">{BRAND_TAGLINE}</p>
           <p className="text-[11px] text-slate-400 pt-1 leading-relaxed max-w-xs mx-auto">
             Andamiaje neurocognitivo para la corteza prefrontal y mitigación del estrés
           </p>

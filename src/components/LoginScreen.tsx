@@ -1,5 +1,6 @@
 import React from 'react';
-import { Brain, ShieldCheck, Compass, Briefcase, Cloud } from 'lucide-react';
+import { ShieldCheck, Compass, Briefcase, Cloud } from 'lucide-react';
+import { BRAND_NAME, BRAND_TAGLINE, BrandMark } from './BrandMark';
 import { AccessibilityTrigger, AccessibleScreen } from './AccessibilityPanel';
 
 interface LoginScreenProps {
@@ -25,17 +26,15 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onSignIn, isSigningIn,
       <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4 antialiased">
         <div className="w-full max-w-md bg-white rounded-3xl border border-slate-200 shadow-xl p-8 space-y-6">
           <div className="flex items-center gap-3">
-            <div className="w-11 h-11 rounded-2xl bg-slate-900 text-white flex items-center justify-center shadow-sm">
-              <Brain className="w-6 h-6 text-indigo-400" />
-            </div>
+            <BrandMark size={44} />
             <div>
-              <h1 className="text-xl font-bold tracking-tight text-slate-900 flex items-center gap-2">
-                NeuroProductividad
+              <h1 className="text-xl font-bold text-slate-900 flex items-center gap-2">
+                <span className="tracking-[0.2em]">{BRAND_NAME}</span>
                 <span className="text-[10px] font-mono font-bold bg-indigo-50 text-indigo-700 px-1.5 py-0.5 rounded border border-indigo-200">
                   v{version}
                 </span>
               </h1>
-              <p className="text-xs text-slate-500">Gestión del tiempo y neuroproductividad</p>
+              <p className="text-xs text-slate-600">{BRAND_TAGLINE}</p>
             </div>
           </div>
 

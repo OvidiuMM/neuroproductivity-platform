@@ -18,7 +18,7 @@ const downloadJson = (filename: string, data: unknown) => {
 
 export const downloadAccountData = async ({ db }: FirebaseServices, user: User) => {
   const data = await exportUserData(db, user.uid);
-  downloadJson(`neuroproductividad-${new Date().toISOString().slice(0, 10)}.json`, {
+  downloadJson(`clar-${new Date().toISOString().slice(0, 10)}.json`, {
     exportedAt: new Date().toISOString(),
     account: { name: user.displayName, email: user.email },
     ...data

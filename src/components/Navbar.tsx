@@ -1,7 +1,8 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { AppTab, ListContext, UserProfile } from '../types';
-import { Brain, Briefcase, User, Compass, ShieldCheck, ChevronDown, BookOpen, Menu, X, CalendarDays, UserCheck, LayoutDashboard } from 'lucide-react';
+import { Briefcase, User, Compass, ShieldCheck, ChevronDown, BookOpen, Menu, X, CalendarDays, UserCheck, LayoutDashboard } from 'lucide-react';
 import { SyncIndicator, type SyncStatus } from './SyncIndicator';
+import { BRAND_NAME, BrandMark } from './BrandMark';
 
 interface NavbarProps {
   activeTab: AppTab;
@@ -106,14 +107,10 @@ export const Navbar: React.FC<NavbarProps> = ({
       <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8">
         {/* Una sola fila; solo con el texto ampliado (panel de accesibilidad) puede pasar a varias */}
         <div className="navbar-row flex flex-nowrap items-center justify-between min-h-14 py-2 gap-2 sm:gap-3">
-          {/* Marca: el nombre completo desde 1024 px; antes, el símbolo y la versión */}
+          {/* Marca: símbolo, nombre y versión en todos los tamaños */}
           <div className="flex items-center gap-2 min-w-0 shrink-0">
-            <div className="w-9 h-9 rounded-xl bg-slate-900 text-white flex items-center justify-center shadow-sm shrink-0">
-              <Brain className="w-5 h-5 text-indigo-400" aria-hidden="true" />
-            </div>
-            <span className="hidden lg:block text-lg font-bold tracking-tight text-slate-900 leading-tight whitespace-nowrap">
-              NeuroProductividad
-            </span>
+            <BrandMark size={36} />
+            <span className="text-lg font-extrabold tracking-[0.2em] text-slate-900 leading-tight whitespace-nowrap">{BRAND_NAME}</span>
             <span className="text-[10px] font-mono font-bold bg-indigo-50 text-indigo-700 px-1.5 py-0.5 rounded border border-indigo-200 whitespace-nowrap">
               v{__APP_VERSION__}
             </span>

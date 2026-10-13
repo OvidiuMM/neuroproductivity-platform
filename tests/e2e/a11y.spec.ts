@@ -7,7 +7,7 @@ import { ADMIN_EMAIL, fillAndSaveTask, localDateFromToday, signInWithGoogle } fr
 const WCAG_TAGS = ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa'];
 test.use({ reducedMotion: 'reduce' });
 
-const SPLASH = '[role="status"][aria-label="Cargando NeuroProductividad"]';
+const SPLASH = '[role="status"][aria-label="Cargando CLAR"]';
 
 // `include` limita la auditoría a una parte de la página (p. ej. la pantalla de bienvenida, que dura poco)
 const expectNoViolations = async (page: Page, screen: string, include?: string) => {

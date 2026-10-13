@@ -57,7 +57,7 @@ test('the panel is also available before signing in', async ({ page }) => {
 test('dialogs take the focus and give it back when they close', async ({ page }) => {
   await page.goto('/');
   await signInWithGoogle(page);
-  await expect(page.getByRole('status', { name: 'Cargando NeuroProductividad' })).toHaveCount(0);
+  await expect(page.getByRole('status', { name: 'Cargando CLAR' })).toHaveCount(0);
 
   // El formulario de tarea recibe el foco (su primer control); Escape lo cierra y el foco vuelve al botón que lo abrió
   const newTask = page.getByRole('button', { name: 'Nueva Tarea' });
@@ -87,7 +87,7 @@ test('with the panel open on the sign-in screen, the rest of the screen is inert
 test('a skip link jumps to the main content', async ({ page }) => {
   await page.goto('/');
   await signInWithGoogle(page);
-  await expect(page.getByRole('status', { name: 'Cargando NeuroProductividad' })).toHaveCount(0);
+  await expect(page.getByRole('status', { name: 'Cargando CLAR' })).toHaveCount(0);
   await page.keyboard.press('Tab');
   const skip = page.getByRole('link', { name: 'Saltar al contenido' });
   await expect(skip).toBeFocused();

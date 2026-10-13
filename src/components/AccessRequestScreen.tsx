@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { Brain, Clock, Download, LogOut, Send, ShieldAlert, Trash2, WifiOff } from 'lucide-react';
+import { Clock, Download, LogOut, Send, ShieldAlert, Trash2, WifiOff } from 'lucide-react';
+import { BRAND_NAME, BrandMark } from './BrandMark';
 import { ACCESS_MESSAGE_MAX_LENGTH, type OwnAccessStatus } from '../services/access';
 import { DELETE_ACCOUNT_CONFIRMATION } from '../services/account';
 import { AccessibilityTrigger, AccessibleScreen } from './AccessibilityPanel';
@@ -17,7 +18,7 @@ interface AccessRequestScreenProps {
 const COPY: Record<AccessRequestScreenProps['status'], { title: string; text: string }> = {
   none: {
     title: 'Solicita acceso',
-    text: 'El acceso a NeuroProductividad se aprueba cuenta a cuenta. Envía tu solicitud y te avisaremos por email cuando esté aprobada.'
+    text: 'El acceso a CLAR se aprueba cuenta a cuenta. Envía tu solicitud y te avisaremos por email cuando esté aprobada.'
   },
   pending: {
     title: 'Solicitud enviada',
@@ -29,7 +30,7 @@ const COPY: Record<AccessRequestScreenProps['status'], { title: string; text: st
   },
   revoked: {
     title: 'Acceso retirado',
-    text: 'Tu acceso a NeuroProductividad se ha retirado. Tus datos siguen guardados. Pasado un día puedes volver a solicitarlo.'
+    text: 'Tu acceso a CLAR se ha retirado. Tus datos siguen guardados. Pasado un día puedes volver a solicitarlo.'
   },
   unknown: {
     title: 'No se pudo comprobar tu acceso',
@@ -89,11 +90,9 @@ export const AccessRequestScreen: React.FC<AccessRequestScreenProps> = ({
         <main className="min-h-screen bg-slate-50 flex items-center justify-center p-4 antialiased">
           <div className="w-full max-w-md bg-white rounded-3xl border border-slate-200 shadow-xl p-8 space-y-6">
             <div className="flex items-center gap-3">
-              <div className="w-11 h-11 rounded-2xl bg-slate-900 text-white flex items-center justify-center shadow-sm">
-                <Brain className="w-6 h-6 text-indigo-400" aria-hidden="true" />
-              </div>
+              <BrandMark size={44} />
               <div>
-                <p className="text-xl font-bold tracking-tight text-slate-900">NeuroProductividad</p>
+                <p className="text-xl font-bold tracking-[0.2em] text-slate-900">{BRAND_NAME}</p>
                 <p className="text-xs text-slate-600">Has entrado como {email}</p>
               </div>
             </div>

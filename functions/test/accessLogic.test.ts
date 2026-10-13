@@ -77,7 +77,7 @@ describe('aprobación de accesos', () => {
     assert.match(request.text, /Mensaje:\nSoy del equipo/);
     assert.match(request.text, /«Accesos»: https:\/\/app\.example\.com/);
     const approved = buildEmail('approved', record(), 'https://app.example.com');
-    assert.equal(approved.subject, 'Ya tienes acceso a NeuroProductividad');
+    assert.equal(approved.subject, 'Ya tienes acceso a CLAR');
     assert.match(approved.text, /^Hola Ana Prueba:/);
   });
 });
