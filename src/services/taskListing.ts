@@ -95,15 +95,16 @@ export const arrangeTasks = (tasks: TaskItem[], prefs: ListPrefs, now = new Date
 // Preferencias guardadas en este dispositivo; los valores desconocidos vuelven a los de por defecto
 export const parseListPrefs = (raw: string | null): ListPrefs => {
   try {
-    const stored = raw ? JSON.parse(raw) : {};
+    const stored = (raw ? JSON.parse(raw) : {}) as { sortBy?: unknown; filters?: Record<string, unknown> };
     const filterValue = <K extends keyof ListFilters>(key: K): ListFilters[K] => {
       const value = stored.filters?.[key];
-      return FILTER_OPTIONS[key].includes(value) ? value : DEFAULT_LIST_PREFS.filters[key];
+      const options: readonly unknown[] = FILTER_OPTIONS[key];
+      return options.includes(value) ? (value as ListFilters[K]) : DEFAULT_LIST_PREFS.filters[key];
     };
     return {
       sortBy:
         typeof stored.sortBy === 'string' && Object.prototype.hasOwnProperty.call(COMPARATORS, stored.sortBy)
-          ? stored.sortBy
+          ? (stored.sortBy as ListPrefs['sortBy'])
           : DEFAULT_LIST_PREFS.sortBy,
       filters: {
         priority: filterValue('priority'),

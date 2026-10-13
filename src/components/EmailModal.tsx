@@ -193,7 +193,7 @@ export const EmailModal: React.FC<EmailModalProps> = ({ isOpen, onClose, onSendE
           {/* PASO 2 (INVERSO): CUERPO DEL CORREO CON ALERTA NO-SCROLL */}
           <div>
             <div className="mb-1 flex items-center justify-between">
-              <label className="text-xs font-bold tracking-wider text-slate-700 uppercase">
+              <label htmlFor="email-body" className="text-xs font-bold tracking-wider text-slate-700 uppercase">
                 Paso 2: Cuerpo del Correo <span className="text-red-500">*</span>
               </label>
               <div className="flex items-center gap-2 font-mono text-[11px] text-slate-500">
@@ -204,6 +204,7 @@ export const EmailModal: React.FC<EmailModalProps> = ({ isOpen, onClose, onSendE
             </div>
 
             <textarea
+              id="email-body"
               rows={4}
               value={body}
               onChange={(e) => setBody(e.target.value)}
@@ -235,10 +236,14 @@ export const EmailModal: React.FC<EmailModalProps> = ({ isOpen, onClose, onSendE
 
           {/* PASO 3: ASUNTO SINTÉTICO */}
           <div>
-            <label className="mb-1 block text-xs font-bold tracking-wider text-slate-700 uppercase">
+            <label
+              htmlFor="email-subject"
+              className="mb-1 block text-xs font-bold tracking-wider text-slate-700 uppercase"
+            >
               Paso 3: Asunto Sintético <span className="text-red-500">*</span>
             </label>
             <input
+              id="email-subject"
               type="text"
               value={subject}
               onChange={(e) => setSubject(e.target.value)}

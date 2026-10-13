@@ -5,7 +5,7 @@ import path from 'path';
 import { defineConfig } from 'vite';
 
 // package.json es la única fuente de la versión que muestra la app
-const { version } = JSON.parse(readFileSync(path.resolve(__dirname, 'package.json'), 'utf8'));
+const { version } = JSON.parse(readFileSync(path.resolve(__dirname, 'package.json'), 'utf8')) as { version: string };
 
 export default defineConfig(() => {
   return {

@@ -82,9 +82,11 @@ export const DateField: React.FC<DateFieldProps> = ({
   const invalid = parsed === null || missing;
 
   // Cambios desde fuera (sugerencia del analizador, «Hoy», otra tarea): se muestran sin pisar lo que se escribe
-  useEffect(() => {
+  const [shownValue, setShownValue] = useState(value);
+  if (shownValue !== value) {
+    setShownValue(value);
     setText((current) => (parseDateInput(current) === value ? current : formatDateInput(value)));
-  }, [value]);
+  }
 
   // Una fecha imposible (o que falta, si es obligatoria) bloquea el envío del formulario con un mensaje del navegador
   useEffect(() => {
@@ -218,6 +220,8 @@ export const DateField: React.FC<DateFieldProps> = ({
 
       {open &&
         createPortal(
+          // El calendario gestiona su propio teclado (flechas, Inicio/Fin, Escape)
+          // eslint-disable-next-line jsx-a11y/no-noninteractive-element-interactions
           <div
             ref={popoverRef}
             id={dialogId}

@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useRef, useState } from 'react';
 import { useModalFocus } from '../hooks/useModalFocus';
 import { describeAuthError, MIN_PASSWORD_LENGTH } from '../services/auth';
 import { UserProfile } from '../types';
@@ -56,13 +56,16 @@ export const AccountMenu: React.FC<AccountMenuProps> = ({
     setNewPassword('');
   };
 
-  useEffect(() => {
-    if (isOpen) return;
-    setPanel(null);
-    setError(null);
-    setNotice(null);
-    clearPasswords();
-  }, [isOpen]);
+  const [wasOpen, setWasOpen] = useState(isOpen);
+  if (wasOpen !== isOpen) {
+    setWasOpen(isOpen);
+    if (!isOpen) {
+      setPanel(null);
+      setError(null);
+      setNotice(null);
+      clearPasswords();
+    }
+  }
 
   if (!isOpen) return null;
 
@@ -93,7 +96,7 @@ export const AccountMenu: React.FC<AccountMenuProps> = ({
       setError(`La contraseña nueva debe tener al menos ${MIN_PASSWORD_LENGTH} caracteres.`);
       return;
     }
-    run(
+    void run(
       'password',
       async () => {
         await onChangePassword(currentPassword, newPassword);

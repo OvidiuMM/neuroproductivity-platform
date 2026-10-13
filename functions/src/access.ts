@@ -84,13 +84,14 @@ export const syncAccess = onCall({ region: REGION }, async (request) => {
   if (isAdminToken(auth.token, adminEmail())) {
     await db().runTransaction(async (tx) => {
       const [access, admin] = await Promise.all([tx.get(accessRef), tx.get(adminRef)]);
+      const current = access.data() as AccessRecord | undefined;
       const now = new Date().toISOString();
-      if (access.data()?.status !== 'approved') {
+      if (current?.status !== 'approved') {
         const record: AccessRecord = {
           ...profileOf(auth.token),
           message: '',
           status: 'approved',
-          requestedAt: access.data()?.requestedAt ?? now,
+          requestedAt: current?.requestedAt ?? now,
           decidedAt: now
         };
         tx.set(accessRef, record);

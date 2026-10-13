@@ -39,7 +39,7 @@ const loadConfig = async (): Promise<FirebaseOptions> => {
   if (usingEmulators) return EMULATOR_CONFIG;
   const res = await fetch('/__/firebase/init.json');
   if (!res.ok) throw new Error(`No se pudo cargar la configuración de Firebase (${res.status})`);
-  return res.json();
+  return (await res.json()) as FirebaseOptions;
 };
 
 let services: Promise<FirebaseServices> | null = null;

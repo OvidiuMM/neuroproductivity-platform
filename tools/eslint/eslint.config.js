@@ -40,6 +40,8 @@ export default defineConfig(
         'error',
         { argsIgnorePattern: '^_', varsIgnorePattern: '^_', caughtErrorsIgnorePattern: '^_' }
       ],
+      // En React, un manejador async en onClick/onSubmit es lo normal; los manejadores capturan sus errores
+      '@typescript-eslint/no-misused-promises': ['error', { checksVoidReturn: { attributes: false } }],
       // test() y describe() de node:test devuelven una promesa que el propio ejecutor espera
       '@typescript-eslint/no-floating-promises': [
         'error',
@@ -65,6 +67,8 @@ export default defineConfig(
     extends: [reactHooks.configs.flat.recommended],
     rules: {
       ...jsxA11y.flatConfigs.recommended.rules,
+      // Las etiquetas que envuelven la casilla tienen el texto un nivel más abajo (label > div > span)
+      'jsx-a11y/label-has-associated-control': ['error', { depth: 3 }],
       'react-refresh/only-export-components': ['error', { allowConstantExport: true }]
     }
   },
@@ -78,7 +82,14 @@ export default defineConfig(
   // Pruebas de extremo a extremo
   {
     files: ['tests/e2e/**/*.ts'],
-    extends: [playwright.configs['flat/recommended']]
+    extends: [playwright.configs['flat/recommended']],
+    rules: {
+      // Ayudantes de helpers.ts que hacen las comprobaciones
+      'playwright/expect-expect': [
+        'error',
+        { assertFunctionNames: ['expectNoViolations', 'expectNoHorizontalOverflow', 'expectNoInnerOverflow'] }
+      ]
+    }
   },
 
   // Desactiva las reglas de estilo que se pisan con Prettier (siempre la última)

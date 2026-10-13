@@ -108,7 +108,7 @@ test('adds a task with a due date to Google, Outlook or an .ics calendar file', 
   await menu.getByRole('menuitem', { name: /Descargar \.ics/ }).click();
   const download = await downloadPromise;
   expect(download.suggestedFilename()).toMatch(/\.ics$/);
-  const ics = readFileSync((await download.path())!, 'utf8');
+  const ics = readFileSync(await download.path(), 'utf8');
   expect(ics).toContain('BEGIN:VEVENT');
   expect(ics).toContain(`SUMMARY:${title}`);
 });

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { useModalFocus } from '../hooks/useModalFocus';
 import {
   TaskItem,
@@ -110,7 +110,14 @@ export const TaskModal: React.FC<TaskModalProps> = ({
 
   // Estados de validación en tiempo real
   const [touched, setTouched] = useState<{ [key: string]: boolean }>({});
-  const [syntaxResult, setSyntaxResult] = useState<SyntaxAnalysisResult>({ isValid: false, detectedVerb: null });
+  // Analizador Sintáctico de Acción Inmediata en tiempo real (Módulo 4)
+  const syntaxResult = useMemo<SyntaxAnalysisResult>(
+    () =>
+      title.trim()
+        ? analyzeImmediateActionSyntax(title)
+        : { isValid: false, detectedVerb: null, warning: 'El nombre es obligatorio.' },
+    [title]
+  );
   const [nlpResult, setNlpResult] = useState<NLPSuggestionResult | null>(null);
   const [nlpLoading, setNlpLoading] = useState(false);
   const [overrideSyntaxWarning, setOverrideSyntaxWarning] = useState(false);
@@ -118,6 +125,7 @@ export const TaskModal: React.FC<TaskModalProps> = ({
   // Inicializar o limpiar al abrir modal
   useEffect(() => {
     nlpRequest.current++; // descarta cualquier sugerencia NLP pendiente del formulario anterior
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- el formulario se rellena o limpia al abrirse
     setNlpLoading(false);
     if (editingTask) {
       setTitle(editingTask.title);
@@ -139,7 +147,6 @@ export const TaskModal: React.FC<TaskModalProps> = ({
       setRepeatInterval(editingTask.recurrence?.interval ?? 1);
       setRepeatWeekdays(editingTask.recurrence?.weekdays ?? []);
       setRepeatMonthlyMode(editingTask.recurrence?.monthlyMode ?? 'DAY_OF_MONTH');
-      setSyntaxResult(analyzeImmediateActionSyntax(editingTask.title));
       setOverrideSyntaxWarning(true);
     } else {
       setTitle('');
@@ -160,22 +167,11 @@ export const TaskModal: React.FC<TaskModalProps> = ({
       setWheelCategoryConfidence(undefined);
       setLinkedBy('MANUAL');
       setObservations([]);
-      setSyntaxResult({ isValid: false, detectedVerb: null });
       setNlpResult(null);
       setTouched({});
       setOverrideSyntaxWarning(false);
     }
   }, [isOpen, editingTask, initialContext, initialSomeday]);
-
-  // Ejecución del Analizador Sintáctico de Acción Inmediata en tiempo real (Módulo 4)
-  useEffect(() => {
-    if (title.trim()) {
-      const result = analyzeImmediateActionSyntax(title);
-      setSyntaxResult(result);
-    } else {
-      setSyntaxResult({ isValid: false, detectedVerb: null, warning: 'El nombre es obligatorio.' });
-    }
-  }, [title]);
 
   // Disparador del Motor NLP TF-IDF (Módulo 3) en evento onBlur o cuando hay texto suficiente
   const triggerNLPInference = () => {
@@ -374,10 +370,13 @@ export const TaskModal: React.FC<TaskModalProps> = ({
         <form onSubmit={handleSubmit} className="space-y-5 p-6">
           {/* CAMPO 1: Contexto de Lista (Segregación Estricta Módulo 2) */}
           <div>
-            <label className="mb-1.5 block text-xs font-bold tracking-wider text-slate-600 uppercase">
+            <p
+              id="task-context-label"
+              className="mb-1.5 block text-xs font-bold tracking-wider text-slate-600 uppercase"
+            >
               Contexto Excluyente <span className="text-red-500">*</span>
-            </label>
-            <div className="grid grid-cols-2 gap-3">
+            </p>
+            <div role="group" aria-labelledby="task-context-label" className="grid grid-cols-2 gap-3">
               <button
                 type="button"
                 onClick={() => setListContext('WORK')}
@@ -506,12 +505,13 @@ export const TaskModal: React.FC<TaskModalProps> = ({
           {/* CAMPO 3: Descripción Detallada + Motor NLP TF-IDF (Módulo 3) */}
           <div>
             <div className="mb-1.5 flex items-center justify-between">
-              <label className="text-xs font-bold tracking-wider text-slate-600 uppercase">
+              <label htmlFor="task-description" className="text-xs font-bold tracking-wider text-slate-600 uppercase">
                 Desglose Operativo <span className="text-red-500">*</span>
               </label>
               <span className="text-[11px] text-slate-500">Captura onBlur dispara inferencia NLP TF-IDF</span>
             </div>
             <textarea
+              id="task-description"
               rows={3}
               value={description}
               onChange={(e) => setDescription(e.target.value)}
@@ -865,11 +865,15 @@ export const TaskModal: React.FC<TaskModalProps> = ({
 
           {/* CAMPO 5: Observaciones Ricas (JSONB) */}
           <div>
-            <label className="mb-1.5 block text-xs font-bold tracking-wider text-slate-600 uppercase">
+            <label
+              htmlFor="task-note"
+              className="mb-1.5 block text-xs font-bold tracking-wider text-slate-600 uppercase"
+            >
               Observaciones y Metadatos (JSONB)
             </label>
             <div className="mb-2 flex gap-2">
               <input
+                id="task-note"
                 type="text"
                 value={newObsText}
                 onChange={(e) => setNewObsText(e.target.value)}

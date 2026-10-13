@@ -63,6 +63,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
   const contextTasks = tasks.filter((t) => t.listContext === activeContext);
   // `now` (reloj por minutos) hace que la pantalla se actualice sola; para calcular se usa la hora exacta, o una
   // tarea recién hecha quedaría fuera hasta el minuto siguiente (las estadísticas solo cuentan lo hecho hasta ahora)
+  // eslint-disable-next-line react-hooks/purity
   const at = new Date(Math.max(now.getTime(), Date.now()));
   const stats = computeStats(contextTasks, at);
   const recommendations = recommendationsFor(stats, contextTasks, wheelLogs, at);

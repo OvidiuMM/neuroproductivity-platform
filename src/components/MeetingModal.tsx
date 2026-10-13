@@ -127,12 +127,13 @@ export const MeetingModal: React.FC<MeetingModalProps> = ({ isOpen, onClose, onS
           {/* TÍTULO */}
           <div>
             <div className="mb-1 flex items-center justify-between">
-              <label className="text-xs font-bold tracking-wider text-slate-600 uppercase">
+              <label htmlFor="meeting-title" className="text-xs font-bold tracking-wider text-slate-600 uppercase">
                 Título de la Convocatoria <span className="text-red-500">*</span>
               </label>
               <span className="text-[11px] text-slate-500">{title.length}/100</span>
             </div>
             <input
+              id="meeting-title"
               type="text"
               value={title}
               onChange={(e) => setTitle(e.target.value)}
@@ -255,11 +256,15 @@ export const MeetingModal: React.FC<MeetingModalProps> = ({ isOpen, onClose, onS
 
           {/* AGENDA CERRADA OBLIGATORIA */}
           <div>
-            <label className="mb-1 block text-xs font-bold tracking-wider text-slate-600 uppercase">
+            <label
+              htmlFor="meeting-agenda-item"
+              className="mb-1 block text-xs font-bold tracking-wider text-slate-600 uppercase"
+            >
               Orden del Día Cerrado (Obligatorio) <span className="text-red-500">*</span>
             </label>
             <div className="mb-2 flex gap-2">
               <input
+                id="meeting-agenda-item"
                 type="text"
                 value={agendaInput}
                 onChange={(e) => setAgendaInput(e.target.value)}
@@ -313,10 +318,14 @@ export const MeetingModal: React.FC<MeetingModalProps> = ({ isOpen, onClose, onS
           {/* DESIGNACIÓN NOMINAL OBLIGATORIA DE MODERADOR */}
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <div>
-              <label className="mb-1 block text-xs font-bold tracking-wider text-slate-600 uppercase">
+              <label
+                htmlFor="meeting-moderator"
+                className="mb-1 block text-xs font-bold tracking-wider text-slate-600 uppercase"
+              >
                 Moderador Responsable <span className="text-red-500">*</span>
               </label>
               <input
+                id="meeting-moderator"
                 type="text"
                 value={moderatorName}
                 onChange={(e) => setModeratorName(e.target.value)}
@@ -334,10 +343,14 @@ export const MeetingModal: React.FC<MeetingModalProps> = ({ isOpen, onClose, onS
             </div>
 
             <div>
-              <label className="mb-1 block text-xs font-bold tracking-wider text-slate-600 uppercase">
+              <label
+                htmlFor="meeting-moderator-email"
+                className="mb-1 block text-xs font-bold tracking-wider text-slate-600 uppercase"
+              >
                 Email del Moderador
               </label>
               <input
+                id="meeting-moderator-email"
                 type="email"
                 value={moderatorEmail}
                 onChange={(e) => setModeratorEmail(e.target.value)}

@@ -20,7 +20,7 @@ export const approveAccess = async (email: string) => {
           `http://127.0.0.1:9399/identitytoolkit.googleapis.com/v1/projects/${EMULATOR_PROJECT}/accounts:lookup`,
           { method: 'POST', headers, body: JSON.stringify({ email: [email] }) }
         );
-        uid = (await lookup.json()).users?.[0]?.localId;
+        uid = ((await lookup.json()) as { users?: { localId: string }[] }).users?.[0]?.localId;
         return uid;
       },
       { message: `cuenta ${email} en el emulador de Auth` }
@@ -172,3 +172,9 @@ export const callFunction = (name: string, idToken: string, data: unknown) =>
     headers: { Authorization: `Bearer ${idToken}`, 'Content-Type': 'application/json' },
     body: JSON.stringify({ data })
   });
+
+// Abre una sección: en el móvil (< 768 px) están en el menú de la cabecera; en tableta y escritorio, en la cabecera
+export const openSection = async (page: Page, name: string) => {
+  if ((page.viewportSize()?.width ?? 1280) < 768) await page.getByRole('button', { name: 'Menú' }).click();
+  await page.getByRole('button', { name, exact: true }).click();
+};

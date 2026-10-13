@@ -51,7 +51,9 @@ test('agenda shows dated tasks of both lists, projected repetitions, and opens a
   const projected = page
     .getByRole('listitem', { name: new RegExp(dayLabel(9), 'i') })
     .getByRole('button', { name: new RegExp(personal) });
-  for (let i = 0; i < 2 && !(await projected.isVisible()); i++) {
+  // Semanas (de lunes a domingo) que hay que avanzar desde la actual para llegar al día 9
+  const weeksAhead = Math.floor((((new Date().getDay() + 6) % 7) + 9) / 7);
+  for (let week = 0; week < weeksAhead; week++) {
     await page.getByRole('button', { name: 'Semana siguiente' }).click();
   }
   await expect(projected).toContainText('Repetición prevista');
@@ -113,9 +115,7 @@ test('a repeated task with a start and a due date shows only its days, from the 
       .locator(':scope > li')
       .evaluateAll(
         (els, t) =>
-          els.map(
-            (el) => [...el.querySelectorAll('button')].filter((b) => b.textContent?.includes(t as string)).length
-          ),
+          els.map((el) => [...el.querySelectorAll('button')].filter((b) => b.textContent?.includes(t)).length),
         title
       );
   await page.getByRole('button', { name: 'Semana siguiente' }).click();

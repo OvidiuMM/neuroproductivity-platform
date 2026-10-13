@@ -62,7 +62,7 @@ type Owned = { id: string; userId: string };
 const readList = <T>(storage: Storage, key: string): T[] => {
   try {
     const data = storage.getItem(key);
-    return data ? JSON.parse(data) : [];
+    return data ? (JSON.parse(data) as T[]) : [];
   } catch {
     return [];
   }
