@@ -43,7 +43,8 @@ export const buildAgenda = (
     if (task.status === 'DONE' || !task.dueDate) continue;
     const base = { title: task.title, context: task.listContext, task, deadline: getDeadlineState(task, now) };
 
-    if (task.startDate && task.startDate < task.dueDate) {
+    // Una tarea repetida no es un intervalo: cada repetición ocupa solo su día
+    if (task.startDate && task.startDate < task.dueDate && !task.recurrence) {
       // Intervalo: empieza, días en curso y vence. Solo se recorre la parte visible, dure lo que dure.
       const from = task.startDate > first ? task.startDate : first;
       const to = task.dueDate < last ? task.dueDate : last;

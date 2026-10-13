@@ -83,10 +83,11 @@ const dateFormat = new Intl.DateTimeFormat('es-ES', { day: 'numeric', month: 'sh
 const formatPoint = (date: string, time?: string) =>
   `${dateFormat.format(toLocalDate(date))}${time ? `, ${time}` : ''}`;
 
-export const formatTaskDates = (task: Pick<TaskItem, 'startDate' | 'startTime' | 'dueDate' | 'dueTime'>) => {
+// Una tarea repetida nunca es un intervalo: cada repetición vence su día (las de antes de 0.8 podían tener inicio)
+export const formatTaskDates = (task: Pick<TaskItem, 'startDate' | 'startTime' | 'dueDate' | 'dueTime' | 'recurrence'>) => {
   if (!task.dueDate) return null;
   const due = formatPoint(task.dueDate, task.dueTime);
-  return task.startDate ? `${formatPoint(task.startDate, task.startTime)} → ${due}` : `Vence: ${due}`;
+  return task.startDate && !task.recurrence ? `${formatPoint(task.startDate, task.startTime)} → ${due}` : `Vence: ${due}`;
 };
 
 export const validateTaskDates = (
