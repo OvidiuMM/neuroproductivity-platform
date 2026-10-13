@@ -145,7 +145,8 @@ const cyrb53 = (text: string) => {
 // escriben el mismo documento en lugar de crear dos repeticiones.
 export const successorId = (taskId: string) => `task-r${cyrb53(taskId).toString(36)}`;
 
-// Siguiente tarea de la serie: misma tarea con la nueva fecha (y el inicio desplazado igual), pendiente y sin marcar
+// Siguiente tarea de la serie: misma tarea con la nueva fecha, pendiente y con la lista de comprobación sin marcar.
+// Cada repetición vence su propio día, así que no lleva fecha de inicio (no hay intervalo).
 export const nextRecurringTask = (task: TaskItem, now = new Date()): TaskItem | null => {
   if (!task.recurrence || !task.dueDate) return null;
   const nextDue = nextOccurrence(task.dueDate, task.recurrence, now, task.dueTime);
