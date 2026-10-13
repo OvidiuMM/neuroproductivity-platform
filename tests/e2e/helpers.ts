@@ -173,8 +173,12 @@ export const callFunction = (name: string, idToken: string, data: unknown) =>
     body: JSON.stringify({ data })
   });
 
-// Abre una sección: en el móvil (< 768 px) están en el menú de la cabecera; en tableta y escritorio, en la cabecera
+// Abre una sección. En tableta y escritorio están en la cabecera; en el móvil (< 768 px), en la barra inferior las
+// cuatro primeras y las demás en la hoja «Más»
+const BOTTOM_BAR_SECTIONS = ['Inicio', 'Listas Duales', 'Agenda', 'Rueda de la Vida'];
 export const openSection = async (page: Page, name: string) => {
-  if ((page.viewportSize()?.width ?? 1280) < 768) await page.getByRole('button', { name: 'Menú' }).click();
+  const isPhone = (page.viewportSize()?.width ?? 1280) < 768;
+  if (isPhone && !BOTTOM_BAR_SECTIONS.includes(name))
+    await page.getByRole('button', { name: /^Más secciones/ }).click();
   await page.getByRole('button', { name, exact: true }).click();
 };
