@@ -1,4 +1,4 @@
-import { expect, test, type Page } from '@playwright/test';
+import { expect, test, type Locator, type Page } from '@playwright/test';
 import { approveAccess, emulatorOobCode, uniqueEmail } from './helpers';
 
 // Esperas que pasan por una Cloud Function del emulador: con la suite en paralelo su arranque puede tardar
@@ -19,6 +19,14 @@ const signIn = async (page: Page, email: string, password: string) => {
   await page.getByLabel('Email', { exact: true }).fill(email);
   await page.getByLabel('Contraseña', { exact: true }).fill(password);
   await page.getByRole('button', { name: 'Entrar', exact: true }).click();
+};
+
+// Cerrar sesión borra la caché local y recarga la página: hay que esperar a la recarga antes de volver a entrar,
+// o lo escrito en el formulario de acceso se pierde
+const signOutWith = async (page: Page, button: Locator) => {
+  const reloaded = page.waitForEvent('load', SERVER_CALL);
+  await button.click();
+  await reloaded;
 };
 
 const openSecurity = async (page: Page) => {
@@ -48,7 +56,7 @@ test('a new account with email and password confirms its email before asking for
   await expect(page.getByRole('button', { name: 'Nueva tarea', exact: true })).toBeVisible();
   const account = await openSecurity(page);
   await expect(account).toContainText('Entras con email y contraseña');
-  await account.getByRole('button', { name: 'Cerrar sesión', exact: true }).click();
+  await signOutWith(page, account.getByRole('button', { name: 'Cerrar sesión', exact: true }));
   await signIn(page, email, PASSWORD);
   await expect(page.getByRole('button', { name: 'Nueva tarea', exact: true })).toBeVisible();
 });
@@ -57,7 +65,7 @@ test('wrong passwords are rejected and a forgotten password can be reset by emai
   const email = uniqueEmail();
   await signUp(page, email);
   await expect(page.getByRole('heading', { name: 'Confirma tu email' })).toBeVisible();
-  await page.getByRole('button', { name: 'Cerrar sesión' }).click();
+  await signOutWith(page, page.getByRole('button', { name: 'Cerrar sesión' }));
 
   await signIn(page, email, 'no-es-esta');
   await expect(page.getByRole('alert')).toHaveText('Email o contraseña incorrectos.');
@@ -103,8 +111,8 @@ test('the account changes its password, closes every session and deletes itself 
 
   // Cerrar sesión en todos los dispositivos (también en este) y volver a entrar con la nueva
   await account.getByRole('button', { name: 'Cerrar sesión en todos los dispositivos' }).click();
-  await account.getByRole('button', { name: 'Cerrar todas las sesiones' }).click();
-  await expect(page.getByRole('button', { name: 'Continuar con Google' })).toBeVisible(SERVER_CALL);
+  await signOutWith(page, account.getByRole('button', { name: 'Cerrar todas las sesiones' }));
+  await expect(page.getByRole('button', { name: 'Continuar con Google' })).toBeVisible();
   await signIn(page, email, 'otra-clave-333');
   await expect(page.getByRole('button', { name: 'Nueva tarea', exact: true })).toBeVisible();
 
@@ -112,8 +120,8 @@ test('the account changes its password, closes every session and deletes itself 
   account = await openSecurity(page);
   await account.getByRole('button', { name: 'Eliminar mi cuenta y todos mis datos' }).click();
   await account.getByLabel('Contraseña', { exact: true }).fill('otra-clave-333');
-  await account.getByRole('button', { name: 'Eliminar definitivamente' }).click();
-  await expect(page.getByRole('button', { name: 'Continuar con Google' })).toBeVisible(SERVER_CALL);
+  await signOutWith(page, account.getByRole('button', { name: 'Eliminar definitivamente' }));
+  await expect(page.getByRole('button', { name: 'Continuar con Google' })).toBeVisible();
   await signIn(page, email, 'otra-clave-333');
   await expect(page.getByRole('alert')).toHaveText('Email o contraseña incorrectos.');
 });
