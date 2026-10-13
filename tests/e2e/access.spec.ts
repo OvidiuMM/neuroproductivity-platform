@@ -1,24 +1,27 @@
 import { expect, test, type Browser, type Page } from '@playwright/test';
 import { ADMIN_EMAIL, expectNoHorizontalOverflow, signInWithGoogle, uniqueEmail } from './helpers';
 
+// Esperas que pasan por una Cloud Function del emulador: con la suite en paralelo su arranque puede tardar
+const SERVER_CALL = { timeout: 15_000 };
+
 const openPage = async (browser: Browser) => (await browser.newContext()).newPage();
 
 // Cuenta nueva que pide acceso con un mensaje
 const requestAccessAs = async (page: Page, email: string, message: string) => {
   await page.goto('/');
   await signInWithGoogle(page, email, 'Persona de Prueba', { approve: false });
-  await expect(page.getByRole('heading', { name: 'Solicita acceso' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Solicita acceso' })).toBeVisible(SERVER_CALL);
   await expect(page.getByRole('button', { name: 'Tu cuenta' })).toHaveCount(0);
   await page.getByLabel('Mensaje para la administración (opcional)').fill(message);
   await page.getByRole('button', { name: 'Solicitar acceso' }).click();
-  await expect(page.getByRole('heading', { name: 'Solicitud enviada' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Solicitud enviada' })).toBeVisible(SERVER_CALL);
 };
 
 const openAccessTab = async (page: Page) => {
   await page.goto('/');
   await signInWithGoogle(page, ADMIN_EMAIL, 'Administración', { approve: false });
   // La cuenta de administración se aprueba sola y ve la pestaña con el número de pendientes
-  await expect(page.getByRole('button', { name: 'Tu cuenta' })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Tu cuenta' })).toBeVisible(SERVER_CALL);
   await page.getByRole('button', { name: /^Accesos, \d+ pendientes$/ }).click();
   await expect(page.getByRole('heading', { name: 'Accesos' })).toBeVisible();
 };
