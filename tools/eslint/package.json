@@ -1,0 +1,19 @@
+{
+  "name": "clar-eslint",
+  "private": true,
+  "description": "ESLint con su propio TypeScript 5.9: typescript-eslint aún no admite el TypeScript 7 del proyecto",
+  "type": "module",
+  "devDependencies": {
+    "@eslint/compat": "2.1.1",
+    "@eslint/js": "10.0.1",
+    "eslint": "10.12.0",
+    "eslint-config-prettier": "10.1.8",
+    "eslint-plugin-jsx-a11y": "6.10.2",
+    "eslint-plugin-playwright": "2.12.1",
+    "eslint-plugin-react-hooks": "7.1.1",
+    "eslint-plugin-react-refresh": "0.5.7",
+    "globals": "17.13.0",
+    "typescript": "5.9.3",
+    "typescript-eslint": "8.71.2"
+  }
+}
