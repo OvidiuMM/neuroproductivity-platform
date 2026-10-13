@@ -11,7 +11,7 @@ for (const viewport of [
     await page.goto('/');
     await signInWithGoogle(page);
 
-    await page.getByRole('button', { name: /^(Nueva )?Tarea$/ }).click();
+    await page.getByRole('button', { name: 'Nueva tarea', exact: true }).click();
     await expect(page.getByRole('heading', { name: 'Captura de Nueva Acción Inmediata' })).toBeInViewport();
     await expect(page.getByRole('button', { name: 'Cerrar' }).first()).toBeInViewport();
 
