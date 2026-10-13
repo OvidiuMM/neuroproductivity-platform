@@ -1,5 +1,5 @@
 import { expect, test, type Locator, type Page } from '@playwright/test';
-import { approveAccess, emulatorOobCode, uniqueEmail } from './helpers';
+import { approveAccess, callFunction, EMULATOR_PROJECT, emulatorOobCode, uniqueEmail } from './helpers';
 
 // Esperas que pasan por una Cloud Function del emulador: con la suite en paralelo su arranque puede tardar
 const SERVER_CALL = { timeout: 15_000 };
@@ -61,6 +61,28 @@ test('a new account with email and password confirms its email before asking for
   await expect(page.getByRole('button', { name: 'Nueva tarea', exact: true })).toBeVisible();
 });
 
+test('the server refuses an access request from an account whose email is not confirmed', async () => {
+  // Cuenta con contraseña creada en el emulador de Auth, sin confirmar el email, que llama a la función sin pasar por la app
+  const signUp = await fetch('http://127.0.0.1:9399/identitytoolkit.googleapis.com/v1/accounts:signUp?key=demo-api-key', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email: uniqueEmail(), password: PASSWORD, returnSecureToken: true })
+  });
+  expect(signUp.ok).toBe(true);
+  const { idToken, localId } = (await signUp.json()) as { idToken: string; localId: string };
+
+  const res = await callFunction('requestAccess', idToken, { message: 'Hola' });
+  expect(res.status).toBe(403);
+  expect(((await res.json()) as { error: { status: string } }).error.status).toBe('PERMISSION_DENIED');
+
+  // Y no queda ninguna solicitud guardada
+  const access = await fetch(
+    `http://127.0.0.1:8281/v1/projects/${EMULATOR_PROJECT}/databases/(default)/documents/access/${localId}`,
+    { headers: { Authorization: 'Bearer owner' } }
+  );
+  expect(access.status).toBe(404);
+});
+
 test('wrong passwords are rejected and a forgotten password can be reset by email', async ({ page }) => {
   const email = uniqueEmail();
   await signUp(page, email);
@@ -101,9 +123,15 @@ test('the account changes its password, closes every session and deletes itself 
   await approveAccess(email);
   await expect(page.getByRole('button', { name: 'Nueva tarea', exact: true })).toBeVisible();
 
-  // Cambiar la contraseña
+  // Cambiar la contraseña. Lo escrito no se conserva al cerrar el diálogo
   let account = await openSecurity(page);
   await account.getByRole('button', { name: 'Cambiar la contraseña' }).click();
+  await account.getByLabel('Contraseña actual').fill(PASSWORD);
+  await account.getByRole('button', { name: 'Cerrar', exact: true }).click();
+  account = await openSecurity(page);
+  await expect(account.getByLabel('Contraseña actual')).toHaveCount(0);
+  await account.getByRole('button', { name: 'Cambiar la contraseña' }).click();
+  await expect(account.getByLabel('Contraseña actual')).toHaveValue('');
   await account.getByLabel('Contraseña actual').fill(PASSWORD);
   await account.getByLabel('Contraseña nueva').fill('otra-clave-333');
   await account.getByRole('button', { name: 'Guardar la contraseña nueva' }).click();

@@ -85,7 +85,7 @@ export const buildEmail = (kind: AccessEmail, record: AccessRecord, appUrl: stri
         text: [
           `Hola${record.name ? ` ${record.name}` : ''}:`,
           '',
-          'Tu solicitud de acceso a CLAR está aprobada. Ya puedes entrar con tu cuenta de Google:',
+          'Tu solicitud de acceso a CLAR está aprobada. Ya puedes entrar con la misma cuenta con la que la pediste:',
           appUrl
         ].join('\n')
       };

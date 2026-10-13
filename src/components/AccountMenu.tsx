@@ -1,4 +1,4 @@
-import React, { useRef, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { useModalFocus } from '../hooks/useModalFocus';
 import { describeAuthError, MIN_PASSWORD_LENGTH } from '../services/auth';
 import { UserProfile } from '../types';
@@ -49,6 +49,20 @@ export const AccountMenu: React.FC<AccountMenuProps> = ({
   const dialogRef = useRef<HTMLDivElement>(null);
   useModalFocus(isOpen, dialogRef, onClose);
 
+  // El menú sigue montado cerrado: lo escrito (contraseñas incluidas) no debe verse al volver a abrirlo
+  const clearPasswords = () => {
+    setCurrentPassword('');
+    setNewPassword('');
+  };
+
+  useEffect(() => {
+    if (isOpen) return;
+    setPanel(null);
+    setError(null);
+    setNotice(null);
+    clearPasswords();
+  }, [isOpen]);
+
   if (!isOpen) return null;
 
   const run = async (kind: Exclude<Busy, null>, action: () => Promise<void>, done?: string) => {
@@ -69,6 +83,7 @@ export const AccountMenu: React.FC<AccountMenuProps> = ({
     setPanel((current) => (current === next ? null : next));
     setError(null);
     setNotice(null);
+    clearPasswords();
   };
 
   const submitPassword = (e: React.FormEvent) => {
@@ -81,8 +96,7 @@ export const AccountMenu: React.FC<AccountMenuProps> = ({
       'password',
       async () => {
         await onChangePassword(currentPassword, newPassword);
-        setCurrentPassword('');
-        setNewPassword('');
+        clearPasswords();
         setPanel(null);
       },
       'Contraseña cambiada.'

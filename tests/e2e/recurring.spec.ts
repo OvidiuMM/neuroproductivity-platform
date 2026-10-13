@@ -82,17 +82,18 @@ test('editing a repetition that fell on a shorter month keeps the series day', a
   await page.goto('/');
   await signInWithGoogle(page);
   await page.getByRole('button', { name: 'Listas Duales' }).click();
-  // Cada mes el día 31, desde el 31 de enero del año que viene: la de febrero cae el 28
+  // Cada mes el día 31, desde el 31 de enero del año que viene: la de febrero cae en su último día (28 o 29)
   const year = new Date().getFullYear() + 1;
+  const endOfFebruary = new Date(year, 2, 0);
   const title = `Pagar el alquiler ${Date.now().toString(36)}`;
   await page.getByRole('button', { name: 'Capturar Primera Acción' }).click();
   await page.getByLabel('Repetir').selectOption('MONTHLY');
   await page.getByLabel('Fecha de inicio', { exact: true }).fill(`${year}-01-31`);
   await fillAndSaveTask(page, { title });
   await page.getByLabel(`Estado de «${title}»`).selectOption('DONE');
-  await expect(page.getByText(dateFormat.format(new Date(year, 1, 28)).replace(/ \d{4}$/, ''), { exact: false }).first()).toBeVisible();
+  await expect(page.getByText(dateFormat.format(endOfFebruary).replace(/ \d{4}$/, ''), { exact: false }).first()).toBeVisible();
 
-  // Abrir y guardar la de febrero sin cambios no mueve la serie al día 28
+  // Abrir y guardar la de febrero sin cambios no mueve la serie a su último día
   await page.getByRole('button', { name: `Editar «${title}»` }).click();
   await expect(page.getByRole('radio', { name: 'El día 31' })).toBeChecked();
   await page.getByRole('button', { name: 'Actualizar Acción' }).click();

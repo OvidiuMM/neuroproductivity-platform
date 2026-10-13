@@ -28,7 +28,7 @@ const SIGN_IN_ERRORS: Record<string, string> = {
 const describeSignInError = (error: unknown) =>
   (error instanceof FirebaseError && SIGN_IN_ERRORS[error.code]) || 'No se pudo iniciar sesión. Inténtalo de nuevo.';
 
-// Inicio de sesión obligatorio: la app solo se muestra con una cuenta de Google
+// Inicio de sesión obligatorio: la app solo se muestra con una cuenta (Google o email y contraseña)
 export const AuthGate: React.FC = () => {
   const [state, setState] = useState<AuthState>({ status: 'loading' });
   const [isSigningIn, setIsSigningIn] = useState(false);

@@ -66,7 +66,7 @@ export default function App({ user, services, isAdmin = false }: AppProps) {
   const { db } = services;
   const uid = user.uid;
 
-  // Perfil para la interfaz a partir de la cuenta de Google
+  // Perfil para la interfaz a partir de la cuenta (Google o email)
   const profile: UserProfile = {
     id: uid,
     name: user.displayName || user.email || 'Tu cuenta',
