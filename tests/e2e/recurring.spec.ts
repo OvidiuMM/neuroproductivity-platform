@@ -25,8 +25,9 @@ test('a task repeated on the second Monday of every month creates its next occur
 
   const title = `Preparar el informe mensual ${Date.now().toString(36)}`;
   await page.getByRole('button', { name: 'Capturar Primera Acción' }).click();
-  await page.getByLabel('Fecha límite', { exact: true }).fill(toDateString(due));
+  // Al repetir, «Inicio» es desde cuándo se repite y ancla la regla (el 2.º lunes)
   await page.getByLabel('Repetir').selectOption('MONTHLY');
+  await page.getByLabel('Fecha de inicio', { exact: true }).fill(toDateString(due));
   await page.getByRole('radio', { name: 'El 2.º lunes' }).check();
   // El formulario resume la regla y la próxima fecha
   await expect(page.getByRole('status').filter({ hasText: 'Cada mes, el 2.º lunes' })).toContainText(dateFormat.format(next));

@@ -54,6 +54,15 @@ const stepAfter = (from: Date, rec: Recurrence): Date => {
   }
 };
 
+// Primera fecha de la serie el día `from` o después, con la regla anclada en `from` (inicio de la repetición).
+// Devuelve null si cae después de `until`.
+export const firstOccurrence = (from: string, rec: Recurrence): string | null => {
+  const start = toLocalDate(from);
+  const startMatches = rec.frequency !== 'WEEKLY' || !rec.weekdays?.length || rec.weekdays.includes(start.getDay());
+  const first = toDateString(startMatches ? start : stepAfter(start, rec));
+  return rec.until && first > rec.until ? null : first;
+};
+
 // Momento en que vence una fecha de la serie: a la hora límite o, sin hora, al final del día
 const deadlineOf = (d: Date, dueTime?: string) => {
   if (!dueTime) return addDays(d, 1);
@@ -141,14 +150,13 @@ export const nextRecurringTask = (task: TaskItem, now = new Date()): TaskItem | 
   if (!task.recurrence || !task.dueDate) return null;
   const nextDue = nextOccurrence(task.dueDate, task.recurrence, now, task.dueTime);
   if (!nextDue) return null;
-  const shiftDays = Math.round((toLocalDate(nextDue).getTime() - toLocalDate(task.dueDate).getTime()) / 86_400_000);
-  const { doneAt: _doneAt, nextOccurrenceId: _nextOccurrenceId, ...rest } = task;
+  // Cada repetición vence su propio día: sin fecha de inicio (las tareas de antes de 0.8 podían tenerla)
+  const { doneAt: _doneAt, nextOccurrenceId: _nextOccurrenceId, startDate: _startDate, ...rest } = task;
   return {
     ...rest,
     id: successorId(task.id),
     status: 'PENDING',
     dueDate: nextDue,
-    ...(task.startDate ? { startDate: toDateString(addDays(toLocalDate(task.startDate), shiftDays)) } : {}),
     observations: task.observations.map((o) => (o.type === 'checklist' ? { ...o, completed: false } : o)),
     createdAt: now.toISOString(),
     updatedAt: now.toISOString()

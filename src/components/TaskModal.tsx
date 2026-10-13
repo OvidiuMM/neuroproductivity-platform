@@ -8,9 +8,11 @@ import { ESTIMATE_OPTIONS } from '../services/taskListing';
 import {
   buildRecurrence,
   describeRecurrence,
+  firstOccurrence,
   isLastWeekdayOfMonth,
   nextOccurrence,
-  nthOfMonth
+  nthOfMonth,
+  toDateString
 } from '../services/recurrence';
 
 const REPEAT_UNITS: Record<RecurrenceFrequency, string> = { DAILY: 'días', WEEKLY: 'semanas', MONTHLY: 'meses', YEARLY: 'años' };
@@ -81,7 +83,6 @@ export const TaskModal: React.FC<TaskModalProps> = ({
   const [repeatInterval, setRepeatInterval] = useState(1);
   const [repeatWeekdays, setRepeatWeekdays] = useState<number[]>([]);
   const [repeatMonthlyMode, setRepeatMonthlyMode] = useState<MonthlyMode>('DAY_OF_MONTH');
-  const [repeatUntil, setRepeatUntil] = useState('');
 
   // Estados de validación en tiempo real
   const [touched, setTouched] = useState<{ [key: string]: boolean }>({});
@@ -104,16 +105,16 @@ export const TaskModal: React.FC<TaskModalProps> = ({
       setWheelCategoryConfidence(editingTask.wheelCategoryConfidence);
       setLinkedBy(editingTask.linkedBy || 'MANUAL');
       setObservations(editingTask.observations || []);
-      setStartDate(editingTask.startDate ?? '');
+      // Una tarea repetida se edita como serie: desde su repetición actual hasta la fecha límite de la serie
+      setStartDate((editingTask.recurrence ? editingTask.dueDate : editingTask.startDate) ?? '');
       setStartTime(editingTask.startTime ?? '');
-      setDueDate(editingTask.dueDate ?? '');
+      setDueDate((editingTask.recurrence ? editingTask.recurrence.until : editingTask.dueDate) ?? '');
       setDueTime(editingTask.dueTime ?? '');
       setEstimateMinutes(editingTask.estimateMinutes);
       setRepeatFrequency(editingTask.recurrence?.frequency ?? '');
       setRepeatInterval(editingTask.recurrence?.interval ?? 1);
       setRepeatWeekdays(editingTask.recurrence?.weekdays ?? []);
       setRepeatMonthlyMode(editingTask.recurrence?.monthlyMode ?? 'DAY_OF_MONTH');
-      setRepeatUntil(editingTask.recurrence?.until ?? '');
       setSyntaxResult(analyzeImmediateActionSyntax(editingTask.title));
       setOverrideSyntaxWarning(true);
     } else {
@@ -131,7 +132,6 @@ export const TaskModal: React.FC<TaskModalProps> = ({
       setRepeatInterval(1);
       setRepeatWeekdays([]);
       setRepeatMonthlyMode('DAY_OF_MONTH');
-      setRepeatUntil('');
       setWheelCategory(undefined);
       setWheelCategoryConfidence(undefined);
       setLinkedBy('MANUAL');
@@ -205,47 +205,55 @@ export const TaskModal: React.FC<TaskModalProps> = ({
   const isTitleTooLong = title.length > 100;
   const isSyntaxInvalid = !syntaxResult.isValid && !overrideSyntaxWarning;
   const isDescriptionEmpty = !description.trim();
-  // Una hora sin fecha no tiene sentido: se descarta
-  const dates = {
-    startDate: startDate || undefined,
-    startTime: (startDate && startTime) || undefined,
-    dueDate: dueDate || undefined,
-    dueTime: (dueDate && dueTime) || undefined
-  };
-  const datesError = validateTaskDates(dates);
-
-  // Repetición: los anclajes (día del mes, N.º día de la semana) salen de la fecha límite
-  const dueDateValue = dueDate ? toLocalDate(dueDate) : null;
-  const monthlyOptions: { mode: MonthlyMode; label: string }[] = dueDateValue
-    ? [
-        { mode: 'DAY_OF_MONTH', label: `El día ${dueDateValue.getDate()}` },
-        ...(nthOfMonth(dueDateValue) <= 4
-          ? [{ mode: 'NTH_WEEKDAY' as const, label: `El ${ORDINAL_LABELS[nthOfMonth(dueDateValue)]} ${WEEKDAY_NAMES[dueDateValue.getDay()]}` }]
-          : []),
-        ...(isLastWeekdayOfMonth(dueDateValue)
-          ? [{ mode: 'LAST_WEEKDAY' as const, label: `El último ${WEEKDAY_NAMES[dueDateValue.getDay()]}` }]
-          : [])
-      ]
-    : [];
+  // REPETICIÓN: las fechas delimitan la serie. «Inicio» es desde cuándo se repite (hoy si se deja vacío) y la
+  // fecha límite es la última fecha posible (la «fecha hasta» de la serie: un solo valor). Cada repetición vence
+  // su propio día, con la hora límite; ninguna se pinta como un intervalo.
+  const isRepeating = Boolean(repeatFrequency);
+  const seriesStart = startDate || toDateString(new Date());
+  const anchor = toLocalDate(seriesStart);
+  // Los anclajes de la regla (día del mes, N.º día de la semana) salen del inicio de la serie
+  const monthlyOptions: { mode: MonthlyMode; label: string }[] = [
+    { mode: 'DAY_OF_MONTH', label: `El día ${anchor.getDate()}` },
+    ...(nthOfMonth(anchor) <= 4
+      ? [{ mode: 'NTH_WEEKDAY' as const, label: `El ${ORDINAL_LABELS[nthOfMonth(anchor)]} ${WEEKDAY_NAMES[anchor.getDay()]}` }]
+      : []),
+    ...(isLastWeekdayOfMonth(anchor) ? [{ mode: 'LAST_WEEKDAY' as const, label: `El último ${WEEKDAY_NAMES[anchor.getDay()]}` }] : [])
+  ];
   // Si al cambiar la fecha el modo elegido deja de existir (p. ej. ya no es el último lunes), se usa el día del mes
   const effectiveMonthlyMode = monthlyOptions.some((o) => o.mode === repeatMonthlyMode) ? repeatMonthlyMode : 'DAY_OF_MONTH';
-  const recurrence =
-    repeatFrequency && dueDate
-      ? buildRecurrence(repeatFrequency, dueDate, {
-          interval: repeatInterval,
-          weekdays: repeatWeekdays,
-          monthlyMode: effectiveMonthlyMode,
-          until: repeatUntil || undefined
-        })
-      : undefined;
-  const recurrenceError = !repeatFrequency
+  // Semanal: mientras no se elijan días, se repite el mismo día de la semana que el inicio (y sigue al inicio si cambia)
+  const weekdays = repeatWeekdays.length ? repeatWeekdays : [anchor.getDay()];
+  const recurrence = repeatFrequency
+    ? buildRecurrence(repeatFrequency, seriesStart, {
+        interval: repeatInterval,
+        weekdays,
+        monthlyMode: effectiveMonthlyMode,
+        until: dueDate || undefined
+      })
+    : undefined;
+  const firstRepetition = recurrence ? firstOccurrence(seriesStart, recurrence) : null;
+  const nextRepetition = recurrence && firstRepetition ? nextOccurrence(firstRepetition, recurrence, toLocalDate(firstRepetition)) : null;
+  const recurrenceError = !isRepeating
     ? null
-    : !dueDate
-    ? 'Para repetir la tarea indica la fecha límite.'
-    : repeatUntil && repeatUntil < dueDate
-    ? 'La fecha «hasta» no puede ser anterior a la fecha límite.'
+    : dueDate && dueDate < seriesStart
+    ? 'La fecha límite (fin de la repetición) no puede ser anterior al inicio.'
+    : !firstRepetition
+    ? 'No hay ninguna repetición entre el inicio y la fecha límite.'
+    : startTime && dueTime && startTime > dueTime
+    ? 'La hora de inicio no puede ser posterior a la hora límite.'
     : null;
-  const nextRepetition = recurrence && dueDate ? nextOccurrence(dueDate, recurrence, toLocalDate(dueDate)) : null;
+
+  // Fechas que se guardan. Una hora sin fecha no tiene sentido y se descarta; en una tarea repetida, la fecha
+  // límite guardada es la de la repetición actual (el fin de la serie va en la regla).
+  const dates = isRepeating
+    ? { startTime: startTime || undefined, dueDate: firstRepetition ?? undefined, dueTime: dueTime || undefined }
+    : {
+        startDate: startDate || undefined,
+        startTime: (startDate && startTime) || undefined,
+        dueDate: dueDate || undefined,
+        dueTime: (dueDate && dueTime) || undefined
+      };
+  const datesError = isRepeating ? null : validateTaskDates(dates);
 
   const isFormValid =
     !isTitleEmpty &&
@@ -593,7 +601,9 @@ export const TaskModal: React.FC<TaskModalProps> = ({
             </legend>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div className="space-y-1">
-                <span className="block text-[11px] font-semibold text-slate-700">Fecha límite</span>
+                <span className="block text-[11px] font-semibold text-slate-700">
+                  Fecha límite{isRepeating && <span className="font-normal text-slate-600"> · fin de la repetición (opcional)</span>}
+                </span>
                 <div className="flex gap-2">
                   <DateField
                     label="Fecha límite"
@@ -606,14 +616,22 @@ export const TaskModal: React.FC<TaskModalProps> = ({
                     type="time"
                     value={dueTime}
                     onChange={(e) => setDueTime(e.target.value)}
-                    disabled={!dueDate}
+                    disabled={!dueDate && !isRepeating}
                     aria-label="Hora límite"
                     className="w-24 px-2 py-1.5 rounded-lg border border-slate-300 text-xs disabled:bg-slate-100 disabled:text-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-400"
                   />
                 </div>
               </div>
               <div className="space-y-1">
-                <span className="block text-[11px] font-semibold text-slate-700">Inicio (para un intervalo)</span>
+                <span className="block text-[11px] font-semibold text-slate-700">
+                  {isRepeating ? (
+                    <>
+                      Inicio de la repetición<span className="font-normal text-slate-600"> (hoy si lo dejas vacío)</span>
+                    </>
+                  ) : (
+                    'Inicio (para un intervalo)'
+                  )}
+                </span>
                 <div className="flex gap-2">
                   <DateField
                     label="Fecha de inicio"
@@ -626,7 +644,7 @@ export const TaskModal: React.FC<TaskModalProps> = ({
                     type="time"
                     value={startTime}
                     onChange={(e) => setStartTime(e.target.value)}
-                    disabled={!startDate}
+                    disabled={!startDate && !isRepeating}
                     aria-label="Hora de inicio"
                     className="w-24 px-2 py-1.5 rounded-lg border border-slate-300 text-xs disabled:bg-slate-100 disabled:text-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-400"
                   />
@@ -634,6 +652,7 @@ export const TaskModal: React.FC<TaskModalProps> = ({
               </div>
             </div>
             <p className="text-[11px] text-slate-500 leading-relaxed">
+              {isRepeating && 'Al repetir, cada repetición vence su propio día, con las horas indicadas. '}
               Sin hora, el plazo termina al final del día. El título se pone <span className="text-violet-600 font-semibold">violeta</span> cuando falta menos de una semana y <span className="text-red-600 font-semibold">rojo</span> cuando ha vencido.
             </p>
             {datesError && (
@@ -645,7 +664,7 @@ export const TaskModal: React.FC<TaskModalProps> = ({
 
             {/* REPETICIÓN: al marcarla Hecha se archiva y se crea la siguiente con la nueva fecha */}
             <div className="pt-2 border-t border-slate-100 space-y-3">
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div className="space-y-1">
                   <label htmlFor="task-repeat" className="flex items-center gap-1 text-[11px] font-semibold text-slate-700">
                     <Repeat className="w-3.5 h-3.5 text-indigo-600" aria-hidden="true" />
@@ -657,9 +676,6 @@ export const TaskModal: React.FC<TaskModalProps> = ({
                     onChange={(e) => {
                       const value = e.target.value as RecurrenceFrequency | '';
                       setRepeatFrequency(value);
-                      if (value === 'WEEKLY' && repeatWeekdays.length === 0 && dueDate) {
-                        setRepeatWeekdays([toLocalDate(dueDate).getDay()]);
-                      }
                     }}
                     className="w-full px-2.5 py-1.5 rounded-lg border border-slate-300 text-xs bg-white focus:outline-none focus:ring-2 focus:ring-indigo-400"
                   >
@@ -671,8 +687,7 @@ export const TaskModal: React.FC<TaskModalProps> = ({
                   </select>
                 </div>
                 {repeatFrequency && (
-                  <>
-                    <div className="space-y-1">
+                  <div className="space-y-1">
                       <label htmlFor="task-repeat-interval" className="block text-[11px] font-semibold text-slate-700">
                         Cada cuántos ({REPEAT_UNITS[repeatFrequency]})
                       </label>
@@ -685,21 +700,7 @@ export const TaskModal: React.FC<TaskModalProps> = ({
                         onChange={(e) => setRepeatInterval(Math.max(1, Math.min(99, Number(e.target.value) || 1)))}
                         className="w-full px-2.5 py-1.5 rounded-lg border border-slate-300 text-xs focus:outline-none focus:ring-2 focus:ring-indigo-400"
                       />
-                    </div>
-                    <div className="space-y-1">
-                      <label htmlFor="task-repeat-until" className="block text-[11px] font-semibold text-slate-700">
-                        Hasta (opcional)
-                      </label>
-                      <DateField
-                        id="task-repeat-until"
-                        label="Fin de la repetición"
-                        hasVisibleLabel
-                        value={repeatUntil}
-                        onChange={setRepeatUntil}
-                        inputClassName="px-2.5 py-1.5 rounded-lg border border-slate-300 text-xs focus:outline-none focus:ring-2 focus:ring-indigo-400"
-                      />
-                    </div>
-                  </>
+                  </div>
                 )}
               </div>
 
@@ -711,16 +712,14 @@ export const TaskModal: React.FC<TaskModalProps> = ({
                       <label
                         key={day}
                         className={`px-2.5 py-1 rounded-lg border text-xs font-semibold cursor-pointer has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-indigo-400 ${
-                          repeatWeekdays.includes(day) ? 'bg-indigo-600 text-white border-indigo-600' : 'bg-white text-slate-700 border-slate-300'
+                          weekdays.includes(day) ? 'bg-indigo-600 text-white border-indigo-600' : 'bg-white text-slate-700 border-slate-300'
                         }`}
                       >
                         <input
                           type="checkbox"
                           className="sr-only"
-                          checked={repeatWeekdays.includes(day)}
-                          onChange={(e) =>
-                            setRepeatWeekdays((days) => (e.target.checked ? [...days, day] : days.filter((d) => d !== day)))
-                          }
+                          checked={weekdays.includes(day)}
+                          onChange={(e) => setRepeatWeekdays(e.target.checked ? [...weekdays, day] : weekdays.filter((d) => d !== day))}
                           aria-label={name}
                         />
                         {short}
@@ -730,7 +729,7 @@ export const TaskModal: React.FC<TaskModalProps> = ({
                 </fieldset>
               )}
 
-              {repeatFrequency === 'MONTHLY' && dueDateValue && (
+              {repeatFrequency === 'MONTHLY' && (
                 <fieldset className="space-y-1">
                   <legend className="text-[11px] font-semibold text-slate-700">Qué día del mes</legend>
                   <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-slate-700">
@@ -749,10 +748,13 @@ export const TaskModal: React.FC<TaskModalProps> = ({
                 </fieldset>
               )}
 
-              {recurrence && dueDate && (
+              {recurrence && firstRepetition && (
                 <p className="text-[11px] text-indigo-700 font-medium" role="status">
-                  {describeRecurrence(recurrence, dueDate)}
-                  {nextRepetition ? ` · Al completarla, la siguiente vencerá el ${formatTaskDates({ dueDate: nextRepetition })?.replace('Vence: ', '')}` : ' · No habrá más repeticiones'}
+                  {describeRecurrence(recurrence, firstRepetition)}
+                  {` · Primera: ${formatTaskDates({ dueDate: firstRepetition })?.replace('Vence: ', '')}`}
+                  {nextRepetition
+                    ? ` · Al completarla, la siguiente vencerá el ${formatTaskDates({ dueDate: nextRepetition })?.replace('Vence: ', '')}`
+                    : ' · No habrá más repeticiones'}
                 </p>
               )}
               {recurrenceError && (

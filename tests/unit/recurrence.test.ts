@@ -6,7 +6,8 @@ import {
   nextOccurrence,
   nextRecurringTask,
   toRRule,
-  upcomingOccurrences
+  upcomingOccurrences,
+  firstOccurrence
 } from '../../src/services/recurrence.ts';
 import type { TaskItem } from '../../src/types';
 
@@ -68,6 +69,23 @@ describe('nextOccurrence', () => {
   });
 });
 
+describe('firstOccurrence', () => {
+  it('starts the series on the start date, or on the first chosen weekday after it', () => {
+    // Martes 13: semanal lunes, miércoles y viernes → miércoles 14
+    assert.equal(firstOccurrence('2026-10-13', buildRecurrence('WEEKLY', '2026-10-13', { weekdays: [1, 3, 5] })), '2026-10-14');
+    // Sábado 17 sin días restantes esa semana → lunes 19 (cada 2 semanas → lunes 26)
+    assert.equal(firstOccurrence('2026-10-17', buildRecurrence('WEEKLY', '2026-10-17', { weekdays: [1, 3] })), '2026-10-19');
+    assert.equal(firstOccurrence('2026-10-17', buildRecurrence('WEEKLY', '2026-10-17', { weekdays: [1, 3], interval: 2 })), '2026-10-26');
+    // Mensual, diaria y anual se anclan en el propio inicio
+    assert.equal(firstOccurrence('2026-10-12', buildRecurrence('MONTHLY', '2026-10-12', { monthlyMode: 'NTH_WEEKDAY' })), '2026-10-12');
+    assert.equal(firstOccurrence('2026-10-12', buildRecurrence('DAILY', '2026-10-12')), '2026-10-12');
+  });
+
+  it('has no first occurrence when the end of the series comes before it', () => {
+    assert.equal(firstOccurrence('2026-10-17', buildRecurrence('WEEKLY', '2026-10-17', { weekdays: [1], until: '2026-10-18' })), null);
+  });
+});
+
 describe('nextRecurringTask', () => {
   const base: TaskItem = {
     id: 'task-1',
@@ -88,14 +106,14 @@ describe('nextRecurringTask', () => {
     recurrence: buildRecurrence('MONTHLY', '2026-10-12', { monthlyMode: 'NTH_WEEKDAY' })
   };
 
-  it('creates the next pending task with shifted dates and a reset checklist', () => {
+  it('creates the next pending task on its own day, without a start date, and a reset checklist', () => {
     const next = nextRecurringTask(base, past)!;
     assert.notEqual(next.id, base.id);
     assert.equal(next.status, 'PENDING');
     assert.equal(next.doneAt, undefined);
     assert.equal(next.dueDate, '2026-11-09');
     assert.equal(next.dueTime, '10:00');
-    assert.equal(next.startDate, '2026-11-06'); // mismo desfase de 3 días
+    assert.equal(next.startDate, undefined); // cada repetición vence su día: no hay intervalo
     assert.equal(next.observations[0].completed, false);
     assert.deepEqual(next.recurrence, base.recurrence);
   });

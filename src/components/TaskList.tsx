@@ -15,7 +15,7 @@ import {
 import { useNow } from '../hooks/useNow';
 import { TaskStatusSelect } from './TaskStatusSelect';
 import { TaskDates } from './TaskDates';
-import { AddToCalendarMenu } from './AddToCalendarMenu';
+import { AddToCalendarMenu, TASK_ACTION_BUTTON } from './AddToCalendarMenu';
 import {
   Clock,
   Sparkles,
@@ -455,23 +455,23 @@ export const TaskList: React.FC<TaskListProps> = ({
                       </div>
 
                       {/* Acciones de tarea */}
-                      <div className="flex flex-col sm:flex-row items-center gap-1 shrink-0">
+                      <div className="flex flex-col sm:flex-row items-center gap-1.5 shrink-0">
                         <AddToCalendarMenu task={task} />
                         <button
                           onClick={() => onEditTask(task)}
-                          className="p-1.5 text-slate-500 hover:text-indigo-600 rounded-lg hover:bg-slate-100 transition-colors"
+                          className={`${TASK_ACTION_BUTTON} text-slate-600 hover:text-indigo-700 hover:bg-indigo-50`}
                           title="Editar tarea"
                           aria-label={`Editar «${task.title}»`}
                         >
-                          <Edit2 className="w-4 h-4" />
+                          <Edit2 className="w-5 h-5" aria-hidden="true" />
                         </button>
                         <button
                           onClick={() => onDeleteTask(task.id)}
-                          className="p-1.5 text-slate-500 hover:text-red-600 rounded-lg hover:bg-slate-100 transition-colors"
+                          className={`${TASK_ACTION_BUTTON} text-slate-600 hover:text-red-700 hover:bg-red-50`}
                           title="Eliminar tarea"
                           aria-label={`Eliminar «${task.title}»`}
                         >
-                          <Trash2 className="w-4 h-4" />
+                          <Trash2 className="w-5 h-5" aria-hidden="true" />
                         </button>
                       </div>
 
@@ -529,17 +529,17 @@ export const TaskList: React.FC<TaskListProps> = ({
                       <AddToCalendarMenu task={task} />
                       <button
                         onClick={() => onEditTask(task)}
-                        className="p-1 text-slate-500 hover:text-indigo-600"
+                        className={`${TASK_ACTION_BUTTON} text-slate-600 hover:text-indigo-700 hover:bg-indigo-50`}
                         aria-label={`Editar «${task.title}»`}
                       >
-                        <Edit2 className="w-3 h-3" />
+                        <Edit2 className="w-5 h-5" aria-hidden="true" />
                       </button>
                       <button
                         onClick={() => onDeleteTask(task.id)}
-                        className="p-1 text-slate-500 hover:text-red-600"
+                        className={`${TASK_ACTION_BUTTON} text-slate-600 hover:text-red-700 hover:bg-red-50`}
                         aria-label={`Eliminar «${task.title}»`}
                       >
-                        <Trash2 className="w-3.5 h-3.5" />
+                        <Trash2 className="w-5 h-5" aria-hidden="true" />
                       </button>
                     </div>
                   </div>
@@ -600,16 +600,17 @@ export const TaskList: React.FC<TaskListProps> = ({
                     <AddToCalendarMenu task={task} />
                     <button
                       onClick={() => onEditTask(task)}
-                      className="px-2.5 py-1 text-xs font-semibold bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg transition-colors"
+                      className={`${TASK_ACTION_BUTTON} text-slate-600 hover:text-indigo-700 hover:bg-indigo-50`}
+                      aria-label={`Editar «${task.title}»`}
                     >
-                      Editar
+                      <Edit2 className="w-5 h-5" aria-hidden="true" />
                     </button>
                     <button
                       onClick={() => onDeleteTask(task.id)}
-                      className="p-1.5 text-slate-500 hover:text-red-600"
+                      className={`${TASK_ACTION_BUTTON} text-slate-600 hover:text-red-700 hover:bg-red-50`}
                       aria-label={`Eliminar «${task.title}»`}
                     >
-                      <Trash2 className="w-4 h-4" />
+                      <Trash2 className="w-5 h-5" aria-hidden="true" />
                     </button>
                   </div>
                 </div>

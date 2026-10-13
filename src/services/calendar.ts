@@ -1,6 +1,6 @@
 import { TaskItem } from '../types';
 import { dueMoment, toLocalDate } from './tasks';
-import { describeRecurrence, toRRule } from './recurrence';
+import { toRRule } from './recurrence';
 
 // Evento de calendario a partir de las fechas de una tarea. Se exporta con enlaces "añadir evento"
 // de cada proveedor o con un archivo .ics: no hace falta conectar ninguna cuenta.
@@ -22,22 +22,19 @@ const addDays = (date: Date, days: number) => {
   return next;
 };
 
-export const buildCalendarEvent = (task: TaskItem, appUrl: string): CalendarEvent | null => {
-  if (!task.dueDate) return null;
+export const buildCalendarEvent = (source: TaskItem, appUrl: string): CalendarEvent | null => {
+  if (!source.dueDate) return null;
+  // Una tarea repetida no es un intervalo: cada repetición ocupa su día, de la hora de inicio a la límite.
+  // Así el evento empieza el mismo día en que se ancla la regla (las de antes de 0.8 podían tener inicio).
+  const dueDate = source.dueDate;
+  const task = source.recurrence ? { ...source, startDate: source.startTime ? dueDate : undefined } : source;
   const allDay = !task.startTime && !task.dueTime;
-  // La serie se ancla en la fecha límite; un intervalo de varios días empieza otro día y su regla no
-  // coincidiría con el inicio del evento, así que se exporta solo esta repetición
-  const isMultiDay = Boolean(task.startDate && task.startDate !== task.dueDate);
-  const repeatNote =
-    task.recurrence && isMultiDay
-      ? `Se repite: ${describeRecurrence(task.recurrence, task.dueDate).toLowerCase()}. Las siguientes repeticiones las crea la app al marcar la tarea como hecha.`
-      : '';
-  const description = [task.description, repeatNote, `Tarea de NeuroProductividad: ${appUrl}`].filter(Boolean).join('\n\n');
+  const description = [task.description, `Tarea de NeuroProductividad: ${appUrl}`].filter(Boolean).join('\n\n');
   const base = {
     uid: `${task.id}@neuroproductividad`,
     title: task.title,
     description,
-    ...(task.recurrence && !isMultiDay ? { rrule: toRRule(task.recurrence, allDay, task.dueDate) } : {})
+    ...(task.recurrence ? { rrule: toRRule(task.recurrence, allDay, dueDate) } : {})
   };
 
   // Sin horas: evento de día completo (de varios días si la tarea tiene intervalo)
@@ -45,8 +42,8 @@ export const buildCalendarEvent = (task: TaskItem, appUrl: string): CalendarEven
     return {
       ...base,
       allDay: true,
-      start: toLocalDate(task.startDate ?? task.dueDate),
-      end: addDays(toLocalDate(task.dueDate), 1)
+      start: toLocalDate(task.startDate ?? dueDate),
+      end: addDays(toLocalDate(dueDate), 1)
     };
   }
 
