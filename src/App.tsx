@@ -36,6 +36,8 @@ import { buildImport, clearLocalData, getLocalProfiles, type LocalProfileSummary
 import { arrangeTasks, parseListPrefs, type ListPrefs } from './services/taskListing';
 import { useNow } from './hooks/useNow';
 import { Navbar } from './components/Navbar';
+import { BottomNav, MORE_BUTTON_ID } from './components/BottomNav';
+import { MoreSheet } from './components/MoreSheet';
 import type { SyncStatus } from './components/SyncIndicator';
 import { TaskList } from './components/TaskList';
 import { TaskModal, type TaskFormData } from './components/TaskModal';
@@ -393,8 +395,16 @@ export default function App({ user, services, isAdmin = false }: AppProps) {
   };
 
   const isImportOpen = localProfiles.length > 0 && !isImportPostponed;
+  // Hoja «Más» del móvil: secciones que no caben en la barra inferior, sincronización y cuenta
+  const [isMoreOpen, setIsMoreOpen] = useState(false);
+  // El botón de la cuenta está en la cabecera en escritorio y dentro de «Más» en el móvil
+  const accountButton = () => {
+    const header = document.getElementById('account-button');
+    return header?.offsetParent ? header : document.getElementById(MORE_BUTTON_ID);
+  };
   // La pantalla de bienvenida no cuenta: es decorativa, se quita sola y deja pasar los clics mientras se desvanece
   const isDialogOpen =
+    isMoreOpen ||
     isTaskModalOpen ||
     isArchiveOpen ||
     isMeetingModalOpen ||
@@ -424,7 +434,8 @@ export default function App({ user, services, isAdmin = false }: AppProps) {
     : '0.0';
 
   return (
-    <div className="flex min-h-screen flex-col bg-slate-50 font-sans text-slate-900 antialiased selection:bg-indigo-500 selection:text-white">
+    // En el móvil queda sitio abajo para la barra de secciones y el botón «Nueva tarea»
+    <div className="flex min-h-screen flex-col bg-slate-50 pb-[calc(9rem+env(safe-area-inset-bottom))] font-sans text-slate-900 antialiased selection:bg-indigo-500 selection:text-white md:pb-0">
       {/* Con un diálogo abierto, el resto de la página queda inerte: ni el teclado ni los lectores de pantalla llegan */}
       <div className="contents" inert={isDialogOpen}>
         <a
@@ -448,8 +459,8 @@ export default function App({ user, services, isAdmin = false }: AppProps) {
           pendingAccessCount={pendingAccessCount}
         />
 
-        {/* NUEVA TAREA: debajo de la cabecera, en todas las secciones */}
-        <div className="mx-auto flex w-full max-w-7xl justify-end px-4 pt-4 sm:px-6 lg:px-8">
+        {/* NUEVA TAREA: debajo de la cabecera en tableta y escritorio; en el móvil, botón flotante sobre la barra */}
+        <div className="mx-auto hidden w-full max-w-7xl justify-end px-4 pt-4 sm:px-6 md:flex lg:px-8">
           <button
             type="button"
             onClick={() => openNewTask()}
@@ -573,12 +584,42 @@ export default function App({ user, services, isAdmin = false }: AppProps) {
             </div>
           </div>
         </footer>
+
+        <button
+          type="button"
+          onClick={() => openNewTask()}
+          aria-label="Nueva tarea"
+          className="fixed right-4 bottom-[calc(5rem+env(safe-area-inset-bottom))] z-40 flex h-14 w-14 items-center justify-center rounded-2xl bg-slate-900 text-white shadow-lg shadow-slate-900/30 transition-transform hover:bg-slate-800 active:scale-95 md:hidden"
+        >
+          <Plus className="h-6 w-6" aria-hidden="true" />
+        </button>
+
+        <BottomNav
+          activeTab={activeTab}
+          onNavigate={navigate}
+          isMoreOpen={isMoreOpen}
+          onOpenMore={() => setIsMoreOpen(true)}
+          pendingAccessCount={isAdmin ? pendingAccessCount : 0}
+        />
       </div>
+
+      <MoreSheet
+        isOpen={isMoreOpen}
+        onClose={() => setIsMoreOpen(false)}
+        activeTab={activeTab}
+        onNavigate={navigate}
+        isAdmin={isAdmin}
+        pendingAccessCount={pendingAccessCount}
+        syncStatus={syncStatus}
+        onForceSync={handleForceSync}
+        activeUser={profile}
+        onOpenAccount={() => setIsAccountMenuOpen(true)}
+      />
 
       {/* BANNER TOAST DE NOTIFICACIÓN: región viva siempre presente para que los lectores de pantalla lo anuncien */}
       <div role="status" aria-live="polite">
         {toastMessage && (
-          <div className="animate-in slide-in-from-bottom-3 fixed right-6 bottom-6 z-50 flex items-center gap-2.5 rounded-2xl bg-slate-900 px-4 py-3 text-xs text-white shadow-xl duration-200">
+          <div className="animate-in slide-in-from-bottom-3 fixed right-4 bottom-[calc(9.5rem+env(safe-area-inset-bottom))] left-4 z-50 flex items-center gap-2.5 rounded-2xl bg-slate-900 px-4 py-3 text-xs text-white shadow-xl duration-200 md:right-6 md:bottom-6 md:left-auto">
             <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-400" aria-hidden="true" />
             <span className="font-semibold">{toastMessage}</span>
           </div>
@@ -633,6 +674,7 @@ export default function App({ user, services, isAdmin = false }: AppProps) {
         onDeleteAccount={handleDeleteAccount}
         onChangePassword={(currentPassword, newPassword) => changePassword(user, currentPassword, newPassword)}
         onSignOutEverywhere={() => signOutEverywhere(services)}
+        returnFocusTo={accountButton}
         onOpenAccessibility={() => {
           setIsAccountMenuOpen(false);
           setIsAccessibilityOpen(true);
@@ -643,7 +685,7 @@ export default function App({ user, services, isAdmin = false }: AppProps) {
       <AccessibilityPanel
         isOpen={isAccessibilityOpen}
         onClose={() => setIsAccessibilityOpen(false)}
-        returnFocusTo={() => document.getElementById('account-button')}
+        returnFocusTo={accountButton}
       />
 
       {/* MODAL 5: IMPORTAR DATOS DE LA VERSIÓN SIN CUENTAS */}

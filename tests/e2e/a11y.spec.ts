@@ -165,6 +165,16 @@ test('high contrast and very large text', async ({ page }) => {
   await expectNoViolations(page, 'agenda (alto contraste)');
 });
 
+test('phone section bar, «Más» sheet and floating new task button', async ({ page }) => {
+  await page.setViewportSize({ width: 375, height: 800 });
+  await page.goto('/');
+  await signInWithGoogle(page, ADMIN_EMAIL);
+  await expectNoViolations(page, 'inicio en el móvil');
+  await page.getByRole('button', { name: /^Más secciones/ }).click();
+  await expect(page.getByRole('dialog', { name: 'Más' })).toBeVisible();
+  await expectNoViolations(page, 'hoja «Más» (administración)');
+});
+
 test('email sign-up and email confirmation screens', async ({ page }) => {
   await page.goto('/');
   await page.getByRole('button', { name: 'Crear una cuenta' }).click();
