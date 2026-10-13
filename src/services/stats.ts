@@ -47,7 +47,8 @@ export const computeStats = (tasks: TaskItem[], now = new Date()): TaskStats => 
   const recentFrom = addDays(today, -RECENT_DAYS + 1);
   const velocityFrom = addDays(weekStart, -7 * VELOCITY_WEEKS);
 
-  const done = tasks.filter((t) => isArchived(t) && t.doneAt);
+  // Solo lo hecho hasta `now` (un reloj adelantado en otro dispositivo no cuenta trabajo futuro como hecho)
+  const done = tasks.filter((t) => isArchived(t) && t.doneAt && new Date(t.doneAt) <= now);
   const doneSince = (from: Date) => done.filter((t) => doneMoment(t)! >= from);
 
   const countsByDay = new Map<string, number>();
@@ -67,7 +68,7 @@ export const computeStats = (tasks: TaskItem[], now = new Date()): TaskStats => 
 
   // Velocidad: semanas completas anteriores más la actual en curso, en proporción a lo transcurrido
   const velocityTasks = doneSince(velocityFrom);
-  const weeksElapsed = VELOCITY_WEEKS + Math.max(1, (now.getTime() - weekStart.getTime()) / DAY_MS) / 7;
+  const weeksElapsed = VELOCITY_WEEKS + (now.getTime() - weekStart.getTime()) / DAY_MS / 7;
   const estimatedMinutes = velocityTasks.reduce((sum, t) => sum + (t.estimateMinutes ?? 0), 0);
 
   const cycles = recent.map((t) => (doneMoment(t)!.getTime() - new Date(t.createdAt).getTime()) / DAY_MS).filter((d) => d >= 0);
