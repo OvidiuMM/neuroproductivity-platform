@@ -59,3 +59,21 @@ test('a task repeated on the second Monday of every month creates its next occur
   await page.getByLabel(`Estado de «${title}»`).first().selectOption('DONE');
   await expect(page.getByRole('heading', { name: title })).toHaveCount(1);
 });
+
+test('turning repetition off keeps the first repetition as the due date, without an interval', async ({ page }) => {
+  await page.goto('/');
+  await signInWithGoogle(page);
+  await page.getByRole('button', { name: 'Listas Duales' }).click();
+  await page.getByRole('button', { name: 'Capturar Primera Acción' }).click();
+  await page.getByLabel('Repetir').selectOption('WEEKLY');
+  const start = new Date();
+  start.setDate(start.getDate() + 3);
+  await page.getByLabel('Fecha de inicio', { exact: true }).fill(toDateString(start));
+  await page.getByLabel('Repetir').selectOption('');
+  const pad2 = (n: number) => String(n).padStart(2, '0');
+  await expect(page.getByLabel('Fecha límite', { exact: true })).toHaveValue(`${pad2(start.getDate())}/${pad2(start.getMonth() + 1)}/${start.getFullYear()}`);
+  await expect(page.getByLabel('Fecha de inicio', { exact: true })).toHaveValue('');
+  const title = `Revisar el informe ${Date.now().toString(36)}`;
+  await fillAndSaveTask(page, { title });
+  await expect(page.getByText(`Vence: ${dateFormat.format(start).replace(/ \d{4}$/, '')}`, { exact: false }).first()).toBeVisible();
+});
