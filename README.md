@@ -109,6 +109,7 @@ cd neuroproductivity-platform
 # 2. Instalar dependencias (frontend y Cloud Functions)
 npm ci
 npm ci --prefix functions
+npm ci --prefix tools/eslint   # ESLint con su propio TypeScript 5.9 (typescript-eslint aún no admite TypeScript 7)
 
 # 3. Iniciar la app en local: arranca los emuladores de Auth, Firestore y Functions (proyecto demo, sin tocar
 #    producción) y la app conectada a ellos. El inicio de sesión con Google lo simula el emulador; entra con
@@ -118,8 +119,11 @@ npm run dev
 # 4. Compilar para producción
 npm run build
 
-# 5. Ejecutar validación de tipos y linter
+# 5. Comprobar tipos, linter y formato (`npm run format` y `npm run lint:fix` corrigen lo automático).
+#    Al hacer commit, un hook formatea y pasa el linter a los archivos del commit.
+npm run typecheck
 npm run lint
+npm run format:check
 
 # 6. Ejecutar pruebas unitarias, de integración, de reglas de Firestore y de la API
 npm run test:unit
@@ -382,7 +386,7 @@ CREATE TABLE meeting_guard (
 Las contribuciones son bienvenidas. Para contribuir:
 1. Haz un Fork del repositorio.
 2. Crea una rama para tu funcionalidad (`git checkout -b feature/nueva-funcionalidad`).
-3. Realiza tus cambios y verifica la compilación (`npm run build && npm run lint`).
+3. Realiza tus cambios y verifica la compilación (`npm run build && npm run typecheck && npm run lint && npm run format:check`).
 4. Haz Commit de tus cambios (`git commit -m 'feat: añade nueva funcionalidad'`).
 5. Haz Push a tu rama (`git push origin feature/nueva-funcionalidad`).
 6. Abre un Pull Request describiendo el impacto metodológico y técnico.
