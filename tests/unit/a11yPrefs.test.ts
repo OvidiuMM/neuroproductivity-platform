@@ -10,12 +10,15 @@ describe('accessibility preferences', () => {
   });
 
   it('reads the saved preferences', () => {
-    assert.deepEqual(parseA11yPrefs('{"textSize":"xlarge","highContrast":true,"reduceMotion":true,"strongFocus":false}'), {
-      textSize: 'xlarge',
-      highContrast: true,
-      reduceMotion: true,
-      strongFocus: false
-    });
+    assert.deepEqual(
+      parseA11yPrefs('{"textSize":"xlarge","highContrast":true,"reduceMotion":true,"strongFocus":false}'),
+      {
+        textSize: 'xlarge',
+        highContrast: true,
+        reduceMotion: true,
+        strongFocus: false
+      }
+    );
   });
 
   it('maps each preference to its class on <html>', () => {

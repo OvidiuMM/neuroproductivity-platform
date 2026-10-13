@@ -24,7 +24,8 @@ type Panel = 'password' | 'everywhere' | 'delete' | null;
 
 const actionClass =
   'w-full py-2.5 px-4 text-xs font-bold text-slate-700 bg-white border border-slate-200 rounded-xl hover:bg-slate-50 disabled:opacity-60 flex items-center gap-2';
-const inputClass = 'w-full px-3 py-2 rounded-xl border border-slate-300 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400';
+const inputClass =
+  'w-full px-3 py-2 rounded-xl border border-slate-300 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400';
 
 // Cuenta autogestionada: accesibilidad, datos, seguridad (contraseña y sesiones) y eliminación
 export const AccountMenu: React.FC<AccountMenuProps> = ({
@@ -104,71 +105,88 @@ export const AccountMenu: React.FC<AccountMenuProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex justify-center p-4 sm:p-8 bg-slate-900/70 backdrop-blur-xs overflow-y-auto">
+    <div className="fixed inset-0 z-50 flex justify-center overflow-y-auto bg-slate-900/70 p-4 backdrop-blur-xs sm:p-8">
       <div
         ref={dialogRef}
         role="dialog"
         aria-modal="true"
         aria-label="Tu cuenta"
-        className="bg-white rounded-3xl shadow-2xl border border-slate-200 w-full max-w-md my-auto overflow-hidden animate-in fade-in zoom-in-95 duration-200"
+        className="animate-in fade-in zoom-in-95 my-auto w-full max-w-md overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-2xl duration-200"
       >
-        <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between bg-slate-50/90">
+        <div className="flex items-center justify-between border-b border-slate-100 bg-slate-50/90 px-6 py-4">
           <h2 className="text-sm font-bold text-slate-900">Tu cuenta</h2>
           <button
             onClick={onClose}
             aria-label="Cerrar"
-            className="p-1.5 rounded-lg text-slate-500 hover:text-slate-600 hover:bg-slate-200/60 transition-colors"
+            className="rounded-lg p-1.5 text-slate-500 transition-colors hover:bg-slate-200/60 hover:text-slate-600"
           >
-            <X className="w-5 h-5" />
+            <X className="h-5 w-5" />
           </button>
         </div>
 
-        <div className="p-6 space-y-5">
+        <div className="space-y-5 p-6">
           <div className="flex items-center gap-3">
             {user.photoUrl ? (
-              <img src={user.photoUrl} alt="" referrerPolicy="no-referrer" className="w-11 h-11 rounded-2xl object-cover" />
+              <img
+                src={user.photoUrl}
+                alt=""
+                referrerPolicy="no-referrer"
+                className="h-11 w-11 rounded-2xl object-cover"
+              />
             ) : (
-              <div className="w-11 h-11 rounded-2xl bg-indigo-600 text-white font-bold text-sm flex items-center justify-center">
+              <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-indigo-600 text-sm font-bold text-white">
                 {user.initials}
               </div>
             )}
             <div className="min-w-0">
-              <h3 className="text-sm font-bold text-slate-900 truncate">{user.name}</h3>
-              {user.email && <p className="text-xs text-slate-500 truncate">{user.email}</p>}
-              <p className="text-[11px] text-slate-600">{hasPassword ? 'Entras con email y contraseña' : 'Entras con Google'}</p>
+              <h3 className="truncate text-sm font-bold text-slate-900">{user.name}</h3>
+              {user.email && <p className="truncate text-xs text-slate-500">{user.email}</p>}
+              <p className="text-[11px] text-slate-600">
+                {hasPassword ? 'Entras con email y contraseña' : 'Entras con Google'}
+              </p>
             </div>
           </div>
 
-          <div className="p-3.5 bg-slate-50 border border-slate-200 rounded-2xl text-[11px] text-slate-600 leading-relaxed flex items-start gap-2.5">
-            <Cloud className="w-4 h-4 text-slate-500 shrink-0 mt-0.5" aria-hidden="true" />
+          <div className="flex items-start gap-2.5 rounded-2xl border border-slate-200 bg-slate-50 p-3.5 text-[11px] leading-relaxed text-slate-600">
+            <Cloud className="mt-0.5 h-4 w-4 shrink-0 text-slate-500" aria-hidden="true" />
             <p>
-              Tus datos se guardan en tu cuenta (Google Cloud, UE) y solo tú puedes acceder a ellos. Se sincronizan entre tus dispositivos y, sin conexión, los cambios se envían al recuperarla.
+              Tus datos se guardan en tu cuenta (Google Cloud, UE) y solo tú puedes acceder a ellos. Se sincronizan
+              entre tus dispositivos y, sin conexión, los cambios se envían al recuperarla.
             </p>
           </div>
 
           <div aria-live="polite">
             {error && (
-              <p role="alert" className="text-xs text-red-700 bg-red-50 border border-red-200 rounded-xl p-3">
+              <p role="alert" className="rounded-xl border border-red-200 bg-red-50 p-3 text-xs text-red-700">
                 {error}
               </p>
             )}
-            {notice && <p className="text-xs text-emerald-800 bg-emerald-50 border border-emerald-200 rounded-xl p-3">{notice}</p>}
+            {notice && (
+              <p className="rounded-xl border border-emerald-200 bg-emerald-50 p-3 text-xs text-emerald-800">
+                {notice}
+              </p>
+            )}
           </div>
 
           <div className="space-y-2">
             <button type="button" onClick={onOpenAccessibility} disabled={busy !== null} className={actionClass}>
-              <Accessibility className="w-4 h-4 text-indigo-600" aria-hidden="true" />
+              <Accessibility className="h-4 w-4 text-indigo-600" aria-hidden="true" />
               Accesibilidad: tamaño del texto, contraste y animaciones
             </button>
-            <button type="button" onClick={() => run('export', onExportData)} disabled={busy !== null} className={actionClass}>
-              <Download className="w-4 h-4 text-indigo-600" aria-hidden="true" />
+            <button
+              type="button"
+              onClick={() => run('export', onExportData)}
+              disabled={busy !== null}
+              className={actionClass}
+            >
+              <Download className="h-4 w-4 text-indigo-600" aria-hidden="true" />
               {busy === 'export' ? 'Preparando descarga…' : 'Descargar mis datos (JSON)'}
             </button>
           </div>
 
           {/* SEGURIDAD */}
           <section aria-labelledby="account-security" className="space-y-2">
-            <h3 id="account-security" className="text-xs font-bold uppercase tracking-wider text-slate-700">
+            <h3 id="account-security" className="text-xs font-bold tracking-wider text-slate-700 uppercase">
               Seguridad
             </h3>
             {hasPassword && (
@@ -179,12 +197,12 @@ export const AccountMenu: React.FC<AccountMenuProps> = ({
                 disabled={busy !== null}
                 className={actionClass}
               >
-                <KeyRound className="w-4 h-4 text-indigo-600" aria-hidden="true" />
+                <KeyRound className="h-4 w-4 text-indigo-600" aria-hidden="true" />
                 Cambiar la contraseña
               </button>
             )}
             {panel === 'password' && (
-              <form onSubmit={submitPassword} className="p-4 rounded-2xl border border-slate-200 space-y-3">
+              <form onSubmit={submitPassword} className="space-y-3 rounded-2xl border border-slate-200 p-4">
                 <div className="space-y-1">
                   <label htmlFor="current-password" className="block text-xs font-semibold text-slate-700">
                     Contraseña actual
@@ -221,7 +239,7 @@ export const AccountMenu: React.FC<AccountMenuProps> = ({
                 <button
                   type="submit"
                   disabled={busy !== null}
-                  className="px-3 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 disabled:opacity-60 text-white text-xs font-bold"
+                  className="rounded-xl bg-slate-900 px-3 py-2 text-xs font-bold text-white hover:bg-slate-800 disabled:opacity-60"
                 >
                   {busy === 'password' ? 'Guardando…' : 'Guardar la contraseña nueva'}
                 </button>
@@ -235,19 +253,20 @@ export const AccountMenu: React.FC<AccountMenuProps> = ({
               disabled={busy !== null}
               className={actionClass}
             >
-              <MonitorSmartphone className="w-4 h-4 text-indigo-600" aria-hidden="true" />
+              <MonitorSmartphone className="h-4 w-4 text-indigo-600" aria-hidden="true" />
               Cerrar sesión en todos los dispositivos
             </button>
             {panel === 'everywhere' && (
-              <div className="p-4 rounded-2xl border border-slate-200 space-y-3">
-                <p className="text-xs text-slate-700 leading-relaxed">
-                  Se cerrará la sesión en todos tus dispositivos, también en este. Los demás dejarán de tener acceso en menos de una hora. Úsalo si has perdido un dispositivo o has entrado en uno que no es tuyo.
+              <div className="space-y-3 rounded-2xl border border-slate-200 p-4">
+                <p className="text-xs leading-relaxed text-slate-700">
+                  Se cerrará la sesión en todos tus dispositivos, también en este. Los demás dejarán de tener acceso en
+                  menos de una hora. Úsalo si has perdido un dispositivo o has entrado en uno que no es tuyo.
                 </p>
                 <button
                   type="button"
                   disabled={busy !== null}
                   onClick={() => run('everywhere', onSignOutEverywhere)}
-                  className="px-3 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 disabled:opacity-60 text-white text-xs font-bold"
+                  className="rounded-xl bg-slate-900 px-3 py-2 text-xs font-bold text-white hover:bg-slate-800 disabled:opacity-60"
                 >
                   {busy === 'everywhere' ? 'Cerrando sesiones…' : 'Cerrar todas las sesiones'}
                 </button>
@@ -255,7 +274,7 @@ export const AccountMenu: React.FC<AccountMenuProps> = ({
             )}
 
             <button type="button" onClick={onSignOut} disabled={busy !== null} className={actionClass}>
-              <LogOut className="w-4 h-4 text-slate-500" aria-hidden="true" />
+              <LogOut className="h-4 w-4 text-slate-500" aria-hidden="true" />
               Cerrar sesión
             </button>
           </section>
@@ -272,9 +291,9 @@ export const AccountMenu: React.FC<AccountMenuProps> = ({
               type="button"
               onClick={() => toggle('delete')}
               disabled={busy !== null}
-              className="w-full py-2.5 px-4 text-xs font-bold text-red-700 bg-white border border-red-200 rounded-xl hover:bg-red-50 disabled:opacity-60 flex items-center gap-2"
+              className="flex w-full items-center gap-2 rounded-xl border border-red-200 bg-white px-4 py-2.5 text-xs font-bold text-red-700 hover:bg-red-50 disabled:opacity-60"
             >
-              <Trash2 className="w-4 h-4" aria-hidden="true" />
+              <Trash2 className="h-4 w-4" aria-hidden="true" />
               Eliminar mi cuenta y todos mis datos
             </button>
           )}

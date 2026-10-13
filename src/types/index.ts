@@ -7,14 +7,8 @@ export type TaskPriority = 'CRITICAL' | 'HIGH' | 'MEDIUM' | 'LOW';
 // Estado manual de la tarea; DONE la archiva (sale de las listas y del Top 10)
 export type TaskStatus = 'PENDING' | 'BLOCKED' | 'IN_PROGRESS' | 'DONE';
 
-export type WheelCategory = 
-  | 'Salud'
-  | 'Carrera Profesional'
-  | 'Finanzas'
-  | 'Familia'
-  | 'Ocio'
-  | 'Relaciones'
-  | 'Espiritualidad';
+export type WheelCategory =
+  'Salud' | 'Carrera Profesional' | 'Finanzas' | 'Familia' | 'Ocio' | 'Relaciones' | 'Espiritualidad';
 
 export interface TaskObservation {
   id: string;
@@ -79,7 +73,7 @@ export interface MeetingGuard {
   userId: string;
   title: string;
   startTime: string; // ISO string
-  endTime: string;   // ISO string
+  endTime: string; // ISO string
   agendaPoints: string[]; // Mínimo 1 punto cerrado obligatorio
   moderatorName: string; // Designación nominal obligatoria
   moderatorEmail: string;

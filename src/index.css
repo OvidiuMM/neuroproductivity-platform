@@ -1,4 +1,4 @@
-@import "tailwindcss";
+@import 'tailwindcss';
 
 /* ACCESIBILIDAD (panel propio, src/services/a11yPrefs.ts): clases en <html> */
 

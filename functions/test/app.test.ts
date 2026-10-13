@@ -34,7 +34,7 @@ describe('API de Cloud Functions', () => {
     const res = await fetch(`${baseUrl}/api/nlp/infer`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ title: 'Llamar al dentista', description: 'Pedir cita' }),
+      body: JSON.stringify({ title: 'Llamar al dentista', description: 'Pedir cita' })
     });
     const body = await res.json();
 

@@ -17,13 +17,40 @@ const KEYS = {
 // Perfiles y registros de demostración de versiones anteriores: nunca se importan
 const LEGACY_DEMO_USER_IDS = ['user-1', 'user-2', 'user-3'];
 const LEGACY_DEMO_RECORD_IDS = new Set([
-  'email-1', 'meet-1', 'meet-u2-1',
-  'task-p-1', 'task-p-2', 'task-p-3', 'task-p-4', 'task-p-someday-1',
-  'task-u2-1', 'task-u2-2', 'task-u2-3', 'task-u2-p1', 'task-u2-p2',
-  'task-w-1', 'task-w-2', 'task-w-3', 'task-w-4', 'task-w-5', 'task-w-6', 'task-w-7',
-  'task-w-8', 'task-w-9', 'task-w-10', 'task-w-11', 'task-w-12', 'task-w-someday-1',
-  'wheel-snapshot-1', 'wheel-snapshot-2', 'wheel-snapshot-3',
-  'wheel-snapshot-u1-1', 'wheel-snapshot-u1-2', 'wheel-snapshot-u1-3', 'wheel-snapshot-u2-1', 'wheel-snapshot-u2-2'
+  'email-1',
+  'meet-1',
+  'meet-u2-1',
+  'task-p-1',
+  'task-p-2',
+  'task-p-3',
+  'task-p-4',
+  'task-p-someday-1',
+  'task-u2-1',
+  'task-u2-2',
+  'task-u2-3',
+  'task-u2-p1',
+  'task-u2-p2',
+  'task-w-1',
+  'task-w-2',
+  'task-w-3',
+  'task-w-4',
+  'task-w-5',
+  'task-w-6',
+  'task-w-7',
+  'task-w-8',
+  'task-w-9',
+  'task-w-10',
+  'task-w-11',
+  'task-w-12',
+  'task-w-someday-1',
+  'wheel-snapshot-1',
+  'wheel-snapshot-2',
+  'wheel-snapshot-3',
+  'wheel-snapshot-u1-1',
+  'wheel-snapshot-u1-2',
+  'wheel-snapshot-u1-3',
+  'wheel-snapshot-u2-1',
+  'wheel-snapshot-u2-2'
 ]);
 
 // Lo creado dentro de un perfil de demostración se ofrece como un perfil aparte en lugar de perderse
@@ -64,7 +91,10 @@ export interface LocalProfileSummary {
 export const getLocalProfiles = (storage: Storage = localStorage): LocalProfileSummary[] => {
   const records = readRecords(storage);
   const profiles = readList<UserProfile>(storage, KEYS.USERS).filter((u) => !LEGACY_DEMO_USER_IDS.includes(u.id));
-  const candidates = [...profiles.map((p) => ({ id: p.id, name: p.name })), { id: ORPHAN_PROFILE_ID, name: ORPHAN_PROFILE_NAME }];
+  const candidates = [
+    ...profiles.map((p) => ({ id: p.id, name: p.name })),
+    { id: ORPHAN_PROFILE_ID, name: ORPHAN_PROFILE_NAME }
+  ];
   // Registros de perfiles que ya no existen también se atribuyen a su userId para no perderlos
   const knownIds = new Set(candidates.map((c) => c.id));
   for (const record of [...records.tasks, ...records.wheelLogs, ...records.meetings, ...records.emails]) {

@@ -66,10 +66,12 @@ export const WheelOfLife: React.FC<WheelOfLifeProps> = ({ logs, showFirstStep, o
   };
 
   const generatePolygonPath = (scores: Record<WheelCategory, number>) => {
-    return CATEGORIES.map((cat, i) => {
-      const { x, y } = getCoordinates(i, scores[cat] ?? 0);
-      return `${i === 0 ? 'M' : 'L'} ${x} ${y}`;
-    }).join(' ') + ' Z';
+    return (
+      CATEGORIES.map((cat, i) => {
+        const { x, y } = getCoordinates(i, scores[cat] ?? 0);
+        return `${i === 0 ? 'M' : 'L'} ${x} ${y}`;
+      }).join(' ') + ' Z'
+    );
   };
 
   const handleScoreChange = (cat: WheelCategory, value: number) => {
@@ -90,74 +92,74 @@ export const WheelOfLife: React.FC<WheelOfLifeProps> = ({ logs, showFirstStep, o
 
   return (
     <div className="space-y-6">
-
       {/* AVISO DE PRIMER PASO (solo mientras la cuenta no tiene ninguna evaluación guardada) */}
       {showFirstStep && (
         <div
           role="status"
-          className="p-5 bg-indigo-50 border border-indigo-200 rounded-2xl flex flex-col sm:flex-row sm:items-center gap-4"
+          className="flex flex-col gap-4 rounded-2xl border border-indigo-200 bg-indigo-50 p-5 sm:flex-row sm:items-center"
         >
-          <div className="w-10 h-10 rounded-xl bg-indigo-600 text-white flex items-center justify-center shrink-0">
-            <Flag className="w-5 h-5" />
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-indigo-600 text-white">
+            <Flag className="h-5 w-5" />
           </div>
           <div className="flex-1 space-y-1">
             <h3 className="text-sm font-bold text-indigo-950">Primer paso: evalúa tu Rueda de la Vida</h3>
-            <p className="text-xs text-indigo-900 leading-relaxed">
-              Puntúa de 0 a 10 tu satisfacción actual en cada área y pulsa <strong>Consolidar Estado</strong>. Será tu punto de partida: las tareas que crees se vincularán a estas áreas y podrás comparar tu progreso en cada nueva evaluación.
+            <p className="text-xs leading-relaxed text-indigo-900">
+              Puntúa de 0 a 10 tu satisfacción actual en cada área y pulsa <strong>Consolidar Estado</strong>. Será tu
+              punto de partida: las tareas que crees se vincularán a estas áreas y podrás comparar tu progreso en cada
+              nueva evaluación.
             </p>
           </div>
           <button
             type="button"
             onClick={onOpenHelp}
-            className="px-3.5 py-2 text-xs font-bold text-indigo-700 bg-white border border-indigo-200 rounded-xl hover:bg-indigo-100 transition-colors flex items-center gap-1.5 whitespace-nowrap"
+            className="flex items-center gap-1.5 rounded-xl border border-indigo-200 bg-white px-3.5 py-2 text-xs font-bold whitespace-nowrap text-indigo-700 transition-colors hover:bg-indigo-100"
           >
-            <BookOpen className="w-3.5 h-3.5" />
+            <BookOpen className="h-3.5 w-3.5" />
             <span>Cómo funciona la app</span>
           </button>
         </div>
       )}
 
       {/* Encabezado y explicación metodológica */}
-      <div className="bg-white rounded-2xl p-6 border border-slate-200 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-4">
+      <div className="flex flex-col justify-between gap-4 rounded-2xl border border-slate-200 bg-white p-6 shadow-xs md:flex-row md:items-center">
         <div>
-          <h2 className="text-xl font-bold text-slate-900 flex items-center gap-2">
-            <Compass className="w-6 h-6 text-indigo-600" />
+          <h2 className="flex items-center gap-2 text-xl font-bold text-slate-900">
+            <Compass className="h-6 w-6 text-indigo-600" />
             Rueda de la Vida & Trazabilidad Temporal Inmutable
           </h2>
-          <p className="text-xs text-slate-500 mt-1 max-w-2xl leading-relaxed">
-            Módulo 1: Evaluación holística de la satisfacción autopercibida (escala 0 a 10). Cada modificación genera una captura inmutable <em>append-only</em> para trazar correlaciones con el esfuerzo diario de neuroplasticidad.
+          <p className="mt-1 max-w-2xl text-xs leading-relaxed text-slate-500">
+            Módulo 1: Evaluación holística de la satisfacción autopercibida (escala 0 a 10). Cada modificación genera
+            una captura inmutable <em>append-only</em> para trazar correlaciones con el esfuerzo diario de
+            neuroplasticidad.
           </p>
         </div>
 
         {/* Conmutador de Comparativa Histórica (HU-01 Escenario 2) */}
         <div className="flex items-center gap-3">
-          <label className="flex items-center gap-2 text-xs font-semibold text-slate-700 cursor-pointer bg-slate-50 px-3 py-2 rounded-xl border border-slate-200">
+          <label className="flex cursor-pointer items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-semibold text-slate-700">
             <input
               type="checkbox"
               checked={showHistoryOverlay}
               onChange={(e) => setShowHistoryOverlay(e.target.checked)}
-              className="w-4 h-4 rounded text-indigo-600 border-slate-300"
+              className="h-4 w-4 rounded border-slate-300 text-indigo-600"
             />
-            <History className="w-4 h-4 text-indigo-600" />
+            <History className="h-4 w-4 text-indigo-600" />
             <span>Comparativa Histórica (Superposición)</span>
           </label>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-        
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-12">
         {/* COLUMNA IZQUIERDA: GRÁFICO POLAR INTERACTIVO SVG */}
-        <div className="lg:col-span-7 bg-white rounded-2xl p-6 border border-slate-200 shadow-xs flex flex-col items-center justify-center">
-          
+        <div className="flex flex-col items-center justify-center rounded-2xl border border-slate-200 bg-white p-6 shadow-xs lg:col-span-7">
           {/* viewBox con margen para las etiquetas: el gráfico escala al ancho disponible sin desbordar en móvil */}
-          <div className="relative w-full max-w-[600px] flex items-center justify-center">
+          <div className="relative flex w-full max-w-[600px] items-center justify-center">
             <svg
               viewBox={`${-LABEL_MARGIN_X} ${-LABEL_MARGIN_Y} ${size + 2 * LABEL_MARGIN_X} ${size + 2 * LABEL_MARGIN_Y}`}
-              className="w-full h-auto"
+              className="h-auto w-full"
               role="img"
               aria-label="Gráfico de la Rueda de la Vida"
             >
-              
               {/* Círculos concéntricos de referencia (Niveles del 0 al 10) */}
               {[2, 4, 6, 8, 10].map((level) => (
                 <circle
@@ -177,17 +179,7 @@ export const WheelOfLife: React.FC<WheelOfLifeProps> = ({ logs, showFirstStep, o
                 const angle = i * angleStep - Math.PI / 2;
                 const x2 = center + radius * Math.cos(angle);
                 const y2 = center + radius * Math.sin(angle);
-                return (
-                  <line
-                    key={cat}
-                    x1={center}
-                    y1={center}
-                    x2={x2}
-                    y2={y2}
-                    stroke="#cbd5e1"
-                    strokeWidth="1"
-                  />
-                );
+                return <line key={cat} x1={center} y1={center} x2={x2} y2={y2} stroke="#cbd5e1" strokeWidth="1" />;
               })}
 
               {/* POLÍGONO HISTÓRICO COMPARATIVO (Translúcido en ámbar) */}
@@ -223,7 +215,7 @@ export const WheelOfLife: React.FC<WheelOfLifeProps> = ({ logs, showFirstStep, o
                       fill="#4f46e5"
                       stroke="#ffffff"
                       strokeWidth="2"
-                      className="cursor-pointer hover:r-8 transition-all"
+                      className="hover:r-8 cursor-pointer transition-all"
                     />
                   </g>
                 );
@@ -242,7 +234,7 @@ export const WheelOfLife: React.FC<WheelOfLifeProps> = ({ logs, showFirstStep, o
                     y={ly}
                     textAnchor="middle"
                     dominantBaseline="middle"
-                    className="text-[11px] font-bold fill-slate-700"
+                    className="fill-slate-700 text-[11px] font-bold"
                   >
                     {cat} ({currentScores[cat]}/10)
                   </text>
@@ -252,35 +244,32 @@ export const WheelOfLife: React.FC<WheelOfLifeProps> = ({ logs, showFirstStep, o
           </div>
 
           {/* Leyenda del gráfico */}
-          <div className="flex items-center gap-6 mt-4 pt-4 border-t border-slate-100 text-xs">
+          <div className="mt-4 flex items-center gap-6 border-t border-slate-100 pt-4 text-xs">
             <div className="flex items-center gap-2">
-              <span className="w-3 h-3 rounded-full bg-indigo-600 inline-block" />
+              <span className="inline-block h-3 w-3 rounded-full bg-indigo-600" />
               <span className="font-semibold text-slate-800">Estado Actual (Vigente)</span>
             </div>
             {showHistoryOverlay && historicalLog && (
               <div className="flex items-center gap-2">
-                <span className="w-3 h-3 rounded-full bg-amber-500 inline-block border border-dashed border-amber-700" />
-                <span className="text-slate-600">
-                  {historicalLog.label || 'Histórico previo'}
-                </span>
+                <span className="inline-block h-3 w-3 rounded-full border border-dashed border-amber-700 bg-amber-500" />
+                <span className="text-slate-600">{historicalLog.label || 'Histórico previo'}</span>
               </div>
             )}
           </div>
         </div>
 
         {/* COLUMNA DERECHA: AJUSTE DIRECTO DE RADIOS & SNAPSHOT APPEND-ONLY */}
-        <div className="lg:col-span-5 space-y-5">
-          
+        <div className="space-y-5 lg:col-span-5">
           {/* Panel de Sliders / Manipulación Directa (0 al 10) */}
-          <div className="bg-white rounded-2xl p-5 border border-slate-200 shadow-xs space-y-3.5">
-            <div className="flex items-center justify-between pb-2 border-b border-slate-100">
-              <h3 className="text-xs font-bold uppercase tracking-wider text-slate-700">
+          <div className="space-y-3.5 rounded-2xl border border-slate-200 bg-white p-5 shadow-xs">
+            <div className="flex items-center justify-between border-b border-slate-100 pb-2">
+              <h3 className="text-xs font-bold tracking-wider text-slate-700 uppercase">
                 Puntuaciones por Segmento Vital
               </h3>
               <span className="text-[11px] text-slate-500">Escala ordinal 0-10</span>
             </div>
 
-            <div className="space-y-3 max-h-[300px] overflow-y-auto pr-2">
+            <div className="max-h-[300px] space-y-3 overflow-y-auto pr-2">
               {CATEGORIES.map((cat) => {
                 const currentVal = currentScores[cat];
                 const histVal = historicalLog ? historicalLog.scores[cat] : currentVal;
@@ -307,7 +296,7 @@ export const WheelOfLife: React.FC<WheelOfLifeProps> = ({ logs, showFirstStep, o
                       value={currentVal}
                       aria-label={`Puntuación de ${cat}`}
                       onChange={(e) => handleScoreChange(cat, parseInt(e.target.value, 10))}
-                      className="w-full h-1.5 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-indigo-600"
+                      className="h-1.5 w-full cursor-pointer appearance-none rounded-lg bg-slate-200 accent-indigo-600"
                     />
                   </div>
                 );
@@ -315,8 +304,8 @@ export const WheelOfLife: React.FC<WheelOfLifeProps> = ({ logs, showFirstStep, o
             </div>
 
             {/* FORMULARIO DE CONSOLIDACIÓN APPEND-ONLY (HU-01 Escenario 1) */}
-            <div className="pt-3 border-t border-slate-100 space-y-2.5">
-              <label className="block text-xs font-bold uppercase tracking-wider text-slate-600">
+            <div className="space-y-2.5 border-t border-slate-100 pt-3">
+              <label className="block text-xs font-bold tracking-wider text-slate-600 uppercase">
                 Consolidar Snapshot Histórico (Append-Only)
               </label>
               <div className="flex gap-2">
@@ -325,50 +314,48 @@ export const WheelOfLife: React.FC<WheelOfLifeProps> = ({ logs, showFirstStep, o
                   value={snapshotLabel}
                   onChange={(e) => setSnapshotLabel(e.target.value)}
                   placeholder="Etiqueta opcional (ej. Cierre Q4 o Retiro)..."
-                  className="min-w-0 flex-1 px-3 py-1.5 text-xs rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-indigo-400"
+                  className="min-w-0 flex-1 rounded-xl border border-slate-300 px-3 py-1.5 text-xs focus:ring-2 focus:ring-indigo-400 focus:outline-none"
                 />
                 <button
                   type="button"
                   onClick={handleConsolidateState}
-                  className="px-4 py-2 bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs rounded-xl shadow-xs transition-colors flex items-center gap-1.5 whitespace-nowrap"
+                  className="flex items-center gap-1.5 rounded-xl bg-slate-900 px-4 py-2 text-xs font-bold whitespace-nowrap text-white shadow-xs transition-colors hover:bg-slate-800"
                 >
-                  <Save className="w-3.5 h-3.5" />
+                  <Save className="h-3.5 w-3.5" />
                   <span>Consolidar Estado</span>
                 </button>
               </div>
 
               {savedSuccess && (
-                <div className="p-2 bg-emerald-50 border border-emerald-200 rounded-xl text-emerald-800 text-xs flex items-center gap-1.5 animate-in fade-in">
-                  <Check className="w-4 h-4 text-emerald-600" />
-                  <span>
-                    Nuevo snapshot inmutable creado con marca de tiempo UTC. Historial preservado.
-                  </span>
+                <div className="animate-in fade-in flex items-center gap-1.5 rounded-xl border border-emerald-200 bg-emerald-50 p-2 text-xs text-emerald-800">
+                  <Check className="h-4 w-4 text-emerald-600" />
+                  <span>Nuevo snapshot inmutable creado con marca de tiempo UTC. Historial preservado.</span>
                 </div>
               )}
             </div>
           </div>
 
           {/* HISTORIAL LONGITUDINAL DE CAPTURAS */}
-          <div className="bg-white rounded-2xl p-5 border border-slate-200 shadow-xs space-y-3">
-            <h3 className="text-xs font-bold uppercase tracking-wider text-slate-700 flex items-center gap-1.5">
-              <TrendingUp className="w-4 h-4 text-indigo-600" />
+          <div className="space-y-3 rounded-2xl border border-slate-200 bg-white p-5 shadow-xs">
+            <h3 className="flex items-center gap-1.5 text-xs font-bold tracking-wider text-slate-700 uppercase">
+              <TrendingUp className="h-4 w-4 text-indigo-600" />
               <span>Línea Temporal de Neuroplasticidad ({logs.length} snapshots)</span>
             </h3>
 
-            <div className="space-y-2 max-h-48 overflow-y-auto pr-1">
+            <div className="max-h-48 space-y-2 overflow-y-auto pr-1">
               {logs.map((log, idx) => (
                 <button
                   key={log.id}
                   onClick={() => setSelectedHistoricalIndex(idx)}
-                  className={`w-full text-left p-2.5 rounded-xl border text-xs transition-all flex items-center justify-between ${
+                  className={`flex w-full items-center justify-between rounded-xl border p-2.5 text-left text-xs transition-all ${
                     selectedHistoricalIndex === idx
-                      ? 'border-indigo-600 bg-indigo-50/50 text-indigo-950 font-bold'
-                      : 'border-slate-200 hover:bg-slate-50 text-slate-700'
+                      ? 'border-indigo-600 bg-indigo-50/50 font-bold text-indigo-950'
+                      : 'border-slate-200 text-slate-700 hover:bg-slate-50'
                   }`}
                 >
                   <div>
                     <span className="block truncate">{log.label || `Captura ${idx + 1}`}</span>
-                    <span className="text-[10px] text-slate-500 font-mono">
+                    <span className="font-mono text-[10px] text-slate-500">
                       {new Date(log.timestamp).toLocaleDateString('es-ES', {
                         year: 'numeric',
                         month: 'short',
@@ -378,20 +365,15 @@ export const WheelOfLife: React.FC<WheelOfLifeProps> = ({ logs, showFirstStep, o
                       })}
                     </span>
                   </div>
-                  <div className="text-[11px] font-mono text-slate-600 bg-white px-2 py-0.5 rounded-md border border-slate-200">
-                    Promedio: {(
-                      Object.values(log.scores).reduce((a, b) => a + b, 0) / CATEGORIES.length
-                    ).toFixed(1)}/10
+                  <div className="rounded-md border border-slate-200 bg-white px-2 py-0.5 font-mono text-[11px] text-slate-600">
+                    Promedio: {(Object.values(log.scores).reduce((a, b) => a + b, 0) / CATEGORIES.length).toFixed(1)}/10
                   </div>
                 </button>
               ))}
             </div>
           </div>
-
         </div>
-
       </div>
-
     </div>
   );
 };

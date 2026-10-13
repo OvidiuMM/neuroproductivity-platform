@@ -5,7 +5,13 @@ import App from './App';
 import { AccessRequestScreen } from './components/AccessRequestScreen';
 import { EmailVerificationScreen } from './components/EmailVerificationScreen';
 import { hasPassword, needsEmailVerification } from './services/auth';
-import { requestAccess, subscribeToIsAdmin, subscribeToOwnAccess, syncAccess, type OwnAccessStatus } from './services/access';
+import {
+  requestAccess,
+  subscribeToIsAdmin,
+  subscribeToOwnAccess,
+  syncAccess,
+  type OwnAccessStatus
+} from './services/access';
 import { deleteAccount, downloadAccountData } from './services/account';
 import { signOutAndClearCache, type FirebaseServices } from './services/firebase';
 import { saveUserProfile } from './services/repository';
@@ -79,7 +85,7 @@ export const AccessGate: React.FC<AccessGateProps> = ({ user, services }) => {
   // Mientras se consulta al servidor no se muestra el formulario (la administración se aprueba en ese paso)
   if (isChecking && (effectiveStatus === 'unknown' || effectiveStatus === 'none')) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-slate-50 text-sm text-slate-500" role="status">
+      <div className="flex min-h-screen items-center justify-center bg-slate-50 text-sm text-slate-500" role="status">
         Comprobando tu acceso…
       </div>
     );

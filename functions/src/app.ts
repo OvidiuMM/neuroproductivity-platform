@@ -4,11 +4,11 @@ import { defineString } from 'firebase-functions/params';
 // Parámetros de Digital Asset Links. `firebase deploy` pide los valores la primera vez
 // y los guarda en functions/.env.<project-id> (ignorado por git).
 const androidPackageName = defineString('ANDROID_PACKAGE_NAME', {
-  description: 'Package name de la APK Android (TWA)',
+  description: 'Package name de la APK Android (TWA)'
 });
 const androidSha256Fingerprint = defineString('ANDROID_SHA256_FINGERPRINT', {
   default: '00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00',
-  description: 'Huella SHA-256 del certificado de firma de la APK Android',
+  description: 'Huella SHA-256 del certificado de firma de la APK Android'
 });
 
 export const app = express();
@@ -23,9 +23,9 @@ app.get('/.well-known/assetlinks.json', (_req: Request, res: Response) => {
       target: {
         namespace: 'android_app',
         package_name: androidPackageName.value(),
-        sha256_cert_fingerprints: [androidSha256Fingerprint.value()],
-      },
-    },
+        sha256_cert_fingerprints: [androidSha256Fingerprint.value()]
+      }
+    }
   ]);
 });
 
@@ -35,7 +35,7 @@ app.get('/api/health', (_req: Request, res: Response) => {
     status: 'ok',
     timestamp: new Date().toISOString(),
     service: 'CLAR API',
-    uptime: process.uptime(),
+    uptime: process.uptime()
   });
 });
 
@@ -47,6 +47,6 @@ app.post('/api/nlp/infer', (req: Request, res: Response) => {
   res.json({
     message: 'Procesamiento semántico recibido',
     input: { title, description },
-    processedAt: new Date().toISOString(),
+    processedAt: new Date().toISOString()
   });
 });

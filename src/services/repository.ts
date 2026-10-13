@@ -135,7 +135,9 @@ export const exportUserData = async (db: Firestore, uid: string): Promise<UserDa
 export const deleteAllUserData = async (db: Firestore, uid: string) => {
   const snapshots = await Promise.all(USER_COLLECTIONS.map((name) => getDocs(userCollection(db, uid, name))));
   await commitInBatches(db, [
-    ...snapshots.flatMap((snapshot) => snapshot.docs.map((d) => (batch: ReturnType<typeof writeBatch>) => batch.delete(d.ref))),
+    ...snapshots.flatMap((snapshot) =>
+      snapshot.docs.map((d) => (batch: ReturnType<typeof writeBatch>) => batch.delete(d.ref))
+    ),
     (batch) => batch.delete(doc(db, 'users', uid))
   ]);
 };

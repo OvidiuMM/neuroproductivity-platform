@@ -9,7 +9,9 @@ test('requires signing in with Google before showing any data', async ({ page })
   await expect(page.getByRole('button', { name: 'Nueva Tarea' })).toHaveCount(0);
 });
 
-test('first sign-in opens the Wheel of Life at 0 with a first-step notice and a link to the guide', async ({ page }) => {
+test('first sign-in opens the Wheel of Life at 0 with a first-step notice and a link to the guide', async ({
+  page
+}) => {
   await page.goto('/');
   await signInWithGoogle(page);
 
@@ -38,7 +40,9 @@ test('first sign-in opens the Wheel of Life at 0 with a first-step notice and a 
   await expect(page.getByText('Primer paso: evalúa tu Rueda de la Vida')).toBeHidden();
 });
 
-test('the first-run jump to the Wheel never pulls the person out of a section they already opened', async ({ page }) => {
+test('the first-run jump to the Wheel never pulls the person out of a section they already opened', async ({
+  page
+}) => {
   await page.goto('/');
   await signInWithGoogle(page);
   // Respuestas de Firestore retrasadas: la confirmación del servidor llega después de abrir otra sección
@@ -49,7 +53,9 @@ test('the first-run jump to the Wheel never pulls the person out of a section th
   await page.reload();
   await expect(page.getByRole('button', { name: 'Tu cuenta' })).toBeVisible();
   await page.getByRole('button', { name: 'Listas Duales' }).click();
-  await expect(page.locator('header [data-sync-status]')).toHaveAttribute('data-sync-status', 'synced', { timeout: 20_000 });
+  await expect(page.locator('header [data-sync-status]')).toHaveAttribute('data-sync-status', 'synced', {
+    timeout: 20_000
+  });
   await expect(page.getByRole('button', { name: 'Listas Duales' })).toHaveAttribute('aria-current', 'page');
   await expect(page.getByRole('button', { name: 'Capturar Primera Acción' })).toBeVisible();
 });

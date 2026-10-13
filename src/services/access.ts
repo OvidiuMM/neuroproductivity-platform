@@ -57,8 +57,12 @@ export const requestAccess = async (functions: Functions, message: string) =>
   (await httpsCallable<{ message: string }, { status: AccessStatus }>(functions, 'requestAccess')({ message })).data;
 
 export const setAccess = async (functions: Functions, uid: string, status: DecisionStatus) =>
-  (await httpsCallable<{ uid: string; status: DecisionStatus }, { status: DecisionStatus }>(functions, 'setAccess')({ uid, status }))
-    .data;
+  (
+    await httpsCallable<{ uid: string; status: DecisionStatus }, { status: DecisionStatus }>(
+      functions,
+      'setAccess'
+    )({ uid, status })
+  ).data;
 
 export const forgetAccess = async (functions: Functions) => {
   await httpsCallable(functions, 'forgetAccess')();

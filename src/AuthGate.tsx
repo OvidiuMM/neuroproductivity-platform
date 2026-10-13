@@ -76,7 +76,7 @@ export const AuthGate: React.FC = () => {
 
   if (state.status === 'loading') {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-slate-50 text-sm text-slate-500" role="status">
+      <div className="flex min-h-screen items-center justify-center bg-slate-50 text-sm text-slate-500" role="status">
         Cargando…
       </div>
     );
@@ -84,8 +84,8 @@ export const AuthGate: React.FC = () => {
 
   if (state.status === 'error') {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-slate-50 p-4">
-        <p role="alert" className="max-w-md text-sm text-red-700 bg-red-50 border border-red-200 rounded-2xl p-4">
+      <div className="flex min-h-screen items-center justify-center bg-slate-50 p-4">
+        <p role="alert" className="max-w-md rounded-2xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">
           No se pudo iniciar la aplicación: {state.message}
         </p>
       </div>

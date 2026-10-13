@@ -17,7 +17,7 @@ export const TaskStatusSelect: React.FC<TaskStatusSelectProps> = ({ status, task
       value={status}
       onChange={(e) => onChange(e.target.value as TaskStatus)}
       aria-label={`Estado de «${taskTitle}»`}
-      className={`rounded-lg border font-semibold cursor-pointer focus:outline-none focus:ring-2 focus:ring-indigo-400 ${current.className} ${
+      className={`cursor-pointer rounded-lg border font-semibold focus:ring-2 focus:ring-indigo-400 focus:outline-none ${current.className} ${
         size === 'xs' ? 'px-1.5 py-0.5 text-[10px]' : 'px-2 py-1 text-[11px]'
       }`}
     >

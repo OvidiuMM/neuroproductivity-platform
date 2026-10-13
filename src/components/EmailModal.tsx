@@ -9,11 +9,7 @@ interface EmailModalProps {
   onSendEmail: (email: Omit<EmailDraft, 'id'>) => void;
 }
 
-export const EmailModal: React.FC<EmailModalProps> = ({
-  isOpen,
-  onClose,
-  onSendEmail
-}) => {
+export const EmailModal: React.FC<EmailModalProps> = ({ isOpen, onClose, onSendEmail }) => {
   const [attachments, setAttachments] = useState<{ name: string; size: string }[]>([]);
   const [newAttachmentName, setNewAttachmentName] = useState('');
   const [noAttachmentsDeclared, setNoAttachmentsDeclared] = useState(false);
@@ -47,16 +43,10 @@ export const EmailModal: React.FC<EmailModalProps> = ({
 
   const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
   const isRecipientsValid =
-    isRecipientsUnlocked &&
-    parsedRecipients.length > 0 &&
-    parsedRecipients.every((email) => emailRegex.test(email));
+    isRecipientsUnlocked && parsedRecipients.length > 0 && parsedRecipients.every((email) => emailRegex.test(email));
 
   // Validación final del formulario completo
-  const isFormValid =
-    isStep1AttachmentsValid &&
-    isStep2BodyValid &&
-    isStep3SubjectValid &&
-    isRecipientsValid;
+  const isFormValid = isStep1AttachmentsValid && isStep2BodyValid && isStep3SubjectValid && isRecipientsValid;
 
   const handleAddAttachment = () => {
     if (!newAttachmentName.trim()) return;
@@ -94,45 +84,43 @@ export const EmailModal: React.FC<EmailModalProps> = ({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex justify-center p-4 sm:p-8 bg-slate-900/60 backdrop-blur-xs overflow-y-auto">
+    <div className="fixed inset-0 z-50 flex justify-center overflow-y-auto bg-slate-900/60 p-4 backdrop-blur-xs sm:p-8">
       <div
         ref={dialogRef}
         role="dialog"
         aria-modal="true"
         aria-labelledby="email-modal-title"
-        className="bg-white rounded-2xl shadow-2xl border border-slate-200 w-full max-w-xl my-auto overflow-hidden animate-in fade-in zoom-in-95 duration-200"
+        className="animate-in fade-in zoom-in-95 my-auto w-full max-w-xl overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl duration-200"
       >
-        
         {/* Cabecera */}
-        <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between bg-slate-50/70">
+        <div className="flex items-center justify-between border-b border-slate-100 bg-slate-50/70 px-6 py-4">
           <div>
-            <h2 id="email-modal-title" className="text-base font-bold text-slate-900 flex items-center gap-2">
-              <Mail className="w-5 h-5 text-indigo-600" />
+            <h2 id="email-modal-title" className="flex items-center gap-2 text-base font-bold text-slate-900">
+              <Mail className="h-5 w-5 text-indigo-600" />
               Cliente Asistido con Redacción Inversa
             </h2>
-            <p className="text-xs text-slate-500 mt-0.5">
+            <p className="mt-0.5 text-xs text-slate-500">
               Protocolo contra re-envíos involuntarios y dispersión atencional
             </p>
           </div>
           <button
             onClick={onClose}
             aria-label="Cerrar"
-            className="p-1.5 rounded-lg text-slate-500 hover:text-slate-600 hover:bg-slate-200/60 transition-colors"
+            className="rounded-lg p-1.5 text-slate-500 transition-colors hover:bg-slate-200/60 hover:text-slate-600"
           >
-            <X className="w-5 h-5" />
+            <X className="h-5 w-5" />
           </button>
         </div>
 
-        <form onSubmit={handleSubmit} className="p-6 space-y-4">
-
+        <form onSubmit={handleSubmit} className="space-y-4 p-6">
           {/* PASO 1 (INVERSO): ADJUNTOS PRIMERO */}
-          <div className="p-3.5 bg-slate-50 border border-slate-200 rounded-xl space-y-2">
+          <div className="space-y-2 rounded-xl border border-slate-200 bg-slate-50 p-3.5">
             <div className="flex items-center justify-between">
-              <span className="text-xs font-bold uppercase tracking-wider text-slate-700 flex items-center gap-1.5">
-                <Paperclip className="w-4 h-4 text-slate-500" />
+              <span className="flex items-center gap-1.5 text-xs font-bold tracking-wider text-slate-700 uppercase">
+                <Paperclip className="h-4 w-4 text-slate-500" />
                 Paso 1: Archivos Adjuntos <span className="text-red-500">*</span>
               </span>
-              <label className="flex items-center gap-1.5 cursor-pointer text-xs text-slate-600">
+              <label className="flex cursor-pointer items-center gap-1.5 text-xs text-slate-600">
                 <input
                   type="checkbox"
                   checked={noAttachmentsDeclared}
@@ -140,7 +128,7 @@ export const EmailModal: React.FC<EmailModalProps> = ({
                     setNoAttachmentsDeclared(e.target.checked);
                     if (e.target.checked) setAttachments([]);
                   }}
-                  className="w-3.5 h-3.5 rounded text-indigo-600 border-slate-300"
+                  className="h-3.5 w-3.5 rounded border-slate-300 text-indigo-600"
                 />
                 <span>Sin archivos adjuntos</span>
               </label>
@@ -153,7 +141,7 @@ export const EmailModal: React.FC<EmailModalProps> = ({
                   value={newAttachmentName}
                   onChange={(e) => setNewAttachmentName(e.target.value)}
                   placeholder="Nombre de archivo (ej. balance_trimestral.xlsx)..."
-                  className="min-w-0 flex-1 px-3 py-1.5 text-xs rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-indigo-400"
+                  className="min-w-0 flex-1 rounded-xl border border-slate-300 px-3 py-1.5 text-xs focus:ring-2 focus:ring-indigo-400 focus:outline-none"
                   onKeyDown={(e) => {
                     if (e.key === 'Enter') {
                       e.preventDefault();
@@ -164,9 +152,9 @@ export const EmailModal: React.FC<EmailModalProps> = ({
                 <button
                   type="button"
                   onClick={handleAddAttachment}
-                  className="px-3 py-1.5 text-xs font-bold bg-slate-900 text-white rounded-xl hover:bg-slate-800 transition-colors flex items-center gap-1"
+                  className="flex items-center gap-1 rounded-xl bg-slate-900 px-3 py-1.5 text-xs font-bold text-white transition-colors hover:bg-slate-800"
                 >
-                  <Plus className="w-3.5 h-3.5" />
+                  <Plus className="h-3.5 w-3.5" />
                   <span>Adjuntar</span>
                 </button>
               </div>
@@ -175,15 +163,20 @@ export const EmailModal: React.FC<EmailModalProps> = ({
             {attachments.length > 0 && (
               <div className="space-y-1">
                 {attachments.map((att, i) => (
-                  <div key={i} className="flex items-center justify-between px-2.5 py-1 bg-white border border-slate-200 rounded-lg text-xs">
-                    <span className="truncate">{att.name} ({att.size})</span>
+                  <div
+                    key={i}
+                    className="flex items-center justify-between rounded-lg border border-slate-200 bg-white px-2.5 py-1 text-xs"
+                  >
+                    <span className="truncate">
+                      {att.name} ({att.size})
+                    </span>
                     <button
                       type="button"
                       onClick={() => handleRemoveAttachment(i)}
                       aria-label={`Quitar el adjunto ${att.name}`}
                       className="text-slate-500 hover:text-red-600"
                     >
-                      <Trash2 className="w-3.5 h-3.5" aria-hidden="true" />
+                      <Trash2 className="h-3.5 w-3.5" aria-hidden="true" />
                     </button>
                   </div>
                 ))}
@@ -199,16 +192,14 @@ export const EmailModal: React.FC<EmailModalProps> = ({
 
           {/* PASO 2 (INVERSO): CUERPO DEL CORREO CON ALERTA NO-SCROLL */}
           <div>
-            <div className="flex items-center justify-between mb-1">
-              <label className="text-xs font-bold uppercase tracking-wider text-slate-700">
+            <div className="mb-1 flex items-center justify-between">
+              <label className="text-xs font-bold tracking-wider text-slate-700 uppercase">
                 Paso 2: Cuerpo del Correo <span className="text-red-500">*</span>
               </label>
-              <div className="text-[11px] font-mono flex items-center gap-2 text-slate-500">
+              <div className="flex items-center gap-2 font-mono text-[11px] text-slate-500">
                 <span>{wordCount} palabras</span>
                 <span>·</span>
-                <span className={body.length > 550 ? 'text-amber-700 font-bold' : ''}>
-                  {body.length} caracteres
-                </span>
+                <span className={body.length > 550 ? 'font-bold text-amber-700' : ''}>{body.length} caracteres</span>
               </div>
             </div>
 
@@ -218,7 +209,7 @@ export const EmailModal: React.FC<EmailModalProps> = ({
               onChange={(e) => setBody(e.target.value)}
               onBlur={() => setTouched({ ...touched, body: true })}
               placeholder="Escribe el mensaje claro y conciso aquí..."
-              className={`w-full px-3.5 py-2.5 rounded-xl border text-xs focus:outline-none focus:ring-2 ${
+              className={`w-full rounded-xl border px-3.5 py-2.5 text-xs focus:ring-2 focus:outline-none ${
                 touched.body && !isStep2BodyValid
                   ? 'border-red-400 bg-red-50/20 focus:ring-red-400'
                   : 'border-slate-300 focus:ring-indigo-400'
@@ -227,24 +218,24 @@ export const EmailModal: React.FC<EmailModalProps> = ({
 
             {/* ALERTA DE SÍNTESIS INFORMATIVA (NO-SCROLL) */}
             {isTooLongForNoScroll && (
-              <div className="p-2.5 bg-amber-50 border border-amber-200 rounded-xl text-xs text-amber-900 mt-1.5 flex items-start gap-2">
-                <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+              <div className="mt-1.5 flex items-start gap-2 rounded-xl border border-amber-200 bg-amber-50 p-2.5 text-xs text-amber-900">
+                <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-amber-600" />
                 <p className="text-[11px] leading-relaxed">
-                  <strong>Alerta de Síntesis Informativa:</strong> El cuerpo supera las dimensiones recomendadas sin desplazamiento vertical (no-scroll). Los mensajes largos fragmentan la atención de quien los lee y suelen generar más idas y vueltas.
+                  <strong>Alerta de Síntesis Informativa:</strong> El cuerpo supera las dimensiones recomendadas sin
+                  desplazamiento vertical (no-scroll). Los mensajes largos fragmentan la atención de quien los lee y
+                  suelen generar más idas y vueltas.
                 </p>
               </div>
             )}
 
             {touched.body && !isStep2BodyValid && (
-              <p className="text-xs text-red-600 mt-1">
-                El cuerpo del correo debe tener al menos 15 caracteres.
-              </p>
+              <p className="mt-1 text-xs text-red-600">El cuerpo del correo debe tener al menos 15 caracteres.</p>
             )}
           </div>
 
           {/* PASO 3: ASUNTO SINTÉTICO */}
           <div>
-            <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1">
+            <label className="mb-1 block text-xs font-bold tracking-wider text-slate-700 uppercase">
               Paso 3: Asunto Sintético <span className="text-red-500">*</span>
             </label>
             <input
@@ -252,29 +243,29 @@ export const EmailModal: React.FC<EmailModalProps> = ({
               value={subject}
               onChange={(e) => setSubject(e.target.value)}
               placeholder="Asunto claro y descriptivo..."
-              className="w-full px-3.5 py-2 rounded-xl border border-slate-300 text-xs focus:outline-none focus:ring-2 focus:ring-indigo-400"
+              className="w-full rounded-xl border border-slate-300 px-3.5 py-2 text-xs focus:ring-2 focus:ring-indigo-400 focus:outline-none"
             />
           </div>
 
           {/* PASO 4 (BLOQUEO ESTRICTO): DESTINATARIOS */}
-          <div className="p-3.5 rounded-xl border transition-all">
-            <div className="flex items-center justify-between mb-1.5">
-              <label className="text-xs font-bold uppercase tracking-wider text-slate-700 flex items-center gap-1.5">
+          <div className="rounded-xl border p-3.5 transition-all">
+            <div className="mb-1.5 flex items-center justify-between">
+              <label className="flex items-center gap-1.5 text-xs font-bold tracking-wider text-slate-700 uppercase">
                 {isRecipientsUnlocked ? (
-                  <Unlock className="w-4 h-4 text-emerald-600" />
+                  <Unlock className="h-4 w-4 text-emerald-600" />
                 ) : (
-                  <Lock className="w-4 h-4 text-slate-500" />
+                  <Lock className="h-4 w-4 text-slate-500" />
                 )}
                 <span>Paso 4: Destinatarios (Desbloqueo Final)</span>
                 <span className="text-red-500">*</span>
               </label>
 
               {!isRecipientsUnlocked ? (
-                <span className="text-[10px] font-bold uppercase px-2 py-0.5 bg-slate-100 text-slate-600 rounded-full">
+                <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-bold text-slate-600 uppercase">
                   Bloqueado hasta completar contenido
                 </span>
               ) : (
-                <span className="text-[10px] font-bold uppercase px-2 py-0.5 bg-emerald-100 text-emerald-700 rounded-full">
+                <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-bold text-emerald-700 uppercase">
                   Desbloqueado
                 </span>
               )}
@@ -291,33 +282,31 @@ export const EmailModal: React.FC<EmailModalProps> = ({
                   ? 'correo1@ejemplo.com, correo2@ejemplo.com'
                   : '🔒 Completa adjuntos y cuerpo para desbloquear este campo'
               }
-              className={`w-full px-3.5 py-2 rounded-xl border text-xs focus:outline-none focus:ring-2 ${
+              className={`w-full rounded-xl border px-3.5 py-2 text-xs focus:ring-2 focus:outline-none ${
                 !isRecipientsUnlocked
-                  ? 'bg-slate-100 border-slate-200 text-slate-500 cursor-not-allowed'
+                  ? 'cursor-not-allowed border-slate-200 bg-slate-100 text-slate-500'
                   : touched.recipients && !isRecipientsValid
-                  ? 'border-red-400 bg-red-50/20 focus:ring-red-400'
-                  : 'border-slate-300 focus:ring-indigo-400'
+                    ? 'border-red-400 bg-red-50/20 focus:ring-red-400'
+                    : 'border-slate-300 focus:ring-indigo-400'
               }`}
             />
 
             {isRecipientsUnlocked && touched.recipients && !isRecipientsValid && (
-              <p className="text-[11px] text-red-600 mt-1">
+              <p className="mt-1 text-[11px] text-red-600">
                 Ingresa al menos una dirección de correo electrónico válida (formato: usuario@dominio.com).
               </p>
             )}
           </div>
 
           {/* CHECKLIST DE REDACCIÓN INVERSA */}
-          <div className="p-3 bg-slate-50 border border-slate-200 rounded-xl space-y-1 text-xs">
-            <span className="font-bold text-slate-700 block mb-1">
-              Secuencia Metodológica de Redacción Inversa:
-            </span>
+          <div className="space-y-1 rounded-xl border border-slate-200 bg-slate-50 p-3 text-xs">
+            <span className="mb-1 block font-bold text-slate-700">Secuencia Metodológica de Redacción Inversa:</span>
             <div className="grid grid-cols-2 gap-2 text-[11px]">
               <div className="flex items-center gap-1.5">
                 {isStep1AttachmentsValid ? (
-                  <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                  <CheckCircle2 className="h-3.5 w-3.5 shrink-0 text-emerald-600" />
                 ) : (
-                  <span className="w-3.5 h-3.5 rounded-full border border-slate-300 inline-block" />
+                  <span className="inline-block h-3.5 w-3.5 rounded-full border border-slate-300" />
                 )}
                 <span className={isStep1AttachmentsValid ? 'text-slate-700' : 'text-slate-500'}>
                   Paso 1: Adjuntos verificados
@@ -326,20 +315,18 @@ export const EmailModal: React.FC<EmailModalProps> = ({
 
               <div className="flex items-center gap-1.5">
                 {isStep2BodyValid ? (
-                  <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                  <CheckCircle2 className="h-3.5 w-3.5 shrink-0 text-emerald-600" />
                 ) : (
-                  <span className="w-3.5 h-3.5 rounded-full border border-slate-300 inline-block" />
+                  <span className="inline-block h-3.5 w-3.5 rounded-full border border-slate-300" />
                 )}
-                <span className={isStep2BodyValid ? 'text-slate-700' : 'text-slate-500'}>
-                  Paso 2: Cuerpo redactado
-                </span>
+                <span className={isStep2BodyValid ? 'text-slate-700' : 'text-slate-500'}>Paso 2: Cuerpo redactado</span>
               </div>
 
               <div className="flex items-center gap-1.5">
                 {isStep3SubjectValid ? (
-                  <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                  <CheckCircle2 className="h-3.5 w-3.5 shrink-0 text-emerald-600" />
                 ) : (
-                  <span className="w-3.5 h-3.5 rounded-full border border-slate-300 inline-block" />
+                  <span className="inline-block h-3.5 w-3.5 rounded-full border border-slate-300" />
                 )}
                 <span className={isStep3SubjectValid ? 'text-slate-700' : 'text-slate-500'}>
                   Paso 3: Asunto definido
@@ -348,9 +335,9 @@ export const EmailModal: React.FC<EmailModalProps> = ({
 
               <div className="flex items-center gap-1.5">
                 {isRecipientsValid ? (
-                  <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                  <CheckCircle2 className="h-3.5 w-3.5 shrink-0 text-emerald-600" />
                 ) : (
-                  <span className="w-3.5 h-3.5 rounded-full border border-slate-300 inline-block" />
+                  <span className="inline-block h-3.5 w-3.5 rounded-full border border-slate-300" />
                 )}
                 <span className={isRecipientsValid ? 'text-slate-700' : 'text-slate-500'}>
                   Paso 4: Destinatarios válidos
@@ -360,28 +347,27 @@ export const EmailModal: React.FC<EmailModalProps> = ({
           </div>
 
           {/* BOTONES */}
-          <div className="pt-2 flex items-center justify-end gap-3 border-t border-slate-100">
+          <div className="flex items-center justify-end gap-3 border-t border-slate-100 pt-2">
             <button
               type="button"
               onClick={onClose}
-              className="px-4 py-2 text-xs font-semibold text-slate-600 hover:text-slate-900 rounded-xl transition-colors"
+              className="rounded-xl px-4 py-2 text-xs font-semibold text-slate-600 transition-colors hover:text-slate-900"
             >
               Cancelar
             </button>
             <button
               type="submit"
               disabled={!isFormValid}
-              className={`px-5 py-2.5 text-xs font-bold rounded-xl shadow-sm transition-all flex items-center gap-2 ${
+              className={`flex items-center gap-2 rounded-xl px-5 py-2.5 text-xs font-bold shadow-sm transition-all ${
                 isFormValid
                   ? 'bg-slate-900 text-white hover:bg-slate-800'
-                  : 'bg-slate-200 text-slate-500 cursor-not-allowed shadow-none'
+                  : 'cursor-not-allowed bg-slate-200 text-slate-500 shadow-none'
               }`}
             >
-              <Send className="w-4 h-4" />
+              <Send className="h-4 w-4" />
               <span>Despachar Mensaje Seguro</span>
             </button>
           </div>
-
         </form>
       </div>
     </div>

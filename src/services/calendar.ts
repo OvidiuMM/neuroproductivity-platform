@@ -60,7 +60,11 @@ const pad = (n: number) => String(n).padStart(2, '0');
 const localDay = (d: Date) => `${d.getFullYear()}${pad(d.getMonth() + 1)}${pad(d.getDate())}`;
 const localDayIso = (d: Date) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
 // Las horas se envían en UTC para que cada calendario las muestre en la zona horaria de la persona
-const utcStamp = (d: Date) => d.toISOString().replace(/[-:]/g, '').replace(/\.\d{3}/, '');
+const utcStamp = (d: Date) =>
+  d
+    .toISOString()
+    .replace(/[-:]/g, '')
+    .replace(/\.\d{3}/, '');
 const utcIso = (d: Date) => d.toISOString().replace(/\.\d{3}/, '');
 
 export const googleCalendarUrl = (event: CalendarEvent) => {

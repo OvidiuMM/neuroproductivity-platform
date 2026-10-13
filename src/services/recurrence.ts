@@ -115,10 +115,12 @@ export const buildRecurrence = (
   const due = toLocalDate(dueDate);
   const base: Recurrence = { frequency, interval: Math.max(1, Math.floor(options.interval ?? 1)) };
   if (options.until) base.until = options.until;
-  if (frequency === 'WEEKLY') return { ...base, weekdays: options.weekdays?.length ? [...options.weekdays].sort() : [due.getDay()] };
+  if (frequency === 'WEEKLY')
+    return { ...base, weekdays: options.weekdays?.length ? [...options.weekdays].sort() : [due.getDay()] };
   if (frequency === 'MONTHLY') {
     const mode = options.monthlyMode ?? 'DAY_OF_MONTH';
-    if (mode === 'NTH_WEEKDAY') return { ...base, monthlyMode: mode, nth: Math.min(4, nthOfMonth(due)), weekday: due.getDay() };
+    if (mode === 'NTH_WEEKDAY')
+      return { ...base, monthlyMode: mode, nth: Math.min(4, nthOfMonth(due)), weekday: due.getDay() };
     if (mode === 'LAST_WEEKDAY') return { ...base, monthlyMode: mode, weekday: due.getDay() };
     return { ...base, monthlyMode: mode, monthDay: due.getDate() };
   }
@@ -215,7 +217,10 @@ const lastDayFallback = (monthDay: number) =>
 const untilStamp = (until: string, allDay: boolean) => {
   if (allDay) return until.replace(/-/g, '');
   const [y, m, d] = until.split('-').map(Number);
-  return new Date(y, m - 1, d, 23, 59, 59).toISOString().replace(/[-:]/g, '').replace(/\.\d{3}/, '');
+  return new Date(y, m - 1, d, 23, 59, 59)
+    .toISOString()
+    .replace(/[-:]/g, '')
+    .replace(/\.\d{3}/, '');
 };
 
 // `anchorDate` (la fecha límite) da el mes de las repeticiones anuales: el 29 de febrero pasa al 28 en años no bisiestos

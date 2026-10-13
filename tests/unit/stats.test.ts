@@ -25,7 +25,10 @@ const done = (id: string, day: number, overrides: Partial<TaskItem> = {}) =>
 
 describe('computeStats', () => {
   it('counts tasks done today, this week (from Monday) and this month', () => {
-    const stats = computeStats([done('a', 14), done('b', 13), done('c', 12), done('d', 11), done('e', 1), task('open')], now);
+    const stats = computeStats(
+      [done('a', 14), done('b', 13), done('c', 12), done('d', 11), done('e', 1), task('open')],
+      now
+    );
     assert.equal(stats.doneToday, 1);
     assert.equal(stats.doneThisWeek, 3); // lunes 12, martes 13 y hoy
     assert.equal(stats.doneThisMonth, 5);
@@ -56,7 +59,10 @@ describe('computeStats', () => {
 
   it('computes velocity, estimated hours and the average cycle time', () => {
     const stats = computeStats(
-      [done('a', 13, { estimateMinutes: 60, createdAt: at(11) }), done('b', 14, { estimateMinutes: 120, createdAt: at(13) })],
+      [
+        done('a', 13, { estimateMinutes: 60, createdAt: at(11) }),
+        done('b', 14, { estimateMinutes: 120, createdAt: at(13) })
+      ],
       now
     );
     // 2 tareas en 4 semanas completas + la actual (2,5 días de 7)
@@ -66,7 +72,10 @@ describe('computeStats', () => {
   });
 
   it('ignores tasks marked done after now (a device clock set ahead)', () => {
-    const stats = computeStats([done('future', 14, { doneAt: new Date(2026, 9, 14, 18, 0).toISOString() }), done('past', 14)], now);
+    const stats = computeStats(
+      [done('future', 14, { doneAt: new Date(2026, 9, 14, 18, 0).toISOString() }), done('past', 14)],
+      now
+    );
     assert.equal(stats.doneToday, 1);
     assert.equal(stats.doneThisWeek, 1);
   });
@@ -104,7 +113,13 @@ describe('computeStats', () => {
     process.env.TZ = 'Europe/Madrid'; // el 25 oct 2026 la hora se retrasa: esa semana dura 169 horas
     try {
       const wednesday = new Date(2026, 9, 21, 12, 0);
-      const stats = computeStats([task('late-sunday', { dueDate: '2026-10-25', dueTime: '23:30' }), task('monday', { dueDate: '2026-10-26', dueTime: '00:30' })], wednesday);
+      const stats = computeStats(
+        [
+          task('late-sunday', { dueDate: '2026-10-25', dueTime: '23:30' }),
+          task('monday', { dueDate: '2026-10-26', dueTime: '00:30' })
+        ],
+        wednesday
+      );
       assert.equal(stats.dueThisWeek, 1);
     } finally {
       // Si no había TZ, se borra (asignar undefined guardaría el texto «undefined»)
@@ -115,7 +130,11 @@ describe('computeStats', () => {
 
   it('ranks areas by tasks done in the last 30 days', () => {
     const stats = computeStats(
-      [done('a', 14, { wheelCategory: 'Salud' }), done('b', 13, { wheelCategory: 'Finanzas' }), done('c', 12, { wheelCategory: 'Salud' })],
+      [
+        done('a', 14, { wheelCategory: 'Salud' }),
+        done('b', 13, { wheelCategory: 'Finanzas' }),
+        done('c', 12, { wheelCategory: 'Salud' })
+      ],
       now
     );
     assert.deepEqual(stats.byArea, [
@@ -126,10 +145,18 @@ describe('computeStats', () => {
 });
 
 describe('recommendationsFor', () => {
-  const wheel = (day: number): WheelOfLifeLog => ({ id: `w${day}`, userId: 'uid', timestamp: at(day), scores: {} as WheelOfLifeLog['scores'] });
+  const wheel = (day: number): WheelOfLifeLog => ({
+    id: `w${day}`,
+    userId: 'uid',
+    timestamp: at(day),
+    scores: {} as WheelOfLifeLog['scores']
+  });
 
   it('starts with the oldest overdue task and suggests evaluating the wheel when it is old', () => {
-    const tasks = [task('old', { title: 'Pagar el seguro', dueDate: '2026-10-05' }), task('new', { dueDate: '2026-10-13' })];
+    const tasks = [
+      task('old', { title: 'Pagar el seguro', dueDate: '2026-10-05' }),
+      task('new', { dueDate: '2026-10-13' })
+    ];
     const recs = recommendationsFor(computeStats(tasks, now), tasks, [], now);
     assert.equal(recs[0].id, 'overdue');
     assert.match(recs[0].text, /2 tareas vencidas.*«Pagar el seguro»/);

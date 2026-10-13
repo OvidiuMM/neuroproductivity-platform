@@ -25,7 +25,9 @@ test('Inicio shows the focus block, task statistics and recommendations for the 
   await expect(page.getByRole('region', { name: 'A tiempo o con retraso' })).toContainText('100 %');
   await expect(page.getByRole('region', { name: 'Constancia y pendientes' })).toContainText('1 vencidas');
   await expect(page.getByRole('region', { name: 'Velocidad' })).toBeVisible();
-  await expect(page.getByRole('img', { name: /Tareas hechas por día en los últimos 14 días: 1 en total/ })).toBeVisible();
+  await expect(
+    page.getByRole('img', { name: /Tareas hechas por día en los últimos 14 días: 1 en total/ })
+  ).toBeVisible();
 
   // La recomendación más urgente es la tarea vencida, con un acceso directo a la agenda
   const recommendations = page.getByRole('region', { name: 'Recomendaciones' });
@@ -35,7 +37,10 @@ test('Inicio shows the focus block, task statistics and recommendations for the 
 
   // Las estadísticas son de la lista activa: la personal está vacía
   await page.getByRole('button', { name: 'Inicio', exact: true }).click();
-  await page.locator('header').getByRole('button', { name: /^Personal/ }).click();
+  await page
+    .locator('header')
+    .getByRole('button', { name: /^Personal/ })
+    .click();
   await expect(page.getByRole('heading', { name: 'Equilibrio de Esfera Personal & Vital' })).toBeVisible();
   await expect(page.getByRole('region', { name: 'Tareas hechas' }).getByText('Hoy').locator('..')).toContainText('0');
 });
