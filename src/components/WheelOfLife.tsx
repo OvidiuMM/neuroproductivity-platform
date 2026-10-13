@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { WheelOfLifeLog, WheelCategory } from '../types';
-import { Compass, History, Save, Sparkles, Check, TrendingUp, AlertCircle, Flag, BookOpen } from 'lucide-react';
+import { Compass, History, Save, Check, TrendingUp, Flag, BookOpen } from 'lucide-react';
 
 interface WheelOfLifeProps {
   logs: WheelOfLifeLog[];
@@ -305,11 +305,15 @@ export const WheelOfLife: React.FC<WheelOfLifeProps> = ({ logs, showFirstStep, o
 
             {/* FORMULARIO DE CONSOLIDACIÓN APPEND-ONLY (HU-01 Escenario 1) */}
             <div className="space-y-2.5 border-t border-slate-100 pt-3">
-              <label className="block text-xs font-bold tracking-wider text-slate-600 uppercase">
+              <label
+                htmlFor="wheel-snapshot-note"
+                className="block text-xs font-bold tracking-wider text-slate-600 uppercase"
+              >
                 Consolidar Snapshot Histórico (Append-Only)
               </label>
               <div className="flex gap-2">
                 <input
+                  id="wheel-snapshot-note"
                   type="text"
                   value={snapshotLabel}
                   onChange={(e) => setSnapshotLabel(e.target.value)}

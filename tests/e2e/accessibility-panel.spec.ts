@@ -1,5 +1,5 @@
 import { expect, test, type Page } from '@playwright/test';
-import { expectNoHorizontalOverflow, signInWithGoogle } from './helpers';
+import { expectNoHorizontalOverflow, openSection, signInWithGoogle } from './helpers';
 
 const rootFontSize = (page: Page) => page.evaluate(() => getComputedStyle(document.documentElement).fontSize);
 const htmlClasses = (page: Page) => page.evaluate(() => [...document.documentElement.classList]);
@@ -108,8 +108,7 @@ test('very large text does not overflow on phones, tablets or desktops', async (
   for (const width of [375, 768, 1280]) {
     await page.setViewportSize({ width, height: 900 });
     for (const section of ['Listas Duales', 'Agenda']) {
-      if (width < 768) await page.getByRole('button', { name: 'Menú' }).click();
-      await page.getByRole('button', { name: section, exact: true }).click();
+      await openSection(page, section);
       await expectNoHorizontalOverflow(page, `${section} a ${width}px con texto muy grande`);
     }
   }

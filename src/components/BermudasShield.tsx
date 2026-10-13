@@ -1,6 +1,6 @@
 import React from 'react';
 import { MeetingGuard, EmailDraft } from '../types';
-import { ShieldCheck, Calendar, Mail, Clock, UserCheck, AlertTriangle, Paperclip, Send, Plus } from 'lucide-react';
+import { ShieldCheck, Calendar, Mail, Clock, UserCheck, Paperclip, Plus } from 'lucide-react';
 
 interface BermudasShieldProps {
   meetings: MeetingGuard[];

@@ -42,7 +42,7 @@ app.get('/api/health', (_req: Request, res: Response) => {
 // Ruta API para inferencia NLP TF-IDF en servidor (Módulo 3)
 app.post('/api/nlp/infer', (req: Request, res: Response) => {
   // Express 5 deja req.body como undefined cuando la petición no trae JSON
-  const { title, description } = req.body ?? {};
+  const { title, description } = (req.body as { title?: unknown; description?: unknown } | undefined) ?? {};
   // Endpoint de fallback para microservicio de vectorización
   res.json({
     message: 'Procesamiento semántico recibido',

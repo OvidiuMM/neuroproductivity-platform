@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useCallback, useState, useEffect, useRef } from 'react';
 import type { User } from 'firebase/auth';
 import {
   AppTab,
@@ -123,12 +123,17 @@ export default function App({ user, services, isAdmin = false }: AppProps) {
   // ACCESOS (solo administración): solicitudes en vivo para la pestaña y su contador de pendientes
   const [accessRequests, setAccessRequests] = useState<AccessRequest[]>([]);
   const [accessError, setAccessError] = useState<string | null>(null);
-  useEffect(() => {
+  // Al dejar de ser administración se vacían las solicitudes y se sale de su pestaña
+  const [wasAdmin, setWasAdmin] = useState(isAdmin);
+  if (wasAdmin !== isAdmin) {
+    setWasAdmin(isAdmin);
     if (!isAdmin) {
       setAccessRequests([]);
       setActiveTab((tab) => (tab === 'access' ? 'tasks' : tab));
-      return;
     }
+  }
+  useEffect(() => {
+    if (!isAdmin) return;
     return subscribeToAccessRequests(db, setAccessRequests, (e) => {
       console.error('Error loading access requests:', e);
       setAccessError('No se pudieron cargar las solicitudes de acceso.');
@@ -160,15 +165,18 @@ export default function App({ user, services, isAdmin = false }: AppProps) {
   // Toast / Banner de notificación
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
-  const showToast = (msg: string) => {
+  const showToast = useCallback((msg: string) => {
     setToastMessage(msg);
     setTimeout(() => setToastMessage(null), 4000);
-  };
+  }, []);
 
-  const reportError = (action: string) => (e: unknown) => {
-    console.error(`Error al ${action}:`, e);
-    showToast(`No se pudo ${action}. Revisa tu conexión e inténtalo de nuevo.`);
-  };
+  const reportError = useCallback(
+    (action: string) => (e: unknown) => {
+      console.error(`Error al ${action}:`, e);
+      showToast(`No se pudo ${action}. Revisa tu conexión e inténtalo de nuevo.`);
+    },
+    [showToast]
+  );
 
   // SINCRONIZACIÓN: verde solo si las cuatro colecciones están confirmadas por el servidor y sin escrituras pendientes
   const [syncByCollection, setSyncByCollection] = useState<Record<UserCollection, SnapshotInfo>>(
@@ -274,7 +282,7 @@ export default function App({ user, services, isAdmin = false }: AppProps) {
       )
     ];
     return () => unsubscribers.forEach((unsubscribe) => unsubscribe());
-  }, [db, uid]);
+  }, [db, uid, reportError]);
 
   // Las escrituras se reflejan al instante (caché local) y se sincronizan con el servidor en segundo plano
   const openNewTask = (options?: { someday?: boolean }) => {

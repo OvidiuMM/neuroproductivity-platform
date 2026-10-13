@@ -1,5 +1,4 @@
 import React, { useEffect, useState } from 'react';
-import { Sparkles, CheckCircle2 } from 'lucide-react';
 import { BRAND_NAME, BRAND_TAGLINE, BrandMark } from './BrandMark';
 
 interface SplashScreenProps {
@@ -47,6 +46,8 @@ export const SplashScreen: React.FC<SplashScreenProps> = ({
   if (!isVisible) return null;
 
   return (
+    // Tocar para saltarla es solo un atajo: se cierra sola en menos de dos segundos
+    // eslint-disable-next-line jsx-a11y/click-events-have-key-events, jsx-a11y/no-noninteractive-element-interactions
     <div
       onClick={() => {
         setIsFadingOut(true);

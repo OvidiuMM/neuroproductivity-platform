@@ -404,7 +404,7 @@ const CATEGORY_CENTROIDS: Record<WheelCategory, Record<string, number>> = (() =>
   for (const [category, words] of Object.entries(CATEGORY_CORPUS)) {
     centroids[category] = calculateTF(words);
   }
-  return centroids as Record<WheelCategory, Record<string, number>>;
+  return centroids;
 })();
 
 export interface NLPSuggestionResult {
@@ -458,7 +458,7 @@ export function inferWheelCategory(title: string, description: string): NLPSugge
           : Math.max(0.65, normalizedConfidence)
         : 0,
     tokensFound: Array.from(new Set(matchedTokens)),
-    allScores: scores as Record<WheelCategory, number>,
+    allScores: scores,
     isAboveThreshold: isAboveThreshold && maxScore > 0
   };
 }

@@ -12,12 +12,16 @@ const secondMonday = (year: number, month: number) => {
   return new Date(year, month, 1 + ((1 - first.getDay() + 7) % 7) + 7);
 };
 
+// Próximo 2.º lunes: el de este mes si aún no ha pasado, o el del siguiente
+const nextSecondMonday = (today: Date) => {
+  const thisMonth = secondMonday(today.getFullYear(), today.getMonth());
+  const startOfToday = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+  return thisMonth < startOfToday ? secondMonday(today.getFullYear(), today.getMonth() + 1) : thisMonth;
+};
+
 test('a task repeated on the second Monday of every month creates its next occurrence when done', async ({ page }) => {
   // Próximo 2.º lunes (de este mes o del siguiente) y el del mes siguiente a ese
-  const today = new Date();
-  let due = secondMonday(today.getFullYear(), today.getMonth());
-  if (due < new Date(today.getFullYear(), today.getMonth(), today.getDate()))
-    due = secondMonday(today.getFullYear(), today.getMonth() + 1);
+  const due = nextSecondMonday(new Date());
   const next = secondMonday(due.getFullYear(), due.getMonth() + 1);
 
   await page.goto('/');
@@ -42,7 +46,7 @@ test('a task repeated on the second Monday of every month creates its next occur
   await page.getByRole('button', { name: `Añadir «${title}» al calendario`, exact: true }).click();
   const downloadPromise = page.waitForEvent('download');
   await page.getByRole('menuitem', { name: /Descargar \.ics/ }).click();
-  const ics = readFileSync((await (await downloadPromise).path())!, 'utf8');
+  const ics = readFileSync(await (await downloadPromise).path(), 'utf8');
   expect(ics).toContain('RRULE:FREQ=MONTHLY;INTERVAL=1;BYDAY=2MO');
   await page.keyboard.press('Escape');
   await page.mouse.click(5, 400);
