@@ -1,4 +1,4 @@
-import { adminDb } from './adminApp';
+import { adminAuth, adminDb } from './adminApp';
 import { HttpsError, onCall, type CallableRequest } from 'firebase-functions/https';
 import * as logger from 'firebase-functions/logger';
 import { defineSecret, defineString } from 'firebase-functions/params';
@@ -53,7 +53,7 @@ const sendAccessEmail = async (kind: AccessEmail, record: AccessRecord) => {
       auth: { user: gmailUser.value(), pass: gmailAppPassword.value() }
     });
     const { subject, text } = buildEmail(kind, record, appUrl());
-    await transport.sendMail({ from: `NeuroProductividad <${gmailUser.value()}>`, to, subject, text });
+    await transport.sendMail({ from: `CLAR <${gmailUser.value()}>`, to, subject, text });
     logger.info('Access email sent', { kind });
   } catch (error) {
     logger.error('Access email failed', { kind, code: (error as { code?: string }).code ?? 'unknown' });
@@ -106,6 +106,8 @@ export const syncAccess = onCall({ region: REGION }, async (request) => {
 export const requestAccess = onCall({ region: REGION, secrets: emailSecrets }, async (request) => {
   const auth = requireAuth(request);
   if (!auth.token.email) throw new HttpsError('failed-precondition', 'Tu cuenta no tiene email.');
+  // Las cuentas con contraseña confirman antes su email (las de Google ya vienen verificadas)
+  if (auth.token.email_verified !== true) throw new HttpsError('permission-denied', 'Verifica tu email antes de solicitar acceso.');
   const message = normalizeMessage((request.data as { message?: unknown } | null)?.message);
   const ref = db().doc(`access/${auth.uid}`);
 
@@ -169,5 +171,13 @@ export const setAccess = onCall({ region: REGION, secrets: emailSecrets }, async
 export const forgetAccess = onCall({ region: REGION }, async (request) => {
   const auth = requireAuth(request);
   await Promise.all([db().doc(`access/${auth.uid}`).delete(), db().doc(`admins/${auth.uid}`).delete()]);
+  return { ok: true };
+});
+
+// Cierra la sesión en todos los dispositivos: invalida los tokens de renovación de la cuenta
+export const revokeSessions = onCall({ region: REGION }, async (request) => {
+  const auth = requireAuth(request);
+  await adminAuth().revokeRefreshTokens(auth.uid);
+  logger.info('Sessions revoked');
   return { ok: true };
 });

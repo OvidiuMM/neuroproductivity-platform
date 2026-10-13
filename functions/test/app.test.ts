@@ -26,7 +26,7 @@ describe('API de Cloud Functions', () => {
 
     assert.equal(res.status, 200);
     assert.equal(body.status, 'ok');
-    assert.equal(body.service, 'NeuroProductividad Dr. Benito Sipos API');
+    assert.equal(body.service, 'CLAR API');
     assert.equal(typeof body.uptime, 'number');
   });
 

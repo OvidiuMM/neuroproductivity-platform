@@ -43,7 +43,8 @@ import { HomeView } from './components/HomeView';
 import { AccessAdminView } from './components/AccessAdminView';
 import { AccessibilityPanel } from './components/AccessibilityPanel';
 import { setAccess, subscribeToAccessRequests, type AccessRequest, type DecisionStatus } from './services/access';
-import { deleteAccount, downloadAccountData } from './services/account';
+import { deleteAccount, downloadAccountData, signOutEverywhere } from './services/account';
+import { changePassword, hasPassword } from './services/auth';
 import { CheckCircle2, Plus } from 'lucide-react';
 
 interface AppProps {
@@ -65,7 +66,7 @@ export default function App({ user, services, isAdmin = false }: AppProps) {
   const { db } = services;
   const uid = user.uid;
 
-  // Perfil para la interfaz a partir de la cuenta de Google
+  // Perfil para la interfaz a partir de la cuenta (Google o email)
   const profile: UserProfile = {
     id: uid,
     name: user.displayName || user.email || 'Tu cuenta',
@@ -335,7 +336,7 @@ export default function App({ user, services, isAdmin = false }: AppProps) {
 
   // CUENTA
   const handleExportData = () => downloadAccountData(services, user);
-  const handleDeleteAccount = () => deleteAccount(services, user);
+  const handleDeleteAccount = (password?: string) => deleteAccount(services, user, password);
 
   // IMPORTACIÓN DE DATOS DE LA VERSIÓN SIN CUENTAS
   const handleImportLocalData = async (profileIds: string[]) => {
@@ -499,7 +500,7 @@ export default function App({ user, services, isAdmin = false }: AppProps) {
       <footer className="border-t border-slate-200 bg-white py-6 mt-12 text-xs text-slate-500">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between gap-3">
           <div className="flex flex-wrap items-center justify-center gap-2">
-            <span className="font-bold text-slate-700">NeuroProductividad v{__APP_VERSION__}</span>
+            <span className="font-bold text-slate-700">CLAR v{__APP_VERSION__}</span>
             <span className="text-slate-300">·</span>
             <p className="text-slate-500">
               Gestión del tiempo y neuroproductividad.
@@ -586,8 +587,11 @@ export default function App({ user, services, isAdmin = false }: AppProps) {
         onClose={() => setIsAccountMenuOpen(false)}
         user={profile}
         onSignOut={() => signOutAndClearCache(services)}
+        hasPassword={hasPassword(user)}
         onExportData={handleExportData}
         onDeleteAccount={handleDeleteAccount}
+        onChangePassword={(currentPassword, newPassword) => changePassword(user, currentPassword, newPassword)}
+        onSignOutEverywhere={() => signOutEverywhere(services)}
         onOpenAccessibility={() => {
           setIsAccountMenuOpen(false);
           setIsAccessibilityOpen(true);

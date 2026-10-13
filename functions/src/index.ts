@@ -6,4 +6,4 @@ import { app } from './app';
 export const api = onRequest({ region: 'europe-west1', cors: true, maxInstances: 10 }, app);
 
 // Aprobación de accesos: solicitud, decisión de la administración y avisos por email
-export { forgetAccess, requestAccess, setAccess, syncAccess } from './access';
+export { forgetAccess, requestAccess, revokeSessions, setAccess, syncAccess } from './access';

@@ -29,8 +29,9 @@ export const buildCalendarEvent = (source: TaskItem, appUrl: string): CalendarEv
   const dueDate = source.dueDate;
   const task = source.recurrence ? { ...source, startDate: source.startTime ? dueDate : undefined } : source;
   const allDay = !task.startTime && !task.dueTime;
-  const description = [task.description, `Tarea de NeuroProductividad: ${appUrl}`].filter(Boolean).join('\n\n');
+  const description = [task.description, `Tarea de CLAR: ${appUrl}`].filter(Boolean).join('\n\n');
   const base = {
+    // Dominio del UID sin cambiar (nombre anterior de la app): así reexportar actualiza el mismo evento
     uid: `${task.id}@neuroproductividad`,
     title: task.title,
     description,
@@ -114,7 +115,7 @@ export const buildIcs = (event: CalendarEvent, now = new Date()) => {
   return [
     'BEGIN:VCALENDAR',
     'VERSION:2.0',
-    'PRODID:-//NeuroProductividad//ES',
+    'PRODID:-//CLAR//ES',
     'CALSCALE:GREGORIAN',
     'METHOD:PUBLISH',
     'BEGIN:VEVENT',

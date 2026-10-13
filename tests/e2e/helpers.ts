@@ -3,7 +3,7 @@ import { expect, type Page } from '@playwright/test';
 // Cada test usa una cuenta nueva en el emulador de Auth para no compartir datos
 export const uniqueEmail = () => `e2e-${Date.now()}-${Math.random().toString(36).slice(2, 8)}@example.com`;
 
-const EMULATOR_PROJECT = 'demo-neuroproductivity';
+export const EMULATOR_PROJECT = 'demo-neuroproductivity';
 // Cuenta que hace de administración en los emuladores (DEMO_ADMIN_EMAIL en functions/src/accessLogic.ts)
 export const ADMIN_EMAIL = 'admin@example.com';
 
@@ -139,3 +139,28 @@ export const expectNoInnerOverflow = async (page: Page, where: string) => {
   );
   expect(offenders, where).toEqual([]);
 };
+
+// Enlace de un email de Firebase Auth (verificación o recuperación) que el emulador guarda en lugar de enviarlo
+export const emulatorOobCode = async (email: string, requestType: 'VERIFY_EMAIL' | 'PASSWORD_RESET') => {
+  let code: { oobCode: string; oobLink: string } | undefined;
+  await expect
+    .poll(
+      async () => {
+        const res = await fetch(`http://127.0.0.1:9399/emulator/v1/projects/${EMULATOR_PROJECT}/oobCodes`);
+        const { oobCodes } = (await res.json()) as { oobCodes: { email: string; requestType: string; oobCode: string; oobLink: string }[] };
+        code = oobCodes.filter((c) => c.email === email && c.requestType === requestType).at(-1);
+        return Boolean(code);
+      },
+      { message: `email ${requestType} para ${email}` }
+    )
+    .toBe(true);
+  return code!;
+};
+
+// Llama a una Cloud Function «callable» del emulador como lo hace la app, con el token de la cuenta
+export const callFunction = (name: string, idToken: string, data: unknown) =>
+  fetch(`http://127.0.0.1:5021/${EMULATOR_PROJECT}/europe-west1/${name}`, {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${idToken}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ data })
+  });

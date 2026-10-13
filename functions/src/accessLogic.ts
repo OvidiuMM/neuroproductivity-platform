@@ -73,19 +73,19 @@ export type AccessEmail = 'new-request' | 'approved';
 export const buildEmail = (kind: AccessEmail, record: AccessRecord, appUrl: string) =>
   kind === 'new-request'
     ? {
-        subject: 'Nueva solicitud de acceso a NeuroProductividad',
+        subject: 'Nueva solicitud de acceso a CLAR',
         text: [
-          `${record.name || 'Alguien'} (${record.email}) quiere acceder a NeuroProductividad.`,
+          `${record.name || 'Alguien'} (${record.email}) quiere acceder a CLAR.`,
           record.message ? `\nMensaje:\n${record.message}` : '',
           `\nRevisa la solicitud en la pestaña «Accesos»: ${appUrl}`
         ].join('\n')
       }
     : {
-        subject: 'Ya tienes acceso a NeuroProductividad',
+        subject: 'Ya tienes acceso a CLAR',
         text: [
           `Hola${record.name ? ` ${record.name}` : ''}:`,
           '',
-          'Tu solicitud de acceso a NeuroProductividad está aprobada. Ya puedes entrar con tu cuenta de Google:',
+          'Tu solicitud de acceso a CLAR está aprobada. Ya puedes entrar con la misma cuenta con la que la pediste:',
           appUrl
         ].join('\n')
       };
