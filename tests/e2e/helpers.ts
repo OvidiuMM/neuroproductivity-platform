@@ -71,7 +71,7 @@ export const signInWithGoogle = async (
   await popup.locator('#sign-in').click();
   if (approve) {
     await approveAccess(email);
-    await expect(page.getByRole('button', { name: 'Tu cuenta' })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Nueva tarea' })).toBeVisible();
   }
   return email;
 };

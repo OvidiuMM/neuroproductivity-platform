@@ -22,7 +22,8 @@ El sistema rechaza las restricciones coercitivas (como las rotaciones atencional
 * **Cuentas y sincronización:** Inicio de sesión con Google; los datos de cada cuenta se guardan en Firestore (UE), funcionan sin conexión y se sincronizan entre dispositivos. En el primer inicio de sesión se ofrece importar los datos que la versión anterior guardaba solo en el navegador. Desde el menú de la cuenta se pueden descargar los datos o eliminar la cuenta con todo su contenido. Un indicador en la cabecera está verde cuando todo está guardado en el servidor y naranja cuando hay cambios pendientes o no hay conexión; al pulsarlo se fuerza la sincronización.
 * **Acceso con aprobación:** cada cuenta, también las que ya existían, necesita la aprobación de la administración. Sin ella se ve una pantalla para solicitar acceso con un mensaje opcional, desde la que también se pueden descargar o eliminar los datos guardados. La administración decide en la pestaña «Accesos» y recibe un email por cada solicitud; la persona recibe otro cuando se aprueba (detalles en [Aprobación de accesos](#aprobación-de-accesos)).
 * **Accesibilidad:** panel propio (menú de la cuenta y pantallas de inicio de sesión y acceso) con tamaño del texto, alto contraste, reducir animaciones y foco muy visible, guardados en cada dispositivo. Toda la app se usa con el teclado (los diálogos atrapan y devuelven el foco, enlace para saltar al contenido) y una auditoría automática WCAG 2.1 AA revisa cada pantalla en CI.
-* **Navegación en el móvil:** las secciones están en un menú desplegable de la cabecera.
+* **Inicio:** pantalla principal con el foco de la lista activa y estadísticas de las tareas (hechas por día, semana y mes; antes o después del plazo; velocidad en tareas y horas estimadas por semana; tiempo medio hasta completarlas; racha; pendientes y vencidas; reparto por área), con recomendaciones según esos datos.
+* **Cabecera de una sola línea:** en escritorio y tableta, las secciones (solo con icono hasta 1280 px), las dos listas, la sincronización y la cuenta; en el móvil, la versión, las dos listas y un menú desplegable con las secciones, la sincronización y la cuenta. «Nueva tarea» está debajo de la cabecera.
 * **Agenda:** vista semanal (de lunes a domingo) y por días (14 días, también los vacíos) con las tareas con fecha de las dos listas, los intervalos, las repeticiones previstas de las tareas recurrentes y las reuniones. En la vista por días las tareas vencidas aparecen aparte; al pulsar una tarea se edita.
 * **Primer arranque guiado:** Una cuenta sin evaluaciones abre directamente la Rueda con todas las áreas a 0 y un aviso de primer paso que enlaza a la guía *Cómo funciona* (pantallas, relaciones entre módulos y dónde se guardan los datos).
 * **Persistencia Append-Only:** Prohibición estricta de sobrescritura (`UPDATE`). Cada consolidación genera un nuevo snapshot inmutable con sellos de tiempo precisos en formato UTC (Unix Epoch).
@@ -264,6 +265,7 @@ El repositorio utiliza `package-lock.json` (en la raíz y en `functions/`) como 
 │   │   ├── agenda.ts            # Agenda por días: plazos, intervalos, repeticiones y reuniones
 │   │   ├── calendar.ts          # Enlaces de Google y Outlook y archivos .ics
 │   │   ├── dateInput.ts         # Fechas dd/mm/aaaa y meses de lunes a domingo
+│   │   ├── stats.ts             # Estadísticas y recomendaciones de la pantalla de Inicio
 │   │   ├── a11yPrefs.ts         # Preferencias del panel de accesibilidad
 │   │   ├── nlpEngine.ts         # Motor TF-IDF y Similitud del Coseno
 │   │   ├── syntaxAnalyzer.ts    # Analizador de verbos de acción física
@@ -274,6 +276,7 @@ El repositorio utiliza `package-lock.json` (en la raíz y en `functions/`) como 
 │       ├── TaskModal.tsx        # Captura con validación sintáctica, TF-IDF, fechas y repetición
 │       ├── DateField.tsx        # Campo de fecha con calendario propio (lunes primero)
 │       ├── TaskDates.tsx · TaskStatusSelect.tsx · AddToCalendarMenu.tsx · ArchivedTasksModal.tsx
+│       ├── HomeView.tsx         # Inicio: foco de la lista, estadísticas y recomendaciones
 │       ├── AgendaView.tsx       # Agenda semanal y por días
 │       ├── WheelOfLife.tsx      # Rueda de la Vida polar SVG interactiva
 │       ├── BermudasShield.tsx · MeetingModal.tsx · EmailModal.tsx   # Reuniones blindadas y correo inverso

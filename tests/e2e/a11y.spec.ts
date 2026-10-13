@@ -37,6 +37,10 @@ test('main sections, forms and dialogs', async ({ page }) => {
   // Primer arranque: Rueda de la Vida
   await expectNoViolations(page, 'rueda de la vida (primer arranque)');
 
+  await page.getByRole('button', { name: 'Inicio', exact: true }).click();
+  await expect(page.getByRole('heading', { name: 'Foco de Concentración Profesional' })).toBeVisible();
+  await expectNoViolations(page, 'inicio');
+
   await page.getByRole('button', { name: 'Listas Duales' }).click();
   await page.getByRole('button', { name: 'Capturar Primera Acción' }).click();
   await expect(page.getByRole('heading', { name: 'Captura de Nueva Acción Inmediata' })).toBeVisible();
