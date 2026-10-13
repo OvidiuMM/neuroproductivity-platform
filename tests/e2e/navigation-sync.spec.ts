@@ -12,7 +12,10 @@ test('phones use a sections menu in the header instead of a tab row', async ({ p
   await expect(menuButton).toHaveAttribute('aria-expanded', 'true');
 
   const menu = page.locator('#mobile-sections-menu');
-  await expect(menu.getByRole('button')).toHaveText(['Listas Duales', 'Agenda', 'Rueda de la Vida', 'Blindaje Bermudas', 'Cómo funciona']);
+  await expect(menu.getByRole('list').getByRole('button')).toHaveText(['Inicio', 'Listas Duales', 'Agenda', 'Rueda de la Vida', 'Blindaje Bermudas', 'Cómo funciona']);
+  // La sincronización y la cuenta también van en el menú
+  await expect(menu.locator('[aria-label^="Sincronizado"], [aria-label^="Hay cambios"], [aria-label^="Sin conexión"]')).toHaveCount(1);
+  await expect(menu.getByRole('button', { name: 'Tu cuenta' })).toBeVisible();
 
   await menu.getByRole('button', { name: 'Blindaje Bermudas' }).click();
   await expect(menu).toBeHidden();

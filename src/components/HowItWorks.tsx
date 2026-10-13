@@ -1,12 +1,22 @@
 import React from 'react';
 import { AppTab } from '../types';
-import { BookOpen, Compass, Briefcase, ShieldCheck, ArrowRight, Database, Link2, CalendarDays } from 'lucide-react';
+import { BookOpen, Compass, Briefcase, ShieldCheck, ArrowRight, Database, Link2, CalendarDays, LayoutDashboard } from 'lucide-react';
 
 interface HowItWorksProps {
   onNavigate: (tab: AppTab) => void;
 }
 
 const SCREENS: { tab: AppTab; title: string; icon: React.ReactNode; points: string[] }[] = [
+  {
+    tab: 'home',
+    title: 'Inicio',
+    icon: <LayoutDashboard className="w-5 h-5 text-indigo-600" />,
+    points: [
+      'El foco de la lista activa (Profesional o Personal) y sus indicadores: Top 10, Índice de la Rueda y reuniones.',
+      'Tus estadísticas: tareas hechas por día, semana y mes, cuántas terminas antes o después del plazo, tu velocidad, tu racha y tus pendientes.',
+      'Recomendaciones según tus datos, por ejemplo empezar por la tarea vencida más antigua.'
+    ]
+  },
   {
     tab: 'wheel',
     title: 'Rueda de la Vida',

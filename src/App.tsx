@@ -39,21 +39,12 @@ import { AccountMenu } from './components/AccountMenu';
 import { ImportLocalDataModal } from './components/ImportLocalDataModal';
 import { HowItWorks } from './components/HowItWorks';
 import { AgendaView } from './components/AgendaView';
+import { HomeView } from './components/HomeView';
 import { AccessAdminView } from './components/AccessAdminView';
 import { AccessibilityPanel } from './components/AccessibilityPanel';
 import { setAccess, subscribeToAccessRequests, type AccessRequest, type DecisionStatus } from './services/access';
 import { deleteAccount, downloadAccountData } from './services/account';
-import {
-  Brain,
-  Sparkles,
-  ShieldAlert,
-  Flame,
-  Clock,
-  Compass,
-  CheckCircle2,
-  Layers,
-  ArrowRight
-} from 'lucide-react';
+import { CheckCircle2, Plus } from 'lucide-react';
 
 interface AppProps {
   user: User;
@@ -101,7 +92,7 @@ export default function App({ user, services, isAdmin = false }: AppProps) {
   const [isImportPostponed, setIsImportPostponed] = useState(false);
 
   const [activeContext, setActiveContext] = useState<ListContext>('WORK');
-  const [activeTab, setActiveTab] = useState<AppTab>('tasks');
+  const [activeTab, setActiveTab] = useState<AppTab>('home');
 
   // Orden y filtros del Top 10, guardados en este dispositivo para cada cuenta
   const listPrefsKey = `neuro_list_prefs_v1:${uid}`;
@@ -377,7 +368,6 @@ export default function App({ user, services, isAdmin = false }: AppProps) {
     ).length
   );
   const personalCount = tasks.filter((t) => t.listContext === 'PERSONAL' && !t.isSomeday && !isArchived(t)).length;
-  const somedayCount = tasks.filter((t) => t.isSomeday && !isArchived(t)).length;
 
   // Cálculo de promedio actual de la Rueda
   const latestLog = wheelLogs[wheelLogs.length - 1];
@@ -405,103 +395,43 @@ export default function App({ user, services, isAdmin = false }: AppProps) {
         setActiveContext={setActiveContext}
         activeUser={profile}
         onOpenAccount={() => setIsAccountMenuOpen(true)}
-        onOpenNewTask={() => openNewTask()}
-        onOpenNewMeeting={() => setIsMeetingModalOpen(true)}
-        onOpenNewEmail={() => setIsEmailModalOpen(true)}
-        taskCounts={{
-          work: workCount,
-          personal: personalCount,
-          someday: somedayCount
-        }}
+        taskCounts={{ work: workCount, personal: personalCount }}
         syncStatus={syncStatus}
         onForceSync={handleForceSync}
         isAdmin={isAdmin}
         pendingAccessCount={pendingAccessCount}
       />
 
+      {/* NUEVA TAREA: debajo de la cabecera, en todas las secciones */}
+      <div className="max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 pt-4 flex justify-end">
+        <button
+          type="button"
+          onClick={() => openNewTask()}
+          className="w-full sm:w-auto h-10 px-4 text-sm font-bold text-white bg-slate-900 hover:bg-slate-800 rounded-xl shadow-sm transition-colors inline-flex items-center justify-center gap-2"
+        >
+          <Plus className="w-4 h-4" aria-hidden="true" />
+          Nueva tarea
+        </button>
+      </div>
+
       {/* CONTENIDO PRINCIPAL */}
-      <main id="main-content" tabIndex={-1} className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6 focus:outline-none">
+      <main id="main-content" tabIndex={-1} className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 pt-4 pb-8 space-y-6 focus:outline-none">
 
-        {/* HERO ESTRATÉGICO CON CONTEXTO Y MÉTRICAS BIOLÓGICAS */}
-        <div className="bg-white rounded-3xl p-6 sm:p-8 border border-slate-200 shadow-xs relative overflow-hidden">
-          <div className="absolute top-0 right-0 w-96 h-96 bg-indigo-50/60 rounded-full blur-3xl -z-10 pointer-events-none" />
-          
-          <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
-            <div className="space-y-2 max-w-2xl">
-              <div className="flex flex-wrap items-center gap-2 text-xs font-semibold text-indigo-700">
-                <Brain className="w-4 h-4" />
-                <span>Andamiaje Digital para la Corteza Prefrontal</span>
-                <span className="text-slate-300">·</span>
-                <span className="text-slate-500">
-                  Contexto Activo:{' '}
-                  <strong className={activeContext === 'WORK' ? 'text-indigo-600' : 'text-emerald-700'}>
-                    {activeContext === 'WORK' ? 'Esfera Profesional' : 'Esfera Personal'}
-                  </strong>
-                </span>
-                <span className="text-slate-300">·</span>
-                <button
-                  type="button"
-                  onClick={() => setIsAccountMenuOpen(true)}
-                  className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-slate-100 hover:bg-slate-200 text-[11px] text-slate-700 font-semibold transition-colors"
-                  title="Tu cuenta"
-                >
-                  <span className="w-2 h-2 rounded-full bg-indigo-500" />
-                  <span>Cuenta: {profile.name}</span>
-                </button>
-              </div>
-
-              <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-slate-900 leading-tight">
-                {activeContext === 'WORK'
-                  ? 'Foco de Concentración Profesional'
-                  : 'Equilibrio de Esfera Personal & Vital'}
-              </h1>
-
-              <p className="text-xs sm:text-sm text-slate-600 leading-relaxed">
-                Gestión neurocientífica sin listas pasivas ni "Tareas Muro" coercitivas. La Jerarquía Visual Gestalt destaca matemáticamente tu <strong>Top 10 operativo</strong>, mientras el analizador sintáctico y el motor TF-IDF alinean cada acción con tu Rueda de la Vida.
-              </p>
-            </div>
-
-            {/* TARJETAS DE INDICADORES EN TIEMPO REAL */}
-            <div className="grid grid-cols-3 gap-2 sm:gap-3 shrink-0 min-w-0">
-              <div className="min-w-0 p-2 sm:p-3.5 bg-slate-50 rounded-2xl border border-slate-200/80 text-center">
-                <div className="text-[10px] font-bold uppercase sm:tracking-wider text-slate-500 mb-0.5 break-words">
-                  Top 10 Foco
-                </div>
-                <div className="text-base sm:text-2xl font-extrabold text-slate-900 font-mono">
-                  {top10Count}/10
-                </div>
-                <div className="text-[10px] text-indigo-600 font-semibold mt-0.5">
-                  Máx. prioridad
-                </div>
-              </div>
-
-              <div className="min-w-0 p-2 sm:p-3.5 bg-slate-50 rounded-2xl border border-slate-200/80 text-center">
-                <div className="text-[10px] font-bold uppercase sm:tracking-wider text-slate-500 mb-0.5 break-words">
-                  Índice Rueda
-                </div>
-                <div className="text-base sm:text-2xl font-extrabold text-slate-900 font-mono">
-                  {wheelAverage}/10
-                </div>
-                <div className="text-[10px] text-emerald-700 font-semibold mt-0.5">
-                  {wheelLogs.length} capturas
-                </div>
-              </div>
-
-              <div className="min-w-0 p-2 sm:p-3.5 bg-slate-50 rounded-2xl border border-slate-200/80 text-center">
-                <div className="text-[10px] font-bold uppercase sm:tracking-wider text-slate-500 mb-0.5 break-words">
-                  Reuniones
-                </div>
-                <div className="text-base sm:text-2xl font-extrabold text-slate-900 font-mono">
-                  {meetings.length}
-                </div>
-                <div className="text-[10px] text-amber-700 font-semibold mt-0.5">
-                  Mañanas libres
-                </div>
-              </div>
-            </div>
-
-          </div>
-        </div>
+        {/* INICIO: foco de la lista activa, estadísticas y recomendaciones */}
+        {activeTab === 'home' && (
+          <HomeView
+            tasks={tasks}
+            activeContext={activeContext}
+            accountName={profile.name}
+            top10Count={top10Count}
+            wheelLogs={wheelLogs}
+            wheelAverage={wheelAverage}
+            meetings={meetings}
+            now={now}
+            onOpenAccount={() => setIsAccountMenuOpen(true)}
+            onNavigate={navigate}
+          />
+        )}
 
         {/* PESTAÑA 1: LISTAS DUALES (GESTOR DUAL CON JERARQUÍA VISUAL TOP 10) */}
         {activeTab === 'tasks' && (

@@ -211,9 +211,16 @@ export const TaskModal: React.FC<TaskModalProps> = ({
   const isRepeating = Boolean(repeatFrequency);
   const seriesStart = startDate || toDateString(new Date());
   const anchor = toLocalDate(seriesStart);
-  // Los anclajes de la regla (día del mes, N.º día de la semana) salen del inicio de la serie
+  // Los anclajes de la regla (día del mes, N.º día de la semana) salen del inicio de la serie. Al editar una
+  // repetición que cayó en el último día de un mes más corto (p. ej. el 28 de febrero de una serie del día 31),
+  // se conserva el día de la serie mientras no se cambie el inicio ni la frecuencia.
+  const storedRecurrence = editingTask?.recurrence;
+  const keepsStoredDay = Boolean(
+    storedRecurrence?.monthDay && editingTask?.dueDate && startDate === editingTask.dueDate && repeatFrequency === storedRecurrence.frequency
+  );
+  const anchorDay = keepsStoredDay ? storedRecurrence!.monthDay! : anchor.getDate();
   const monthlyOptions: { mode: MonthlyMode; label: string }[] = [
-    { mode: 'DAY_OF_MONTH', label: `El día ${anchor.getDate()}` },
+    { mode: 'DAY_OF_MONTH', label: `El día ${anchorDay}` },
     ...(nthOfMonth(anchor) <= 4
       ? [{ mode: 'NTH_WEEKDAY' as const, label: `El ${ORDINAL_LABELS[nthOfMonth(anchor)]} ${WEEKDAY_NAMES[anchor.getDay()]}` }]
       : []),
@@ -223,7 +230,7 @@ export const TaskModal: React.FC<TaskModalProps> = ({
   const effectiveMonthlyMode = monthlyOptions.some((o) => o.mode === repeatMonthlyMode) ? repeatMonthlyMode : 'DAY_OF_MONTH';
   // Semanal: mientras no se elijan días, se repite el mismo día de la semana que el inicio (y sigue al inicio si cambia)
   const weekdays = repeatWeekdays.length ? repeatWeekdays : [anchor.getDay()];
-  const recurrence = repeatFrequency
+  const built = repeatFrequency
     ? buildRecurrence(repeatFrequency, seriesStart, {
         interval: repeatInterval,
         weekdays,
@@ -231,6 +238,7 @@ export const TaskModal: React.FC<TaskModalProps> = ({
         until: dueDate || undefined
       })
     : undefined;
+  const recurrence = built?.monthDay !== undefined ? { ...built, monthDay: anchorDay } : built;
   const firstRepetition = recurrence ? firstOccurrence(seriesStart, recurrence) : null;
   const nextRepetition = recurrence && firstRepetition ? nextOccurrence(firstRepetition, recurrence, toLocalDate(firstRepetition)) : null;
   const recurrenceError = !isRepeating
