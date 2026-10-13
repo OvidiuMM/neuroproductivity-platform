@@ -11,6 +11,7 @@ import { FirebaseError } from 'firebase/app';
 import { AccessGate } from './AccessGate';
 import { LoginScreen } from './components/LoginScreen';
 import { getFirebase, type FirebaseServices } from './services/firebase';
+import { sendPasswordReset, signInWithEmail, signUpWithEmail } from './services/auth';
 
 type AuthState =
   | { status: 'loading' }
@@ -93,7 +94,19 @@ export const AuthGate: React.FC = () => {
 
   if (state.status === 'signed-out') {
     return (
-      <LoginScreen onSignIn={handleSignIn} isSigningIn={isSigningIn} error={signInError} version={__APP_VERSION__} />
+      <LoginScreen
+        onSignIn={handleSignIn}
+        onEmailSignIn={async (email, password) => {
+          await signInWithEmail(state.services.auth, email, password);
+        }}
+        onEmailSignUp={async (account) => {
+          await signUpWithEmail(state.services.auth, account);
+        }}
+        onPasswordReset={(email) => sendPasswordReset(state.services.auth, email)}
+        isSigningIn={isSigningIn}
+        error={signInError}
+        version={__APP_VERSION__}
+      />
     );
   }
 

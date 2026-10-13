@@ -48,6 +48,8 @@ export const getFirebase = (): Promise<FirebaseServices> => {
   services ??= loadConfig().then((config) => {
     const app = initializeApp(config);
     const auth = getAuth(app);
+    // Emails de verificación y de recuperación de contraseña en español
+    auth.languageCode = 'es';
     // Caché persistente: la app funciona sin conexión y sincroniza al volver, también entre pestañas
     const db = initializeFirestore(app, {
       ignoreUndefinedProperties: true,

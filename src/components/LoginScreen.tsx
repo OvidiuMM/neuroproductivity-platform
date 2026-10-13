@@ -2,9 +2,13 @@ import React from 'react';
 import { ShieldCheck, Compass, Briefcase, Cloud } from 'lucide-react';
 import { BRAND_NAME, BRAND_TAGLINE, BrandMark } from './BrandMark';
 import { AccessibilityTrigger, AccessibleScreen } from './AccessibilityPanel';
+import { EmailAuthForm } from './EmailAuthForm';
 
 interface LoginScreenProps {
   onSignIn: () => void;
+  onEmailSignIn: (email: string, password: string) => Promise<void>;
+  onEmailSignUp: (account: { name: string; email: string; password: string }) => Promise<void>;
+  onPasswordReset: (email: string) => Promise<void>;
   isSigningIn: boolean;
   error: string | null;
   version: string;
@@ -20,7 +24,15 @@ const GoogleIcon = () => (
   </svg>
 );
 
-export const LoginScreen: React.FC<LoginScreenProps> = ({ onSignIn, isSigningIn, error, version }) => (
+export const LoginScreen: React.FC<LoginScreenProps> = ({
+  onSignIn,
+  onEmailSignIn,
+  onEmailSignUp,
+  onPasswordReset,
+  isSigningIn,
+  error,
+  version
+}) => (
   <AccessibleScreen>
     {(openAccessibility) => (
       <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4 antialiased">
@@ -69,10 +81,15 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onSignIn, isSigningIn,
             </p>
           )}
 
+          <div className="flex items-center gap-3 text-xs text-slate-600" aria-hidden="true">
+            <span className="flex-1 h-px bg-slate-200" />o con tu email<span className="flex-1 h-px bg-slate-200" />
+          </div>
+          <EmailAuthForm onSignIn={onEmailSignIn} onSignUp={onEmailSignUp} onReset={onPasswordReset} />
+
           <div className="p-3.5 bg-slate-50 border border-slate-200 rounded-2xl text-[11px] text-slate-600 leading-relaxed flex items-start gap-2.5">
             <Cloud className="w-4 h-4 text-slate-500 shrink-0 mt-0.5" />
             <p>
-              El acceso se aprueba cuenta a cuenta: al entrar por primera vez podrás solicitarlo. Tus tareas, evaluaciones y agenda se guardan en tu cuenta, en servidores de Google Cloud en la Unión Europea (Bélgica). Solo tú puedes acceder a ellos, y puedes descargarlos o eliminarlos cuando quieras desde el menú de tu cuenta.
+              El acceso se aprueba cuenta a cuenta: al entrar por primera vez podrás solicitarlo (con email y contraseña, después de confirmar tu email). Tus tareas, evaluaciones y agenda se guardan en tu cuenta, en servidores de Google Cloud en la Unión Europea (Bélgica). Solo tú puedes acceder a ellos, y puedes descargarlos o eliminarlos cuando quieras desde el menú de tu cuenta.
             </p>
           </div>
 

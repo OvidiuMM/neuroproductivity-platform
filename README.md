@@ -40,7 +40,8 @@ El sistema rechaza las restricciones coercitivas (como las rotaciones atencional
 
 ### 1. Motor Estratégico: Rueda de la Vida & Trazabilidad Temporal Inmutable (`M1`)
 * **Gráfico Polar Interactivo SVG:** Mapeo de 7 dominios vitales (*Salud, Carrera Profesional, Finanzas, Familia, Ocio, Relaciones, Espiritualidad*) evaluados del 0 al 10 con arrastre y redibujado en tiempo real.
-* **Cuentas y sincronización:** Inicio de sesión con Google; los datos de cada cuenta se guardan en Firestore (UE), funcionan sin conexión y se sincronizan entre dispositivos. En el primer inicio de sesión se ofrece importar los datos que la versión anterior guardaba solo en el navegador. Desde el menú de la cuenta se pueden descargar los datos o eliminar la cuenta con todo su contenido. Un indicador en la cabecera está verde cuando todo está guardado en el servidor y naranja cuando hay cambios pendientes o no hay conexión; al pulsarlo se fuerza la sincronización.
+* **Cuentas y sincronización:** Inicio de sesión con Google o con email y contraseña (con verificación del email antes de solicitar acceso y recuperación de la contraseña por email); los datos de cada cuenta se guardan en Firestore (UE), funcionan sin conexión y se sincronizan entre dispositivos. En el primer inicio de sesión se ofrece importar los datos que la versión anterior guardaba solo en el navegador. Desde el menú de la cuenta se pueden descargar los datos o eliminar la cuenta con todo su contenido. Un indicador en la cabecera está verde cuando todo está guardado en el servidor y naranja cuando hay cambios pendientes o no hay conexión; al pulsarlo se fuerza la sincronización.
+* **Cuenta autogestionada:** desde el menú de la cuenta se cambia la contraseña, se cierra la sesión en todos los dispositivos (los demás pierden el acceso en menos de una hora), se descargan los datos y se elimina la cuenta, confirmándolo con la contraseña o con Google.
 * **Acceso con aprobación:** cada cuenta, también las que ya existían, necesita la aprobación de la administración. Sin ella se ve una pantalla para solicitar acceso con un mensaje opcional, desde la que también se pueden descargar o eliminar los datos guardados. La administración decide en la pestaña «Accesos» y recibe un email por cada solicitud; la persona recibe otro cuando se aprueba (detalles en [Aprobación de accesos](#aprobación-de-accesos)).
 * **Accesibilidad:** panel propio (menú de la cuenta y pantallas de inicio de sesión y acceso) con tamaño del texto, alto contraste, reducir animaciones y foco muy visible, guardados en cada dispositivo. Toda la app se usa con el teclado (los diálogos atrapan y devuelven el foco, enlace para saltar al contenido) y una auditoría automática WCAG 2.1 AA revisa cada pantalla en CI.
 * **Inicio:** pantalla principal con el foco de la lista activa y estadísticas de las tareas (hechas por día, semana y mes; antes o después del plazo; velocidad en tareas y horas estimadas por semana; tiempo medio hasta completarlas; racha; pendientes y vencidas; reparto por área), con recomendaciones según esos datos.
@@ -147,7 +148,7 @@ Firebase Hosting sirve la SPA compilada (`dist/`), la función `api` (Cloud Func
 | `/.well-known/assetlinks.json` | Función `api` (Digital Asset Links de la APK Android) |
 | `**` | `index.html` (fallback de la SPA) |
 
-Requisitos: un proyecto de Firebase en plan Blaze (Cloud Functions lo exige), una base de datos de Firestore `(default)` en `europe-west1`, el proveedor de inicio de sesión **Google** activado en Authentication y la Firebase CLI con sesión iniciada (`npx firebase login`).
+Requisitos: un proyecto de Firebase en plan Blaze (Cloud Functions lo exige), una base de datos de Firestore `(default)` en `europe-west1`, los proveedores de inicio de sesión **Google** y **Correo electrónico/contraseña** activados en Authentication y la Firebase CLI con sesión iniciada (`npx firebase login`).
 
 El ID del proyecto no se versiona: `.firebaserc` está en `.gitignore`. En cada clon, selecciona el proyecto una vez:
 
@@ -161,7 +162,7 @@ La función usa dos parámetros, `ANDROID_PACKAGE_NAME` y `ANDROID_SHA256_FINGER
 
 Cada cuenta necesita la aprobación de la administración antes de usar la app, también las que ya existían. Al entrar sin acceso, la persona ve una pantalla para solicitarlo con un mensaje opcional; la administración decide en la pestaña **Accesos** (aprobar, rechazar o retirar) y el cambio se aplica al momento. Tras un rechazo o una retirada se puede volver a solicitar pasado un día.
 
-- Las Cloud Functions `syncAccess`, `requestAccess`, `setAccess` y `forgetAccess` (`functions/src/access.ts`) son las únicas que escriben `access/{uid}` y `admins/{uid}`. Las reglas consultan `access/{uid}` para dejar crear y modificar en `users/{uid}/…`, y la marca `admins/{uid}` (con el email de la administración, que debe coincidir con el de quien lee) para la lista de solicitudes.
+- Las Cloud Functions `syncAccess`, `requestAccess`, `setAccess`, `forgetAccess` y `revokeSessions` (esta última cierra las sesiones de la cuenta en todos los dispositivos) (`functions/src/access.ts`) son las únicas que escriben `access/{uid}` y `admins/{uid}`. Las reglas consultan `access/{uid}` para dejar crear y modificar en `users/{uid}/…`, y la marca `admins/{uid}` (con el email de la administración, que debe coincidir con el de quien lee) para la lista de solicitudes.
 - La administración es la cuenta de Google cuyo email coincide con el parámetro `ADMIN_EMAIL`; se aprueba sola al entrar. En los emuladores (proyecto demo) es `admin@example.com`.
 - Avisos por email con Gmail y una contraseña de aplicación: a la administración por cada solicitud nueva y a la persona cuando se aprueba. Los envía la cuenta del parámetro `GMAIL_USER`; la contraseña está en Secret Manager como `GMAIL_APP_PASSWORD` y nunca en el repositorio ni en los `.env`. En los emuladores no se envía nada.
 
@@ -279,7 +280,8 @@ El repositorio utiliza `package-lock.json` (en la raíz y en `functions/`) como 
 │   │   ├── firebase.ts          # Firebase (Auth, Firestore con caché sin conexión, Functions) y sincronización forzada
 │   │   ├── repository.ts        # Lectura en tiempo real y escritura de los datos de cada cuenta
 │   │   ├── access.ts            # Solicitudes de acceso y llamadas a las Cloud Functions
-│   │   ├── account.ts           # Descarga de los datos y eliminación de la cuenta
+│   │   ├── auth.ts              # Email y contraseña: alta con verificación, acceso, recuperación y cambio
+│   │   ├── account.ts           # Descarga de los datos, eliminación de la cuenta y cierre de todas las sesiones
 │   │   ├── tasks.ts             # Estados, plazos y prioridad efectiva
 │   │   ├── taskListing.ts       # Orden, filtros y estimación del Top 10
 │   │   ├── recurrence.ts        # Tareas recurrentes y su exportación RRULE
@@ -306,7 +308,8 @@ El repositorio utiliza `package-lock.json` (en la raíz y en `functions/`) como 
 │       ├── AccessRequestScreen.tsx # Solicitud de acceso, su estado y los datos de la cuenta
 │       ├── AccessAdminView.tsx  # Pestaña «Accesos» de la administración
 │       ├── AccessibilityPanel.tsx # Panel de accesibilidad
-│       ├── AccountMenu.tsx      # Accesibilidad, descargar datos, cerrar sesión y eliminar la cuenta
+│       ├── AccountMenu.tsx      # Accesibilidad, datos, seguridad (contraseña y sesiones) y eliminar la cuenta
+│       ├── EmailAuthForm.tsx · EmailVerificationScreen.tsx · DeleteAccountPanel.tsx
 │       ├── ImportLocalDataModal.tsx # Importación de datos locales en el primer inicio de sesión
 │       ├── HowItWorks.tsx       # Guía «Cómo funciona»
 │       ├── SyncIndicator.tsx    # Indicador de sincronización (pulsar fuerza la sincronización)
