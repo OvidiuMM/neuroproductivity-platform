@@ -22,8 +22,9 @@ test('agenda shows dated tasks of both lists, projected repetitions, and opens a
   // Con la lista Personal activa, el formulario se abre ya en esa lista
   await page.locator('header').getByRole('button', { name: /^Personal/ }).click();
   await page.getByRole('button', { name: 'Nueva Tarea' }).click();
-  await page.getByLabel('Fecha límite', { exact: true }).fill(localDateFromToday(2));
+  // Semanal desde dentro de dos días, sin fin
   await page.getByLabel('Repetir').selectOption('WEEKLY');
+  await page.getByLabel('Fecha de inicio', { exact: true }).fill(localDateFromToday(2));
   await fillAndSaveTask(page, { title: personal });
 
   await page.getByRole('button', { name: 'Agenda', exact: true }).click();
@@ -71,4 +72,42 @@ test('in the by-days view an overdue task is listed once, under «Vencidas»', a
   await page.getByRole('button', { name: 'Semana anterior' }).click();
   await expect(page.getByRole('region', { name: /Vencidas/ }).getByRole('button', { name: new RegExp(title) })).toBeVisible();
   await expect(page.getByRole('button', { name: new RegExp(title) })).toHaveCount(1);
+});
+
+test('a repeated task with a start and a due date shows only its days, from the start to the due date', async ({ page }) => {
+  await page.goto('/');
+  await signInWithGoogle(page);
+  await page.getByRole('button', { name: 'Listas Duales' }).click();
+  const title = `Revisar el correo de clientes ${Date.now().toString(36)}`;
+  await page.getByRole('button', { name: 'Capturar Primera Acción' }).click();
+  await page.getByLabel('Repetir').selectOption('WEEKLY');
+  // Lunes, miércoles y viernes durante tres semanas desde el lunes de la semana que viene
+  const today = new Date();
+  const nextMonday = (8 - today.getDay()) % 7 || 7;
+  const start = localDateFromToday(nextMonday);
+  const end = localDateFromToday(nextMonday + 18); // viernes de la tercera semana
+  await page.getByLabel('Fecha de inicio', { exact: true }).fill(start);
+  const days = page.locator('fieldset', { hasText: 'Días de la semana' });
+  // El lunes ya viene marcado por ser el día del inicio
+  await expect(days.getByRole('checkbox', { name: 'Lunes' })).toBeChecked();
+  await days.getByText('X', { exact: true }).click();
+  await days.getByText('V', { exact: true }).click();
+  await page.getByLabel('Fecha límite', { exact: true }).fill(end);
+  await expect(page.getByText('fin de la repetición (opcional)')).toBeVisible();
+  await expect(page.getByLabel('Hasta (opcional)')).toHaveCount(0);
+  await fillAndSaveTask(page, { title });
+
+  await page.getByRole('button', { name: 'Agenda', exact: true }).click();
+  const countPerDay = async () =>
+    page.getByRole('list', { name: 'Semana' }).locator(':scope > li').evaluateAll((els, t) =>
+      els.map((el) => [...el.querySelectorAll('button')].filter((b) => b.textContent?.includes(t as string)).length), title);
+  await page.getByRole('button', { name: 'Semana siguiente' }).click();
+  // Ningún día «En curso»: solo lunes, miércoles y viernes
+  await expect.poll(countPerDay).toEqual([1, 0, 1, 0, 1, 0, 0]);
+  await page.getByRole('button', { name: 'Semana siguiente' }).click();
+  await page.getByRole('button', { name: 'Semana siguiente' }).click();
+  await expect.poll(countPerDay).toEqual([1, 0, 1, 0, 1, 0, 0]);
+  // La serie termina en la fecha límite
+  await page.getByRole('button', { name: 'Semana siguiente' }).click();
+  await expect.poll(countPerDay).toEqual([0, 0, 0, 0, 0, 0, 0]);
 });

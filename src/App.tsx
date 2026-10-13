@@ -462,12 +462,12 @@ export default function App({ user, services, isAdmin = false }: AppProps) {
             </div>
 
             {/* TARJETAS DE INDICADORES EN TIEMPO REAL */}
-            <div className="grid grid-cols-3 gap-3 shrink-0">
-              <div className="p-3.5 bg-slate-50 rounded-2xl border border-slate-200/80 text-center">
-                <div className="text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-0.5">
+            <div className="grid grid-cols-3 gap-2 sm:gap-3 shrink-0 min-w-0">
+              <div className="min-w-0 p-2 sm:p-3.5 bg-slate-50 rounded-2xl border border-slate-200/80 text-center">
+                <div className="text-[10px] font-bold uppercase sm:tracking-wider text-slate-500 mb-0.5 break-words">
                   Top 10 Foco
                 </div>
-                <div className="text-xl sm:text-2xl font-extrabold text-slate-900 font-mono">
+                <div className="text-base sm:text-2xl font-extrabold text-slate-900 font-mono">
                   {top10Count}/10
                 </div>
                 <div className="text-[10px] text-indigo-600 font-semibold mt-0.5">
@@ -475,11 +475,11 @@ export default function App({ user, services, isAdmin = false }: AppProps) {
                 </div>
               </div>
 
-              <div className="p-3.5 bg-slate-50 rounded-2xl border border-slate-200/80 text-center">
-                <div className="text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-0.5">
+              <div className="min-w-0 p-2 sm:p-3.5 bg-slate-50 rounded-2xl border border-slate-200/80 text-center">
+                <div className="text-[10px] font-bold uppercase sm:tracking-wider text-slate-500 mb-0.5 break-words">
                   Índice Rueda
                 </div>
-                <div className="text-xl sm:text-2xl font-extrabold text-slate-900 font-mono">
+                <div className="text-base sm:text-2xl font-extrabold text-slate-900 font-mono">
                   {wheelAverage}/10
                 </div>
                 <div className="text-[10px] text-emerald-700 font-semibold mt-0.5">
@@ -487,11 +487,11 @@ export default function App({ user, services, isAdmin = false }: AppProps) {
                 </div>
               </div>
 
-              <div className="p-3.5 bg-slate-50 rounded-2xl border border-slate-200/80 text-center">
-                <div className="text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-0.5">
+              <div className="min-w-0 p-2 sm:p-3.5 bg-slate-50 rounded-2xl border border-slate-200/80 text-center">
+                <div className="text-[10px] font-bold uppercase sm:tracking-wider text-slate-500 mb-0.5 break-words">
                   Reuniones
                 </div>
-                <div className="text-xl sm:text-2xl font-extrabold text-slate-900 font-mono">
+                <div className="text-base sm:text-2xl font-extrabold text-slate-900 font-mono">
                   {meetings.length}
                 </div>
                 <div className="text-[10px] text-amber-700 font-semibold mt-0.5">
@@ -589,10 +589,6 @@ export default function App({ user, services, isAdmin = false }: AppProps) {
             >
               Guía de uso
             </button>
-            <span className="text-slate-300">·</span>
-            <span>Datos sincronizados en tu cuenta</span>
-            <span className="text-slate-300">·</span>
-            <span>Append-Only UTC</span>
           </div>
         </div>
       </footer>

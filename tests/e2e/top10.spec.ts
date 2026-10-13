@@ -36,6 +36,12 @@ test('ranks the Top 10 by effective priority and filters it by estimate and dead
   await expect(farRow.getByText('MEDIA', { exact: true })).toBeVisible();
   await expect(farRow.getByText('plazo > 1 semana')).toBeVisible();
 
+  // Los botones de cada tarea son grandes, fáciles de pulsar
+  for (const name of [`Editar «${far}»`, `Eliminar «${far}»`, `Añadir «${far}» al calendario`]) {
+    const box = (await page.getByRole('button', { name, exact: true }).boundingBox())!;
+    expect(Math.min(box.width, box.height), name).toBeGreaterThanOrEqual(40);
+  }
+
   // Orden por prioridad efectiva: Alta (sin fecha) → Media que vence antes → Media lejana
   await expect.poll(() => top10Titles(page)).toEqual([long, quick, far]);
 
