@@ -87,6 +87,18 @@ describe('computeStats', () => {
     assert.equal(stats.dueThisWeek, 2);
   });
 
+  it('ends the week at next Monday even when the clocks change on Sunday', () => {
+    const previousTz = process.env.TZ;
+    process.env.TZ = 'Europe/Madrid'; // el 25 oct 2026 la hora se retrasa: esa semana dura 169 horas
+    try {
+      const wednesday = new Date(2026, 9, 21, 12, 0);
+      const stats = computeStats([task('late-sunday', { dueDate: '2026-10-25', dueTime: '23:30' }), task('monday', { dueDate: '2026-10-26', dueTime: '00:30' })], wednesday);
+      assert.equal(stats.dueThisWeek, 1);
+    } finally {
+      process.env.TZ = previousTz;
+    }
+  });
+
   it('ranks areas by tasks done in the last 30 days', () => {
     const stats = computeStats(
       [done('a', 14, { wheelCategory: 'Salud' }), done('b', 13, { wheelCategory: 'Finanzas' }), done('c', 12, { wheelCategory: 'Salud' })],
@@ -109,6 +121,13 @@ describe('recommendationsFor', () => {
     assert.match(recs[0].text, /2 tareas vencidas.*«Pagar el seguro»/);
     assert.ok(recs.some((r) => r.id === 'wheel'));
     assert.ok(recs.length <= 3);
+  });
+
+  it('suggests restarting when nothing was done this calendar week, even if last week had completions', () => {
+    const monday = new Date(2026, 9, 19, 9, 0); // lunes 19: lo último hecho fue el martes 13
+    const tasks = [done('last-week', 13, { dueDate: '2026-10-14' }), task('open', { dueDate: '2026-10-30' })];
+    const recs = recommendationsFor(computeStats(tasks, monday), tasks, [wheel(18)], monday);
+    assert.ok(recs.some((r) => r.id === 'restart'));
   });
 
   it('says nothing when everything is on track', () => {

@@ -1,7 +1,7 @@
 import { AppTab, TaskItem, WheelCategory, WheelOfLifeLog } from '../types';
 import { startOfWeek } from './agenda';
 import { toDateString } from './recurrence';
-import { dueMoment, isArchived, WEEK_MS } from './tasks';
+import { dueMoment, isArchived } from './tasks';
 
 // Estadísticas de la pantalla de Inicio, a partir de las tareas de una lista (las hechas guardan doneAt)
 
@@ -41,6 +41,8 @@ const doneMoment = (task: TaskItem) => (task.doneAt ? new Date(task.doneAt) : nu
 export const computeStats = (tasks: TaskItem[], now = new Date()): TaskStats => {
   const today = startOfDay(now);
   const weekStart = startOfWeek(now);
+  // Siete días de calendario (no 168 horas): con el cambio de hora la semana dura una hora más o menos
+  const nextWeekStart = addDays(weekStart, 7);
   const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
   const recentFrom = addDays(today, -RECENT_DAYS + 1);
   const velocityFrom = addDays(weekStart, -7 * VELOCITY_WEEKS);
@@ -97,7 +99,7 @@ export const computeStats = (tasks: TaskItem[], now = new Date()): TaskStats => 
     overdue: open.filter((t) => dueMoment(t) && dueMoment(t)! < now).length,
     dueThisWeek: open.filter((t) => {
       const due = dueMoment(t);
-      return due && due >= now && due.getTime() < weekStart.getTime() + WEEK_MS;
+      return due && due >= now && due < nextWeekStart;
     }).length,
     byArea: [...areaCounts.entries()].map(([area, count]) => ({ area, count })).sort((a, b) => b.count - a.count)
   };
@@ -143,7 +145,7 @@ export const recommendationsFor = (
       text: `En el último mes terminaste a tiempo el ${Math.round(stats.onTimeRate * 100)} % de las tareas con plazo. Prueba a dividir las largas o a poner plazos más realistas.`
     });
   }
-  if (stats.open > 0 && stats.daily.slice(-7).every((d) => d.count === 0)) {
+  if (stats.open > 0 && stats.doneThisWeek === 0) {
     list.push({
       id: 'restart',
       text: 'Esta semana aún no has completado ninguna tarea. Elige una corta del Top 10 y hazla hoy.',
