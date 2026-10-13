@@ -1,4 +1,5 @@
-import { GoogleAuthProvider, deleteUser, reauthenticateWithPopup, type User } from 'firebase/auth';
+import { EmailAuthProvider, GoogleAuthProvider, deleteUser, reauthenticateWithCredential, reauthenticateWithPopup, type User } from 'firebase/auth';
+import { httpsCallable } from 'firebase/functions';
 import { forgetAccess } from './access';
 import { signOutAndClearCache, type FirebaseServices } from './firebase';
 import { deleteAllUserData, exportUserData } from './repository';
@@ -18,16 +19,22 @@ const downloadJson = (filename: string, data: unknown) => {
 
 export const downloadAccountData = async ({ db }: FirebaseServices, user: User) => {
   const data = await exportUserData(db, user.uid);
-  downloadJson(`neuroproductividad-${new Date().toISOString().slice(0, 10)}.json`, {
+  downloadJson(`clar-${new Date().toISOString().slice(0, 10)}.json`, {
     exportedAt: new Date().toISOString(),
     account: { name: user.displayName, email: user.email },
     ...data
   });
 };
 
-export const deleteAccount = async (services: FirebaseServices, user: User) => {
-  // Firebase exige un inicio de sesión reciente para eliminar la cuenta
-  await reauthenticateWithPopup(user, new GoogleAuthProvider());
+// Firebase exige un inicio de sesión reciente para eliminar la cuenta: con la contraseña si la cuenta la tiene
+// (y se ha escrito), si no con Google
+const reauthenticate = (user: User, password?: string) =>
+  password
+    ? reauthenticateWithCredential(user, EmailAuthProvider.credential(user.email ?? '', password))
+    : reauthenticateWithPopup(user, new GoogleAuthProvider());
+
+export const deleteAccount = async (services: FirebaseServices, user: User, password?: string) => {
+  await reauthenticate(user, password);
   await deleteAllUserData(services.db, user.uid);
   // La solicitud de acceso se borra al final, con la sesión aún abierta para llamar a la función
   await forgetAccess(services.functions);
@@ -35,5 +42,9 @@ export const deleteAccount = async (services: FirebaseServices, user: User) => {
   await signOutAndClearCache(services);
 };
 
-export const DELETE_ACCOUNT_CONFIRMATION =
-  'Se eliminarán tu cuenta y todos tus datos (tareas, evaluaciones, reuniones y correos). No se puede deshacer. ¿Continuar?';
+// Cierra la sesión en todos los dispositivos: invalida los tokens de renovación (los demás dispositivos dejan de
+// tener acceso en menos de una hora, cuando caduca el token actual) y cierra la sesión en este
+export const signOutEverywhere = async (services: FirebaseServices) => {
+  await httpsCallable(services.functions, 'revokeSessions')();
+  await signOutAndClearCache(services);
+};

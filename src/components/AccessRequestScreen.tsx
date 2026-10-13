@@ -1,7 +1,9 @@
 import React, { useState } from 'react';
-import { Brain, Clock, Download, LogOut, Send, ShieldAlert, Trash2, WifiOff } from 'lucide-react';
+import { Clock, Download, LogOut, Send, ShieldAlert, Trash2, WifiOff } from 'lucide-react';
+import { BRAND_NAME, BrandMark } from './BrandMark';
 import { ACCESS_MESSAGE_MAX_LENGTH, type OwnAccessStatus } from '../services/access';
-import { DELETE_ACCOUNT_CONFIRMATION } from '../services/account';
+import { describeAuthError } from '../services/auth';
+import { DeleteAccountPanel } from './DeleteAccountPanel';
 import { AccessibilityTrigger, AccessibleScreen } from './AccessibilityPanel';
 
 interface AccessRequestScreenProps {
@@ -11,13 +13,14 @@ interface AccessRequestScreenProps {
   onRetry: () => void;
   onSignOut: () => void;
   onDownloadData: () => Promise<void>;
-  onDeleteAccount: () => Promise<void>;
+  onDeleteAccount: (password?: string) => Promise<void>;
+  hasPassword: boolean;
 }
 
 const COPY: Record<AccessRequestScreenProps['status'], { title: string; text: string }> = {
   none: {
     title: 'Solicita acceso',
-    text: 'El acceso a NeuroProductividad se aprueba cuenta a cuenta. Envía tu solicitud y te avisaremos por email cuando esté aprobada.'
+    text: 'El acceso a CLAR se aprueba cuenta a cuenta. Envía tu solicitud y te avisaremos por email cuando esté aprobada.'
   },
   pending: {
     title: 'Solicitud enviada',
@@ -29,7 +32,7 @@ const COPY: Record<AccessRequestScreenProps['status'], { title: string; text: st
   },
   revoked: {
     title: 'Acceso retirado',
-    text: 'Tu acceso a NeuroProductividad se ha retirado. Tus datos siguen guardados. Pasado un día puedes volver a solicitarlo.'
+    text: 'Tu acceso a CLAR se ha retirado. Tus datos siguen guardados. Pasado un día puedes volver a solicitarlo.'
   },
   unknown: {
     title: 'No se pudo comprobar tu acceso',
@@ -47,11 +50,13 @@ export const AccessRequestScreen: React.FC<AccessRequestScreenProps> = ({
   onRetry,
   onSignOut,
   onDownloadData,
-  onDeleteAccount
+  onDeleteAccount,
+  hasPassword
 }) => {
   const [message, setMessage] = useState('');
   const [isSending, setIsSending] = useState(false);
   const [dataBusy, setDataBusy] = useState<'download' | 'delete' | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   // Sin acceso aprobado la cuenta sigue pudiendo llevarse o eliminar sus datos (p. ej. tras una retirada)
@@ -62,7 +67,12 @@ export const AccessRequestScreen: React.FC<AccessRequestScreenProps> = ({
       await action();
     } catch (err) {
       console.error(`Account ${kind} failed:`, err);
-      setError(kind === 'download' ? 'No se pudieron descargar tus datos. Inténtalo de nuevo.' : 'No se pudo eliminar la cuenta. Inténtalo de nuevo.');
+      setError(
+        describeAuthError(
+          err,
+          kind === 'download' ? 'No se pudieron descargar tus datos. Inténtalo de nuevo.' : 'No se pudo eliminar la cuenta. Inténtalo de nuevo.'
+        )
+      );
     } finally {
       setDataBusy(null);
     }
@@ -89,11 +99,9 @@ export const AccessRequestScreen: React.FC<AccessRequestScreenProps> = ({
         <main className="min-h-screen bg-slate-50 flex items-center justify-center p-4 antialiased">
           <div className="w-full max-w-md bg-white rounded-3xl border border-slate-200 shadow-xl p-8 space-y-6">
             <div className="flex items-center gap-3">
-              <div className="w-11 h-11 rounded-2xl bg-slate-900 text-white flex items-center justify-center shadow-sm">
-                <Brain className="w-6 h-6 text-indigo-400" aria-hidden="true" />
-              </div>
+              <BrandMark size={44} />
               <div>
-                <p className="text-xl font-bold tracking-tight text-slate-900">NeuroProductividad</p>
+                <p className="text-xl font-bold tracking-[0.2em] text-slate-900">{BRAND_NAME}</p>
                 <p className="text-xs text-slate-600">Has entrado como {email}</p>
               </div>
             </div>
@@ -175,18 +183,27 @@ export const AccessRequestScreen: React.FC<AccessRequestScreenProps> = ({
                   <button
                     type="button"
                     disabled={dataBusy !== null}
-                    onClick={() => window.confirm(DELETE_ACCOUNT_CONFIRMATION) && runDataAction('delete', onDeleteAccount)}
+                    onClick={() => setIsDeleting(true)}
+                    aria-expanded={isDeleting}
                     className="flex-1 py-2 px-3 border border-red-300 hover:bg-red-50 disabled:opacity-60 text-red-700 rounded-xl text-xs font-semibold flex items-center justify-center gap-1.5"
                   >
                     <Trash2 className="w-3.5 h-3.5" aria-hidden="true" />
-                    {dataBusy === 'delete' ? 'Eliminando…' : 'Eliminar mi cuenta y mis datos'}
+                    Eliminar mi cuenta y mis datos
                   </button>
                 </div>
+                {isDeleting && (
+                  <DeleteAccountPanel
+                    needsPassword={hasPassword}
+                    busy={dataBusy === 'delete'}
+                    onConfirm={(password) => runDataAction('delete', () => onDeleteAccount(password))}
+                    onCancel={() => setIsDeleting(false)}
+                  />
+                )}
               </section>
             )}
 
             <p className="text-[11px] text-slate-600 leading-relaxed">
-              Para revisar tu solicitud se guardan tu nombre, tu email, tu foto de perfil de Google y el mensaje, en servidores de Google Cloud en la Unión Europea (Bélgica).
+              Para revisar tu solicitud se guardan tu nombre, tu email, tu foto de perfil (si entras con Google) y el mensaje, en servidores de Google Cloud en la Unión Europea (Bélgica).
             </p>
 
             <button
