@@ -675,6 +675,12 @@ export const TaskModal: React.FC<TaskModalProps> = ({
                     value={repeatFrequency}
                     onChange={(e) => {
                       const value = e.target.value as RecurrenceFrequency | '';
+                      // Al dejar de repetir, las fechas vuelven a ser las de una tarea normal: la fecha límite pasa
+                      // a ser la primera repetición y desaparece el inicio de la serie (si no, quedaría un intervalo)
+                      if (!value && isRepeating) {
+                        setDueDate(firstRepetition ?? startDate);
+                        setStartDate('');
+                      }
                       setRepeatFrequency(value);
                     }}
                     className="w-full px-2.5 py-1.5 rounded-lg border border-slate-300 text-xs bg-white focus:outline-none focus:ring-2 focus:ring-indigo-400"
