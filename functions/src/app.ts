@@ -34,7 +34,7 @@ app.get('/api/health', (_req: Request, res: Response) => {
   res.json({
     status: 'ok',
     timestamp: new Date().toISOString(),
-    service: 'NeuroProductividad Dr. Benito Sipos API',
+    service: 'CLAR API',
     uptime: process.uptime(),
   });
 });

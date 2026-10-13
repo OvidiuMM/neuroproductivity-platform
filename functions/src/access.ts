@@ -53,7 +53,7 @@ const sendAccessEmail = async (kind: AccessEmail, record: AccessRecord) => {
       auth: { user: gmailUser.value(), pass: gmailAppPassword.value() }
     });
     const { subject, text } = buildEmail(kind, record, appUrl());
-    await transport.sendMail({ from: `NeuroProductividad <${gmailUser.value()}>`, to, subject, text });
+    await transport.sendMail({ from: `CLAR <${gmailUser.value()}>`, to, subject, text });
     logger.info('Access email sent', { kind });
   } catch (error) {
     logger.error('Access email failed', { kind, code: (error as { code?: string }).code ?? 'unknown' });

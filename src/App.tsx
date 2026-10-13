@@ -499,7 +499,7 @@ export default function App({ user, services, isAdmin = false }: AppProps) {
       <footer className="border-t border-slate-200 bg-white py-6 mt-12 text-xs text-slate-500">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between gap-3">
           <div className="flex flex-wrap items-center justify-center gap-2">
-            <span className="font-bold text-slate-700">NeuroProductividad v{__APP_VERSION__}</span>
+            <span className="font-bold text-slate-700">CLAR v{__APP_VERSION__}</span>
             <span className="text-slate-300">·</span>
             <p className="text-slate-500">
               Gestión del tiempo y neuroproductividad.

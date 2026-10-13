@@ -52,7 +52,7 @@ describe('buildCalendarEvent', () => {
 
   it('includes the task description and a link to the app', () => {
     const event = buildCalendarEvent(task({ dueDate: '2026-10-15' }), APP)!;
-    assert.equal(event.description, `Enviarlo al equipo\n\nTarea de NeuroProductividad: ${APP}`);
+    assert.equal(event.description, `Enviarlo al equipo\n\nTarea de CLAR: ${APP}`);
   });
 });
 
