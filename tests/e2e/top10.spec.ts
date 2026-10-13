@@ -52,14 +52,18 @@ test('ranks the Top 10 by effective priority and filters it by estimate and dead
   await page.getByLabel('Estimación hasta').selectOption('30');
   await expect.poll(() => top10Titles(page)).toEqual([quick]);
   await expect(page.getByText('2 tareas ocultas por los filtros.')).toBeVisible();
-  // El resumen «Top 10 Foco» cuenta lo mismo que muestra la lista
+  // El resumen «Top 10 Foco» de Inicio cuenta lo mismo que muestra la lista
+  await page.getByRole('button', { name: 'Inicio', exact: true }).click();
   await expect(page.getByText('1/10', { exact: true })).toBeVisible();
+  await page.getByRole('button', { name: 'Listas Duales', exact: true }).click();
 
   // Si los filtros lo ocultan todo, no se invita a crear la primera tarea
   await page.getByLabel('Fecha límite', { exact: true }).selectOption('OVERDUE');
   await expect(page.getByText('Ninguna tarea coincide con los filtros (3 ocultas).')).toBeVisible();
   await expect(page.getByRole('button', { name: 'Capturar Primera Acción' })).toHaveCount(0);
+  await page.getByRole('button', { name: 'Inicio', exact: true }).click();
   await expect(page.getByText('0/10', { exact: true })).toBeVisible();
+  await page.getByRole('button', { name: 'Listas Duales', exact: true }).click();
   await page.getByRole('button', { name: 'Mostrar todas las tareas' }).click();
   await expect.poll(() => top10Titles(page)).toEqual([quick, far, long]);
 

@@ -32,9 +32,9 @@ test('first sign-in opens the Wheel of Life at 0 with a first-step notice and a 
   await page.getByRole('button', { name: 'Consolidar Estado' }).click();
   await expect(notice).toBeHidden();
 
-  // La sesión y la evaluación persisten: al recargar, la app vuelve a abrir en las listas
+  // La sesión y la evaluación persisten: al recargar, la app vuelve a abrir en Inicio
   await page.reload();
-  await expect(page.getByText('Top 10 Operativo & Flujo Activo')).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Foco de Concentración Profesional' })).toBeVisible();
   await expect(page.getByText('Primer paso: evalúa tu Rueda de la Vida')).toBeHidden();
 });
 

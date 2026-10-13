@@ -2,7 +2,7 @@ import { expect, test } from '@playwright/test';
 import { expectNoHorizontalOverflow, expectNoInnerOverflow, signInWithGoogle } from './helpers';
 
 // En escritorio las secciones son pestañas; en el móvil (< 768 px) están en el menú de la cabecera
-const SECTIONS = ['Listas Duales', 'Agenda', 'Rueda de la Vida', 'Blindaje Bermudas', 'Cómo funciona'];
+const SECTIONS = ['Inicio', 'Listas Duales', 'Agenda', 'Rueda de la Vida', 'Blindaje Bermudas', 'Cómo funciona'];
 
 for (const width of [360, 375, 768, 1280]) {
   test(`no horizontal overflow at ${width}px`, async ({ page }) => {
@@ -11,6 +11,13 @@ for (const width of [360, 375, 768, 1280]) {
     await expectNoHorizontalOverflow(page, 'login');
 
     await signInWithGoogle(page);
+
+    // La cabecera ocupa una sola línea y «Nueva tarea» queda debajo de ella
+    const header = (await page.locator('header').boundingBox())!;
+    expect(header.height, 'altura de la cabecera').toBeLessThanOrEqual(72);
+    const newTask = (await page.getByRole('button', { name: 'Nueva tarea', exact: true }).boundingBox())!;
+    expect(newTask.y).toBeGreaterThanOrEqual(header.y + header.height);
+
     for (const name of SECTIONS) {
       if (width < 768) await page.getByRole('button', { name: 'Menú' }).click();
       await page.getByRole('button', { name, exact: true }).click();
