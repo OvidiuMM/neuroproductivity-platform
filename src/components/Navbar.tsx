@@ -18,7 +18,9 @@ interface NavbarProps {
   pendingAccessCount?: number;
 }
 
-// Secciones de la app: pestañas en escritorio (solo icono hasta 1280 px) y menú desplegable en el móvil
+// Secciones de la app: pestañas en escritorio (con nombre desde 1280 px) y menú desplegable en el móvil.
+// «Cómo funciona» y «Accesos» son siempre solo icono en escritorio: con su nombre la cabecera no cabe en una
+// línea a 1280 px (su nombre accesible y su título siguen ahí).
 const SECTIONS: { tab: AppTab; label: string; icon: typeof Briefcase; iconOnly?: boolean }[] = [
   { tab: 'home', label: 'Inicio', icon: LayoutDashboard },
   { tab: 'tasks', label: 'Listas Duales', icon: Briefcase },
@@ -92,6 +94,15 @@ export const Navbar: React.FC<NavbarProps> = ({
     };
   }, [isMenuOpen]);
 
+  // El punto naranja del botón del menú es solo visual: su nombre accesible dice lo mismo
+  const menuLabel = [
+    'Menú',
+    isAdmin && pendingAccessCount > 0 ? `${pendingAccessCount} solicitudes de acceso pendientes` : '',
+    syncStatus === 'pending' ? 'cambios sin sincronizar' : syncStatus === 'offline' ? 'sin conexión' : ''
+  ]
+    .filter(Boolean)
+    .join(', ');
+
   const goTo = (tab: AppTab) => {
     setActiveTab(tab);
     setIsMenuOpen(false);
@@ -116,7 +127,7 @@ export const Navbar: React.FC<NavbarProps> = ({
             </span>
           </div>
 
-          {/* Secciones (escritorio y tableta): solo icono hasta 1280 px */}
+          {/* Secciones (escritorio y tableta): solo icono hasta 1280 px; «Cómo funciona» y «Accesos», siempre */}
           <nav aria-label="Secciones" className="hidden md:flex items-center gap-0.5 min-w-0">
             {sections.map(({ tab, label, icon: Icon, iconOnly }) => (
               <button
@@ -179,7 +190,7 @@ export const Navbar: React.FC<NavbarProps> = ({
               onClick={() => setIsMenuOpen((open) => !open)}
               aria-expanded={isMenuOpen}
               aria-controls="mobile-sections-menu"
-              aria-label={isAdmin && pendingAccessCount > 0 ? `Menú, ${pendingAccessCount} solicitudes de acceso pendientes` : 'Menú'}
+              aria-label={menuLabel}
               className="relative md:hidden w-9 h-9 shrink-0 rounded-lg border border-slate-200 text-slate-700 flex items-center justify-center hover:bg-slate-50"
             >
               {isMenuOpen ? <X className="w-4 h-4" aria-hidden="true" /> : <Menu className="w-4 h-4" aria-hidden="true" />}
