@@ -65,6 +65,18 @@ describe('computeStats', () => {
     assert.equal(stats.avgCycleDays, 1.5);
   });
 
+  it('ignores tasks marked done after now (a device clock set ahead)', () => {
+    const stats = computeStats([done('future', 14, { doneAt: new Date(2026, 9, 14, 18, 0).toISOString() }), done('past', 14)], now);
+    assert.equal(stats.doneToday, 1);
+    assert.equal(stats.doneThisWeek, 1);
+  });
+
+  it('measures velocity on Monday morning with only the time elapsed this week', () => {
+    const monday = new Date(2026, 9, 19, 6, 0); // 6 h de la semana nueva
+    const stats = computeStats([done('a', 13), done('b', 14)], monday);
+    assert.ok(Math.abs(stats.weeklyVelocity - 2 / (4 + 0.25 / 7)) < 0.001);
+  });
+
   it('counts the streak from today, or from yesterday while today has none yet', () => {
     assert.equal(computeStats([done('a', 14), done('b', 13), done('c', 12), done('d', 10)], now).streak, 3);
     assert.equal(computeStats([done('b', 13), done('c', 12)], now).streak, 2);
@@ -95,7 +107,9 @@ describe('computeStats', () => {
       const stats = computeStats([task('late-sunday', { dueDate: '2026-10-25', dueTime: '23:30' }), task('monday', { dueDate: '2026-10-26', dueTime: '00:30' })], wednesday);
       assert.equal(stats.dueThisWeek, 1);
     } finally {
-      process.env.TZ = previousTz;
+      // Si no había TZ, se borra (asignar undefined guardaría el texto «undefined»)
+      if (previousTz === undefined) delete process.env.TZ;
+      else process.env.TZ = previousTz;
     }
   });
 

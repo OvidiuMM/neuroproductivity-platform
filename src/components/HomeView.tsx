@@ -58,8 +58,11 @@ export const HomeView: React.FC<HomeViewProps> = ({
   onNavigate
 }) => {
   const contextTasks = tasks.filter((t) => t.listContext === activeContext);
-  const stats = computeStats(contextTasks, now);
-  const recommendations = recommendationsFor(stats, contextTasks, wheelLogs, now);
+  // `now` (reloj por minutos) hace que la pantalla se actualice sola; para calcular se usa la hora exacta, o una
+  // tarea recién hecha quedaría fuera hasta el minuto siguiente (las estadísticas solo cuentan lo hecho hasta ahora)
+  const at = new Date(Math.max(now.getTime(), Date.now()));
+  const stats = computeStats(contextTasks, at);
+  const recommendations = recommendationsFor(stats, contextTasks, wheelLogs, at);
   const maxDaily = Math.max(1, ...stats.daily.map((d) => d.count));
   const datedDone = stats.onTime + stats.late;
   const maxArea = Math.max(1, ...stats.byArea.map((a) => a.count));
