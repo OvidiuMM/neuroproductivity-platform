@@ -16,13 +16,14 @@ import {
   EmailDraft,
   UserProfile
 } from './types';
-import { formatTaskDates, isArchived, withStatus } from './services/tasks';
+import { formatTaskDates, isArchived, isUnchanged, withStatus } from './services/tasks';
 import { nextRecurringTask } from './services/recurrence';
 import { forceSync, signOutAndClearCache, type FirebaseServices } from './services/firebase';
 import {
   appendWheelLog,
   completeRecurringTask,
   deleteTask,
+  undoCompleteRecurringTask,
   importUserData,
   saveEmail,
   saveMeeting,
@@ -166,11 +167,14 @@ export default function App({ user, services, isAdmin = false }: AppProps) {
   const [isEmailModalOpen, setIsEmailModalOpen] = useState(false);
 
   // Toast / Banner de notificación
-  const [toastMessage, setToastMessage] = useState<string | null>(null);
+  // Con `undo`, el aviso ofrece «Deshacer» y dura un poco más
+  const [toast, setToast] = useState<{ message: string; undo?: () => void } | null>(null);
+  const toastTimer = useRef<number | undefined>(undefined);
 
-  const showToast = useCallback((msg: string) => {
-    setToastMessage(msg);
-    setTimeout(() => setToastMessage(null), 4000);
+  const showToast = useCallback((message: string, undo?: () => void) => {
+    window.clearTimeout(toastTimer.current);
+    setToast({ message, undo });
+    toastTimer.current = window.setTimeout(() => setToast(null), undo ? 5000 : 4000);
   }, []);
 
   const reportError = useCallback(
@@ -320,29 +324,60 @@ export default function App({ user, services, isAdmin = false }: AppProps) {
   };
 
   // "Hecha" archiva la tarea; cualquier otro estado la devuelve a su lista
+  // Últimas tareas recibidas, también las cambiadas en otros dispositivos: «Deshacer» comprueba con ellas que no
+  // ha cambiado nada desde que se escribió
+  const latestTasks = useRef(tasks);
+  useEffect(() => {
+    latestTasks.current = tasks;
+  }, [tasks]);
+
   const handleChangeStatus = (task: TaskItem, status: TaskStatus) => {
     if (status === task.status) return;
     // Tarea recurrente marcada como Hecha: se crea la siguiente repetición (una sola vez por tarea)
     const next = status === 'DONE' && !task.nextOccurrenceId ? nextRecurringTask(task) : null;
     const updated = withStatus(task, status);
+    // Deshacer devuelve la tarea tal como estaba (y quita la repetición que se acaba de crear), pero solo si lo
+    // escrito sigue igual: si entretanto se cambió aquí o en otro dispositivo, se avisa en vez de pisarlo.
+    // Se comprueba con los datos en vivo y no con una transacción, que sin conexión no funcionaría.
+    const restore = (written: TaskItem[], save: () => Promise<void>) => () => {
+      if (!isUnchanged(written, latestTasks.current)) {
+        showToast('No se puede deshacer: la tarea ha cambiado entretanto.');
+        return;
+      }
+      save().catch(reportError('deshacer el cambio'));
+      showToast('Tarea recuperada.');
+    };
     if (next) {
-      completeRecurringTask(db, uid, { ...updated, nextOccurrenceId: next.id }, next).catch(
-        reportError('guardar la tarea y su siguiente repetición')
+      const done = { ...updated, nextOccurrenceId: next.id };
+      completeRecurringTask(db, uid, done, next).catch(reportError('guardar la tarea y su siguiente repetición'));
+      showToast(
+        `Tarea hecha y archivada. Siguiente repetición: ${formatTaskDates(next)?.replace('Vence: ', '')}.`,
+        restore([done, next], () => undoCompleteRecurringTask(db, uid, task, next.id))
       );
-      showToast(`Tarea hecha y archivada. Siguiente repetición: ${formatTaskDates(next)?.replace('Vence: ', '')}.`);
       return;
     }
     saveTask(db, uid, updated).catch(reportError('actualizar el estado'));
     if (status === 'DONE') {
-      showToast('Tarea hecha y archivada. La encontrarás en «Archivadas».');
+      showToast(
+        'Tarea hecha y archivada. La encontrarás en «Archivadas».',
+        restore([updated], () => saveTask(db, uid, task))
+      );
     } else if (isArchived(task)) {
       showToast('Tarea reactivada: vuelve a su lista.');
     }
   };
 
   const handleDeleteTask = (id: string) => {
+    const deleted = tasks.find((t) => t.id === id);
     deleteTask(db, uid, id).catch(reportError('eliminar la tarea'));
-    showToast('Acción eliminada del inventario.');
+    showToast(
+      'Acción eliminada del inventario.',
+      deleted &&
+        (() => {
+          saveTask(db, uid, deleted).catch(reportError('recuperar la tarea'));
+          showToast('Tarea recuperada.');
+        })
+    );
   };
 
   const handleAppendWheelSnapshot = (scores: Record<WheelCategory, number>, label?: string) => {
@@ -623,10 +658,19 @@ export default function App({ user, services, isAdmin = false }: AppProps) {
 
       {/* BANNER TOAST DE NOTIFICACIÓN: región viva siempre presente para que los lectores de pantalla lo anuncien */}
       <div role="status" aria-live="polite">
-        {toastMessage && (
+        {toast && (
           <div className="animate-in slide-in-from-bottom-3 fixed right-[calc(1rem+env(safe-area-inset-right))] bottom-[calc(9.5rem+env(safe-area-inset-bottom))] left-[calc(1rem+env(safe-area-inset-left))] z-50 flex items-center gap-2.5 rounded-2xl bg-slate-900 px-4 py-3 text-xs text-white shadow-xl duration-200 md:right-6 md:bottom-6 md:left-auto">
             <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-400" aria-hidden="true" />
-            <span className="font-semibold">{toastMessage}</span>
+            <span className="font-semibold">{toast.message}</span>
+            {toast.undo && (
+              <button
+                type="button"
+                onClick={toast.undo}
+                className="-my-1 ml-auto min-h-9 shrink-0 rounded-lg px-2.5 font-bold text-indigo-300 hover:bg-white/10 hover:text-indigo-200"
+              >
+                Deshacer
+              </button>
+            )}
           </div>
         )}
       </div>

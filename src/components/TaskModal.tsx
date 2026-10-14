@@ -51,6 +51,7 @@ import {
   ArrowRight,
   ListPlus,
   CalendarClock,
+  ChevronDown,
   Repeat
 } from 'lucide-react';
 import { DateField } from './DateField';
@@ -121,6 +122,8 @@ export const TaskModal: React.FC<TaskModalProps> = ({
   const [nlpResult, setNlpResult] = useState<NLPSuggestionResult | null>(null);
   const [nlpLoading, setNlpLoading] = useState(false);
   const [overrideSyntaxWarning, setOverrideSyntaxWarning] = useState(false);
+  // «Más opciones» empieza abierto si la tarea ya usa alguno de sus campos (o si es una tarea «Quizá» nueva)
+  const [showMore, setShowMore] = useState(false);
 
   // Inicializar o limpiar al abrir modal
   useEffect(() => {
@@ -128,6 +131,17 @@ export const TaskModal: React.FC<TaskModalProps> = ({
     // eslint-disable-next-line react-hooks/set-state-in-effect -- el formulario se rellena o limpia al abrirse
     setNlpLoading(false);
     if (editingTask) {
+      setShowMore(
+        Boolean(
+          editingTask.description ||
+          editingTask.estimateMinutes ||
+          editingTask.wheelCategory ||
+          editingTask.startDate ||
+          editingTask.recurrence ||
+          editingTask.isSomeday ||
+          editingTask.observations?.length
+        )
+      );
       setTitle(editingTask.title);
       setDescription(editingTask.description);
       setListContext(editingTask.listContext);
@@ -149,6 +163,7 @@ export const TaskModal: React.FC<TaskModalProps> = ({
       setRepeatMonthlyMode(editingTask.recurrence?.monthlyMode ?? 'DAY_OF_MONTH');
       setOverrideSyntaxWarning(true);
     } else {
+      setShowMore(initialSomeday);
       setTitle('');
       setDescription('');
       setListContext(initialContext);
@@ -224,7 +239,6 @@ export const TaskModal: React.FC<TaskModalProps> = ({
   const isTitleEmpty = !title.trim();
   const isTitleTooLong = title.length > 100;
   const isSyntaxInvalid = !syntaxResult.isValid && !overrideSyntaxWarning;
-  const isDescriptionEmpty = !description.trim();
   // REPETICIÓN: las fechas delimitan la serie. «Inicio» es desde cuándo se repite (hoy si se deja vacío) y la
   // fecha límite es la última fecha posible (la «fecha hasta» de la serie: un solo valor). Cada repetición vence
   // su propio día, con la hora límite; ninguna se pinta como un intervalo.
@@ -300,7 +314,6 @@ export const TaskModal: React.FC<TaskModalProps> = ({
     !isTitleEmpty &&
     !isTitleTooLong &&
     !isSyntaxInvalid &&
-    !isDescriptionEmpty &&
     !datesError &&
     !recurrenceError &&
     Boolean(listContext) &&
@@ -308,7 +321,7 @@ export const TaskModal: React.FC<TaskModalProps> = ({
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    setTouched({ title: true, description: true });
+    setTouched({ title: true });
 
     if (!isFormValid) {
       return;
@@ -502,215 +515,33 @@ export const TaskModal: React.FC<TaskModalProps> = ({
             )}
           </div>
 
-          {/* CAMPO 3: Descripción Detallada + Motor NLP TF-IDF (Módulo 3) */}
-          <div>
-            <div className="mb-1.5 flex items-center justify-between">
-              <label htmlFor="task-description" className="text-xs font-bold tracking-wider text-slate-600 uppercase">
-                Desglose Operativo <span className="text-red-500">*</span>
-              </label>
-              <span className="text-[11px] text-slate-500">Captura onBlur dispara inferencia NLP TF-IDF</span>
-            </div>
-            <textarea
-              id="task-description"
-              rows={3}
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              onBlur={(e) => {
-                setTouched({ ...touched, description: true });
-                // Si el foco pasa a un botón (Guardar, Cancelar…) no se lanza la sugerencia: el aviso de carga
-                // desplazaría el botón entre que se pulsa y se suelta, y el clic se perdería
-                if ((e.relatedTarget as HTMLElement | null)?.tagName === 'BUTTON') return;
-                triggerNLPInference();
-              }}
-              placeholder="Detalla el resultado esperado, personas involucradas o requerimientos físicos previos..."
-              className={`w-full rounded-xl border px-3.5 py-2.5 text-sm transition-all focus:ring-2 focus:outline-none ${
-                touched.description && isDescriptionEmpty
-                  ? 'border-red-400 bg-red-50/20 focus:ring-red-400'
-                  : 'border-slate-300 focus:ring-indigo-400'
-              }`}
-            />
-            {touched.description && isDescriptionEmpty && (
-              <p className="mt-1 flex items-center gap-1 text-xs text-red-600">
-                <AlertTriangle className="h-3.5 w-3.5" /> La descripción de la acción física es obligatoria.
-              </p>
-            )}
-
-            {/* INSIGNIA INTERACTIVA DE PROPUESTA NLP TF-IDF (Módulo 3) */}
-            {nlpLoading && (
-              <p className="mt-1 flex animate-pulse items-center gap-1 text-[11px] text-indigo-600">
-                <Sparkles className="h-3.5 w-3.5" /> Vectorizando texto y calculando similitud de cosenos...
-              </p>
-            )}
-
-            {nlpResult && nlpResult.category && nlpResult.isAboveThreshold && (
-              <div className="animate-in fade-in mt-2 flex items-center justify-between rounded-xl border border-indigo-200 bg-indigo-50 p-2.5 text-xs">
-                <div className="flex items-center gap-2 text-indigo-950">
-                  <Sparkles className="h-4 w-4 text-indigo-600" />
-                  <div>
-                    <span className="font-semibold">Sugerencia NLP TF-IDF:</span>{' '}
-                    <span>
-                      ¿Vincular a <strong>{nlpResult.category}</strong>?
-                    </span>
-                    <span className="ml-1.5 font-mono text-[11px] text-indigo-600">
-                      ({Math.round(nlpResult.confidenceScore * 100)}% de confianza)
-                    </span>
-                  </div>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => applyNlpSuggestion(nlpResult.category!, nlpResult.confidenceScore)}
-                  className="flex items-center gap-1 rounded-lg bg-indigo-600 px-2.5 py-1 text-xs font-bold text-white transition-colors hover:bg-indigo-700"
-                >
-                  <Check className="h-3 w-3" />
-                  <span>Validar Vínculo</span>
-                </button>
-              </div>
-            )}
-          </div>
-
-          {/* FILA: Prioridad Ordinal + Estimación, y debajo la Categoría de la Rueda (Enlace Cognitivo) */}
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-            {/* Prioridad Ordinal */}
-            <div>
-              <label
-                htmlFor="task-priority"
-                className="mb-1.5 block text-xs font-bold tracking-wider text-slate-600 uppercase"
-              >
-                Nivel de Prioridad <span className="text-red-500">*</span>
-              </label>
-              <select
-                id="task-priority"
-                value={priority}
-                onChange={(e) => setPriority(e.target.value as TaskPriority)}
-                className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm font-semibold focus:ring-2 focus:ring-indigo-400 focus:outline-none"
-              >
-                <option value="CRITICAL">🔥 Crítica (Impacto Prefrontal Máximo)</option>
-                <option value="HIGH">⚡ Alta (Ejecución Prioritaria)</option>
-                <option value="MEDIUM">⚖️ Media (Operatividad Regular)</option>
-                <option value="LOW">🌱 Baja (Baja Demanda Cognitiva)</option>
-              </select>
-              <p className="mt-1 text-[11px] text-slate-500">
-                Con la fecha límite a más de una semana, cuenta un nivel por debajo.
-              </p>
-            </div>
-
-            {/* Estimación: duración prevista */}
-            <div>
-              <label
-                htmlFor="task-estimate"
-                className="mb-1.5 block text-xs font-bold tracking-wider text-slate-600 uppercase"
-              >
-                Estimación (duración)
-              </label>
-              <select
-                id="task-estimate"
-                value={estimateMinutes ?? ''}
-                onChange={(e) => setEstimateMinutes(e.target.value ? Number(e.target.value) : undefined)}
-                className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-400 focus:outline-none"
-              >
-                <option value="">(Sin estimar)</option>
-                {ESTIMATE_OPTIONS.map((o) => (
-                  <option key={o.value} value={o.value}>
-                    {o.label}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            {/* Categoría Rueda de la Vida */}
-            <div className="sm:col-span-2">
-              <label
-                htmlFor="task-category"
-                className="mb-1.5 block text-xs font-bold tracking-wider text-slate-600 uppercase"
-              >
-                Enlace Estratégico (Rueda de la Vida)
-              </label>
-              <select
-                id="task-category"
-                value={wheelCategory || ''}
-                onChange={(e) => {
-                  setWheelCategory((e.target.value as WheelCategory) || undefined);
-                  setLinkedBy('MANUAL');
-                }}
-                className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-400 focus:outline-none"
-              >
-                <option value="">(Sin vinculación específica)</option>
-                {WHEEL_CATEGORIES_LIST.map((cat) => (
-                  <option key={cat} value={cat}>
-                    {cat}
-                  </option>
-                ))}
-              </select>
-              {wheelCategory && (
-                <p className="mt-1 text-[11px] text-slate-500">
-                  Enlace: <strong>{wheelCategory}</strong> ({linkedBy === 'AUTO_TFIDF' ? 'Inferencia TF-IDF' : 'Manual'}
-                  )
-                </p>
+          {/* FECHA LÍMITE: a la vista; el inicio y la repetición están en «Más opciones» */}
+          <div className="space-y-1.5">
+            <span className="mb-1.5 block text-xs font-bold tracking-wider text-slate-600 uppercase">
+              Fecha límite
+              {isRepeating && (
+                <span className="font-normal tracking-normal text-slate-600 normal-case">
+                  {' '}
+                  · fin de la repetición (opcional)
+                </span>
               )}
-            </div>
-          </div>
-
-          {/* FECHAS OPCIONALES: plazo (solo fecha límite) o intervalo (inicio + fecha límite), con hora opcional */}
-          <fieldset className="space-y-3 rounded-xl border border-slate-200 p-3.5">
-            <legend className="flex items-center gap-1.5 px-1 text-xs font-bold tracking-wider text-slate-600 uppercase">
-              <CalendarClock className="h-3.5 w-3.5 text-indigo-600" />
-              Fechas (opcional)
-            </legend>
-            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-              <div className="space-y-1">
-                <span className="block text-[11px] font-semibold text-slate-700">
-                  Fecha límite
-                  {isRepeating && (
-                    <span className="font-normal text-slate-600"> · fin de la repetición (opcional)</span>
-                  )}
-                </span>
-                <div className="flex gap-2">
-                  <DateField
-                    label="Fecha límite"
-                    value={dueDate}
-                    onChange={setDueDate}
-                    className="min-w-0 flex-1"
-                    inputClassName="px-2.5 py-1.5 rounded-lg border border-slate-300 text-xs focus:outline-none focus:ring-2 focus:ring-indigo-400"
-                  />
-                  <input
-                    type="time"
-                    value={dueTime}
-                    onChange={(e) => setDueTime(e.target.value)}
-                    disabled={!dueDate && !isRepeating}
-                    aria-label="Hora límite"
-                    className="w-24 rounded-lg border border-slate-300 px-2 py-1.5 text-xs focus:ring-2 focus:ring-indigo-400 focus:outline-none disabled:bg-slate-100 disabled:text-slate-400"
-                  />
-                </div>
-              </div>
-              <div className="space-y-1">
-                <span className="block text-[11px] font-semibold text-slate-700">
-                  {isRepeating ? (
-                    <>
-                      Inicio de la repetición
-                      <span className="font-normal text-slate-600"> (hoy si lo dejas vacío)</span>
-                    </>
-                  ) : (
-                    'Inicio (para un intervalo)'
-                  )}
-                </span>
-                <div className="flex gap-2">
-                  <DateField
-                    label="Fecha de inicio"
-                    value={startDate}
-                    onChange={setStartDate}
-                    className="min-w-0 flex-1"
-                    inputClassName="px-2.5 py-1.5 rounded-lg border border-slate-300 text-xs focus:outline-none focus:ring-2 focus:ring-indigo-400"
-                  />
-                  <input
-                    type="time"
-                    value={startTime}
-                    onChange={(e) => setStartTime(e.target.value)}
-                    disabled={!startDate && !isRepeating}
-                    aria-label="Hora de inicio"
-                    className="w-24 rounded-lg border border-slate-300 px-2 py-1.5 text-xs focus:ring-2 focus:ring-indigo-400 focus:outline-none disabled:bg-slate-100 disabled:text-slate-400"
-                  />
-                </div>
-              </div>
+            </span>
+            <div className="flex gap-2">
+              <DateField
+                label="Fecha límite"
+                value={dueDate}
+                onChange={setDueDate}
+                className="min-w-0 flex-1"
+                inputClassName="px-2.5 py-1.5 rounded-lg border border-slate-300 text-xs focus:outline-none focus:ring-2 focus:ring-indigo-400"
+              />
+              <input
+                type="time"
+                value={dueTime}
+                onChange={(e) => setDueTime(e.target.value)}
+                disabled={!dueDate && !isRepeating}
+                aria-label="Hora límite"
+                className="w-24 rounded-lg border border-slate-300 px-2 py-1.5 text-xs focus:ring-2 focus:ring-indigo-400 focus:outline-none disabled:bg-slate-100 disabled:text-slate-400"
+              />
             </div>
             <p className="text-[11px] leading-relaxed text-slate-500">
               {isRepeating && 'Al repetir, cada repetición vence su propio día, con las horas indicadas. '}
@@ -718,203 +549,421 @@ export const TaskModal: React.FC<TaskModalProps> = ({
               <span className="font-semibold text-violet-600">violeta</span> cuando falta menos de una semana y{' '}
               <span className="font-semibold text-red-600">rojo</span> cuando ha vencido.
             </p>
-            {datesError && (
-              <p role="alert" className="flex items-center gap-1 text-xs font-medium text-red-600">
-                <AlertTriangle className="h-3.5 w-3.5" />
-                {datesError}
-              </p>
-            )}
+          </div>
 
-            {/* REPETICIÓN: al marcarla Hecha se archiva y se crea la siguiente con la nueva fecha */}
-            <div className="space-y-3 border-t border-slate-100 pt-2">
-              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                <div className="space-y-1">
+          {/* Prioridad: a la vista, cuenta para el orden del Top 10 */}
+          <div>
+            <label
+              htmlFor="task-priority"
+              className="mb-1.5 block text-xs font-bold tracking-wider text-slate-600 uppercase"
+            >
+              Nivel de Prioridad <span className="text-red-500">*</span>
+            </label>
+            <select
+              id="task-priority"
+              value={priority}
+              onChange={(e) => setPriority(e.target.value as TaskPriority)}
+              className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm font-semibold focus:ring-2 focus:ring-indigo-400 focus:outline-none"
+            >
+              <option value="CRITICAL">🔥 Crítica (Impacto Prefrontal Máximo)</option>
+              <option value="HIGH">⚡ Alta (Ejecución Prioritaria)</option>
+              <option value="MEDIUM">⚖️ Media (Operatividad Regular)</option>
+              <option value="LOW">🌱 Baja (Baja Demanda Cognitiva)</option>
+            </select>
+            <p className="mt-1 text-[11px] text-slate-500">
+              Con la fecha límite a más de una semana, cuenta un nivel por debajo.
+            </p>
+          </div>
+
+          {/* MÁS OPCIONES: lo que no hace falta para capturar la acción */}
+          <div className="rounded-xl border border-slate-200">
+            <button
+              type="button"
+              onClick={() => setShowMore((open) => !open)}
+              aria-expanded={showMore}
+              aria-controls="task-more-options"
+              className="flex min-h-11 w-full items-center justify-between gap-2 px-3.5 text-left text-xs font-bold tracking-wider text-slate-700 uppercase"
+            >
+              <span>
+                Más opciones
+                <span className="ml-2 font-normal tracking-normal text-slate-500 normal-case">
+                  descripción, estimación, área, inicio, repetición, «Quizá» y notas
+                </span>
+              </span>
+              <ChevronDown
+                className={`h-4 w-4 shrink-0 text-slate-500 transition-transform ${showMore ? 'rotate-180' : ''}`}
+                aria-hidden="true"
+              />
+            </button>
+            <div id="task-more-options" hidden={!showMore} className="space-y-5 border-t border-slate-100 p-3.5">
+              {/* CAMPO 3: Descripción Detallada + Motor NLP TF-IDF (Módulo 3) */}
+              <div>
+                <div className="mb-1.5 flex items-center justify-between">
                   <label
-                    htmlFor="task-repeat"
-                    className="flex items-center gap-1 text-[11px] font-semibold text-slate-700"
+                    htmlFor="task-description"
+                    className="text-xs font-bold tracking-wider text-slate-600 uppercase"
                   >
-                    <Repeat className="h-3.5 w-3.5 text-indigo-600" aria-hidden="true" />
-                    Repetir
+                    Desglose Operativo{' '}
+                    <span className="font-normal tracking-normal text-slate-500 normal-case">(opcional)</span>
                   </label>
-                  <select
-                    id="task-repeat"
-                    value={repeatFrequency}
-                    onChange={(e) => {
-                      const value = e.target.value as RecurrenceFrequency | '';
-                      // Al dejar de repetir, las fechas vuelven a ser las de una tarea normal: la fecha límite pasa
-                      // a ser la primera repetición y desaparece el inicio de la serie (si no, quedaría un intervalo)
-                      if (!value && isRepeating) {
-                        setDueDate(firstRepetition ?? startDate);
-                        setStartDate('');
-                      }
-                      setRepeatFrequency(value);
-                    }}
-                    className="w-full rounded-lg border border-slate-300 bg-white px-2.5 py-1.5 text-xs focus:ring-2 focus:ring-indigo-400 focus:outline-none"
-                  >
-                    <option value="">No se repite</option>
-                    <option value="DAILY">Cada día</option>
-                    <option value="WEEKLY">Cada semana</option>
-                    <option value="MONTHLY">Cada mes</option>
-                    <option value="YEARLY">Cada año</option>
-                  </select>
+                  <span className="text-[11px] text-slate-500">Captura onBlur dispara inferencia NLP TF-IDF</span>
                 </div>
-                {repeatFrequency && (
-                  <div className="space-y-1">
-                    <label htmlFor="task-repeat-interval" className="block text-[11px] font-semibold text-slate-700">
-                      Cada cuántos ({REPEAT_UNITS[repeatFrequency]})
-                    </label>
-                    <input
-                      id="task-repeat-interval"
-                      type="number"
-                      min={1}
-                      max={99}
-                      value={repeatInterval}
-                      onChange={(e) => setRepeatInterval(Math.max(1, Math.min(99, Number(e.target.value) || 1)))}
-                      className="w-full rounded-lg border border-slate-300 px-2.5 py-1.5 text-xs focus:ring-2 focus:ring-indigo-400 focus:outline-none"
-                    />
+                <textarea
+                  id="task-description"
+                  rows={3}
+                  value={description}
+                  onChange={(e) => setDescription(e.target.value)}
+                  onBlur={(e) => {
+                    setTouched({ ...touched, description: true });
+                    // Si el foco pasa a un botón (Guardar, Cancelar…) no se lanza la sugerencia: el aviso de carga
+                    // desplazaría el botón entre que se pulsa y se suelta, y el clic se perdería
+                    if ((e.relatedTarget as HTMLElement | null)?.tagName === 'BUTTON') return;
+                    triggerNLPInference();
+                  }}
+                  placeholder="Detalla el resultado esperado, personas involucradas o requerimientos físicos previos..."
+                  className="w-full rounded-xl border border-slate-300 px-3.5 py-2.5 text-sm transition-all focus:ring-2 focus:ring-indigo-400 focus:outline-none"
+                />
+
+                {/* INSIGNIA INTERACTIVA DE PROPUESTA NLP TF-IDF (Módulo 3) */}
+                {nlpLoading && (
+                  <p className="mt-1 flex animate-pulse items-center gap-1 text-[11px] text-indigo-600">
+                    <Sparkles className="h-3.5 w-3.5" /> Vectorizando texto y calculando similitud de cosenos...
+                  </p>
+                )}
+
+                {nlpResult && nlpResult.category && nlpResult.isAboveThreshold && (
+                  <div className="animate-in fade-in mt-2 flex items-center justify-between rounded-xl border border-indigo-200 bg-indigo-50 p-2.5 text-xs">
+                    <div className="flex items-center gap-2 text-indigo-950">
+                      <Sparkles className="h-4 w-4 text-indigo-600" />
+                      <div>
+                        <span className="font-semibold">Sugerencia NLP TF-IDF:</span>{' '}
+                        <span>
+                          ¿Vincular a <strong>{nlpResult.category}</strong>?
+                        </span>
+                        <span className="ml-1.5 font-mono text-[11px] text-indigo-600">
+                          ({Math.round(nlpResult.confidenceScore * 100)}% de confianza)
+                        </span>
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => applyNlpSuggestion(nlpResult.category!, nlpResult.confidenceScore)}
+                      className="flex items-center gap-1 rounded-lg bg-indigo-600 px-2.5 py-1 text-xs font-bold text-white transition-colors hover:bg-indigo-700"
+                    >
+                      <Check className="h-3 w-3" />
+                      <span>Validar Vínculo</span>
+                    </button>
                   </div>
                 )}
               </div>
 
-              {repeatFrequency === 'WEEKLY' && (
-                <fieldset className="space-y-1">
-                  <legend className="text-[11px] font-semibold text-slate-700">Días de la semana</legend>
-                  <div className="flex flex-wrap gap-1.5">
-                    {WEEKDAY_TOGGLES.map(({ day, short, name }) => (
-                      <label
-                        key={day}
-                        className={`cursor-pointer rounded-lg border px-2.5 py-1 text-xs font-semibold has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-indigo-400 ${
-                          weekdays.includes(day)
-                            ? 'border-indigo-600 bg-indigo-600 text-white'
-                            : 'border-slate-300 bg-white text-slate-700'
-                        }`}
-                      >
-                        <input
-                          type="checkbox"
-                          className="sr-only"
-                          checked={weekdays.includes(day)}
-                          onChange={(e) =>
-                            setRepeatWeekdays(e.target.checked ? [...weekdays, day] : weekdays.filter((d) => d !== day))
-                          }
-                          aria-label={name}
-                        />
-                        {short}
-                      </label>
-                    ))}
-                  </div>
-                </fieldset>
-              )}
-
-              {repeatFrequency === 'MONTHLY' && (
-                <fieldset className="space-y-1">
-                  <legend className="text-[11px] font-semibold text-slate-700">Qué día del mes</legend>
-                  <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-slate-700">
-                    {monthlyOptions.map((option) => (
-                      <label key={option.mode} className="flex cursor-pointer items-center gap-1.5">
-                        <input
-                          type="radio"
-                          name="task-repeat-monthly"
-                          checked={effectiveMonthlyMode === option.mode}
-                          onChange={() => setRepeatMonthlyMode(option.mode)}
-                        />
-                        {option.label}
-                      </label>
-                    ))}
-                  </div>
-                </fieldset>
-              )}
-
-              {recurrence && firstRepetition && (
-                <p className="text-[11px] font-medium text-indigo-700" role="status">
-                  {describeRecurrence(recurrence, firstRepetition)}
-                  {` · Primera: ${formatTaskDates({ dueDate: firstRepetition })?.replace('Vence: ', '')}`}
-                  {nextRepetition
-                    ? ` · Al completarla, la siguiente vencerá el ${formatTaskDates({ dueDate: nextRepetition })?.replace('Vence: ', '')}`
-                    : ' · No habrá más repeticiones'}
-                </p>
-              )}
-              {recurrenceError && (
-                <p role="alert" className="flex items-center gap-1 text-xs font-medium text-red-600">
-                  <AlertTriangle className="h-3.5 w-3.5" />
-                  {recurrenceError}
-                </p>
-              )}
-            </div>
-          </fieldset>
-
-          {/* CAMPO 4: Sumidero Cognitivo ("Quizá" / "Algún día" - HU-03) */}
-          <div className="rounded-xl border border-slate-200 bg-slate-50/60 p-3.5">
-            <label className="flex cursor-pointer items-start gap-3">
-              <input
-                type="checkbox"
-                checked={isSomeday}
-                onChange={(e) => setIsSomeday(e.target.checked)}
-                className="mt-0.5 h-4 w-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
-              />
-              <div>
-                <span className="block text-xs font-bold text-slate-800">
-                  Catalogar como "Quizá" / "Algún día" (Sumidero Cognitivo)
-                </span>
-                <span className="mt-0.5 block text-[11px] leading-relaxed text-slate-500">
-                  Externaliza deseos o iniciativas latentes sin urgencia operativa. Desaparece del Top 10 diario para
-                  liberar ancho de banda mental, pero permanece indexado en "Opciones Futuras".
-                </span>
-              </div>
-            </label>
-          </div>
-
-          {/* CAMPO 5: Observaciones Ricas (JSONB) */}
-          <div>
-            <label
-              htmlFor="task-note"
-              className="mb-1.5 block text-xs font-bold tracking-wider text-slate-600 uppercase"
-            >
-              Observaciones y Metadatos (JSONB)
-            </label>
-            <div className="mb-2 flex gap-2">
-              <input
-                id="task-note"
-                type="text"
-                value={newObsText}
-                onChange={(e) => setNewObsText(e.target.value)}
-                placeholder="Añadir nota, enlace o sub-requisito..."
-                className="min-w-0 flex-1 rounded-xl border border-slate-300 px-3 py-1.5 text-xs focus:ring-2 focus:ring-indigo-400 focus:outline-none"
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter') {
-                    e.preventDefault();
-                    handleAddObservation();
-                  }
-                }}
-              />
-              <button
-                type="button"
-                onClick={handleAddObservation}
-                className="rounded-xl bg-slate-100 px-3 py-1.5 text-xs font-semibold text-slate-700 transition-colors hover:bg-slate-200"
-              >
-                Añadir
-              </button>
-            </div>
-
-            {observations.length > 0 && (
-              <div className="max-h-28 space-y-1.5 overflow-y-auto pr-1">
-                {observations.map((obs) => (
-                  <div
-                    key={obs.id}
-                    className="flex items-center justify-between rounded-lg bg-slate-100 px-2.5 py-1 text-xs text-slate-700"
+              {/* FILA: Estimación y Categoría de la Rueda (Enlace Cognitivo) */}
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                {/* Estimación: duración prevista */}
+                <div>
+                  <label
+                    htmlFor="task-estimate"
+                    className="mb-1.5 block text-xs font-bold tracking-wider text-slate-600 uppercase"
                   >
-                    <span className="truncate">{obs.text}</span>
-                    <button
-                      type="button"
-                      onClick={() => handleRemoveObservation(obs.id)}
-                      className="ml-2 text-slate-500 hover:text-red-600"
-                    >
-                      <X className="h-3.5 w-3.5" />
-                    </button>
-                  </div>
-                ))}
+                    Estimación (duración)
+                  </label>
+                  <select
+                    id="task-estimate"
+                    value={estimateMinutes ?? ''}
+                    onChange={(e) => setEstimateMinutes(e.target.value ? Number(e.target.value) : undefined)}
+                    className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-400 focus:outline-none"
+                  >
+                    <option value="">(Sin estimar)</option>
+                    {ESTIMATE_OPTIONS.map((o) => (
+                      <option key={o.value} value={o.value}>
+                        {o.label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                {/* Categoría Rueda de la Vida */}
+                <div>
+                  <label
+                    htmlFor="task-category"
+                    className="mb-1.5 block text-xs font-bold tracking-wider text-slate-600 uppercase"
+                  >
+                    Enlace Estratégico (Rueda de la Vida)
+                  </label>
+                  <select
+                    id="task-category"
+                    value={wheelCategory || ''}
+                    onChange={(e) => {
+                      setWheelCategory((e.target.value as WheelCategory) || undefined);
+                      setLinkedBy('MANUAL');
+                    }}
+                    className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-400 focus:outline-none"
+                  >
+                    <option value="">(Sin vinculación específica)</option>
+                    {WHEEL_CATEGORIES_LIST.map((cat) => (
+                      <option key={cat} value={cat}>
+                        {cat}
+                      </option>
+                    ))}
+                  </select>
+                  {wheelCategory && (
+                    <p className="mt-1 text-[11px] text-slate-500">
+                      Enlace: <strong>{wheelCategory}</strong> (
+                      {linkedBy === 'AUTO_TFIDF' ? 'Inferencia TF-IDF' : 'Manual'})
+                    </p>
+                  )}
+                </div>
               </div>
-            )}
+
+              {/* FECHAS OPCIONALES: plazo (solo fecha límite) o intervalo (inicio + fecha límite), con hora opcional */}
+              <fieldset className="space-y-3 rounded-xl border border-slate-200 p-3.5">
+                <legend className="flex items-center gap-1.5 px-1 text-xs font-bold tracking-wider text-slate-600 uppercase">
+                  <CalendarClock className="h-3.5 w-3.5 text-indigo-600" />
+                  Inicio y repetición (opcional)
+                </legend>
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                  <div className="space-y-1">
+                    <span className="block text-[11px] font-semibold text-slate-700">
+                      {isRepeating ? (
+                        <>
+                          Inicio de la repetición
+                          <span className="font-normal text-slate-600"> (hoy si lo dejas vacío)</span>
+                        </>
+                      ) : (
+                        'Inicio (para un intervalo)'
+                      )}
+                    </span>
+                    <div className="flex gap-2">
+                      <DateField
+                        label="Fecha de inicio"
+                        value={startDate}
+                        onChange={setStartDate}
+                        className="min-w-0 flex-1"
+                        inputClassName="px-2.5 py-1.5 rounded-lg border border-slate-300 text-xs focus:outline-none focus:ring-2 focus:ring-indigo-400"
+                      />
+                      <input
+                        type="time"
+                        value={startTime}
+                        onChange={(e) => setStartTime(e.target.value)}
+                        disabled={!startDate && !isRepeating}
+                        aria-label="Hora de inicio"
+                        className="w-24 rounded-lg border border-slate-300 px-2 py-1.5 text-xs focus:ring-2 focus:ring-indigo-400 focus:outline-none disabled:bg-slate-100 disabled:text-slate-400"
+                      />
+                    </div>
+                  </div>
+                </div>
+                {datesError && (
+                  <p role="alert" className="flex items-center gap-1 text-xs font-medium text-red-600">
+                    <AlertTriangle className="h-3.5 w-3.5" />
+                    {datesError}
+                  </p>
+                )}
+
+                {/* REPETICIÓN: al marcarla Hecha se archiva y se crea la siguiente con la nueva fecha */}
+                <div className="space-y-3 border-t border-slate-100 pt-2">
+                  <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                    <div className="space-y-1">
+                      <label
+                        htmlFor="task-repeat"
+                        className="flex items-center gap-1 text-[11px] font-semibold text-slate-700"
+                      >
+                        <Repeat className="h-3.5 w-3.5 text-indigo-600" aria-hidden="true" />
+                        Repetir
+                      </label>
+                      <select
+                        id="task-repeat"
+                        value={repeatFrequency}
+                        onChange={(e) => {
+                          const value = e.target.value as RecurrenceFrequency | '';
+                          // Al dejar de repetir, las fechas vuelven a ser las de una tarea normal: la fecha límite pasa
+                          // a ser la primera repetición y desaparece el inicio de la serie (si no, quedaría un intervalo)
+                          if (!value && isRepeating) {
+                            setDueDate(firstRepetition ?? startDate);
+                            setStartDate('');
+                          }
+                          setRepeatFrequency(value);
+                        }}
+                        className="w-full rounded-lg border border-slate-300 bg-white px-2.5 py-1.5 text-xs focus:ring-2 focus:ring-indigo-400 focus:outline-none"
+                      >
+                        <option value="">No se repite</option>
+                        <option value="DAILY">Cada día</option>
+                        <option value="WEEKLY">Cada semana</option>
+                        <option value="MONTHLY">Cada mes</option>
+                        <option value="YEARLY">Cada año</option>
+                      </select>
+                    </div>
+                    {repeatFrequency && (
+                      <div className="space-y-1">
+                        <label
+                          htmlFor="task-repeat-interval"
+                          className="block text-[11px] font-semibold text-slate-700"
+                        >
+                          Cada cuántos ({REPEAT_UNITS[repeatFrequency]})
+                        </label>
+                        <input
+                          id="task-repeat-interval"
+                          type="number"
+                          min={1}
+                          max={99}
+                          value={repeatInterval}
+                          onChange={(e) => setRepeatInterval(Math.max(1, Math.min(99, Number(e.target.value) || 1)))}
+                          className="w-full rounded-lg border border-slate-300 px-2.5 py-1.5 text-xs focus:ring-2 focus:ring-indigo-400 focus:outline-none"
+                        />
+                      </div>
+                    )}
+                  </div>
+
+                  {repeatFrequency === 'WEEKLY' && (
+                    <fieldset className="space-y-1">
+                      <legend className="text-[11px] font-semibold text-slate-700">Días de la semana</legend>
+                      <div className="flex flex-wrap gap-1.5">
+                        {WEEKDAY_TOGGLES.map(({ day, short, name }) => (
+                          <label
+                            key={day}
+                            className={`cursor-pointer rounded-lg border px-2.5 py-1 text-xs font-semibold has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-indigo-400 ${
+                              weekdays.includes(day)
+                                ? 'border-indigo-600 bg-indigo-600 text-white'
+                                : 'border-slate-300 bg-white text-slate-700'
+                            }`}
+                          >
+                            <input
+                              type="checkbox"
+                              className="sr-only"
+                              checked={weekdays.includes(day)}
+                              onChange={(e) =>
+                                setRepeatWeekdays(
+                                  e.target.checked ? [...weekdays, day] : weekdays.filter((d) => d !== day)
+                                )
+                              }
+                              aria-label={name}
+                            />
+                            {short}
+                          </label>
+                        ))}
+                      </div>
+                    </fieldset>
+                  )}
+
+                  {repeatFrequency === 'MONTHLY' && (
+                    <fieldset className="space-y-1">
+                      <legend className="text-[11px] font-semibold text-slate-700">Qué día del mes</legend>
+                      <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-slate-700">
+                        {monthlyOptions.map((option) => (
+                          <label key={option.mode} className="flex cursor-pointer items-center gap-1.5">
+                            <input
+                              type="radio"
+                              name="task-repeat-monthly"
+                              checked={effectiveMonthlyMode === option.mode}
+                              onChange={() => setRepeatMonthlyMode(option.mode)}
+                            />
+                            {option.label}
+                          </label>
+                        ))}
+                      </div>
+                    </fieldset>
+                  )}
+
+                  {recurrence && firstRepetition && (
+                    <p className="text-[11px] font-medium text-indigo-700" role="status">
+                      {describeRecurrence(recurrence, firstRepetition)}
+                      {` · Primera: ${formatTaskDates({ dueDate: firstRepetition })?.replace('Vence: ', '')}`}
+                      {nextRepetition
+                        ? ` · Al completarla, la siguiente vencerá el ${formatTaskDates({ dueDate: nextRepetition })?.replace('Vence: ', '')}`
+                        : ' · No habrá más repeticiones'}
+                    </p>
+                  )}
+                  {recurrenceError && (
+                    <p role="alert" className="flex items-center gap-1 text-xs font-medium text-red-600">
+                      <AlertTriangle className="h-3.5 w-3.5" />
+                      {recurrenceError}
+                    </p>
+                  )}
+                </div>
+              </fieldset>
+
+              {/* CAMPO 4: Sumidero Cognitivo ("Quizá" / "Algún día" - HU-03) */}
+              <div className="rounded-xl border border-slate-200 bg-slate-50/60 p-3.5">
+                <label className="flex cursor-pointer items-start gap-3">
+                  <input
+                    type="checkbox"
+                    checked={isSomeday}
+                    onChange={(e) => setIsSomeday(e.target.checked)}
+                    className="mt-0.5 h-4 w-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
+                  />
+                  <div>
+                    <span className="block text-xs font-bold text-slate-800">
+                      Catalogar como "Quizá" / "Algún día" (Sumidero Cognitivo)
+                    </span>
+                    <span className="mt-0.5 block text-[11px] leading-relaxed text-slate-500">
+                      Externaliza deseos o iniciativas latentes sin urgencia operativa. Desaparece del Top 10 diario
+                      para liberar ancho de banda mental, pero permanece indexado en "Opciones Futuras".
+                    </span>
+                  </div>
+                </label>
+              </div>
+
+              {/* CAMPO 5: Observaciones Ricas (JSONB) */}
+              <div>
+                <label
+                  htmlFor="task-note"
+                  className="mb-1.5 block text-xs font-bold tracking-wider text-slate-600 uppercase"
+                >
+                  Observaciones y Metadatos (JSONB)
+                </label>
+                <div className="mb-2 flex gap-2">
+                  <input
+                    id="task-note"
+                    type="text"
+                    value={newObsText}
+                    onChange={(e) => setNewObsText(e.target.value)}
+                    placeholder="Añadir nota, enlace o sub-requisito..."
+                    className="min-w-0 flex-1 rounded-xl border border-slate-300 px-3 py-1.5 text-xs focus:ring-2 focus:ring-indigo-400 focus:outline-none"
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        e.preventDefault();
+                        handleAddObservation();
+                      }
+                    }}
+                  />
+                  <button
+                    type="button"
+                    onClick={handleAddObservation}
+                    className="rounded-xl bg-slate-100 px-3 py-1.5 text-xs font-semibold text-slate-700 transition-colors hover:bg-slate-200"
+                  >
+                    Añadir
+                  </button>
+                </div>
+
+                {observations.length > 0 && (
+                  <div className="max-h-28 space-y-1.5 overflow-y-auto pr-1">
+                    {observations.map((obs) => (
+                      <div
+                        key={obs.id}
+                        className="flex items-center justify-between rounded-lg bg-slate-100 px-2.5 py-1 text-xs text-slate-700"
+                      >
+                        <span className="truncate">{obs.text}</span>
+                        <button
+                          type="button"
+                          onClick={() => handleRemoveObservation(obs.id)}
+                          className="ml-2 text-slate-500 hover:text-red-600"
+                        >
+                          <X className="h-3.5 w-3.5" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
           </div>
+
+          {/* Con «Más opciones» plegado, sus errores se ven igualmente */}
+          {!showMore && (datesError || recurrenceError) && (
+            <p role="alert" className="flex items-center gap-1 text-xs font-medium text-red-600">
+              <AlertTriangle className="h-3.5 w-3.5" />
+              {datesError ?? recurrenceError} (en «Más opciones»)
+            </p>
+          )}
 
           {/* CHECKLIST DE VALIDACIÓN EN TIEMPO REAL ANTES DE ENVIAR */}
           <div className="space-y-1 rounded-xl border border-slate-200 bg-slate-50 p-3 text-xs">
@@ -938,22 +987,6 @@ export const TaskModal: React.FC<TaskModalProps> = ({
                 <span className={syntaxResult.isValid ? 'text-slate-700' : 'text-slate-500'}>
                   Verbo de acción física motora
                 </span>
-              </div>
-
-              <div className="flex items-center gap-1.5">
-                {!isDescriptionEmpty ? (
-                  <CheckCircle2 className="h-3.5 w-3.5 shrink-0 text-emerald-600" />
-                ) : (
-                  <span className="inline-block h-3.5 w-3.5 rounded-full border border-slate-300" />
-                )}
-                <span className={!isDescriptionEmpty ? 'text-slate-700' : 'text-slate-500'}>
-                  Descripción operacional
-                </span>
-              </div>
-
-              <div className="flex items-center gap-1.5">
-                <CheckCircle2 className="h-3.5 w-3.5 shrink-0 text-emerald-600" />
-                <span className="text-slate-700">Contexto y Prioridad</span>
               </div>
             </div>
           </div>
