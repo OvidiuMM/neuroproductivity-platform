@@ -175,6 +175,22 @@ test('phone section bar, «Más» sheet and floating new task button', async ({ 
   await expectNoViolations(page, 'hoja «Más» (administración)');
 });
 
+test('goals: dialog, panel in the Wheel and card in Inicio', async ({ page }) => {
+  await page.goto('/');
+  await signInWithGoogle(page);
+  await page.getByRole('button', { name: 'Rueda de la Vida' }).click();
+  await page.getByRole('button', { name: 'Nueva meta' }).click();
+  await expectNoViolations(page, 'nueva meta');
+  const editor = page.getByRole('dialog', { name: 'Nueva meta' });
+  await editor.getByLabel('Meta').fill('Ahorrar para la entrada del piso');
+  await editor.getByLabel('Área de la Rueda').selectOption('Finanzas');
+  await editor.getByRole('button', { name: 'Crear la meta' }).click();
+  await expect(page.getByRole('list', { name: 'Metas activas' })).toBeVisible();
+  await expectNoViolations(page, 'rueda con metas');
+  await page.getByRole('button', { name: 'Inicio', exact: true }).click();
+  await expectNoViolations(page, 'inicio con metas');
+});
+
 test('email sign-up and email confirmation screens', async ({ page }) => {
   await page.goto('/');
   await page.getByRole('button', { name: 'Crear una cuenta' }).click();

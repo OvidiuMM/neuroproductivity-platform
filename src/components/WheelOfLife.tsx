@@ -1,5 +1,8 @@
 import React, { useState } from 'react';
-import { WheelOfLifeLog, WheelCategory } from '../types';
+import { Goal, GoalStatus, TaskItem, WheelOfLifeLog, WheelCategory } from '../types';
+import { activeGoalsByArea } from '../services/goals';
+import { WHEEL_CATEGORIES } from '../services/wheel';
+import { GoalsPanel } from './GoalsPanel';
 import { Compass, History, Save, Check, TrendingUp, Flag, BookOpen } from 'lucide-react';
 
 interface WheelOfLifeProps {
@@ -8,23 +11,32 @@ interface WheelOfLifeProps {
   showFirstStep: boolean;
   onAppendSnapshot: (scores: Record<WheelCategory, number>, label?: string) => void;
   onOpenHelp: () => void;
+  // Metas de cada área (áreas → metas → tareas) y las tareas, para su progreso
+  goals: Goal[];
+  tasks: TaskItem[];
+  onNewGoal: () => void;
+  onEditGoal: (goal: Goal) => void;
+  onSetGoalStatus: (goal: Goal, status: GoalStatus) => void;
 }
 
 // Margen del viewBox alrededor del círculo para que quepan las etiquetas de las áreas
 const LABEL_MARGIN_X = 100;
 const LABEL_MARGIN_Y = 16;
 
-const CATEGORIES: WheelCategory[] = [
-  'Salud',
-  'Carrera Profesional',
-  'Finanzas',
-  'Familia',
-  'Ocio',
-  'Relaciones',
-  'Espiritualidad'
-];
+const CATEGORIES = WHEEL_CATEGORIES;
 
-export const WheelOfLife: React.FC<WheelOfLifeProps> = ({ logs, showFirstStep, onAppendSnapshot, onOpenHelp }) => {
+export const WheelOfLife: React.FC<WheelOfLifeProps> = ({
+  logs,
+  showFirstStep,
+  onAppendSnapshot,
+  onOpenHelp,
+  goals,
+  tasks,
+  onNewGoal,
+  onEditGoal,
+  onSetGoalStatus
+}) => {
+  const goalsByArea = activeGoalsByArea(goals);
   // Sin evaluaciones guardadas (primer arranque) todas las áreas empiezan en 0
   const latestLog = logs[logs.length - 1] || {
     scores: {
@@ -278,7 +290,14 @@ export const WheelOfLife: React.FC<WheelOfLifeProps> = ({ logs, showFirstStep, o
                 return (
                   <div key={cat} className="space-y-1">
                     <div className="flex items-center justify-between text-xs">
-                      <span className="font-semibold text-slate-800">{cat}</span>
+                      <span className="font-semibold text-slate-800">
+                        {cat}
+                        {goalsByArea[cat] ? (
+                          <span className="ml-1.5 font-normal text-indigo-700">
+                            · {goalsByArea[cat]} {goalsByArea[cat] === 1 ? 'meta activa' : 'metas activas'}
+                          </span>
+                        ) : null}
+                      </span>
                       <div className="flex items-center gap-2 font-mono">
                         <span className="font-bold text-slate-900">{currentVal}/10</span>
                         {showHistoryOverlay && historicalLog && delta !== 0 && (
@@ -378,6 +397,15 @@ export const WheelOfLife: React.FC<WheelOfLifeProps> = ({ logs, showFirstStep, o
           </div>
         </div>
       </div>
+
+      {/* METAS: áreas → metas → tareas */}
+      <GoalsPanel
+        goals={goals}
+        tasks={tasks}
+        onNewGoal={onNewGoal}
+        onEditGoal={onEditGoal}
+        onSetStatus={onSetGoalStatus}
+      />
     </div>
   );
 };

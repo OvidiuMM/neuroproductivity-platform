@@ -1,6 +1,6 @@
 import React from 'react';
-import { ArrowDown, Check, Flame, Scale, Sparkles, Sprout, Timer, Zap } from 'lucide-react';
-import { TaskItem, TaskPriority, TaskStatus } from '../types';
+import { ArrowDown, Check, Flame, Scale, Sparkles, Sprout, Target, Timer, Zap } from 'lucide-react';
+import { Goal, TaskItem, TaskPriority, TaskStatus } from '../types';
 import {
   DEADLINE_TITLE_CLASS,
   PRIORITY_LABEL,
@@ -17,6 +17,8 @@ type Variant = 'top' | 'peripheral' | 'someday';
 
 interface TaskCardProps {
   task: TaskItem;
+  // Meta a la que contribuye (sustituye al área, que es la de la meta)
+  goal?: Goal;
   now: Date;
   variant: Variant;
   // Posición en la lista activa (1 a 10 en el Top 10; 11 en adelante en el resto)
@@ -88,6 +90,7 @@ const CARD_CLASS: Record<Variant, string> = {
 // Tarjeta de tarea: completar de un toque a la izquierda, título y una línea de datos, y las demás acciones en «⋯»
 export const TaskCard: React.FC<TaskCardProps> = ({
   task,
+  goal,
   now,
   variant,
   position,
@@ -145,11 +148,19 @@ export const TaskCard: React.FC<TaskCardProps> = ({
           <TaskDates task={task} now={now} />
           <EstimateBadge minutes={task.estimateMinutes} />
           {variant !== 'someday' && <PriorityBadge task={task} now={now} />}
-          {task.wheelCategory && (
+          {goal ? (
             <span className="inline-flex items-center gap-1 font-semibold text-indigo-700">
-              <Sparkles className="h-3 w-3 text-indigo-500" aria-hidden="true" />
-              {task.wheelCategory}
+              <Target className="h-3 w-3 text-indigo-500" aria-hidden="true" />
+              <span className="sr-only">Meta:</span>
+              {goal.title}
             </span>
+          ) : (
+            task.wheelCategory && (
+              <span className="inline-flex items-center gap-1 font-semibold text-indigo-700">
+                <Sparkles className="h-3 w-3 text-indigo-500" aria-hidden="true" />
+                {task.wheelCategory}
+              </span>
+            )
           )}
           <StatusBadge status={task.status} />
         </div>

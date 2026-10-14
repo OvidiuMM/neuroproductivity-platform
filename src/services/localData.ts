@@ -77,7 +77,9 @@ const readRecords = (storage: Storage): UserData => {
     tasks: keep<TaskItem>(KEYS.TASKS),
     wheelLogs: keep<WheelOfLifeLog>(KEYS.WHEEL_LOGS),
     meetings: keep<MeetingGuard>(KEYS.MEETINGS),
-    emails: keep<EmailDraft>(KEYS.EMAILS)
+    emails: keep<EmailDraft>(KEYS.EMAILS),
+    // Las versiones sin cuentas no tenían metas
+    goals: []
   };
 };
 
@@ -131,7 +133,8 @@ export const buildImport = (profileIds: string[], storage: Storage = localStorag
     tasks: pick(records.tasks),
     wheelLogs: pick(records.wheelLogs),
     meetings: pick(records.meetings),
-    emails: pick(records.emails)
+    emails: pick(records.emails),
+    goals: []
   };
 };
 

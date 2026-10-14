@@ -94,6 +94,9 @@ export const DEADLINE_TITLE_CLASS: Record<DeadlineState, string> = {
 
 const dateFormat = new Intl.DateTimeFormat('es-ES', { day: 'numeric', month: 'short', year: 'numeric' });
 
+// Día en formato corto y legible (p. ej. «13 oct 2026»)
+export const formatDay = (date: string) => dateFormat.format(toLocalDate(date));
+
 const formatPoint = (date: string, time?: string) =>
   `${dateFormat.format(toLocalDate(date))}${time ? `, ${time}` : ''}`;
 
