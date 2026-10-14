@@ -154,4 +154,21 @@ describe('publicAppUrl', () => {
     assert.equal(publicAppUrl('http://clar.life', 'my-project'), 'https://my-project.web.app');
     assert.equal(publicAppUrl('clar.life', 'my-project'), 'https://my-project.web.app');
   });
+
+  it('falls back on malformed or unusual addresses', () => {
+    for (const bad of [
+      'https://clar.life:invalid',
+      'https://clar.life extra',
+      'https://user:secret@clar.life',
+      'https://clar.life/?ref=email',
+      'https://clar.life/#inicio',
+      'https://'
+    ]) {
+      assert.equal(publicAppUrl(bad, 'my-project'), 'https://my-project.web.app', bad);
+    }
+  });
+
+  it('keeps a valid port or path', () => {
+    assert.equal(publicAppUrl('https://clar.life:8443/app/', 'my-project'), 'https://clar.life:8443/app');
+  });
 });
