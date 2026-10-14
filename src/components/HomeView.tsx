@@ -2,7 +2,7 @@ import React from 'react';
 import { ArrowRight, Brain, CalendarCheck, Flame, Gauge, Lightbulb, ListChecks, Target, Timer } from 'lucide-react';
 import { AppTab, Goal, ListContext, MeetingGuard, TaskItem, WheelOfLifeLog } from '../types';
 import { sortGoals } from '../services/goals';
-import { GoalProgress } from './GoalsPanel';
+import { GoalProgress } from './GoalProgress';
 import { computeStats, recommendationsFor } from '../services/stats';
 import { toLocalDate } from '../services/tasks';
 
@@ -269,7 +269,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
           )}
         </Card>
 
-        {/* METAS: las activas con su progreso (de las dos listas); se crean en la Rueda */}
+        {/* METAS: las activas con su progreso (de las dos listas); se gestionan en «Metas» */}
         <Card
           title="Metas"
           icon={<Target className="h-4 w-4 text-indigo-600" aria-hidden="true" />}
@@ -282,10 +282,10 @@ export const HomeView: React.FC<HomeViewProps> = ({
               </p>
               <button
                 type="button"
-                onClick={() => onNavigate('wheel')}
+                onClick={() => onNavigate('goals')}
                 className="inline-flex min-h-11 items-center gap-1.5 text-xs font-semibold text-indigo-700 hover:text-indigo-900"
               >
-                Crear una meta en la Rueda <ArrowRight className="h-3.5 w-3.5" aria-hidden="true" />
+                Crear una meta <ArrowRight className="h-3.5 w-3.5" aria-hidden="true" />
               </button>
             </div>
           ) : (
@@ -301,7 +301,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
               </ul>
               <button
                 type="button"
-                onClick={() => onNavigate('wheel')}
+                onClick={() => onNavigate('goals')}
                 className="inline-flex min-h-11 items-center gap-1.5 text-xs font-semibold text-indigo-700 hover:text-indigo-900"
               >
                 {activeGoals.length > 6 ? `Ver las ${activeGoals.length} metas` : 'Gestionar las metas'}

@@ -86,7 +86,8 @@ El sistema rechaza las restricciones coercitivas (como las rotaciones atencional
 ### 6. Metas, bienvenida, recorrido y contacto (0.9)
 
 - **Metas:** objetivos concretos dentro de un área de la Rueda (`users/{uid}/goals`). Las tareas se vinculan con `goalId` y toman el área de su meta al leerse; el progreso de cada meta son sus tareas hechas sobre el total.
-- **Navegación móvil:** barra inferior (Inicio, Listas, Agenda, Rueda y «Más»), botón flotante «Nueva tarea» y hojas inferiores para «Más» y para ordenar y filtrar.
+- **Sección «Metas» (0.9.1):** el paso entre la Rueda y las tareas. Las áreas van de la puntuación más baja a la más alta según la última evaluación, cada una con sus metas activas, su progreso y las tareas que les quedan. «Añadir tarea» crea una tarea ya vinculada a la meta. Las áreas con 5 o menos y sin metas salen en «Necesitan atención».
+- **Navegación móvil:** barra inferior (Inicio, Listas, Agenda, Metas y «Más», donde está la Rueda), botón flotante «Nueva tarea» y hojas inferiores para «Más» y para ordenar y filtrar.
 - **Tareas:** completar de un toque con «Deshacer» (comprobado en una transacción), menú «⋯» y formulario en dos niveles.
 - **Bienvenida y recorrido guiado:** se muestran una vez por cuenta (`hasSeenOnboarding` en el perfil, con copia local) y se repiten desde Ayuda.
 - **Contacto:** «Escríbenos» envía el mensaje a la Cloud Function `submitFeedback` (email confirmado, 5 por hora), que lo guarda en `feedback_tickets` y avisa por email. La administración lo lee en «Administración» → «Mensajes».

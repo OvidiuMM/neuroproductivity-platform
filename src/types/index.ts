@@ -1,6 +1,6 @@
 export type ListContext = 'WORK' | 'PERSONAL';
 
-export type AppTab = 'home' | 'tasks' | 'agenda' | 'wheel' | 'bermudas' | 'help' | 'access';
+export type AppTab = 'home' | 'tasks' | 'agenda' | 'wheel' | 'goals' | 'bermudas' | 'help' | 'access';
 
 export type TaskPriority = 'CRITICAL' | 'HIGH' | 'MEDIUM' | 'LOW';
 
