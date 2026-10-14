@@ -187,8 +187,14 @@ export const requestAccess = onCall({ region: REGION, secrets: emailSecrets }, a
       tx.set(ref, { ...profileOf(auth.token), message: '', status: 'blocked', requestedAt: now, decidedAt: now });
       return { status: 'blocked' as const };
     }
-    const decision = decideRequest(current.data() as AccessRecord | undefined, new Date());
+    const decision = decideRequest(current.data() as AccessRecord | undefined, new Date(), approvalRequired);
     if (decision.action === 'keep') return { status: decision.status };
+    // Pendiente con la aprobación libre: se aprueba conservando la solicitud original. Sin aviso por email, igual
+    // que al entrar: la persona ya está en la app
+    if (decision.action === 'approve') {
+      tx.update(ref, { status: 'approved', decidedAt: new Date().toISOString() });
+      return { status: 'approved' as const };
+    }
     if (decision.action === 'wait') {
       throw new HttpsError('resource-exhausted', 'Podrás volver a pedir acceso más adelante.', {
         retryAt: decision.retryAt
