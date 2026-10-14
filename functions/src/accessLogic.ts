@@ -103,6 +103,21 @@ export const decideOnSync = ({
   return current === undefined || current === 'pending' ? 'approve' : 'keep';
 };
 
+// Dirección de la app en los emails: la configurada (APP_URL, p. ej. https://clar.life) si es una dirección https
+// completa y válida, sin usuario, consulta ni fragmento; si no, la de Firebase Hosting del proyecto
+export const publicAppUrl = (configured: string, projectId: string) => {
+  const fallback = `https://${projectId}.web.app`;
+  const value = configured.trim();
+  if (!value || /\s/.test(value)) return fallback;
+  try {
+    const url = new URL(value);
+    const plain = url.protocol === 'https:' && !url.username && !url.password && !url.search && !url.hash;
+    return plain ? url.href.replace(/\/+$/, '') : fallback;
+  } catch {
+    return fallback;
+  }
+};
+
 // Avisos: a la administración por cada solicitud nueva y a la persona cuando se aprueba su acceso
 export type AccessEmail = 'new-request' | 'approved';
 
