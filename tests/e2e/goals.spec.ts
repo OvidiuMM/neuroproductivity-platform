@@ -24,6 +24,9 @@ test('areas → goals → tasks: a goal is created in the Wheel, tasks link to i
   await expect(active.getByRole('heading', { name: goalTitle })).toBeVisible();
   await expect(active).toContainText('Aún no tiene tareas vinculadas.');
   await expect(page.getByText('· 1 meta activa')).toBeVisible();
+  // «Archivar» también es fácil de pulsar
+  const archiveBox = (await active.getByRole('button', { name: 'Archivar' }).boundingBox())!;
+  expect(archiveBox.height).toBeGreaterThanOrEqual(44);
 
   // Una tarea cuyo título comparte palabras con la meta la sugiere; al vincularla hereda el área
   const taskTitle = `Salir a correr para la maratón ${Date.now().toString(36)}`;
@@ -55,7 +58,7 @@ test('areas → goals → tasks: a goal is created in the Wheel, tasks link to i
   await page.getByRole('button', { name: 'Logradas y archivadas (1)' }).click();
   await expect(page.getByRole('list', { name: 'Metas logradas y archivadas' })).toContainText('Lograda');
 
-  // Eliminarla deja sus tareas, sin meta pero con su área
+  // Cambiar el área de la meta mueve sus tareas a la nueva; eliminarla las deja sin meta, con esa área
   await page.getByRole('button', { name: 'Listas Duales' }).click();
   await page.getByRole('button', { name: /Archivadas/ }).click();
   const archive = page.getByRole('dialog', { name: 'Tareas archivadas' });
@@ -66,11 +69,33 @@ test('areas → goals → tasks: a goal is created in the Wheel, tasks link to i
   await page.getByRole('button', { name: 'Rueda de la Vida' }).click();
   await page.getByRole('button', { name: 'Logradas y archivadas (1)' }).click();
   await page.getByRole('button', { name: `Editar la meta «${goalTitle}»` }).click();
+  await page.getByLabel('Área de la Rueda').selectOption('Ocio');
+  await page.getByRole('button', { name: 'Guardar los cambios' }).click();
+  await page.getByRole('button', { name: `Editar la meta «${goalTitle}»` }).click();
   await page.getByRole('button', { name: 'Eliminar la meta' }).click();
   await page.getByRole('button', { name: 'Eliminar definitivamente' }).click();
   await expect(page.getByRole('heading', { name: goalTitle })).toHaveCount(0);
 
   await page.getByRole('button', { name: 'Listas Duales' }).click();
   await expect(card).not.toContainText(goalTitle);
-  await expect(card).toContainText('Salud');
+  await expect(card).toContainText('Ocio');
+});
+
+test('an impossible target date does not let the goal be saved', async ({ page }) => {
+  await page.goto('/');
+  await signInWithGoogle(page);
+  await page.getByRole('button', { name: 'Rueda de la Vida' }).click();
+  await page.getByRole('button', { name: 'Nueva meta' }).click();
+  const editor = page.getByRole('dialog', { name: 'Nueva meta' });
+  await editor.getByLabel('Meta').fill('Viajar a Japón');
+  await editor.getByLabel('Área de la Rueda').selectOption('Ocio');
+  const date = editor.getByLabel('Fecha objetivo', { exact: true });
+  await date.fill('31/02/2027');
+  await expect(date).toHaveAttribute('aria-invalid', 'true');
+  await editor.getByRole('button', { name: 'Crear la meta' }).click();
+  await expect(editor).toBeVisible();
+  await date.fill('28/02/2027');
+  await editor.getByRole('button', { name: 'Crear la meta' }).click();
+  await expect(editor).toBeHidden();
+  await expect(page.getByRole('list', { name: 'Metas activas' })).toContainText('Para el 28 feb 2027');
 });
