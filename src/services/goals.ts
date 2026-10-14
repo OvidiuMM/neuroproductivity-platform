@@ -9,6 +9,16 @@ export const goalProgress = (goal: Pick<Goal, 'id'>, tasks: TaskItem[]) => {
   return { done: linked.filter((t) => t.status === 'DONE').length, total: linked.length };
 };
 
+// El área de una tarea vinculada es la de su meta: se resuelve al leer, así cambiar el área de una meta no tiene que
+// reescribir sus tareas (ni puede dejar alguna atrás). Un vínculo a una meta que ya no existe se ignora.
+export const applyGoalAreas = (tasks: TaskItem[], goals: Goal[]) => {
+  const areaOf = new Map(goals.map((g) => [g.id, g.area]));
+  return tasks.map((task) => {
+    const area = task.goalId ? areaOf.get(task.goalId) : undefined;
+    return area && area !== task.wheelCategory ? { ...task, wheelCategory: area } : task;
+  });
+};
+
 // Metas activas por área de la Rueda
 export const activeGoalsByArea = (goals: Goal[]) =>
   goals

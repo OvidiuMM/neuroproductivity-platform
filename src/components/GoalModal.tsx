@@ -1,4 +1,4 @@
-import React, { useRef, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Target, Trash2, X } from 'lucide-react';
 import { useModalFocus } from '../hooks/useModalFocus';
 import { Goal, WheelCategory } from '../types';
@@ -26,6 +26,11 @@ export const GoalModal: React.FC<GoalModalProps> = ({ goal, onSave, onDelete, on
   const [targetDate, setTargetDate] = useState(goal?.targetDate ?? '');
   const [submitted, setSubmitted] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
+  // Al pedir confirmación, el foco pasa al botón que confirma (y el lector lee el aviso, que lo describe)
+  const confirmRef = useRef<HTMLButtonElement>(null);
+  useEffect(() => {
+    if (confirmDelete) confirmRef.current?.focus();
+  }, [confirmDelete]);
 
   const dialogRef = useRef<HTMLDivElement>(null);
   useModalFocus(true, dialogRef, onClose);
@@ -148,8 +153,10 @@ export const GoalModal: React.FC<GoalModalProps> = ({ goal, onSave, onDelete, on
             {goal ? (
               confirmDelete ? (
                 <div className="flex flex-wrap items-center gap-2 text-xs text-slate-700">
-                  <span>Sus tareas se quedan, sin meta.</span>
+                  <span id="goal-delete-note">Sus tareas se quedan, sin meta.</span>
                   <button
+                    ref={confirmRef}
+                    aria-describedby="goal-delete-note"
                     type="button"
                     onClick={() => {
                       onDelete(goal);

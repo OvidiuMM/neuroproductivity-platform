@@ -73,7 +73,10 @@ test('areas → goals → tasks: a goal is created in the Wheel, tasks link to i
   await page.getByRole('button', { name: 'Guardar los cambios' }).click();
   await page.getByRole('button', { name: `Editar la meta «${goalTitle}»` }).click();
   await page.getByRole('button', { name: 'Eliminar la meta' }).click();
-  await page.getByRole('button', { name: 'Eliminar definitivamente' }).click();
+  const confirm = page.getByRole('button', { name: 'Eliminar definitivamente' });
+  await expect(confirm).toBeFocused();
+  await expect(confirm).toHaveAccessibleDescription('Sus tareas se quedan, sin meta.');
+  await confirm.click();
   await expect(page.getByRole('heading', { name: goalTitle })).toHaveCount(0);
 
   await page.getByRole('button', { name: 'Listas Duales' }).click();

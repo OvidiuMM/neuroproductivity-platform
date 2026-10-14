@@ -1,4 +1,5 @@
 import { expect, type Page } from '@playwright/test';
+import { ONBOARDING_VERSION } from '../../src/services/onboarding';
 
 // Cada test usa una cuenta nueva en el emulador de Auth para no compartir datos
 export const uniqueEmail = () => `e2e-${Date.now()}-${Math.random().toString(36).slice(2, 8)}@example.com`;
@@ -59,7 +60,7 @@ export const readDocument = async (path: string) => {
 export const markOnboarded = async (email: string) => {
   await patchDocument(`users/${await uidOf(email)}`, {
     hasSeenOnboarding: { booleanValue: true },
-    onboardingVersion: { integerValue: '1' }
+    onboardingVersion: { integerValue: String(ONBOARDING_VERSION) }
   });
 };
 
