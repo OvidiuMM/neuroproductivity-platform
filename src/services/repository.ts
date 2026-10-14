@@ -132,18 +132,23 @@ export const saveGoal = (db: Firestore, uid: string, goal: Goal) =>
   setDoc(doc(userCollection(db, uid, 'goals'), goal.id), { ...goal, userId: uid });
 
 // Al eliminar una meta, sus tareas se quedan con el área que tenía y sin el vínculo. El vínculo a una meta que ya no
-// existe se ignora al leer, así que esta limpieza no tiene que ser atómica: busca las tareas vinculadas en ese momento
-// (también las de otros dispositivos ya sincronizadas) y las actualiza por lotes, sin límite de cantidad
+// existe se ignora al leer, así que esta limpieza no tiene que ser atómica en conjunto: busca las tareas vinculadas
+// en ese momento y desvincula cada una en su propia transacción, solo si sigue apuntando a esta meta (si entretanto se
+// vinculó a otra en otro dispositivo, no se toca). Sin límite de cantidad: van de diez en diez.
+const UNLINK_CONCURRENCY = 10;
 export const deleteGoal = async (db: Firestore, uid: string, goal: Goal) => {
   await deleteDoc(doc(userCollection(db, uid, 'goals'), goal.id));
   const linked = await getDocs(query(userCollection(db, uid, 'tasks'), where('goalId', '==', goal.id)));
   const updatedAt = new Date().toISOString();
-  await commitInBatches(
-    db,
-    linked.docs.map(
-      (task) => (batch) => batch.update(task.ref, { goalId: deleteField(), wheelCategory: goal.area, updatedAt })
-    )
-  );
+  const unlink = (ref: (typeof linked.docs)[number]['ref']) =>
+    runTransaction(db, async (tx) => {
+      const current = await tx.get(ref);
+      if ((current.data() as TaskItem | undefined)?.goalId !== goal.id) return;
+      tx.update(ref, { goalId: deleteField(), wheelCategory: goal.area, updatedAt });
+    });
+  for (let i = 0; i < linked.docs.length; i += UNLINK_CONCURRENCY) {
+    await Promise.all(linked.docs.slice(i, i + UNLINK_CONCURRENCY).map((task) => unlink(task.ref)));
+  }
 };
 
 export const appendWheelLog = (db: Firestore, uid: string, log: WheelOfLifeLog) =>

@@ -33,6 +33,15 @@ service cloud.firestore {
       allow read: if isOwner(uid);
     }
 
+    // Mensajes de contacto: los escribe la Cloud Function submitFeedback. La administración los lee y solo cambia
+    // su estado (nuevo, leído, cerrado); el contador de envíos (feedback_limits) no lo ve nadie desde la app.
+    match /feedback_tickets/{ticketId} {
+      allow read: if isAdmin();
+      allow update: if isAdmin()
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'updatedAt'])
+        && request.resource.data.status in ['new', 'read', 'closed'];
+    }
+
     // Campos del perfil que escribe la app (datos de la cuenta y si ya vio la bienvenida); cualquier otro se rechaza
     function onlyProfileFields(keys) {
       return keys.hasOnly([
