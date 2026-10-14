@@ -12,7 +12,7 @@ interface AdminViewProps {
   onDecide: (uid: string, status: DecisionStatus) => Promise<void>;
   tickets: FeedbackTicket[];
   feedbackError: string | null;
-  onSetFeedbackStatus: (ticket: FeedbackTicket, status: FeedbackStatus) => Promise<void>;
+  onSetFeedbackStatus: (ticket: FeedbackTicket, status: FeedbackStatus) => Promise<boolean>;
   loadClosedFeedback: (cursor: ClosedFeedbackPage['cursor']) => Promise<ClosedFeedbackPage>;
 }
 

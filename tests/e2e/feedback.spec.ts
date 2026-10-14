@@ -105,7 +105,9 @@ test('the server asks for a confirmed email, allows five messages an hour and fo
   );
   expect((await listDocuments('feedback_tickets')).filter((t) => t.uid === uid)).toHaveLength(5);
 
-  // Al eliminar la cuenta (forgetAccess) se borran sus mensajes
+  // Al eliminar la cuenta (forgetAccess) se borran sus mensajes, pero no el límite de la última hora: borrar la cuenta
+  // a medias no sirve para seguir enviando
   expect((await callFunction('forgetAccess', idToken, {})).status).toBe(200);
   expect((await listDocuments('feedback_tickets')).filter((t) => t.uid === uid)).toHaveLength(0);
+  expect((await callFunction('submitFeedback', idToken, message)).status).toBe(429);
 });
