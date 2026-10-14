@@ -33,9 +33,18 @@ service cloud.firestore {
       allow read: if isOwner(uid);
     }
 
+    // Campos del perfil que escribe la app (datos de la cuenta y si ya vio la bienvenida); cualquier otro se rechaza
+    function onlyProfileFields(keys) {
+      return keys.hasOnly([
+        'name', 'email', 'photoUrl', 'createdAt', 'lastLoginAt',
+        'hasSeenOnboarding', 'onboardingVersion', 'onboardingSeenAt', 'onboardingOutcome'
+      ]);
+    }
+
     match /users/{uid} {
       allow read, delete: if isOwner(uid);
-      allow create, update: if hasAccess(uid);
+      allow create: if hasAccess(uid) && onlyProfileFields(request.resource.data.keys());
+      allow update: if hasAccess(uid) && onlyProfileFields(request.resource.data.diff(resource.data).affectedKeys());
 
       match /{collection}/{docId} {
         allow read, delete: if isOwner(uid)

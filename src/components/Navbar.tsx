@@ -79,6 +79,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                 <button
                   key={tab}
                   onClick={() => setActiveTab(tab)}
+                  data-tour={`nav-${tab}`}
                   aria-current={activeTab === tab ? 'page' : undefined}
                   aria-label={sectionLabel(section, pendingAccessCount)}
                   title={sectionLabel(section, pendingAccessCount)}
@@ -101,6 +102,7 @@ export const Navbar: React.FC<NavbarProps> = ({
             <div
               role="group"
               aria-label="Lista activa"
+              data-tour="lists"
               className="flex items-center rounded-lg border border-slate-200 bg-slate-100 p-0.5"
             >
               {contexts.map(({ value, label, count, Icon, iconClass }) => (

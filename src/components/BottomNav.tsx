@@ -47,6 +47,7 @@ export const BottomNav: React.FC<BottomNavProps> = ({
             <button
               type="button"
               onClick={() => onNavigate(tab)}
+              data-tour={`nav-${tab}`}
               aria-current={activeTab === tab ? 'page' : undefined}
               aria-label={label}
               className={itemClass(activeTab === tab)}
@@ -61,6 +62,7 @@ export const BottomNav: React.FC<BottomNavProps> = ({
         <li>
           <button
             id={MORE_BUTTON_ID}
+            data-tour="nav-more"
             type="button"
             onClick={onOpenMore}
             aria-haspopup="dialog"

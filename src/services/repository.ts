@@ -5,13 +5,18 @@ import {
   doc,
   getDocs,
   onSnapshot,
+  query,
+  where,
+  runTransaction,
   setDoc,
+  waitForPendingWrites,
   writeBatch,
   type Firestore
 } from 'firebase/firestore';
 import type { User } from 'firebase/auth';
 import { EmailDraft, Goal, MeetingGuard, TaskItem, WheelOfLifeLog } from '../types';
-import { normalizeTask } from './tasks';
+import { isUnchanged, normalizeTask } from './tasks';
+import { onboardingRecord, type OnboardingOutcome, type OnboardingRecord } from './onboarding';
 
 // Datos de cada persona en users/{uid}/<colección>/<id>. Las reglas (firestore.rules) solo dejan acceder al propio uid.
 export type UserCollection = 'tasks' | 'wheelLogs' | 'meetings' | 'emails' | 'goals';
@@ -78,41 +83,67 @@ export const completeRecurringTask = (db: Firestore, uid: string, done: TaskItem
   return batch.commit();
 };
 
-// Deshacer una tarea recurrente hecha: vuelve tal como estaba y desaparece la repetición que se había creado
-export const undoCompleteRecurringTask = (db: Firestore, uid: string, original: TaskItem, nextId: string) => {
-  const batch = writeBatch(db);
-  batch.set(doc(userCollection(db, uid, 'tasks'), original.id), { ...original, userId: uid });
-  batch.delete(doc(userCollection(db, uid, 'tasks'), nextId));
-  return batch.commit();
+// «Deshacer» necesita al servidor: primero se espera a que confirme lo que se acaba de escribir (o se desiste si no
+// hay conexión) y después se comprueba y se restaura en una transacción, para no pisar cambios de otro dispositivo
+const UNDO_SYNC_TIMEOUT_MS = 5_000;
+const whenSynced = (db: Firestore) =>
+  Promise.race([
+    waitForPendingWrites(db),
+    new Promise<never>((_, reject) => setTimeout(() => reject(new Error('offline')), UNDO_SYNC_TIMEOUT_MS))
+  ]);
+
+// Deshacer un cambio de estado: solo si las tareas escritas siguen igual (mismo estado y fecha de modificación) se
+// restaura la anterior y, si se creó, se borra la siguiente repetición. Devuelve false si algo cambió entretanto.
+export const undoTaskChange = async (
+  db: Firestore,
+  uid: string,
+  written: TaskItem[],
+  restored: TaskItem,
+  removeId?: string
+) => {
+  await whenSynced(db);
+  const tasks = userCollection(db, uid, 'tasks');
+  return runTransaction(db, async (tx) => {
+    const snapshots = await Promise.all(written.map((task) => tx.get(doc(tasks, task.id))));
+    const current = snapshots.filter((s) => s.exists()).map((s) => s.data() as TaskItem);
+    if (!isUnchanged(written, current)) return false;
+    tx.set(doc(tasks, restored.id), { ...restored, userId: uid });
+    if (removeId) tx.delete(doc(tasks, removeId));
+    return true;
+  });
+};
+
+// Recuperar una tarea eliminada, solo si nadie la ha vuelto a crear entretanto
+export const restoreDeletedTask = async (db: Firestore, uid: string, task: TaskItem) => {
+  await whenSynced(db);
+  const ref = doc(userCollection(db, uid, 'tasks'), task.id);
+  return runTransaction(db, async (tx) => {
+    if ((await tx.get(ref)).exists()) return false;
+    tx.set(ref, { ...task, userId: uid });
+    return true;
+  });
 };
 
 export const deleteTask = (db: Firestore, uid: string, taskId: string) =>
   deleteDoc(doc(userCollection(db, uid, 'tasks'), taskId));
 
-// Meta y, si cambia de área, sus tareas con el área nueva (heredan el área de la meta), en un mismo lote. En las
-// tareas solo se tocan el área y la fecha de modificación: lo demás pudo cambiar en otro dispositivo, y la fecha nueva
-// hace que un «Deshacer» pendiente sobre ellas detecte el cambio
-export const saveGoal = (db: Firestore, uid: string, goal: Goal, retaggedTaskIds: string[] = []) => {
-  const batch = writeBatch(db);
-  batch.set(doc(userCollection(db, uid, 'goals'), goal.id), { ...goal, userId: uid });
-  for (const taskId of retaggedTaskIds) {
-    batch.update(doc(userCollection(db, uid, 'tasks'), taskId), {
-      wheelCategory: goal.area,
-      updatedAt: goal.updatedAt
-    });
-  }
-  return batch.commit();
-};
+// La meta sola: sus tareas toman el área de la meta al leerlas (applyGoalAreas), no hay que reescribirlas
+export const saveGoal = (db: Firestore, uid: string, goal: Goal) =>
+  setDoc(doc(userCollection(db, uid, 'goals'), goal.id), { ...goal, userId: uid });
 
-// Al eliminar una meta, sus tareas se quedan, sin meta (conservan el área); en ellas solo se quita el vínculo
-export const deleteGoal = (db: Firestore, uid: string, goalId: string, linkedTaskIds: string[]) => {
-  const batch = writeBatch(db);
-  batch.delete(doc(userCollection(db, uid, 'goals'), goalId));
+// Al eliminar una meta, sus tareas se quedan con el área que tenía y sin el vínculo. El vínculo a una meta que ya no
+// existe se ignora al leer, así que esta limpieza no tiene que ser atómica: busca las tareas vinculadas en ese momento
+// (también las de otros dispositivos ya sincronizadas) y las actualiza por lotes, sin límite de cantidad
+export const deleteGoal = async (db: Firestore, uid: string, goal: Goal) => {
+  await deleteDoc(doc(userCollection(db, uid, 'goals'), goal.id));
+  const linked = await getDocs(query(userCollection(db, uid, 'tasks'), where('goalId', '==', goal.id)));
   const updatedAt = new Date().toISOString();
-  for (const taskId of linkedTaskIds) {
-    batch.update(doc(userCollection(db, uid, 'tasks'), taskId), { goalId: deleteField(), updatedAt });
-  }
-  return batch.commit();
+  await commitInBatches(
+    db,
+    linked.docs.map(
+      (task) => (batch) => batch.update(task.ref, { goalId: deleteField(), wheelCategory: goal.area, updatedAt })
+    )
+  );
 };
 
 export const appendWheelLog = (db: Firestore, uid: string, log: WheelOfLifeLog) =>
@@ -136,6 +167,24 @@ export const saveUserProfile = (db: Firestore, user: User) =>
     },
     { merge: true }
   );
+
+// Perfil (users/{uid}) en vivo: por ahora solo interesa si ya vio la bienvenida. `fromServer` dice si el dato ya
+// está confirmado por el servidor (al principio puede venir solo de la caché, o no existir aún)
+export const subscribeToProfile = (
+  db: Firestore,
+  uid: string,
+  onData: (profile: OnboardingRecord | null, fromServer: boolean) => void,
+  onError: (error: Error) => void
+) =>
+  onSnapshot(
+    doc(db, 'users', uid),
+    { includeMetadataChanges: true },
+    (snapshot) => onData((snapshot.data() as OnboardingRecord | undefined) ?? null, !snapshot.metadata.fromCache),
+    onError
+  );
+
+export const markOnboardingSeen = (db: Firestore, uid: string, outcome: OnboardingOutcome) =>
+  setDoc(doc(db, 'users', uid), onboardingRecord(outcome), { merge: true });
 
 // Firestore admite como máximo 500 operaciones por lote
 const BATCH_LIMIT = 450;

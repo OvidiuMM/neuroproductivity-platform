@@ -191,6 +191,28 @@ test('goals: dialog, panel in the Wheel and card in Inicio', async ({ page }) =>
   await expectNoViolations(page, 'inicio con metas');
 });
 
+test('welcome dialog, every step', async ({ page }) => {
+  await page.goto('/');
+  await signInWithGoogle(page, undefined, undefined, { onboarded: false });
+  const dialog = page.getByRole('dialog');
+  await expect(dialog.getByRole('heading', { name: 'Te damos la bienvenida a CLAR' })).toBeVisible();
+  await expectNoViolations(page, 'bienvenida: por qué');
+  await dialog.getByRole('button', { name: 'Siguiente' }).click();
+  await expectNoViolations(page, 'bienvenida: el método');
+  await dialog.getByRole('button', { name: 'Siguiente' }).click();
+  await expectNoViolations(page, 'bienvenida: cómo empezar');
+});
+
+test('guided tour bubble', async ({ page }) => {
+  await page.goto('/');
+  await signInWithGoogle(page);
+  await page.getByRole('button', { name: 'Cómo funciona' }).click();
+  await expectNoViolations(page, 'guía con la guía rápida');
+  await page.getByRole('button', { name: 'Repetir el recorrido' }).click();
+  await expect(page.getByRole('dialog', { name: 'Captura una tarea' })).toBeVisible();
+  await expectNoViolations(page, 'recorrido guiado');
+});
+
 test('email sign-up and email confirmation screens', async ({ page }) => {
   await page.goto('/');
   await page.getByRole('button', { name: 'Crear una cuenta' }).click();
