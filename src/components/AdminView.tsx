@@ -14,7 +14,7 @@ interface AdminViewProps {
   onSetApprovalRequired: (approvalRequired: boolean) => Promise<void>;
   tickets: FeedbackTicket[];
   feedbackError: string | null;
-  onSetFeedbackStatus: (ticket: FeedbackTicket, status: FeedbackStatus) => Promise<void>;
+  onSetFeedbackStatus: (ticket: FeedbackTicket, status: FeedbackStatus) => Promise<boolean>;
   loadClosedFeedback: (cursor: ClosedFeedbackPage['cursor']) => Promise<ClosedFeedbackPage>;
 }
 

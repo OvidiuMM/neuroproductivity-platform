@@ -3,7 +3,9 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { Suspense, lazy, useCallback, useMemo, useState, useEffect, useRef } from 'react';
+import React, { useCallback, useMemo, useState, useEffect, useRef } from 'react';
+import { retryableLazy } from './lazy';
+import { DeferredDialog, DeferredSection } from './components/Deferred';
 import type { User } from 'firebase/auth';
 import {
   AppTab,
@@ -47,6 +49,8 @@ import { Navbar } from './components/Navbar';
 import { BottomNav, MORE_BUTTON_ID } from './components/BottomNav';
 import { PHONE_QUERY, useMediaQuery } from './hooks/useMediaQuery';
 import { MoreSheet } from './components/MoreSheet';
+// Va ya en el paquete principal: también la usa la pantalla de acceso
+import { FeedbackDialog } from './components/FeedbackDialog';
 import { TOUR_STEPS } from './tourSteps';
 import {
   hasSeenLocally,
@@ -101,21 +105,14 @@ const initialsOf = (name: string) =>
     .toUpperCase() || 'U';
 
 // Secciones y ventanas que no se ven al arrancar: se cargan la primera vez que se abren
-const AgendaView = lazy(() => import('./components/AgendaView').then((m) => ({ default: m.AgendaView })));
-const WheelOfLife = lazy(() => import('./components/WheelOfLife').then((m) => ({ default: m.WheelOfLife })));
-const BermudasShield = lazy(() => import('./components/BermudasShield').then((m) => ({ default: m.BermudasShield })));
-const HowItWorks = lazy(() => import('./components/HowItWorks').then((m) => ({ default: m.HowItWorks })));
-const AdminView = lazy(() => import('./components/AdminView').then((m) => ({ default: m.AdminView })));
-const GoalModal = lazy(() => import('./components/GoalModal').then((m) => ({ default: m.GoalModal })));
-const FeedbackDialog = lazy(() => import('./components/FeedbackDialog').then((m) => ({ default: m.FeedbackDialog })));
-const WelcomeDialog = lazy(() => import('./components/WelcomeDialog').then((m) => ({ default: m.WelcomeDialog })));
-const ProductTour = lazy(() => import('./components/ProductTour').then((m) => ({ default: m.ProductTour })));
-
-const Loading: React.FC = () => (
-  <div role="status" className="py-16 text-center text-sm text-slate-500">
-    Cargando…
-  </div>
-);
+const AgendaView = retryableLazy(() => import('./components/AgendaView').then((m) => m.AgendaView));
+const WheelOfLife = retryableLazy(() => import('./components/WheelOfLife').then((m) => m.WheelOfLife));
+const BermudasShield = retryableLazy(() => import('./components/BermudasShield').then((m) => m.BermudasShield));
+const HowItWorks = retryableLazy(() => import('./components/HowItWorks').then((m) => m.HowItWorks));
+const AdminView = retryableLazy(() => import('./components/AdminView').then((m) => m.AdminView));
+const GoalModal = retryableLazy(() => import('./components/GoalModal').then((m) => m.GoalModal));
+const WelcomeDialog = retryableLazy(() => import('./components/WelcomeDialog').then((m) => m.WelcomeDialog));
+const ProductTour = retryableLazy(() => import('./components/ProductTour').then((m) => m.ProductTour));
 
 export default function App({ user, services, isAdmin = false }: AppProps) {
   const { db } = services;
@@ -230,13 +227,16 @@ export default function App({ user, services, isAdmin = false }: AppProps) {
   const pendingAccessCount =
     accessRequests.filter((r) => r.status === 'pending').length +
     feedbackTickets.filter((t) => t.status === 'new').length;
+  // Devuelve si se guardó: la vista solo ajusta su lista de cerrados cuando la escritura fue bien
   const handleSetFeedbackStatus = async (ticket: FeedbackTicket, status: FeedbackTicket['status']) => {
     setFeedbackError(null);
     try {
       await setFeedbackStatus(db, ticket.id, status);
+      return true;
     } catch (e) {
       console.error('Error updating feedback:', e);
       setFeedbackError('No se pudo guardar el cambio. Revisa tu conexión e inténtalo de nuevo.');
+      return false;
     }
   };
 
@@ -686,46 +686,46 @@ export default function App({ user, services, isAdmin = false }: AppProps) {
           tabIndex={-1}
           className="mx-auto w-full max-w-7xl flex-1 space-y-6 px-4 pt-4 pb-8 focus:outline-none sm:px-6 lg:px-8"
         >
-          <Suspense fallback={<Loading />}>
-            {/* INICIO: foco de la lista activa, estadísticas y recomendaciones */}
-            {activeTab === 'home' && (
-              <HomeView
-                tasks={tasks}
-                goals={goals}
-                activeContext={activeContext}
-                accountName={profile.name}
-                top10Count={top10Count}
-                wheelLogs={wheelLogs}
-                wheelAverage={wheelAverage}
-                meetings={meetings}
-                now={now}
-                onOpenAccount={() => setIsAccountMenuOpen(true)}
-                onNavigate={navigate}
-              />
-            )}
+          {/* INICIO: foco de la lista activa, estadísticas y recomendaciones */}
+          {activeTab === 'home' && (
+            <HomeView
+              tasks={tasks}
+              goals={goals}
+              activeContext={activeContext}
+              accountName={profile.name}
+              top10Count={top10Count}
+              wheelLogs={wheelLogs}
+              wheelAverage={wheelAverage}
+              meetings={meetings}
+              now={now}
+              onOpenAccount={() => setIsAccountMenuOpen(true)}
+              onNavigate={navigate}
+            />
+          )}
 
-            {/* PESTAÑA 1: LISTAS DUALES (GESTOR DUAL CON JERARQUÍA VISUAL TOP 10) */}
-            {activeTab === 'tasks' && (
-              <TaskList
-                tasks={tasks}
-                goals={goals}
-                activeContext={activeContext}
-                prefs={listPrefs}
-                onPrefsChange={setListPrefs}
-                archivedCount={archivedTasks.length}
-                onChangeStatus={handleChangeStatus}
-                onDeleteTask={handleDeleteTask}
-                onEditTask={(task) => {
-                  setEditingTask(task);
-                  setIsTaskModalOpen(true);
-                }}
-                onOpenNewTask={openNewTask}
-                onOpenArchive={() => setIsArchiveOpen(true)}
-              />
-            )}
+          {/* PESTAÑA 1: LISTAS DUALES (GESTOR DUAL CON JERARQUÍA VISUAL TOP 10) */}
+          {activeTab === 'tasks' && (
+            <TaskList
+              tasks={tasks}
+              goals={goals}
+              activeContext={activeContext}
+              prefs={listPrefs}
+              onPrefsChange={setListPrefs}
+              archivedCount={archivedTasks.length}
+              onChangeStatus={handleChangeStatus}
+              onDeleteTask={handleDeleteTask}
+              onEditTask={(task) => {
+                setEditingTask(task);
+                setIsTaskModalOpen(true);
+              }}
+              onOpenNewTask={openNewTask}
+              onOpenArchive={() => setIsArchiveOpen(true)}
+            />
+          )}
 
-            {/* AGENDA: tareas con fecha de las dos listas, repeticiones previstas y reuniones */}
-            {activeTab === 'agenda' && (
+          {/* AGENDA: tareas con fecha de las dos listas, repeticiones previstas y reuniones */}
+          {activeTab === 'agenda' && (
+            <DeferredSection retry={AgendaView.retry}>
               <AgendaView
                 tasks={tasks}
                 meetings={meetings}
@@ -734,11 +734,13 @@ export default function App({ user, services, isAdmin = false }: AppProps) {
                   setIsTaskModalOpen(true);
                 }}
               />
-            )}
+            </DeferredSection>
+          )}
 
-            {/* PESTAÑA 2: RUEDA DE LA VIDA (MÓDULO 1) */}
-            {activeTab === 'wheel' && (
-              // Se remonta cuando llegan los datos confirmados por el servidor para partir de la última evaluación
+          {/* PESTAÑA 2: RUEDA DE LA VIDA (MÓDULO 1) */}
+          {activeTab === 'wheel' && (
+            // Se remonta cuando llegan los datos confirmados por el servidor para partir de la última evaluación
+            <DeferredSection retry={WheelOfLife.retry}>
               <WheelOfLife
                 key={wheelSynced ? 'synced' : 'cache'}
                 logs={wheelLogs}
@@ -751,29 +753,35 @@ export default function App({ user, services, isAdmin = false }: AppProps) {
                 onEditGoal={(goal) => setGoalEditor({ goal })}
                 onSetGoalStatus={handleSetGoalStatus}
               />
-            )}
+            </DeferredSection>
+          )}
 
-            {/* PESTAÑA 3: BLINDAJE BERMUDAS (MÓDULO 5) */}
-            {activeTab === 'bermudas' && (
+          {/* PESTAÑA 3: BLINDAJE BERMUDAS (MÓDULO 5) */}
+          {activeTab === 'bermudas' && (
+            <DeferredSection retry={BermudasShield.retry}>
               <BermudasShield
                 meetings={meetings}
                 emails={emails}
                 onOpenNewMeeting={() => setIsMeetingModalOpen(true)}
                 onOpenNewEmail={() => setIsEmailModalOpen(true)}
               />
-            )}
+            </DeferredSection>
+          )}
 
-            {/* PESTAÑA 4: CÓMO FUNCIONA LA APP */}
-            {activeTab === 'help' && (
+          {/* PESTAÑA 4: CÓMO FUNCIONA LA APP */}
+          {activeTab === 'help' && (
+            <DeferredSection retry={HowItWorks.retry}>
               <HowItWorks
                 onNavigate={navigate}
                 onStartTour={() => startTour()}
                 onShowWelcome={() => setIsWelcomeReplay(true)}
                 onContact={() => setIsFeedbackOpen(true)}
               />
-            )}
+            </DeferredSection>
+          )}
 
-            {activeTab === 'access' && isAdmin && (
+          {activeTab === 'access' && isAdmin && (
+            <DeferredSection retry={AdminView.retry}>
               <AdminView
                 requests={accessRequests}
                 currentUid={uid}
@@ -786,8 +794,8 @@ export default function App({ user, services, isAdmin = false }: AppProps) {
                 onSetFeedbackStatus={handleSetFeedbackStatus}
                 loadClosedFeedback={(cursor) => loadClosedFeedback(db, cursor)}
               />
-            )}
-          </Suspense>
+            </DeferredSection>
+          )}
         </main>
 
         {/* FOOTER DISCRETO Y EDITORIAL */}
@@ -927,30 +935,38 @@ export default function App({ user, services, isAdmin = false }: AppProps) {
         returnFocusTo={accountButton}
       />
 
-      <Suspense fallback={null}>
-        {/* CONTACTO: sugerencias, errores o mensajes (se monta al abrirse, así empieza limpio) */}
-        {isFeedbackOpen && (
-          <FeedbackDialog
-            functions={services.functions}
-            onClose={() => setIsFeedbackOpen(false)}
-            returnFocusTo={accountButton}
-          />
-        )}
+      {/* CONTACTO: sugerencias, errores o mensajes (se monta al abrirse, así empieza limpio) */}
+      {isFeedbackOpen && (
+        <FeedbackDialog
+          functions={services.functions}
+          onClose={() => setIsFeedbackOpen(false)}
+          returnFocusTo={accountButton}
+        />
+      )}
 
-        {/* BIENVENIDA DE LA PRIMERA VEZ */}
-        {isWelcomeOpen && <WelcomeDialog onFinish={finishWelcome} />}
-        {isTourOpen && <ProductTour steps={TOUR_STEPS} onFinish={finishTour} />}
+      {/* BIENVENIDA DE LA PRIMERA VEZ */}
+      {isWelcomeOpen && (
+        <DeferredDialog retry={WelcomeDialog.retry} onCancel={() => finishWelcome('skipped')}>
+          <WelcomeDialog onFinish={finishWelcome} />
+        </DeferredDialog>
+      )}
+      {isTourOpen && (
+        <DeferredDialog retry={ProductTour.retry} onCancel={finishTour}>
+          <ProductTour steps={TOUR_STEPS} onFinish={finishTour} />
+        </DeferredDialog>
+      )}
 
-        {/* METAS: crear o editar (se monta al abrirse, así empieza limpio) */}
-        {goalEditor && (
+      {/* METAS: crear o editar (se monta al abrirse, así empieza limpio) */}
+      {goalEditor && (
+        <DeferredDialog retry={GoalModal.retry} onCancel={() => setGoalEditor(null)}>
           <GoalModal
             goal={goalEditor.goal}
             onSave={handleSaveGoal}
             onDelete={handleDeleteGoal}
             onClose={() => setGoalEditor(null)}
           />
-        )}
-      </Suspense>
+        </DeferredDialog>
+      )}
 
       {/* MODAL 5: IMPORTAR DATOS DE LA VERSIÓN SIN CUENTAS */}
       {isImportOpen && (
