@@ -45,12 +45,12 @@ test('main sections, forms and dialogs', async ({ page }) => {
   await expectNoViolations(page, 'rueda de la vida (primer arranque)');
 
   await page.getByRole('button', { name: 'Inicio', exact: true }).click();
-  await expect(page.getByRole('heading', { name: 'Foco de Concentración Profesional' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Tu foco profesional' })).toBeVisible();
   await expectNoViolations(page, 'inicio');
 
-  await page.getByRole('button', { name: 'Listas Duales' }).click();
-  await page.getByRole('button', { name: 'Capturar Primera Acción' }).click();
-  await expect(page.getByRole('heading', { name: 'Captura de Nueva Acción Inmediata' })).toBeVisible();
+  await page.getByRole('button', { name: 'Listas', exact: true }).click();
+  await page.getByRole('button', { name: 'Añadir la primera tarea' }).click();
+  await expect(page.getByRole('heading', { name: 'Nueva tarea' })).toBeVisible();
   await expectNoViolations(page, 'formulario de tarea');
 
   await page.getByRole('button', { name: 'Calendario: Fecha límite' }).click();
@@ -69,7 +69,7 @@ test('main sections, forms and dialogs', async ({ page }) => {
   await page.getByRole('button', { name: 'Por días' }).click();
   await expectNoViolations(page, 'agenda (por días)');
 
-  await page.getByRole('button', { name: 'Blindaje Bermudas' }).click();
+  await page.getByRole('button', { name: 'Tiempo protegido', exact: true }).click();
   await expectNoViolations(page, 'blindaje bermudas');
 
   await page.getByRole('button', { name: 'Ayuda' }).click();
@@ -86,25 +86,26 @@ test('main sections, forms and dialogs', async ({ page }) => {
   await expectNoViolations(page, 'panel de accesibilidad');
   await page.keyboard.press('Escape');
 
-  await page.getByRole('button', { name: 'Listas Duales', exact: true }).click();
+  await page.getByRole('button', { name: 'Listas', exact: true }).click();
   await page.getByRole('button', { name: /Archivadas/ }).click();
   await expect(page.getByRole('dialog', { name: 'Tareas archivadas' })).toBeVisible();
   await expectNoViolations(page, 'tareas archivadas');
   await page.keyboard.press('Escape');
 
-  await page.getByRole('button', { name: 'Blindaje Bermudas' }).click();
-  await page.getByRole('button', { name: 'Agendar Reunión Blindada' }).click();
-  await expect(page.getByRole('dialog', { name: /Blindaje de Reunión/ })).toBeVisible();
+  await page.getByRole('button', { name: 'Tiempo protegido', exact: true }).click();
+  await page.getByRole('button', { name: 'Planificar una reunión' }).click();
+  await expect(page.getByRole('dialog', { name: 'Nueva reunión' })).toBeVisible();
   await expectNoViolations(page, 'formulario de reunión');
   await page.keyboard.press('Escape');
-  await page.getByRole('button', { name: 'Redactar Inversamente' }).click();
+  await page.getByRole('button', { name: 'Escribir un correo' }).click();
   await expect(page.getByRole('dialog')).toBeVisible();
   await expectNoViolations(page, 'formulario de correo');
   await page.keyboard.press('Escape');
 
-  // Pantalla de bienvenida: se abre desde el pie y dura poco, así que se audita solo ella
-  await page.getByRole('button', { name: /Ver Pantalla de Inicio Móvil/ }).click();
-  await expectNoViolations(page, 'pantalla de bienvenida', SPLASH);
+  // Pantalla de inicio: aparece al cargar la app y dura poco, así que se audita solo ella
+  await page.reload();
+  await expect(page.locator(SPLASH)).toBeVisible();
+  await expectNoViolations(page, 'pantalla de inicio', SPLASH);
 });
 
 test('import dialog for data saved by the version without accounts', async ({ page }) => {
@@ -159,7 +160,7 @@ test('high contrast and very large text', async ({ page }) => {
   await page.goto('/');
   await expectNoViolations(page, 'inicio de sesión (alto contraste)');
   await signInWithGoogle(page);
-  await page.getByRole('button', { name: 'Listas Duales' }).click();
+  await page.getByRole('button', { name: 'Listas', exact: true }).click();
   await expectNoViolations(page, 'listas duales (alto contraste)');
   await page.getByRole('button', { name: 'Agenda', exact: true }).click();
   await expectNoViolations(page, 'agenda (alto contraste)');

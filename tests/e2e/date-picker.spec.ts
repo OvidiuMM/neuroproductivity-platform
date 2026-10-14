@@ -13,8 +13,8 @@ const fromToday = (days: number) => {
 test('date fields use a Monday-first calendar and dd/mm/aaaa, with keyboard support', async ({ page }) => {
   await page.goto('/');
   await signInWithGoogle(page);
-  await page.getByRole('button', { name: 'Listas Duales' }).click();
-  await page.getByRole('button', { name: 'Capturar Primera Acción' }).click();
+  await page.getByRole('button', { name: 'Listas', exact: true }).click();
+  await page.getByRole('button', { name: 'Añadir la primera tarea' }).click();
 
   const dueDate = page.getByLabel('Fecha límite', { exact: true });
   const openCalendar = page.getByRole('button', { name: 'Calendario: Fecha límite' });
@@ -44,7 +44,7 @@ test('date fields use a Monday-first calendar and dd/mm/aaaa, with keyboard supp
   // Escape cierra el calendario sin cerrar el formulario y devuelve el foco al botón
   await page.keyboard.press('Escape');
   await expect(calendar).toBeHidden();
-  await expect(page.getByRole('heading', { name: 'Captura de Nueva Acción Inmediata' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Nueva tarea' })).toBeVisible();
   await expect(openCalendar).toBeFocused();
 
   // Escrita a mano se normaliza a dd/mm/aaaa; una fecha imposible bloquea el guardado
@@ -55,8 +55,8 @@ test('date fields use a Monday-first calendar and dd/mm/aaaa, with keyboard supp
   await page.getByPlaceholder('ej. Llamar al proveedor para acordar el plazo de entrega').fill(title);
   await dueDate.fill('31/02/2027');
   await expect(dueDate).toHaveAttribute('aria-invalid', 'true');
-  await page.getByRole('button', { name: 'Guardar Acción Operativa' }).click();
-  await expect(page.getByRole('heading', { name: 'Captura de Nueva Acción Inmediata' })).toBeVisible();
+  await page.getByRole('button', { name: 'Guardar la tarea' }).click();
+  await expect(page.getByRole('heading', { name: 'Nueva tarea' })).toBeVisible();
   expect(await dueDate.evaluate((el: HTMLInputElement) => el.validationMessage)).toBe(
     'Escribe la fecha como dd/mm/aaaa'
   );
@@ -72,8 +72,8 @@ test('date fields use a Monday-first calendar and dd/mm/aaaa, with keyboard supp
     `${pad(tomorrow.getDate())}/${pad(tomorrow.getMonth() + 1)}/${tomorrow.getFullYear()}`
   );
 
-  await page.getByRole('button', { name: 'Guardar Acción Operativa' }).click();
-  await expect(page.getByRole('button', { name: 'Guardar Acción Operativa' })).toBeHidden();
+  await page.getByRole('button', { name: 'Guardar la tarea' }).click();
+  await expect(page.getByRole('button', { name: 'Guardar la tarea' })).toBeHidden();
 
   // La agenda también empieza la semana en lunes y muestra la tarea en el día elegido
   await page.getByRole('button', { name: 'Agenda', exact: true }).click();
@@ -90,8 +90,8 @@ test('the calendar stays inside the screen on a phone', async ({ page }) => {
   await page.setViewportSize({ width: 375, height: 740 });
   await page.goto('/');
   await signInWithGoogle(page);
-  await openSection(page, 'Listas Duales');
-  await page.getByRole('button', { name: 'Capturar Primera Acción' }).click();
+  await openSection(page, 'Listas');
+  await page.getByRole('button', { name: 'Añadir la primera tarea' }).click();
   await showMoreOptions(page);
   await page.getByLabel('Repetir').selectOption('MONTHLY');
 
@@ -110,8 +110,8 @@ test('the calendar stays inside the screen on a phone', async ({ page }) => {
 test('a meeting needs a date: clearing it disables saving and says why', async ({ page }) => {
   await page.goto('/');
   await signInWithGoogle(page);
-  await page.getByRole('button', { name: 'Blindaje Bermudas' }).click();
-  await page.getByRole('button', { name: 'Agendar Reunión Blindada' }).click();
+  await page.getByRole('button', { name: 'Tiempo protegido', exact: true }).click();
+  await page.getByRole('button', { name: 'Planificar una reunión' }).click();
   await page.getByRole('button', { name: 'Calendario: Fecha de la reunión' }).click();
   await page
     .getByRole('dialog', { name: /Fecha de la reunión/ })
@@ -119,5 +119,5 @@ test('a meeting needs a date: clearing it disables saving and says why', async (
     .click();
   await expect(page.getByLabel('Fecha', { exact: true })).toHaveAttribute('aria-invalid', 'true');
   await expect(page.getByRole('alert').filter({ hasText: 'La reunión necesita una fecha.' })).toBeVisible();
-  await expect(page.getByRole('button', { name: /Guardar Convocatoria Blindada/ })).toBeDisabled();
+  await expect(page.getByRole('button', { name: /Guardar la reunión/ })).toBeDisabled();
 });

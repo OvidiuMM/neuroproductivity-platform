@@ -139,7 +139,11 @@ export const fillAndSaveTask = async (page: Page, task: NewTask) => {
   await page.getByPlaceholder('ej. Llamar al proveedor para acordar el plazo de entrega').fill(task.title);
   if (task.dueDate) await page.getByLabel('Fecha límite', { exact: true }).fill(task.dueDate);
   if (task.dueTime) await page.getByLabel('Hora límite').fill(task.dueTime);
-  if (task.priority) await page.getByLabel('Nivel de Prioridad').selectOption(task.priority);
+  if (task.priority)
+    await page
+      .getByRole('dialog')
+      .getByLabel(/^Prioridad/)
+      .selectOption(task.priority);
   if (task.description || task.startDate || task.estimateMinutes || task.repeat) await showMoreOptions(page);
   if (task.description)
     await page
@@ -151,7 +155,7 @@ export const fillAndSaveTask = async (page: Page, task: NewTask) => {
     await page.getByLabel('Repetir').selectOption(task.repeat.frequency);
     if (task.repeat.monthlyOption) await page.getByRole('radio', { name: task.repeat.monthlyOption }).check();
   }
-  const saveButton = page.getByRole('button', { name: 'Guardar Acción Operativa' });
+  const saveButton = page.getByRole('button', { name: 'Guardar la tarea' });
   await saveButton.scrollIntoViewIfNeeded();
   await saveButton.click();
   await expect(saveButton).toBeHidden();
@@ -217,7 +221,7 @@ export const callFunction = (name: string, idToken: string, data: unknown) =>
 
 // Abre una sección. En tableta y escritorio están en la cabecera; en el móvil (< 768 px), en la barra inferior las
 // cuatro primeras y las demás en la hoja «Más»
-const BOTTOM_BAR_SECTIONS = ['Inicio', 'Listas Duales', 'Agenda', 'Rueda de la Vida'];
+const BOTTOM_BAR_SECTIONS = ['Inicio', 'Listas', 'Agenda', 'Rueda de la Vida'];
 export const openSection = async (page: Page, name: string) => {
   const isPhone = (page.viewportSize()?.width ?? 1280) < 768;
   if (isPhone && !BOTTOM_BAR_SECTIONS.includes(name))

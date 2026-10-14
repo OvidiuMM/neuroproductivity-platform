@@ -97,11 +97,9 @@ export const EmailModal: React.FC<EmailModalProps> = ({ isOpen, onClose, onSendE
           <div>
             <h2 id="email-modal-title" className="flex items-center gap-2 text-base font-bold text-slate-900">
               <Mail className="h-5 w-5 text-indigo-600" />
-              Cliente Asistido con Redacción Inversa
+              Nuevo correo
             </h2>
-            <p className="mt-0.5 text-xs text-slate-500">
-              Protocolo contra re-envíos involuntarios y dispersión atencional
-            </p>
+            <p className="mt-0.5 text-xs text-slate-500">Primero el contenido; los destinatarios, al final</p>
           </div>
           <button
             onClick={onClose}
@@ -222,9 +220,7 @@ export const EmailModal: React.FC<EmailModalProps> = ({ isOpen, onClose, onSendE
               <div className="mt-1.5 flex items-start gap-2 rounded-xl border border-amber-200 bg-amber-50 p-2.5 text-xs text-amber-900">
                 <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-amber-600" />
                 <p className="text-[11px] leading-relaxed">
-                  <strong>Alerta de Síntesis Informativa:</strong> El cuerpo supera las dimensiones recomendadas sin
-                  desplazamiento vertical (no-scroll). Los mensajes largos fragmentan la atención de quien los lee y
-                  suelen generar más idas y vueltas.
+                  <strong>Es largo:</strong> si cabe en una pantalla, se lee mejor y genera menos idas y vueltas.
                 </p>
               </div>
             )}
@@ -240,7 +236,7 @@ export const EmailModal: React.FC<EmailModalProps> = ({ isOpen, onClose, onSendE
               htmlFor="email-subject"
               className="mb-1 block text-xs font-bold tracking-wider text-slate-700 uppercase"
             >
-              Paso 3: Asunto Sintético <span className="text-red-500">*</span>
+              Paso 3: Asunto <span className="text-red-500">*</span>
             </label>
             <input
               id="email-subject"
@@ -261,7 +257,7 @@ export const EmailModal: React.FC<EmailModalProps> = ({ isOpen, onClose, onSendE
                 ) : (
                   <Lock className="h-4 w-4 text-slate-500" />
                 )}
-                <span>Paso 4: Destinatarios (Desbloqueo Final)</span>
+                <span>Paso 4: Destinatarios</span>
                 <span className="text-red-500">*</span>
               </label>
 
@@ -305,7 +301,7 @@ export const EmailModal: React.FC<EmailModalProps> = ({ isOpen, onClose, onSendE
 
           {/* CHECKLIST DE REDACCIÓN INVERSA */}
           <div className="space-y-1 rounded-xl border border-slate-200 bg-slate-50 p-3 text-xs">
-            <span className="mb-1 block font-bold text-slate-700">Secuencia Metodológica de Redacción Inversa:</span>
+            <span className="mb-1 block font-bold text-slate-700">Antes de guardar:</span>
             <div className="grid grid-cols-2 gap-2 text-[11px]">
               <div className="flex items-center gap-1.5">
                 {isStep1AttachmentsValid ? (
@@ -370,7 +366,7 @@ export const EmailModal: React.FC<EmailModalProps> = ({ isOpen, onClose, onSendE
               }`}
             >
               <Send className="h-4 w-4" />
-              <span>Despachar Mensaje Seguro</span>
+              <span>Guardar el correo</span>
             </button>
           </div>
         </form>

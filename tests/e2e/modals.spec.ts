@@ -12,11 +12,11 @@ for (const viewport of [
     await signInWithGoogle(page);
 
     await page.getByRole('button', { name: 'Nueva tarea', exact: true }).click();
-    await expect(page.getByRole('heading', { name: 'Captura de Nueva Acción Inmediata' })).toBeInViewport();
+    await expect(page.getByRole('heading', { name: 'Nueva tarea' })).toBeInViewport();
     await expect(page.getByRole('button', { name: 'Cerrar' }).first()).toBeInViewport();
 
     // El final del formulario sigue siendo accesible desplazándose
-    const save = page.getByRole('button', { name: 'Guardar Acción Operativa' });
+    const save = page.getByRole('button', { name: 'Guardar la tarea' });
     await save.scrollIntoViewIfNeeded();
     await expect(save).toBeInViewport();
   });

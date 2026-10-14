@@ -12,19 +12,19 @@ test('shows the physical-verb hint above the action field', async ({ page }) => 
   await page.getByRole('button', { name: 'Nueva Tarea' }).click();
 
   await expect(page.getByText('Verbo físico:', { exact: true })).toBeVisible();
-  await expect(page.getByLabel('Acción Inmediata Siguiente')).toHaveAttribute('aria-describedby', 'task-title-hint');
+  await expect(page.getByRole('dialog').getByLabel(/^Tarea/)).toHaveAttribute('aria-describedby', 'task-title-hint');
 });
 
 test('ranks the Top 10 by effective priority and filters it by estimate and deadline', async ({ page }) => {
   await page.goto('/');
   await signInWithGoogle(page);
-  await page.getByRole('button', { name: 'Listas Duales' }).click();
+  await page.getByRole('button', { name: 'Listas', exact: true }).click();
 
   const far = `Llamar al arquitecto ${unique()}`; // Alta, pero vence en 30 días → cuenta como Media
   const quick = `Enviar la factura ${unique()}`; // Media, 15 min, vence en 2 días
   const long = `Reservar el viaje ${unique()}`; // Alta, 2 h, sin fecha
 
-  await page.getByRole('button', { name: 'Capturar Primera Acción' }).click();
+  await page.getByRole('button', { name: 'Añadir la primera tarea' }).click();
   await fillAndSaveTask(page, { title: far, priority: 'HIGH', dueDate: localDateFromToday(30), estimateMinutes: 60 });
   await page.getByRole('button', { name: 'Añadir tarea', exact: true }).click();
   await fillAndSaveTask(page, {
@@ -57,18 +57,18 @@ test('ranks the Top 10 by effective priority and filters it by estimate and dead
   await page.getByLabel('Estimación hasta').selectOption('30');
   await expect.poll(() => top10Titles(page)).toEqual([quick]);
   await expect(page.getByText('2 tareas ocultas por los filtros.')).toBeVisible();
-  // El resumen «Top 10 Foco» de Inicio cuenta lo mismo que muestra la lista
+  // El resumen «Top 10» de Inicio cuenta lo mismo que muestra la lista
   await page.getByRole('button', { name: 'Inicio', exact: true }).click();
   await expect(page.getByText('1/10', { exact: true })).toBeVisible();
-  await page.getByRole('button', { name: 'Listas Duales', exact: true }).click();
+  await page.getByRole('button', { name: 'Listas', exact: true }).click();
 
   // Si los filtros lo ocultan todo, no se invita a crear la primera tarea
   await page.getByLabel('Fecha límite', { exact: true }).selectOption('OVERDUE');
   await expect(page.getByText('Ninguna tarea coincide con los filtros (3 ocultas).')).toBeVisible();
-  await expect(page.getByRole('button', { name: 'Capturar Primera Acción' })).toHaveCount(0);
+  await expect(page.getByRole('button', { name: 'Añadir la primera tarea' })).toHaveCount(0);
   await page.getByRole('button', { name: 'Inicio', exact: true }).click();
   await expect(page.getByText('0/10', { exact: true })).toBeVisible();
-  await page.getByRole('button', { name: 'Listas Duales', exact: true }).click();
+  await page.getByRole('button', { name: 'Listas', exact: true }).click();
   await page.getByRole('button', { name: 'Mostrar todas las tareas' }).click();
   await expect.poll(() => top10Titles(page)).toEqual([quick, far, long]);
 
@@ -77,7 +77,7 @@ test('ranks the Top 10 by effective priority and filters it by estimate and dead
 
   // Las preferencias se guardan: tras recargar siguen el orden y el filtro
   await page.reload();
-  await page.getByRole('button', { name: 'Listas Duales' }).click();
+  await page.getByRole('button', { name: 'Listas', exact: true }).click();
   await expect(page.getByLabel('Ordenar por:')).toHaveValue('estimate');
   await expect.poll(() => top10Titles(page)).toEqual([long]);
 
@@ -89,11 +89,11 @@ test('on a phone, sort and filters open in a sheet and active filters are remova
   await page.setViewportSize({ width: 375, height: 800 });
   await page.goto('/');
   await signInWithGoogle(page);
-  await openSection(page, 'Listas Duales');
+  await openSection(page, 'Listas');
 
   const short = `Enviar el recibo ${unique()}`;
   const long = `Preparar la reunión ${unique()}`;
-  await page.getByRole('button', { name: 'Capturar Primera Acción' }).click();
+  await page.getByRole('button', { name: 'Añadir la primera tarea' }).click();
   await fillAndSaveTask(page, { title: short, estimateMinutes: 15 });
   await page.getByRole('button', { name: 'Añadir tarea', exact: true }).click();
   await fillAndSaveTask(page, { title: long, estimateMinutes: 120 });

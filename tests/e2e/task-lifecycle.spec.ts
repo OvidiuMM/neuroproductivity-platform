@@ -14,13 +14,13 @@ const unique = () => Date.now().toString(36);
 test('adds tasks from the button at the end of the list and colors titles by due date', async ({ page }) => {
   await page.goto('/');
   await signInWithGoogle(page);
-  await page.getByRole('button', { name: 'Listas Duales' }).click();
+  await page.getByRole('button', { name: 'Listas', exact: true }).click();
 
   const overdue = `Llamar al proveedor vencido ${unique()}`;
   const soon = `Llamar al taller esta semana ${unique()}`;
   const later = `Llamar al banco el mes que viene ${unique()}`;
 
-  await page.getByRole('button', { name: 'Capturar Primera Acción' }).click();
+  await page.getByRole('button', { name: 'Añadir la primera tarea' }).click();
   await fillAndSaveTask(page, { title: overdue, dueDate: localDateFromToday(-1) });
 
   // Con tareas en la lista, el botón para añadir otra está al final
@@ -54,10 +54,10 @@ test('adds tasks from the button at the end of the list and colors titles by due
 test('archives a task when marked done and reactivates it from the archive', async ({ page }) => {
   await page.goto('/');
   await signInWithGoogle(page);
-  await page.getByRole('button', { name: 'Listas Duales' }).click();
+  await page.getByRole('button', { name: 'Listas', exact: true }).click();
 
   const title = `Llamar al cliente para cerrar ${unique()}`;
-  await page.getByRole('button', { name: 'Capturar Primera Acción' }).click();
+  await page.getByRole('button', { name: 'Añadir la primera tarea' }).click();
   await fillAndSaveTask(page, { title });
   await expect(page.getByRole('heading', { name: title })).toBeVisible();
 
@@ -99,10 +99,10 @@ test('archives a task when marked done and reactivates it from the archive', asy
 test('changing the status from «⋯» with the keyboard leaves the focus on that button', async ({ page }) => {
   await page.goto('/');
   await signInWithGoogle(page);
-  await page.getByRole('button', { name: 'Listas Duales' }).click();
+  await page.getByRole('button', { name: 'Listas', exact: true }).click();
 
   const title = `Llamar a la academia ${unique()}`;
-  await page.getByRole('button', { name: 'Capturar Primera Acción' }).click();
+  await page.getByRole('button', { name: 'Añadir la primera tarea' }).click();
   await fillAndSaveTask(page, { title });
   const actions = page.getByRole('button', { name: `Acciones de «${title}»` });
   await actions.focus();
@@ -119,10 +119,10 @@ test('changing the status from «⋯» with the keyboard leaves the focus on tha
 test('a deleted task can be brought back with «Deshacer»', async ({ page }) => {
   await page.goto('/');
   await signInWithGoogle(page);
-  await page.getByRole('button', { name: 'Listas Duales' }).click();
+  await page.getByRole('button', { name: 'Listas', exact: true }).click();
 
   const title = `Llamar a la gestoría ${unique()}`;
-  await page.getByRole('button', { name: 'Capturar Primera Acción' }).click();
+  await page.getByRole('button', { name: 'Añadir la primera tarea' }).click();
   await fillAndSaveTask(page, { title });
   await openTaskActions(page, title);
   await page.getByRole('button', { name: `Eliminar «${title}»` }).click();
@@ -131,17 +131,17 @@ test('a deleted task can be brought back with «Deshacer»', async ({ page }) =>
   await expect(page.getByRole('heading', { name: title })).toBeVisible();
   // Sigue ahí tras recargar: se ha vuelto a guardar
   await page.reload();
-  await page.getByRole('button', { name: 'Listas Duales' }).click();
+  await page.getByRole('button', { name: 'Listas', exact: true }).click();
   await expect(page.getByRole('heading', { name: title })).toBeVisible();
 });
 
 test('adds a task with a due date to Google, Outlook or an .ics calendar file', async ({ page }) => {
   await page.goto('/');
   await signInWithGoogle(page);
-  await page.getByRole('button', { name: 'Listas Duales' }).click();
+  await page.getByRole('button', { name: 'Listas', exact: true }).click();
 
   const title = `Llamar al notario ${unique()}`;
-  await page.getByRole('button', { name: 'Capturar Primera Acción' }).click();
+  await page.getByRole('button', { name: 'Añadir la primera tarea' }).click();
   await fillAndSaveTask(page, { title, dueDate: localDateFromToday(10), dueTime: '10:30' });
 
   await openTaskActions(page, title);
@@ -169,10 +169,10 @@ test('adds a task with a due date to Google, Outlook or an .ics calendar file', 
 test('explains that a task needs a due date to go to the calendar', async ({ page }) => {
   await page.goto('/');
   await signInWithGoogle(page);
-  await page.getByRole('button', { name: 'Listas Duales' }).click();
+  await page.getByRole('button', { name: 'Listas', exact: true }).click();
 
   const title = `Llamar al electricista ${unique()}`;
-  await page.getByRole('button', { name: 'Capturar Primera Acción' }).click();
+  await page.getByRole('button', { name: 'Añadir la primera tarea' }).click();
   await fillAndSaveTask(page, { title });
 
   await openTaskActions(page, title);
@@ -185,13 +185,13 @@ test('updates deadline colors while the page stays open', async ({ page }) => {
   await page.clock.install();
   await page.goto('/');
   await signInWithGoogle(page);
-  await page.getByRole('button', { name: 'Listas Duales' }).click();
+  await page.getByRole('button', { name: 'Listas', exact: true }).click();
 
   // Vence dentro de una semana y 3 minutos: al principio no tiene color; al adelantar 5 minutos pasa a violeta
   const due = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000 + 3 * 60 * 1000);
   const pad = (n: number) => String(n).padStart(2, '0');
   const title = `Llamar al gestor ${unique()}`;
-  await page.getByRole('button', { name: 'Capturar Primera Acción' }).click();
+  await page.getByRole('button', { name: 'Añadir la primera tarea' }).click();
   await fillAndSaveTask(page, {
     title,
     dueDate: `${due.getFullYear()}-${pad(due.getMonth() + 1)}-${pad(due.getDate())}`,
