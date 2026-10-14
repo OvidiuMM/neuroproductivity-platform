@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useCallback, useMemo, useState, useEffect, useRef } from 'react';
+import React, { Suspense, lazy, useCallback, useMemo, useState, useEffect, useRef } from 'react';
 import type { User } from 'firebase/auth';
 import {
   AppTab,
@@ -47,9 +47,6 @@ import { Navbar } from './components/Navbar';
 import { BottomNav, MORE_BUTTON_ID } from './components/BottomNav';
 import { PHONE_QUERY, useMediaQuery } from './hooks/useMediaQuery';
 import { MoreSheet } from './components/MoreSheet';
-import { GoalModal } from './components/GoalModal';
-import { WelcomeDialog } from './components/WelcomeDialog';
-import { ProductTour } from './components/ProductTour';
 import { TOUR_STEPS } from './tourSteps';
 import {
   hasSeenLocally,
@@ -63,18 +60,12 @@ import type { SyncStatus } from './components/SyncIndicator';
 import { TaskList } from './components/TaskList';
 import { TaskModal, type TaskFormData } from './components/TaskModal';
 import { ArchivedTasksModal } from './components/ArchivedTasksModal';
-import { WheelOfLife } from './components/WheelOfLife';
-import { BermudasShield } from './components/BermudasShield';
 import { MeetingModal } from './components/MeetingModal';
 import { EmailModal } from './components/EmailModal';
 import { SplashScreen } from './components/SplashScreen';
 import { AccountMenu } from './components/AccountMenu';
 import { ImportLocalDataModal } from './components/ImportLocalDataModal';
-import { HowItWorks } from './components/HowItWorks';
-import { AgendaView } from './components/AgendaView';
 import { HomeView } from './components/HomeView';
-import { AdminView } from './components/AdminView';
-import { FeedbackDialog } from './components/FeedbackDialog';
 import { setFeedbackStatus, subscribeToFeedback, type FeedbackTicket } from './services/feedbackApi';
 import { AccessibilityPanel } from './components/AccessibilityPanel';
 import { setAccess, subscribeToAccessRequests, type AccessRequest, type DecisionStatus } from './services/access';
@@ -96,6 +87,23 @@ const initialsOf = (name: string) =>
     .slice(0, 2)
     .join('')
     .toUpperCase() || 'U';
+
+// Secciones y ventanas que no se ven al arrancar: se cargan la primera vez que se abren
+const AgendaView = lazy(() => import('./components/AgendaView').then((m) => ({ default: m.AgendaView })));
+const WheelOfLife = lazy(() => import('./components/WheelOfLife').then((m) => ({ default: m.WheelOfLife })));
+const BermudasShield = lazy(() => import('./components/BermudasShield').then((m) => ({ default: m.BermudasShield })));
+const HowItWorks = lazy(() => import('./components/HowItWorks').then((m) => ({ default: m.HowItWorks })));
+const AdminView = lazy(() => import('./components/AdminView').then((m) => ({ default: m.AdminView })));
+const GoalModal = lazy(() => import('./components/GoalModal').then((m) => ({ default: m.GoalModal })));
+const FeedbackDialog = lazy(() => import('./components/FeedbackDialog').then((m) => ({ default: m.FeedbackDialog })));
+const WelcomeDialog = lazy(() => import('./components/WelcomeDialog').then((m) => ({ default: m.WelcomeDialog })));
+const ProductTour = lazy(() => import('./components/ProductTour').then((m) => ({ default: m.ProductTour })));
+
+const Loading: React.FC = () => (
+  <div role="status" className="py-16 text-center text-sm text-slate-500">
+    Cargando…
+  </div>
+);
 
 export default function App({ user, services, isAdmin = false }: AppProps) {
   const { db } = services;
@@ -640,103 +648,105 @@ export default function App({ user, services, isAdmin = false }: AppProps) {
           tabIndex={-1}
           className="mx-auto w-full max-w-7xl flex-1 space-y-6 px-4 pt-4 pb-8 focus:outline-none sm:px-6 lg:px-8"
         >
-          {/* INICIO: foco de la lista activa, estadísticas y recomendaciones */}
-          {activeTab === 'home' && (
-            <HomeView
-              tasks={tasks}
-              goals={goals}
-              activeContext={activeContext}
-              accountName={profile.name}
-              top10Count={top10Count}
-              wheelLogs={wheelLogs}
-              wheelAverage={wheelAverage}
-              meetings={meetings}
-              now={now}
-              onOpenAccount={() => setIsAccountMenuOpen(true)}
-              onNavigate={navigate}
-            />
-          )}
+          <Suspense fallback={<Loading />}>
+            {/* INICIO: foco de la lista activa, estadísticas y recomendaciones */}
+            {activeTab === 'home' && (
+              <HomeView
+                tasks={tasks}
+                goals={goals}
+                activeContext={activeContext}
+                accountName={profile.name}
+                top10Count={top10Count}
+                wheelLogs={wheelLogs}
+                wheelAverage={wheelAverage}
+                meetings={meetings}
+                now={now}
+                onOpenAccount={() => setIsAccountMenuOpen(true)}
+                onNavigate={navigate}
+              />
+            )}
 
-          {/* PESTAÑA 1: LISTAS DUALES (GESTOR DUAL CON JERARQUÍA VISUAL TOP 10) */}
-          {activeTab === 'tasks' && (
-            <TaskList
-              tasks={tasks}
-              goals={goals}
-              activeContext={activeContext}
-              prefs={listPrefs}
-              onPrefsChange={setListPrefs}
-              archivedCount={archivedTasks.length}
-              onChangeStatus={handleChangeStatus}
-              onDeleteTask={handleDeleteTask}
-              onEditTask={(task) => {
-                setEditingTask(task);
-                setIsTaskModalOpen(true);
-              }}
-              onOpenNewTask={openNewTask}
-              onOpenArchive={() => setIsArchiveOpen(true)}
-            />
-          )}
+            {/* PESTAÑA 1: LISTAS DUALES (GESTOR DUAL CON JERARQUÍA VISUAL TOP 10) */}
+            {activeTab === 'tasks' && (
+              <TaskList
+                tasks={tasks}
+                goals={goals}
+                activeContext={activeContext}
+                prefs={listPrefs}
+                onPrefsChange={setListPrefs}
+                archivedCount={archivedTasks.length}
+                onChangeStatus={handleChangeStatus}
+                onDeleteTask={handleDeleteTask}
+                onEditTask={(task) => {
+                  setEditingTask(task);
+                  setIsTaskModalOpen(true);
+                }}
+                onOpenNewTask={openNewTask}
+                onOpenArchive={() => setIsArchiveOpen(true)}
+              />
+            )}
 
-          {/* AGENDA: tareas con fecha de las dos listas, repeticiones previstas y reuniones */}
-          {activeTab === 'agenda' && (
-            <AgendaView
-              tasks={tasks}
-              meetings={meetings}
-              onEditTask={(task) => {
-                setEditingTask(task);
-                setIsTaskModalOpen(true);
-              }}
-            />
-          )}
+            {/* AGENDA: tareas con fecha de las dos listas, repeticiones previstas y reuniones */}
+            {activeTab === 'agenda' && (
+              <AgendaView
+                tasks={tasks}
+                meetings={meetings}
+                onEditTask={(task) => {
+                  setEditingTask(task);
+                  setIsTaskModalOpen(true);
+                }}
+              />
+            )}
 
-          {/* PESTAÑA 2: RUEDA DE LA VIDA (MÓDULO 1) */}
-          {activeTab === 'wheel' && (
-            // Se remonta cuando llegan los datos confirmados por el servidor para partir de la última evaluación
-            <WheelOfLife
-              key={wheelSynced ? 'synced' : 'cache'}
-              logs={wheelLogs}
-              showFirstStep={wheelSynced && wheelLogs.length === 0}
-              onAppendSnapshot={handleAppendWheelSnapshot}
-              onOpenHelp={() => navigate('help')}
-              goals={goals}
-              tasks={tasks}
-              onNewGoal={() => setGoalEditor({})}
-              onEditGoal={(goal) => setGoalEditor({ goal })}
-              onSetGoalStatus={handleSetGoalStatus}
-            />
-          )}
+            {/* PESTAÑA 2: RUEDA DE LA VIDA (MÓDULO 1) */}
+            {activeTab === 'wheel' && (
+              // Se remonta cuando llegan los datos confirmados por el servidor para partir de la última evaluación
+              <WheelOfLife
+                key={wheelSynced ? 'synced' : 'cache'}
+                logs={wheelLogs}
+                showFirstStep={wheelSynced && wheelLogs.length === 0}
+                onAppendSnapshot={handleAppendWheelSnapshot}
+                onOpenHelp={() => navigate('help')}
+                goals={goals}
+                tasks={tasks}
+                onNewGoal={() => setGoalEditor({})}
+                onEditGoal={(goal) => setGoalEditor({ goal })}
+                onSetGoalStatus={handleSetGoalStatus}
+              />
+            )}
 
-          {/* PESTAÑA 3: BLINDAJE BERMUDAS (MÓDULO 5) */}
-          {activeTab === 'bermudas' && (
-            <BermudasShield
-              meetings={meetings}
-              emails={emails}
-              onOpenNewMeeting={() => setIsMeetingModalOpen(true)}
-              onOpenNewEmail={() => setIsEmailModalOpen(true)}
-            />
-          )}
+            {/* PESTAÑA 3: BLINDAJE BERMUDAS (MÓDULO 5) */}
+            {activeTab === 'bermudas' && (
+              <BermudasShield
+                meetings={meetings}
+                emails={emails}
+                onOpenNewMeeting={() => setIsMeetingModalOpen(true)}
+                onOpenNewEmail={() => setIsEmailModalOpen(true)}
+              />
+            )}
 
-          {/* PESTAÑA 4: CÓMO FUNCIONA LA APP */}
-          {activeTab === 'help' && (
-            <HowItWorks
-              onNavigate={navigate}
-              onStartTour={startTour}
-              onShowWelcome={() => setIsWelcomeReplay(true)}
-              onContact={() => setIsFeedbackOpen(true)}
-            />
-          )}
+            {/* PESTAÑA 4: CÓMO FUNCIONA LA APP */}
+            {activeTab === 'help' && (
+              <HowItWorks
+                onNavigate={navigate}
+                onStartTour={startTour}
+                onShowWelcome={() => setIsWelcomeReplay(true)}
+                onContact={() => setIsFeedbackOpen(true)}
+              />
+            )}
 
-          {activeTab === 'access' && isAdmin && (
-            <AdminView
-              requests={accessRequests}
-              currentUid={uid}
-              accessError={accessError}
-              onDecide={handleDecideAccess}
-              tickets={feedbackTickets}
-              feedbackError={feedbackError}
-              onSetFeedbackStatus={handleSetFeedbackStatus}
-            />
-          )}
+            {activeTab === 'access' && isAdmin && (
+              <AdminView
+                requests={accessRequests}
+                currentUid={uid}
+                accessError={accessError}
+                onDecide={handleDecideAccess}
+                tickets={feedbackTickets}
+                feedbackError={feedbackError}
+                onSetFeedbackStatus={handleSetFeedbackStatus}
+              />
+            )}
+          </Suspense>
         </main>
 
         {/* FOOTER DISCRETO Y EDITORIAL */}
@@ -883,28 +893,30 @@ export default function App({ user, services, isAdmin = false }: AppProps) {
         returnFocusTo={accountButton}
       />
 
-      {/* CONTACTO: sugerencias, errores o mensajes (se monta al abrirse, así empieza limpio) */}
-      {isFeedbackOpen && (
-        <FeedbackDialog
-          functions={services.functions}
-          onClose={() => setIsFeedbackOpen(false)}
-          returnFocusTo={accountButton}
-        />
-      )}
+      <Suspense fallback={null}>
+        {/* CONTACTO: sugerencias, errores o mensajes (se monta al abrirse, así empieza limpio) */}
+        {isFeedbackOpen && (
+          <FeedbackDialog
+            functions={services.functions}
+            onClose={() => setIsFeedbackOpen(false)}
+            returnFocusTo={accountButton}
+          />
+        )}
 
-      {/* BIENVENIDA DE LA PRIMERA VEZ */}
-      {isWelcomeOpen && <WelcomeDialog onFinish={finishWelcome} />}
-      {isTourOpen && <ProductTour steps={TOUR_STEPS} onFinish={finishTour} />}
+        {/* BIENVENIDA DE LA PRIMERA VEZ */}
+        {isWelcomeOpen && <WelcomeDialog onFinish={finishWelcome} />}
+        {isTourOpen && <ProductTour steps={TOUR_STEPS} onFinish={finishTour} />}
 
-      {/* METAS: crear o editar (se monta al abrirse, así empieza limpio) */}
-      {goalEditor && (
-        <GoalModal
-          goal={goalEditor.goal}
-          onSave={handleSaveGoal}
-          onDelete={handleDeleteGoal}
-          onClose={() => setGoalEditor(null)}
-        />
-      )}
+        {/* METAS: crear o editar (se monta al abrirse, así empieza limpio) */}
+        {goalEditor && (
+          <GoalModal
+            goal={goalEditor.goal}
+            onSave={handleSaveGoal}
+            onDelete={handleDeleteGoal}
+            onClose={() => setGoalEditor(null)}
+          />
+        )}
+      </Suspense>
 
       {/* MODAL 5: IMPORTAR DATOS DE LA VERSIÓN SIN CUENTAS */}
       {isImportOpen && (
