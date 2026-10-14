@@ -16,7 +16,13 @@ interface ArchivedTasksModalProps {
 const doneFormat = new Intl.DateTimeFormat('es-ES', { day: 'numeric', month: 'short', year: 'numeric' });
 
 // Tareas hechas de las dos listas; cambiar el estado las devuelve a su lista
-export const ArchivedTasksModal: React.FC<ArchivedTasksModalProps> = ({ isOpen, onClose, tasks, onChangeStatus, onDeleteTask }) => {
+export const ArchivedTasksModal: React.FC<ArchivedTasksModalProps> = ({
+  isOpen,
+  onClose,
+  tasks,
+  onChangeStatus,
+  onDeleteTask
+}) => {
   const [query, setQuery] = useState('');
   const dialogRef = useRef<HTMLDivElement>(null);
   useModalFocus(isOpen, dialogRef, onClose);
@@ -29,35 +35,36 @@ export const ArchivedTasksModal: React.FC<ArchivedTasksModalProps> = ({ isOpen, 
     .filter((t) => !normalized || `${t.title} ${t.description}`.toLowerCase().includes(normalized));
 
   return (
-    <div className="fixed inset-0 z-50 flex justify-center p-4 sm:p-8 bg-slate-900/70 backdrop-blur-xs overflow-y-auto">
+    <div className="fixed inset-0 z-50 flex justify-center overflow-y-auto bg-slate-900/70 p-4 backdrop-blur-xs sm:p-8">
       <div
         ref={dialogRef}
         role="dialog"
         aria-modal="true"
         aria-label="Tareas archivadas"
-        className="bg-white rounded-3xl shadow-2xl border border-slate-200 w-full max-w-2xl my-auto overflow-hidden animate-in fade-in zoom-in-95 duration-200"
+        className="animate-in fade-in zoom-in-95 my-auto w-full max-w-2xl overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-2xl duration-200"
       >
-        <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between bg-slate-50/90">
-          <h2 className="text-sm font-bold text-slate-900 flex items-center gap-2">
-            <Archive className="w-4 h-4 text-indigo-600" />
+        <div className="flex items-center justify-between border-b border-slate-100 bg-slate-50/90 px-6 py-4">
+          <h2 className="flex items-center gap-2 text-sm font-bold text-slate-900">
+            <Archive className="h-4 w-4 text-indigo-600" />
             Tareas archivadas ({tasks.length})
           </h2>
           <button
             onClick={onClose}
             aria-label="Cerrar"
-            className="p-1.5 rounded-lg text-slate-500 hover:text-slate-600 hover:bg-slate-200/60 transition-colors"
+            className="rounded-lg p-1.5 text-slate-500 transition-colors hover:bg-slate-200/60 hover:text-slate-600"
           >
-            <X className="w-5 h-5" />
+            <X className="h-5 w-5" />
           </button>
         </div>
 
-        <div className="p-6 space-y-4">
+        <div className="space-y-4 p-6">
           <p className="text-xs text-slate-600">
-            Las tareas marcadas como <strong>Hecha</strong> se guardan aquí. Cambia su estado para devolverlas a su lista.
+            Las tareas marcadas como <strong>Hecha</strong> se guardan aquí. Cambia su estado para devolverlas a su
+            lista.
           </p>
 
           <label className="relative block">
-            <Search className="w-4 h-4 text-slate-500 absolute left-3 top-1/2 -translate-y-1/2" />
+            <Search className="absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-slate-500" />
             <input
               type="search"
               value={query}
@@ -65,38 +72,47 @@ export const ArchivedTasksModal: React.FC<ArchivedTasksModalProps> = ({ isOpen, 
               placeholder="Buscar en las tareas archivadas…"
               aria-label="Buscar en las tareas archivadas"
               data-autofocus
-              className="w-full pl-9 pr-3 py-2 text-xs rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-indigo-400"
+              className="w-full rounded-xl border border-slate-300 py-2 pr-3 pl-9 text-xs focus:ring-2 focus:ring-indigo-400 focus:outline-none"
             />
           </label>
 
           {visible.length === 0 ? (
-            <p className="p-6 text-center text-xs text-slate-500 bg-slate-50 rounded-2xl border border-slate-200">
-              {tasks.length === 0 ? 'Todavía no hay tareas archivadas.' : 'Ninguna tarea archivada coincide con la búsqueda.'}
+            <p className="rounded-2xl border border-slate-200 bg-slate-50 p-6 text-center text-xs text-slate-500">
+              {tasks.length === 0
+                ? 'Todavía no hay tareas archivadas.'
+                : 'Ninguna tarea archivada coincide con la búsqueda.'}
             </p>
           ) : (
-            <ul className="space-y-2 max-h-[55vh] overflow-y-auto pr-1">
+            <ul className="max-h-[55vh] space-y-2 overflow-y-auto pr-1">
               {visible.map((task) => (
-                <li key={task.id} className="p-3 rounded-2xl border border-slate-200 flex flex-wrap items-start justify-between gap-3">
+                <li
+                  key={task.id}
+                  className="flex flex-wrap items-start justify-between gap-3 rounded-2xl border border-slate-200 p-3"
+                >
                   <div className="min-w-0 flex-1 space-y-1">
-                    <span className="block text-xs font-bold text-slate-900 break-words">{task.title}</span>
+                    <span className="block text-xs font-bold break-words text-slate-900">{task.title}</span>
                     <span className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[11px] text-slate-500">
                       <span>{task.listContext === 'WORK' ? 'Profesional' : 'Personal'}</span>
                       {task.doneAt && <span>· Hecha el {doneFormat.format(new Date(task.doneAt))}</span>}
                       <TaskDates task={task} />
                     </span>
                   </div>
-                  <div className="flex items-center gap-1.5 shrink-0">
-                    <TaskStatusSelect status={task.status} taskTitle={task.title} onChange={(s) => onChangeStatus(task, s)} />
+                  <div className="flex shrink-0 items-center gap-1.5">
+                    <TaskStatusSelect
+                      status={task.status}
+                      taskTitle={task.title}
+                      onChange={(s) => onChangeStatus(task, s)}
+                    />
                     <button
                       type="button"
                       onClick={() => {
                         if (window.confirm(`¿Eliminar definitivamente «${task.title}»?`)) onDeleteTask(task.id);
                       }}
-                      className="p-1.5 text-slate-500 hover:text-red-600 rounded-lg hover:bg-slate-100"
+                      className="rounded-lg p-1.5 text-slate-500 hover:bg-slate-100 hover:text-red-600"
                       title="Eliminar tarea"
                       aria-label={`Eliminar «${task.title}»`}
                     >
-                      <Trash2 className="w-4 h-4" />
+                      <Trash2 className="h-4 w-4" />
                     </button>
                   </div>
                 </li>

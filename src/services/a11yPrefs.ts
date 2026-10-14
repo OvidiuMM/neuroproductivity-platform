@@ -25,7 +25,9 @@ export const parseA11yPrefs = (raw: string | null): A11yPrefs => {
   try {
     const data = JSON.parse(raw ?? '{}') as Partial<Record<keyof A11yPrefs, unknown>>;
     return {
-      textSize: TEXT_SIZES.includes(data.textSize as TextSize) ? (data.textSize as TextSize) : DEFAULT_A11Y_PREFS.textSize,
+      textSize: TEXT_SIZES.includes(data.textSize as TextSize)
+        ? (data.textSize as TextSize)
+        : DEFAULT_A11Y_PREFS.textSize,
       highContrast: data.highContrast === true,
       reduceMotion: data.reduceMotion === true,
       strongFocus: data.strongFocus === true
@@ -35,7 +37,13 @@ export const parseA11yPrefs = (raw: string | null): A11yPrefs => {
   }
 };
 
-export const A11Y_CLASSES = ['a11y-text-large', 'a11y-text-xlarge', 'a11y-contrast', 'a11y-reduce-motion', 'a11y-focus'] as const;
+export const A11Y_CLASSES = [
+  'a11y-text-large',
+  'a11y-text-xlarge',
+  'a11y-contrast',
+  'a11y-reduce-motion',
+  'a11y-focus'
+] as const;
 
 export const classesFor = (prefs: A11yPrefs): string[] =>
   [

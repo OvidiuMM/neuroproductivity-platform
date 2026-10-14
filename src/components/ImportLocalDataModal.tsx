@@ -21,7 +21,12 @@ const describeCounts = ({ tasks, wheelLogs, meetings, emails }: LocalProfileSumm
     .join(', ');
 
 // Primer inicio de sesión en un navegador con datos de la versión sin cuentas: ofrece subirlos a la cuenta
-export const ImportLocalDataModal: React.FC<ImportLocalDataModalProps> = ({ profiles, onImport, onDiscard, onLater }) => {
+export const ImportLocalDataModal: React.FC<ImportLocalDataModalProps> = ({
+  profiles,
+  onImport,
+  onDiscard,
+  onLater
+}) => {
   const dialogRef = useRef<HTMLDivElement>(null);
   // Solo se monta cuando hay datos que importar; Escape equivale a «Más tarde»
   useModalFocus(true, dialogRef, onLater);
@@ -55,44 +60,46 @@ export const ImportLocalDataModal: React.FC<ImportLocalDataModalProps> = ({ prof
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex justify-center p-4 sm:p-8 bg-slate-900/70 backdrop-blur-xs overflow-y-auto">
+    <div className="fixed inset-0 z-50 flex justify-center overflow-y-auto bg-slate-900/70 p-4 backdrop-blur-xs sm:p-8">
       <div
         ref={dialogRef}
         role="dialog"
         aria-modal="true"
         aria-label="Importar datos de este navegador"
-        className="bg-white rounded-3xl shadow-2xl border border-slate-200 w-full max-w-lg my-auto overflow-hidden animate-in fade-in zoom-in-95 duration-200"
+        className="animate-in fade-in zoom-in-95 my-auto w-full max-w-lg overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-2xl duration-200"
       >
-        <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between bg-slate-50/90">
-          <h2 className="text-sm font-bold text-slate-900 flex items-center gap-2">
-            <Upload className="w-4 h-4 text-indigo-600" />
+        <div className="flex items-center justify-between border-b border-slate-100 bg-slate-50/90 px-6 py-4">
+          <h2 className="flex items-center gap-2 text-sm font-bold text-slate-900">
+            <Upload className="h-4 w-4 text-indigo-600" />
             Importar datos de este navegador
           </h2>
           <button
             onClick={onLater}
             aria-label="Decidir más tarde"
-            className="p-1.5 rounded-lg text-slate-500 hover:text-slate-600 hover:bg-slate-200/60 transition-colors"
+            className="rounded-lg p-1.5 text-slate-500 transition-colors hover:bg-slate-200/60 hover:text-slate-600"
           >
-            <X className="w-5 h-5" />
+            <X className="h-5 w-5" />
           </button>
         </div>
 
-        <div className="p-6 space-y-4">
-          <p className="text-xs text-slate-600 leading-relaxed">
-            Este navegador tiene datos de la versión anterior, que los guardaba solo aquí. Elige qué perfiles quieres pasar a tu cuenta. Al importar se borran todos los datos locales de este navegador, también los de los perfiles que no marques.
+        <div className="space-y-4 p-6">
+          <p className="text-xs leading-relaxed text-slate-600">
+            Este navegador tiene datos de la versión anterior, que los guardaba solo aquí. Elige qué perfiles quieres
+            pasar a tu cuenta. Al importar se borran todos los datos locales de este navegador, también los de los
+            perfiles que no marques.
           </p>
 
           <div className="space-y-2">
             {profiles.map((p) => (
               <label
                 key={p.id}
-                className="p-3 rounded-2xl border border-slate-200 hover:bg-slate-50 flex items-start gap-3 cursor-pointer"
+                className="flex cursor-pointer items-start gap-3 rounded-2xl border border-slate-200 p-3 hover:bg-slate-50"
               >
                 <input
                   type="checkbox"
                   checked={selected.has(p.id)}
                   onChange={() => toggle(p.id)}
-                  className="mt-0.5 w-4 h-4 rounded text-indigo-600 border-slate-300"
+                  className="mt-0.5 h-4 w-4 rounded border-slate-300 text-indigo-600"
                 />
                 <span>
                   <span className="block text-xs font-bold text-slate-900">{p.name}</span>
@@ -103,17 +110,17 @@ export const ImportLocalDataModal: React.FC<ImportLocalDataModalProps> = ({ prof
           </div>
 
           {error && (
-            <p role="alert" className="text-xs text-red-700 bg-red-50 border border-red-200 rounded-xl p-3">
+            <p role="alert" className="rounded-xl border border-red-200 bg-red-50 p-3 text-xs text-red-700">
               {error}
             </p>
           )}
 
-          <div className="pt-2 flex flex-wrap items-center justify-end gap-2">
+          <div className="flex flex-wrap items-center justify-end gap-2 pt-2">
             <button
               type="button"
               onClick={handleDiscard}
               disabled={isImporting}
-              className="px-3 py-2 text-xs text-red-600 hover:bg-red-50 rounded-xl disabled:opacity-60"
+              className="rounded-xl px-3 py-2 text-xs text-red-600 hover:bg-red-50 disabled:opacity-60"
             >
               Descartar
             </button>
@@ -121,7 +128,7 @@ export const ImportLocalDataModal: React.FC<ImportLocalDataModalProps> = ({ prof
               type="button"
               onClick={onLater}
               disabled={isImporting}
-              className="px-3 py-2 text-xs text-slate-600 hover:bg-slate-100 rounded-xl disabled:opacity-60"
+              className="rounded-xl px-3 py-2 text-xs text-slate-600 hover:bg-slate-100 disabled:opacity-60"
             >
               Más tarde
             </button>
@@ -129,7 +136,7 @@ export const ImportLocalDataModal: React.FC<ImportLocalDataModalProps> = ({ prof
               type="button"
               onClick={handleImport}
               disabled={isImporting || selected.size === 0}
-              className="px-4 py-2 text-xs font-bold bg-slate-900 hover:bg-slate-800 disabled:opacity-60 text-white rounded-xl shadow-xs"
+              className="rounded-xl bg-slate-900 px-4 py-2 text-xs font-bold text-white shadow-xs hover:bg-slate-800 disabled:opacity-60"
             >
               {isImporting ? 'Importando…' : 'Importar a mi cuenta'}
             </button>

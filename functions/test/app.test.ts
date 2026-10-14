@@ -22,7 +22,7 @@ describe('API de Cloud Functions', () => {
 
   it('GET /api/health responde ok', async () => {
     const res = await fetch(`${baseUrl}/api/health`);
-    const body = await res.json();
+    const body = (await res.json()) as { status: string; service: string; uptime: unknown };
 
     assert.equal(res.status, 200);
     assert.equal(body.status, 'ok');
@@ -34,9 +34,9 @@ describe('API de Cloud Functions', () => {
     const res = await fetch(`${baseUrl}/api/nlp/infer`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ title: 'Llamar al dentista', description: 'Pedir cita' }),
+      body: JSON.stringify({ title: 'Llamar al dentista', description: 'Pedir cita' })
     });
-    const body = await res.json();
+    const body = (await res.json()) as { input: unknown };
 
     assert.equal(res.status, 200);
     assert.deepEqual(body.input, { title: 'Llamar al dentista', description: 'Pedir cita' });
@@ -44,7 +44,7 @@ describe('API de Cloud Functions', () => {
 
   it('POST /api/nlp/infer sin cuerpo no falla', async () => {
     const res = await fetch(`${baseUrl}/api/nlp/infer`, { method: 'POST' });
-    const body = await res.json();
+    const body = (await res.json()) as { input: unknown };
 
     assert.equal(res.status, 200);
     assert.deepEqual(body.input, {});
@@ -52,7 +52,7 @@ describe('API de Cloud Functions', () => {
 
   it('GET /.well-known/assetlinks.json usa los parámetros configurados', async () => {
     const res = await fetch(`${baseUrl}/.well-known/assetlinks.json`);
-    const body = await res.json();
+    const body = (await res.json()) as { target: { package_name: string; sha256_cert_fingerprints: string[] } }[];
 
     assert.equal(res.status, 200);
     assert.match(res.headers.get('content-type') ?? '', /application\/json/);

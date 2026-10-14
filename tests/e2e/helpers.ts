@@ -20,7 +20,7 @@ export const approveAccess = async (email: string) => {
           `http://127.0.0.1:9399/identitytoolkit.googleapis.com/v1/projects/${EMULATOR_PROJECT}/accounts:lookup`,
           { method: 'POST', headers, body: JSON.stringify({ email: [email] }) }
         );
-        uid = (await lookup.json()).users?.[0]?.localId;
+        uid = ((await lookup.json()) as { users?: { localId: string }[] }).users?.[0]?.localId;
         return uid;
       },
       { message: `cuenta ${email} en el emulador de Auth` }
@@ -133,9 +133,15 @@ export const expectNoInnerOverflow = async (page: Page, where: string) => {
     [...document.querySelectorAll('header *, main *')]
       // Los elementos SVG no son cajas: su scrollWidth no indica desbordamiento
       .filter((el) => !(el instanceof SVGElement))
-      .filter((el) => getComputedStyle(el).overflowX === 'visible' && el.clientWidth > 0 && el.scrollWidth > el.clientWidth + 1)
+      .filter(
+        (el) =>
+          getComputedStyle(el).overflowX === 'visible' && el.clientWidth > 0 && el.scrollWidth > el.clientWidth + 1
+      )
       .slice(0, 5)
-      .map((el) => `${el.tagName.toLowerCase()}«${(el.textContent ?? '').trim().slice(0, 30)}» ${el.scrollWidth}>${el.clientWidth}`)
+      .map(
+        (el) =>
+          `${el.tagName.toLowerCase()}«${(el.textContent ?? '').trim().slice(0, 30)}» ${el.scrollWidth}>${el.clientWidth}`
+      )
   );
   expect(offenders, where).toEqual([]);
 };
@@ -147,7 +153,9 @@ export const emulatorOobCode = async (email: string, requestType: 'VERIFY_EMAIL'
     .poll(
       async () => {
         const res = await fetch(`http://127.0.0.1:9399/emulator/v1/projects/${EMULATOR_PROJECT}/oobCodes`);
-        const { oobCodes } = (await res.json()) as { oobCodes: { email: string; requestType: string; oobCode: string; oobLink: string }[] };
+        const { oobCodes } = (await res.json()) as {
+          oobCodes: { email: string; requestType: string; oobCode: string; oobLink: string }[];
+        };
         code = oobCodes.filter((c) => c.email === email && c.requestType === requestType).at(-1);
         return Boolean(code);
       },
@@ -164,3 +172,9 @@ export const callFunction = (name: string, idToken: string, data: unknown) =>
     headers: { Authorization: `Bearer ${idToken}`, 'Content-Type': 'application/json' },
     body: JSON.stringify({ data })
   });
+
+// Abre una sección: en el móvil (< 768 px) están en el menú de la cabecera; en tableta y escritorio, en la cabecera
+export const openSection = async (page: Page, name: string) => {
+  if ((page.viewportSize()?.width ?? 1280) < 768) await page.getByRole('button', { name: 'Menú' }).click();
+  await page.getByRole('button', { name, exact: true }).click();
+};

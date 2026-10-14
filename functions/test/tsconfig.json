@@ -1,0 +1,9 @@
+{
+  "//": "Solo para el editor y ESLint: el build de functions/ compila src/ con ../tsconfig.json",
+  "extends": "../tsconfig.json",
+  "compilerOptions": {
+    "rootDir": "..",
+    "noEmit": true
+  },
+  "include": [".", "../src"]
+}

@@ -27,7 +27,12 @@ test('ranks the Top 10 by effective priority and filters it by estimate and dead
   await page.getByRole('button', { name: 'Capturar Primera Acción' }).click();
   await fillAndSaveTask(page, { title: far, priority: 'HIGH', dueDate: localDateFromToday(30), estimateMinutes: 60 });
   await page.getByRole('button', { name: 'Añadir tarea', exact: true }).click();
-  await fillAndSaveTask(page, { title: quick, priority: 'MEDIUM', dueDate: localDateFromToday(2), estimateMinutes: 15 });
+  await fillAndSaveTask(page, {
+    title: quick,
+    priority: 'MEDIUM',
+    dueDate: localDateFromToday(2),
+    estimateMinutes: 15
+  });
   await page.getByRole('button', { name: 'Añadir tarea', exact: true }).click();
   await fillAndSaveTask(page, { title: long, priority: 'HIGH', estimateMinutes: 120 });
 

@@ -67,12 +67,23 @@ describe('local data import (version without accounts)', () => {
 
   beforeEach(() => {
     storage = new MemoryStorage();
-    storage.setItem('neuro_users_v1', JSON.stringify([profile('user-1', 'Demo'), profile('user-ana', 'Ana'), profile('user-vacio', 'Vacío')]));
+    storage.setItem(
+      'neuro_users_v1',
+      JSON.stringify([profile('user-1', 'Demo'), profile('user-ana', 'Ana'), profile('user-vacio', 'Vacío')])
+    );
     storage.setItem(
       'neuro_tasks_v1',
-      JSON.stringify([task('task-w-1', 'user-1'), task('task-a', 'user-ana'), task('task-in-demo', 'user-1'), task('task-gone', 'user-borrado')])
+      JSON.stringify([
+        task('task-w-1', 'user-1'),
+        task('task-a', 'user-ana'),
+        task('task-in-demo', 'user-1'),
+        task('task-gone', 'user-borrado')
+      ])
     );
-    storage.setItem('neuro_wheel_logs_v1', JSON.stringify([wheelLog('wheel-snapshot-u1-1', 'user-1'), wheelLog('wheel-a', 'user-ana')]));
+    storage.setItem(
+      'neuro_wheel_logs_v1',
+      JSON.stringify([wheelLog('wheel-snapshot-u1-1', 'user-1'), wheelLog('wheel-a', 'user-ana')])
+    );
   });
 
   it('lists only profiles with data, never demo profiles or demo records', () => {
@@ -91,8 +102,14 @@ describe('local data import (version without accounts)', () => {
   it('builds the import only from the selected profiles', () => {
     const data = buildImport(['user-ana', ORPHAN_PROFILE_ID], storage);
 
-    assert.deepEqual(data.tasks.map((t) => t.id), ['task-a', 'task-in-demo']);
-    assert.deepEqual(data.wheelLogs.map((l) => l.id), ['wheel-a']);
+    assert.deepEqual(
+      data.tasks.map((t) => t.id),
+      ['task-a', 'task-in-demo']
+    );
+    assert.deepEqual(
+      data.wheelLogs.map((l) => l.id),
+      ['wheel-a']
+    );
     assert.deepEqual(data.meetings, []);
     assert.deepEqual(data.emails, []);
   });

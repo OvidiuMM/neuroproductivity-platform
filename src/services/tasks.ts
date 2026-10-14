@@ -65,7 +65,10 @@ export const getDeadlineState = (task: TaskItem, now = new Date()): DeadlineStat
 // (Crítica → Alta → Media → Baja). Sin fecha límite mantiene su prioridad.
 export const PRIORITY_LEVELS: TaskPriority[] = ['LOW', 'MEDIUM', 'HIGH', 'CRITICAL'];
 
-export const effectivePriority = (task: Pick<TaskItem, 'priority' | 'dueDate' | 'dueTime'>, now = new Date()): TaskPriority => {
+export const effectivePriority = (
+  task: Pick<TaskItem, 'priority' | 'dueDate' | 'dueTime'>,
+  now = new Date()
+): TaskPriority => {
   const due = dueMoment(task);
   if (!due || due.getTime() - now.getTime() <= WEEK_MS) return task.priority;
   return PRIORITY_LEVELS[Math.max(0, PRIORITY_LEVELS.indexOf(task.priority) - 1)];
@@ -84,10 +87,14 @@ const formatPoint = (date: string, time?: string) =>
   `${dateFormat.format(toLocalDate(date))}${time ? `, ${time}` : ''}`;
 
 // Una tarea repetida nunca es un intervalo: cada repetición vence su día (las de antes de 0.8 podían tener inicio)
-export const formatTaskDates = (task: Pick<TaskItem, 'startDate' | 'startTime' | 'dueDate' | 'dueTime' | 'recurrence'>) => {
+export const formatTaskDates = (
+  task: Pick<TaskItem, 'startDate' | 'startTime' | 'dueDate' | 'dueTime' | 'recurrence'>
+) => {
   if (!task.dueDate) return null;
   const due = formatPoint(task.dueDate, task.dueTime);
-  return task.startDate && !task.recurrence ? `${formatPoint(task.startDate, task.startTime)} → ${due}` : `Vence: ${due}`;
+  return task.startDate && !task.recurrence
+    ? `${formatPoint(task.startDate, task.startTime)} → ${due}`
+    : `Vence: ${due}`;
 };
 
 export const validateTaskDates = (

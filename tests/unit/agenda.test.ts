@@ -25,7 +25,15 @@ const items = (agenda: Map<string, { key: string }[]>, date: string) => agenda.g
 
 describe('startOfWeek and daysFrom', () => {
   it('starts weeks on Monday', () => {
-    assert.deepEqual(week, ['2026-10-12', '2026-10-13', '2026-10-14', '2026-10-15', '2026-10-16', '2026-10-17', '2026-10-18']);
+    assert.deepEqual(week, [
+      '2026-10-12',
+      '2026-10-13',
+      '2026-10-14',
+      '2026-10-15',
+      '2026-10-16',
+      '2026-10-17',
+      '2026-10-18'
+    ]);
     assert.equal(daysFrom(startOfWeek(new Date(2026, 9, 18)), 1)[0], '2026-10-12'); // domingo → lunes anterior
   });
 });
@@ -50,8 +58,18 @@ describe('buildAgenda', () => {
   });
 
   it('spreads intervals over their days with start, ongoing and due labels', () => {
-    const agenda = buildAgenda([task('trip', { startDate: '2026-10-11', dueDate: '2026-10-13', startTime: '08:00' })], [], week, now);
-    const labels = week.map((d) => agenda.get(d)!.map((i) => (i as { label: string }).label).join());
+    const agenda = buildAgenda(
+      [task('trip', { startDate: '2026-10-11', dueDate: '2026-10-13', startTime: '08:00' })],
+      [],
+      week,
+      now
+    );
+    const labels = week.map((d) =>
+      agenda
+        .get(d)!
+        .map((i) => (i as { label: string }).label)
+        .join()
+    );
     // Empezó el domingo 11 (fuera de la semana): lunes en curso, martes vence
     assert.deepEqual(labels.slice(0, 3), ['En curso', 'Vence', '']);
   });
@@ -76,7 +94,10 @@ describe('buildAgenda', () => {
       recurrence: { frequency: 'WEEKLY', interval: 1, weekdays: [1, 3, 5] }
     });
     const agenda = buildAgenda([repeated], [], week, now);
-    assert.deepEqual(week.map((d) => items(agenda, d).length), [0, 0, 1, 0, 1, 0, 0]);
+    assert.deepEqual(
+      week.map((d) => items(agenda, d).length),
+      [0, 0, 1, 0, 1, 0, 0]
+    );
   });
 
   it('projects only from the last task of a series, not from a reactivated earlier one', () => {
@@ -101,7 +122,10 @@ describe('buildAgenda', () => {
     // Tarea diaria vencida hace casi un año: sus repeticiones siguen apareciendo en la semana actual
     const daily = task('water', { dueDate: '2025-11-01', recurrence: { frequency: 'DAILY', interval: 1 } });
     const agenda = buildAgenda([daily], [], week, now);
-    assert.deepEqual(week.map((d) => items(agenda, d).length), [1, 1, 1, 1, 1, 1, 1]);
+    assert.deepEqual(
+      week.map((d) => items(agenda, d).length),
+      [1, 1, 1, 1, 1, 1, 1]
+    );
     // Y también varios años hacia delante
     const future = daysFrom(new Date(2029, 0, 1), 3);
     assert.deepEqual(items(buildAgenda([daily], [], future, now), '2029-01-02'), ['water:next:2029-01-02']);
@@ -128,9 +152,17 @@ describe('buildAgenda', () => {
 describe('overdueTasks', () => {
   it('lists active overdue tasks, oldest first', () => {
     const list = overdueTasks(
-      [task('b', { dueDate: '2026-10-10' }), task('a', { dueDate: '2026-10-01' }), task('c', { dueDate: '2026-10-20' }), task('d', { dueDate: '2026-10-02', status: 'DONE' })],
+      [
+        task('b', { dueDate: '2026-10-10' }),
+        task('a', { dueDate: '2026-10-01' }),
+        task('c', { dueDate: '2026-10-20' }),
+        task('d', { dueDate: '2026-10-02', status: 'DONE' })
+      ],
       now
     );
-    assert.deepEqual(list.map((t) => t.id), ['a', 'b']);
+    assert.deepEqual(
+      list.map((t) => t.id),
+      ['a', 'b']
+    );
   });
 });

@@ -12,11 +12,16 @@ const secondMonday = (year: number, month: number) => {
   return new Date(year, month, 1 + ((1 - first.getDay() + 7) % 7) + 7);
 };
 
+// Próximo 2.º lunes: el de este mes si aún no ha pasado, o el del siguiente
+const nextSecondMonday = (today: Date) => {
+  const thisMonth = secondMonday(today.getFullYear(), today.getMonth());
+  const startOfToday = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+  return thisMonth < startOfToday ? secondMonday(today.getFullYear(), today.getMonth() + 1) : thisMonth;
+};
+
 test('a task repeated on the second Monday of every month creates its next occurrence when done', async ({ page }) => {
   // Próximo 2.º lunes (de este mes o del siguiente) y el del mes siguiente a ese
-  const today = new Date();
-  let due = secondMonday(today.getFullYear(), today.getMonth());
-  if (due < new Date(today.getFullYear(), today.getMonth(), today.getDate())) due = secondMonday(today.getFullYear(), today.getMonth() + 1);
+  const due = nextSecondMonday(new Date());
   const next = secondMonday(due.getFullYear(), due.getMonth() + 1);
 
   await page.goto('/');
@@ -30,7 +35,9 @@ test('a task repeated on the second Monday of every month creates its next occur
   await page.getByLabel('Fecha de inicio', { exact: true }).fill(toDateString(due));
   await page.getByRole('radio', { name: 'El 2.º lunes' }).check();
   // El formulario resume la regla y la próxima fecha
-  await expect(page.getByRole('status').filter({ hasText: 'Cada mes, el 2.º lunes' })).toContainText(dateFormat.format(next));
+  await expect(page.getByRole('status').filter({ hasText: 'Cada mes, el 2.º lunes' })).toContainText(
+    dateFormat.format(next)
+  );
   await fillAndSaveTask(page, { title });
 
   await expect(page.getByText('Cada mes, el 2.º lunes').first()).toBeVisible();
@@ -39,7 +46,7 @@ test('a task repeated on the second Monday of every month creates its next occur
   await page.getByRole('button', { name: `Añadir «${title}» al calendario`, exact: true }).click();
   const downloadPromise = page.waitForEvent('download');
   await page.getByRole('menuitem', { name: /Descargar \.ics/ }).click();
-  const ics = readFileSync((await (await downloadPromise).path())!, 'utf8');
+  const ics = readFileSync(await (await downloadPromise).path(), 'utf8');
   expect(ics).toContain('RRULE:FREQ=MONTHLY;INTERVAL=1;BYDAY=2MO');
   await page.keyboard.press('Escape');
   await page.mouse.click(5, 400);
@@ -71,11 +78,15 @@ test('turning repetition off keeps the first repetition as the due date, without
   await page.getByLabel('Fecha de inicio', { exact: true }).fill(toDateString(start));
   await page.getByLabel('Repetir').selectOption('');
   const pad2 = (n: number) => String(n).padStart(2, '0');
-  await expect(page.getByLabel('Fecha límite', { exact: true })).toHaveValue(`${pad2(start.getDate())}/${pad2(start.getMonth() + 1)}/${start.getFullYear()}`);
+  await expect(page.getByLabel('Fecha límite', { exact: true })).toHaveValue(
+    `${pad2(start.getDate())}/${pad2(start.getMonth() + 1)}/${start.getFullYear()}`
+  );
   await expect(page.getByLabel('Fecha de inicio', { exact: true })).toHaveValue('');
   const title = `Revisar el informe ${Date.now().toString(36)}`;
   await fillAndSaveTask(page, { title });
-  await expect(page.getByText(`Vence: ${dateFormat.format(start).replace(/ \d{4}$/, '')}`, { exact: false }).first()).toBeVisible();
+  await expect(
+    page.getByText(`Vence: ${dateFormat.format(start).replace(/ \d{4}$/, '')}`, { exact: false }).first()
+  ).toBeVisible();
 });
 
 test('editing a repetition that fell on a shorter month keeps the series day', async ({ page }) => {
@@ -91,7 +102,9 @@ test('editing a repetition that fell on a shorter month keeps the series day', a
   await page.getByLabel('Fecha de inicio', { exact: true }).fill(`${year}-01-31`);
   await fillAndSaveTask(page, { title });
   await page.getByLabel(`Estado de «${title}»`).selectOption('DONE');
-  await expect(page.getByText(dateFormat.format(endOfFebruary).replace(/ \d{4}$/, ''), { exact: false }).first()).toBeVisible();
+  await expect(
+    page.getByText(dateFormat.format(endOfFebruary).replace(/ \d{4}$/, ''), { exact: false }).first()
+  ).toBeVisible();
 
   // Abrir y guardar la de febrero sin cambios no mueve la serie a su último día
   await page.getByRole('button', { name: `Editar «${title}»` }).click();
@@ -99,5 +112,7 @@ test('editing a repetition that fell on a shorter month keeps the series day', a
   await page.getByRole('button', { name: 'Actualizar Acción' }).click();
   await expect(page.getByRole('button', { name: 'Actualizar Acción' })).toBeHidden();
   await page.getByLabel(`Estado de «${title}»`).selectOption('DONE');
-  await expect(page.getByText(dateFormat.format(new Date(year, 2, 31)).replace(/ \d{4}$/, ''), { exact: false }).first()).toBeVisible();
+  await expect(
+    page.getByText(dateFormat.format(new Date(year, 2, 31)).replace(/ \d{4}$/, ''), { exact: false }).first()
+  ).toBeVisible();
 });

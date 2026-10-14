@@ -1,4 +1,11 @@
-import { EmailAuthProvider, GoogleAuthProvider, deleteUser, reauthenticateWithCredential, reauthenticateWithPopup, type User } from 'firebase/auth';
+import {
+  EmailAuthProvider,
+  GoogleAuthProvider,
+  deleteUser,
+  reauthenticateWithCredential,
+  reauthenticateWithPopup,
+  type User
+} from 'firebase/auth';
 import { httpsCallable } from 'firebase/functions';
 import { forgetAccess } from './access';
 import { signOutAndClearCache, type FirebaseServices } from './firebase';

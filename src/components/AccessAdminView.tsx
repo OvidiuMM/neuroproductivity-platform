@@ -9,11 +9,27 @@ interface AccessAdminViewProps {
   onDecide: (uid: string, status: DecisionStatus) => Promise<void>;
 }
 
-const dateFormat = new Intl.DateTimeFormat('es-ES', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+const dateFormat = new Intl.DateTimeFormat('es-ES', {
+  day: 'numeric',
+  month: 'short',
+  year: 'numeric',
+  hour: '2-digit',
+  minute: '2-digit'
+});
 
 const GROUPS: { id: string; title: string; matches: (r: AccessRequest) => boolean; empty: string }[] = [
-  { id: 'access-pending', title: 'Pendientes', matches: (r) => r.status === 'pending', empty: 'No hay solicitudes pendientes.' },
-  { id: 'access-approved', title: 'Con acceso', matches: (r) => r.status === 'approved', empty: 'Nadie tiene acceso todavía.' },
+  {
+    id: 'access-pending',
+    title: 'Pendientes',
+    matches: (r) => r.status === 'pending',
+    empty: 'No hay solicitudes pendientes.'
+  },
+  {
+    id: 'access-approved',
+    title: 'Con acceso',
+    matches: (r) => r.status === 'approved',
+    empty: 'Nadie tiene acceso todavía.'
+  },
   {
     id: 'access-closed',
     title: 'Rechazadas o retiradas',
@@ -22,14 +38,33 @@ const GROUPS: { id: string; title: string; matches: (r: AccessRequest) => boolea
   }
 ];
 
-const ACTIONS: Record<AccessRequest['status'], { status: DecisionStatus; label: string; icon: typeof Check; style: string }[]> = {
+const ACTIONS: Record<
+  AccessRequest['status'],
+  { status: DecisionStatus; label: string; icon: typeof Check; style: string }[]
+> = {
   pending: [
     { status: 'approved', label: 'Aprobar', icon: Check, style: 'bg-emerald-700 hover:bg-emerald-800 text-white' },
-    { status: 'rejected', label: 'Rechazar', icon: X, style: 'border border-slate-300 text-slate-700 hover:bg-slate-50' }
+    {
+      status: 'rejected',
+      label: 'Rechazar',
+      icon: X,
+      style: 'border border-slate-300 text-slate-700 hover:bg-slate-50'
+    }
   ],
-  approved: [{ status: 'revoked', label: 'Retirar acceso', icon: UserX, style: 'border border-red-300 text-red-700 hover:bg-red-50' }],
-  rejected: [{ status: 'approved', label: 'Aprobar', icon: Check, style: 'bg-emerald-700 hover:bg-emerald-800 text-white' }],
-  revoked: [{ status: 'approved', label: 'Aprobar', icon: Check, style: 'bg-emerald-700 hover:bg-emerald-800 text-white' }]
+  approved: [
+    {
+      status: 'revoked',
+      label: 'Retirar acceso',
+      icon: UserX,
+      style: 'border border-red-300 text-red-700 hover:bg-red-50'
+    }
+  ],
+  rejected: [
+    { status: 'approved', label: 'Aprobar', icon: Check, style: 'bg-emerald-700 hover:bg-emerald-800 text-white' }
+  ],
+  revoked: [
+    { status: 'approved', label: 'Aprobar', icon: Check, style: 'bg-emerald-700 hover:bg-emerald-800 text-white' }
+  ]
 };
 
 const STATUS_LABEL: Record<AccessRequest['status'], string> = {
@@ -54,18 +89,19 @@ export const AccessAdminView: React.FC<AccessAdminViewProps> = ({ requests, curr
 
   return (
     <div className="space-y-5">
-      <div className="bg-white rounded-2xl p-5 border border-slate-200 shadow-xs">
-        <h2 className="text-xl font-bold text-slate-900 flex items-center gap-2">
-          <UserCheck className="w-6 h-6 text-indigo-600" aria-hidden="true" />
+      <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-xs">
+        <h2 className="flex items-center gap-2 text-xl font-bold text-slate-900">
+          <UserCheck className="h-6 w-6 text-indigo-600" aria-hidden="true" />
           Accesos
         </h2>
-        <p className="text-xs text-slate-600 mt-1">
-          Aprueba quién puede usar la app. Cada solicitud nueva te llega también por email, y la persona recibe otro cuando la apruebas.
+        <p className="mt-1 text-xs text-slate-600">
+          Aprueba quién puede usar la app. Cada solicitud nueva te llega también por email, y la persona recibe otro
+          cuando la apruebas.
         </p>
       </div>
 
       {error && (
-        <p role="alert" className="text-xs text-red-700 bg-red-50 border border-red-200 rounded-xl p-3">
+        <p role="alert" className="rounded-xl border border-red-200 bg-red-50 p-3 text-xs text-red-700">
           {error}
         </p>
       )}
@@ -73,8 +109,12 @@ export const AccessAdminView: React.FC<AccessAdminViewProps> = ({ requests, curr
       {GROUPS.map(({ id, title, matches, empty }) => {
         const items = requests.filter(matches);
         return (
-          <section key={id} aria-labelledby={id} className="bg-white rounded-2xl p-5 border border-slate-200 shadow-xs space-y-3">
-            <h3 id={id} className="text-xs font-bold uppercase tracking-wider text-slate-700">
+          <section
+            key={id}
+            aria-labelledby={id}
+            className="space-y-3 rounded-2xl border border-slate-200 bg-white p-5 shadow-xs"
+          >
+            <h3 id={id} className="text-xs font-bold tracking-wider text-slate-700 uppercase">
               {title} ({items.length})
             </h3>
             {items.length === 0 ? (
@@ -85,30 +125,47 @@ export const AccessAdminView: React.FC<AccessAdminViewProps> = ({ requests, curr
                   const who = `${request.name || request.email} (${request.email})`;
                   const isSelf = request.uid === currentUid;
                   return (
-                    <li key={request.uid} aria-label={who} className="py-3 flex flex-col sm:flex-row sm:items-start gap-3 justify-between">
-                      <div className="flex items-start gap-3 min-w-0">
+                    <li
+                      key={request.uid}
+                      aria-label={who}
+                      className="flex flex-col justify-between gap-3 py-3 sm:flex-row sm:items-start"
+                    >
+                      <div className="flex min-w-0 items-start gap-3">
                         {request.photoUrl ? (
-                          <img src={request.photoUrl} alt="" referrerPolicy="no-referrer" className="w-9 h-9 rounded-xl object-cover shrink-0" />
+                          <img
+                            src={request.photoUrl}
+                            alt=""
+                            referrerPolicy="no-referrer"
+                            className="h-9 w-9 shrink-0 rounded-xl object-cover"
+                          />
                         ) : (
-                          <div className="w-9 h-9 rounded-xl bg-indigo-600 text-white font-bold text-xs flex items-center justify-center shrink-0" aria-hidden="true">
+                          <div
+                            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-indigo-600 text-xs font-bold text-white"
+                            aria-hidden="true"
+                          >
                             {(request.name || request.email).slice(0, 1).toUpperCase()}
                           </div>
                         )}
                         <div className="min-w-0 space-y-0.5">
-                          <p className="text-sm font-semibold text-slate-900 break-words">{request.name || request.email}</p>
-                          <p className="text-xs text-slate-600 break-all">{request.email}</p>
+                          <p className="text-sm font-semibold break-words text-slate-900">
+                            {request.name || request.email}
+                          </p>
+                          <p className="text-xs break-all text-slate-600">{request.email}</p>
                           <p className="text-[11px] text-slate-500">
-                            {STATUS_LABEL[request.status]} · solicitado el {dateFormat.format(new Date(request.requestedAt))}
-                            {request.decidedAt && request.status !== 'pending' && <> · decidido el {dateFormat.format(new Date(request.decidedAt))}</>}
+                            {STATUS_LABEL[request.status]} · solicitado el{' '}
+                            {dateFormat.format(new Date(request.requestedAt))}
+                            {request.decidedAt && request.status !== 'pending' && (
+                              <> · decidido el {dateFormat.format(new Date(request.decidedAt))}</>
+                            )}
                           </p>
                           {request.message && (
-                            <blockquote className="mt-1 text-xs text-slate-700 bg-slate-50 border-l-4 border-slate-300 rounded-r-lg px-3 py-2 whitespace-pre-wrap break-words">
+                            <blockquote className="mt-1 rounded-r-lg border-l-4 border-slate-300 bg-slate-50 px-3 py-2 text-xs break-words whitespace-pre-wrap text-slate-700">
                               {request.message}
                             </blockquote>
                           )}
                         </div>
                       </div>
-                      <div className="flex items-center gap-2 shrink-0">
+                      <div className="flex shrink-0 items-center gap-2">
                         {isSelf ? (
                           <span className="text-[11px] font-semibold text-slate-500">Tú (administración)</span>
                         ) : (
@@ -119,9 +176,9 @@ export const AccessAdminView: React.FC<AccessAdminViewProps> = ({ requests, curr
                               disabled={busyUid === request.uid}
                               onClick={() => decide(request.uid, status)}
                               aria-label={`${label}: ${who}`}
-                              className={`px-3 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1.5 disabled:opacity-60 ${style}`}
+                              className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-bold disabled:opacity-60 ${style}`}
                             >
-                              <Icon className="w-3.5 h-3.5" aria-hidden="true" />
+                              <Icon className="h-3.5 w-3.5" aria-hidden="true" />
                               {label}
                             </button>
                           ))

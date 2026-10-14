@@ -70,7 +70,9 @@ export const AccessRequestScreen: React.FC<AccessRequestScreenProps> = ({
       setError(
         describeAuthError(
           err,
-          kind === 'download' ? 'No se pudieron descargar tus datos. Inténtalo de nuevo.' : 'No se pudo eliminar la cuenta. Inténtalo de nuevo.'
+          kind === 'download'
+            ? 'No se pudieron descargar tus datos. Inténtalo de nuevo.'
+            : 'No se pudo eliminar la cuenta. Inténtalo de nuevo.'
         )
       );
     } finally {
@@ -87,7 +89,9 @@ export const AccessRequestScreen: React.FC<AccessRequestScreenProps> = ({
     try {
       await onRequest(message.trim());
     } catch (err) {
-      setError(err instanceof Error && err.message ? err.message : 'No se pudo enviar la solicitud. Inténtalo de nuevo.');
+      setError(
+        err instanceof Error && err.message ? err.message : 'No se pudo enviar la solicitud. Inténtalo de nuevo.'
+      );
     } finally {
       setIsSending(false);
     }
@@ -96,8 +100,8 @@ export const AccessRequestScreen: React.FC<AccessRequestScreenProps> = ({
   return (
     <AccessibleScreen>
       {(openAccessibility) => (
-        <main className="min-h-screen bg-slate-50 flex items-center justify-center p-4 antialiased">
-          <div className="w-full max-w-md bg-white rounded-3xl border border-slate-200 shadow-xl p-8 space-y-6">
+        <main className="flex min-h-screen items-center justify-center bg-slate-50 p-4 antialiased">
+          <div className="w-full max-w-md space-y-6 rounded-3xl border border-slate-200 bg-white p-8 shadow-xl">
             <div className="flex items-center gap-3">
               <BrandMark size={44} />
               <div>
@@ -107,11 +111,11 @@ export const AccessRequestScreen: React.FC<AccessRequestScreenProps> = ({
             </div>
 
             <div aria-live="polite" className="space-y-2">
-              <h1 className="text-lg font-bold text-slate-900 flex items-center gap-2">
-                <Icon className="w-5 h-5 text-indigo-600" aria-hidden="true" />
+              <h1 className="flex items-center gap-2 text-lg font-bold text-slate-900">
+                <Icon className="h-5 w-5 text-indigo-600" aria-hidden="true" />
                 {COPY[status].title}
               </h1>
-              <p className="text-sm text-slate-700 leading-relaxed">{COPY[status].text}</p>
+              <p className="text-sm leading-relaxed text-slate-700">{COPY[status].text}</p>
             </div>
 
             {canRequest && (
@@ -121,7 +125,7 @@ export const AccessRequestScreen: React.FC<AccessRequestScreenProps> = ({
                     <label htmlFor="access-message" className="text-xs font-semibold text-slate-700">
                       Mensaje para la administración (opcional)
                     </label>
-                    <span className="text-[10px] font-mono text-slate-500" aria-hidden="true">
+                    <span className="font-mono text-[10px] text-slate-500" aria-hidden="true">
                       {message.length}/{ACCESS_MESSAGE_MAX_LENGTH}
                     </span>
                   </div>
@@ -132,15 +136,15 @@ export const AccessRequestScreen: React.FC<AccessRequestScreenProps> = ({
                     maxLength={ACCESS_MESSAGE_MAX_LENGTH}
                     rows={3}
                     placeholder="Por ejemplo, quién eres o para qué quieres usar la app"
-                    className="w-full px-3 py-2 rounded-xl border border-slate-300 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400"
+                    className="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-400 focus:outline-none"
                   />
                 </div>
                 <button
                   type="submit"
                   disabled={isSending}
-                  className="w-full py-3 px-4 bg-slate-900 hover:bg-slate-800 disabled:opacity-60 text-white rounded-2xl text-sm font-bold flex items-center justify-center gap-2"
+                  className="flex w-full items-center justify-center gap-2 rounded-2xl bg-slate-900 px-4 py-3 text-sm font-bold text-white hover:bg-slate-800 disabled:opacity-60"
                 >
-                  <Send className="w-4 h-4" aria-hidden="true" />
+                  <Send className="h-4 w-4" aria-hidden="true" />
                   {isSending ? 'Enviando…' : status === 'none' ? 'Solicitar acceso' : 'Volver a solicitar acceso'}
                 </button>
               </form>
@@ -150,34 +154,34 @@ export const AccessRequestScreen: React.FC<AccessRequestScreenProps> = ({
               <button
                 type="button"
                 onClick={onRetry}
-                className="w-full py-3 px-4 bg-slate-900 hover:bg-slate-800 text-white rounded-2xl text-sm font-bold"
+                className="w-full rounded-2xl bg-slate-900 px-4 py-3 text-sm font-bold text-white hover:bg-slate-800"
               >
                 Reintentar
               </button>
             )}
 
             {error && (
-              <p role="alert" className="text-xs text-red-700 bg-red-50 border border-red-200 rounded-xl p-3">
+              <p role="alert" className="rounded-xl border border-red-200 bg-red-50 p-3 text-xs text-red-700">
                 {error}
               </p>
             )}
 
             {status !== 'unknown' && (
-              <section aria-labelledby="access-data-title" className="space-y-2 pt-3 border-t border-slate-100">
-                <h2 id="access-data-title" className="text-xs font-bold uppercase tracking-wider text-slate-700">
+              <section aria-labelledby="access-data-title" className="space-y-2 border-t border-slate-100 pt-3">
+                <h2 id="access-data-title" className="text-xs font-bold tracking-wider text-slate-700 uppercase">
                   Tus datos
                 </h2>
-                <p className="text-[11px] text-slate-600 leading-relaxed">
+                <p className="text-[11px] leading-relaxed text-slate-600">
                   Aunque no tengas acceso, puedes descargar o eliminar los datos que tengas guardados.
                 </p>
-                <div className="flex flex-col sm:flex-row gap-2">
+                <div className="flex flex-col gap-2 sm:flex-row">
                   <button
                     type="button"
                     disabled={dataBusy !== null}
                     onClick={() => runDataAction('download', onDownloadData)}
-                    className="flex-1 py-2 px-3 border border-slate-300 hover:bg-slate-50 disabled:opacity-60 text-slate-700 rounded-xl text-xs font-semibold flex items-center justify-center gap-1.5"
+                    className="flex flex-1 items-center justify-center gap-1.5 rounded-xl border border-slate-300 px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-60"
                   >
-                    <Download className="w-3.5 h-3.5" aria-hidden="true" />
+                    <Download className="h-3.5 w-3.5" aria-hidden="true" />
                     {dataBusy === 'download' ? 'Preparando descarga…' : 'Descargar mis datos'}
                   </button>
                   <button
@@ -185,9 +189,9 @@ export const AccessRequestScreen: React.FC<AccessRequestScreenProps> = ({
                     disabled={dataBusy !== null}
                     onClick={() => setIsDeleting(true)}
                     aria-expanded={isDeleting}
-                    className="flex-1 py-2 px-3 border border-red-300 hover:bg-red-50 disabled:opacity-60 text-red-700 rounded-xl text-xs font-semibold flex items-center justify-center gap-1.5"
+                    className="flex flex-1 items-center justify-center gap-1.5 rounded-xl border border-red-300 px-3 py-2 text-xs font-semibold text-red-700 hover:bg-red-50 disabled:opacity-60"
                   >
-                    <Trash2 className="w-3.5 h-3.5" aria-hidden="true" />
+                    <Trash2 className="h-3.5 w-3.5" aria-hidden="true" />
                     Eliminar mi cuenta y mis datos
                   </button>
                 </div>
@@ -202,16 +206,17 @@ export const AccessRequestScreen: React.FC<AccessRequestScreenProps> = ({
               </section>
             )}
 
-            <p className="text-[11px] text-slate-600 leading-relaxed">
-              Para revisar tu solicitud se guardan tu nombre, tu email, tu foto de perfil (si entras con Google) y el mensaje, en servidores de Google Cloud en la Unión Europea (Bélgica).
+            <p className="text-[11px] leading-relaxed text-slate-600">
+              Para revisar tu solicitud se guardan tu nombre, tu email, tu foto de perfil (si entras con Google) y el
+              mensaje, en servidores de Google Cloud en la Unión Europea (Bélgica).
             </p>
 
             <button
               type="button"
               onClick={onSignOut}
-              className="w-full py-2 px-4 border border-slate-200 hover:bg-slate-50 text-slate-700 rounded-2xl text-xs font-semibold flex items-center justify-center gap-2"
+              className="flex w-full items-center justify-center gap-2 rounded-2xl border border-slate-200 px-4 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50"
             >
-              <LogOut className="w-3.5 h-3.5" aria-hidden="true" />
+              <LogOut className="h-3.5 w-3.5" aria-hidden="true" />
               Cerrar sesión
             </button>
 

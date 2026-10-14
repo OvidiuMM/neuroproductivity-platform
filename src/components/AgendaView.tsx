@@ -29,16 +29,19 @@ const titleColor = (item: AgendaItem) =>
 
 const AgendaEntry: React.FC<{ item: AgendaItem; onEditTask: (task: TaskItem) => void }> = ({ item, onEditTask }) => {
   const time = item.time ? `${item.time}${item.endTime ? `–${item.endTime}` : ''}` : 'Todo el día';
-  const meta = [item.label, item.context === 'WORK' ? 'Profesional' : item.context === 'PERSONAL' ? 'Personal' : undefined]
+  const meta = [
+    item.label,
+    item.context === 'WORK' ? 'Profesional' : item.context === 'PERSONAL' ? 'Personal' : undefined
+  ]
     .filter(Boolean)
     .join(' · ');
 
   if (item.kind === 'meeting') {
     return (
-      <div className="p-2 rounded-lg border border-slate-200 border-l-4 border-l-amber-500 bg-amber-50/50 text-xs space-y-0.5">
+      <div className="space-y-0.5 rounded-lg border border-l-4 border-slate-200 border-l-amber-500 bg-amber-50/50 p-2 text-xs">
         <span className="block font-mono text-[10px] text-slate-600">{time}</span>
-        <span className="flex items-center gap-1 font-semibold text-slate-900 break-words">
-          <Users className="w-3 h-3 text-amber-600 shrink-0" aria-hidden="true" />
+        <span className="flex items-center gap-1 font-semibold break-words text-slate-900">
+          <Users className="h-3 w-3 shrink-0 text-amber-600" aria-hidden="true" />
           {item.title}
         </span>
         <span className="block text-[10px] text-slate-500">{meta}</span>
@@ -51,13 +54,15 @@ const AgendaEntry: React.FC<{ item: AgendaItem; onEditTask: (task: TaskItem) => 
     <button
       type="button"
       onClick={() => item.task && onEditTask(item.task)}
-      className={`w-full text-left p-2 rounded-lg border border-l-4 text-xs space-y-0.5 hover:bg-slate-50 ${
+      className={`w-full space-y-0.5 rounded-lg border border-l-4 p-2 text-left text-xs hover:bg-slate-50 ${
         item.context ? CONTEXT_STYLE[item.context] : ''
       } ${isOccurrence ? 'border-dashed border-slate-300 bg-white/60' : 'border-slate-200 bg-white'}`}
     >
       <span className="block font-mono text-[10px] text-slate-600">{time}</span>
-      <span className={`flex items-center gap-1 font-semibold break-words ${isOccurrence ? 'text-slate-600' : titleColor(item)}`}>
-        {isOccurrence && <Repeat className="w-3 h-3 shrink-0" aria-hidden="true" />}
+      <span
+        className={`flex items-center gap-1 font-semibold break-words ${isOccurrence ? 'text-slate-600' : titleColor(item)}`}
+      >
+        {isOccurrence && <Repeat className="h-3 w-3 shrink-0" aria-hidden="true" />}
         {item.title}
       </span>
       <span className="block text-[10px] text-slate-500">{meta}</span>
@@ -85,19 +90,23 @@ export const AgendaView: React.FC<AgendaViewProps> = ({ tasks, meetings, onEditT
 
   return (
     <div className="space-y-5">
-      <div className="bg-white rounded-2xl p-5 border border-slate-200 shadow-xs flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+      <div className="flex flex-col justify-between gap-4 rounded-2xl border border-slate-200 bg-white p-5 shadow-xs lg:flex-row lg:items-center">
         <div>
-          <h2 className="text-xl font-bold text-slate-900 flex items-center gap-2">
-            <CalendarDays className="w-6 h-6 text-indigo-600" aria-hidden="true" />
+          <h2 className="flex items-center gap-2 text-xl font-bold text-slate-900">
+            <CalendarDays className="h-6 w-6 text-indigo-600" aria-hidden="true" />
             Agenda
           </h2>
-          <p className="text-xs text-slate-500 mt-1">
+          <p className="mt-1 text-xs text-slate-500">
             Tareas con fecha de tus dos listas, repeticiones previstas y reuniones. Pulsa una tarea para editarla.
           </p>
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
-          <div role="group" aria-label="Vista de la agenda" className="flex items-center bg-slate-100 p-0.5 rounded-lg border border-slate-200">
+          <div
+            role="group"
+            aria-label="Vista de la agenda"
+            className="flex items-center rounded-lg border border-slate-200 bg-slate-100 p-0.5"
+          >
             {(
               [
                 ['week', 'Semana'],
@@ -109,7 +118,7 @@ export const AgendaView: React.FC<AgendaViewProps> = ({ tasks, meetings, onEditT
                 type="button"
                 aria-pressed={mode === value}
                 onClick={() => setMode(value)}
-                className={`px-3 py-1 text-xs font-semibold rounded-md ${mode === value ? 'bg-white text-slate-900 shadow-xs' : 'text-slate-600 hover:text-slate-900'}`}
+                className={`rounded-md px-3 py-1 text-xs font-semibold ${mode === value ? 'bg-white text-slate-900 shadow-xs' : 'text-slate-600 hover:text-slate-900'}`}
               >
                 {label}
               </button>
@@ -120,14 +129,14 @@ export const AgendaView: React.FC<AgendaViewProps> = ({ tasks, meetings, onEditT
               type="button"
               onClick={() => moveWeeks(-1)}
               aria-label="Semana anterior"
-              className="p-1.5 rounded-lg border border-slate-200 text-slate-700 hover:bg-slate-50"
+              className="rounded-lg border border-slate-200 p-1.5 text-slate-700 hover:bg-slate-50"
             >
-              <ChevronLeft className="w-4 h-4" aria-hidden="true" />
+              <ChevronLeft className="h-4 w-4" aria-hidden="true" />
             </button>
             <button
               type="button"
               onClick={() => setWeekStart(startOfWeek(new Date()))}
-              className="px-3 py-1.5 rounded-lg border border-slate-200 text-xs font-semibold text-slate-700 hover:bg-slate-50"
+              className="rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-50"
             >
               Hoy
             </button>
@@ -135,9 +144,9 @@ export const AgendaView: React.FC<AgendaViewProps> = ({ tasks, meetings, onEditT
               type="button"
               onClick={() => moveWeeks(1)}
               aria-label="Semana siguiente"
-              className="p-1.5 rounded-lg border border-slate-200 text-slate-700 hover:bg-slate-50"
+              className="rounded-lg border border-slate-200 p-1.5 text-slate-700 hover:bg-slate-50"
             >
-              <ChevronRight className="w-4 h-4" aria-hidden="true" />
+              <ChevronRight className="h-4 w-4" aria-hidden="true" />
             </button>
           </div>
           <span className="text-xs font-semibold text-slate-700" aria-live="polite">
@@ -147,15 +156,27 @@ export const AgendaView: React.FC<AgendaViewProps> = ({ tasks, meetings, onEditT
       </div>
 
       {/* Leyenda */}
-      <ul className="flex flex-wrap gap-x-4 gap-y-1 text-[11px] text-slate-600 px-1" aria-label="Leyenda">
-        <li className="flex items-center gap-1.5"><span className="w-3 h-3 rounded-sm bg-indigo-500" aria-hidden="true" />Profesional</li>
-        <li className="flex items-center gap-1.5"><span className="w-3 h-3 rounded-sm bg-emerald-500" aria-hidden="true" />Personal</li>
-        <li className="flex items-center gap-1.5"><span className="w-3 h-3 rounded-sm bg-amber-500" aria-hidden="true" />Reunión</li>
-        <li className="flex items-center gap-1.5"><Repeat className="w-3 h-3" aria-hidden="true" />Repetición prevista</li>
+      <ul className="flex flex-wrap gap-x-4 gap-y-1 px-1 text-[11px] text-slate-600" aria-label="Leyenda">
+        <li className="flex items-center gap-1.5">
+          <span className="h-3 w-3 rounded-sm bg-indigo-500" aria-hidden="true" />
+          Profesional
+        </li>
+        <li className="flex items-center gap-1.5">
+          <span className="h-3 w-3 rounded-sm bg-emerald-500" aria-hidden="true" />
+          Personal
+        </li>
+        <li className="flex items-center gap-1.5">
+          <span className="h-3 w-3 rounded-sm bg-amber-500" aria-hidden="true" />
+          Reunión
+        </li>
+        <li className="flex items-center gap-1.5">
+          <Repeat className="h-3 w-3" aria-hidden="true" />
+          Repetición prevista
+        </li>
       </ul>
 
       {mode === 'week' ? (
-        <ol className="grid grid-cols-1 md:grid-cols-7 gap-2" aria-label="Semana">
+        <ol className="grid grid-cols-1 gap-2 md:grid-cols-7" aria-label="Semana">
           {days.map((date) => {
             const isToday = date === today;
             const dayItems = agenda.get(date)!;
@@ -164,16 +185,18 @@ export const AgendaView: React.FC<AgendaViewProps> = ({ tasks, meetings, onEditT
                 key={date}
                 aria-current={isToday ? 'date' : undefined}
                 aria-label={longDayFormat.format(toLocalDate(date))}
-                className={`min-h-28 rounded-2xl border p-2 space-y-2 ${isToday ? 'border-indigo-400 bg-indigo-50/40' : 'border-slate-200 bg-slate-50/60'}`}
+                className={`min-h-28 space-y-2 rounded-2xl border p-2 ${isToday ? 'border-indigo-400 bg-indigo-50/40' : 'border-slate-200 bg-slate-50/60'}`}
               >
                 <div className="flex items-baseline justify-between px-0.5">
-                  <span className="text-[11px] font-bold uppercase text-slate-600">{weekdayFormat.format(toLocalDate(date))}</span>
+                  <span className="text-[11px] font-bold text-slate-600 uppercase">
+                    {weekdayFormat.format(toLocalDate(date))}
+                  </span>
                   <span className={`text-sm font-extrabold ${isToday ? 'text-indigo-700' : 'text-slate-800'}`}>
                     {toLocalDate(date).getDate()}
                   </span>
                 </div>
                 {dayItems.length === 0 ? (
-                  <p className="text-[10px] text-slate-600 px-0.5">Sin nada programado</p>
+                  <p className="px-0.5 text-[10px] text-slate-600">Sin nada programado</p>
                 ) : (
                   <ul className="space-y-1.5">
                     {dayItems.map((item) => (
@@ -190,8 +213,11 @@ export const AgendaView: React.FC<AgendaViewProps> = ({ tasks, meetings, onEditT
       ) : (
         <div className="space-y-4">
           {overdue.length > 0 && (
-            <section aria-labelledby="agenda-overdue" className="bg-red-50/60 border border-red-200 rounded-2xl p-4 space-y-2">
-              <h3 id="agenda-overdue" className="text-xs font-bold uppercase tracking-wider text-red-700">
+            <section
+              aria-labelledby="agenda-overdue"
+              className="space-y-2 rounded-2xl border border-red-200 bg-red-50/60 p-4"
+            >
+              <h3 id="agenda-overdue" className="text-xs font-bold tracking-wider text-red-700 uppercase">
                 Vencidas ({overdue.length})
               </h3>
               <ul className="space-y-1.5">
@@ -200,9 +226,9 @@ export const AgendaView: React.FC<AgendaViewProps> = ({ tasks, meetings, onEditT
                     <button
                       type="button"
                       onClick={() => onEditTask(task)}
-                      className={`w-full text-left p-2 rounded-lg border border-slate-200 border-l-4 bg-white text-xs hover:bg-slate-50 ${CONTEXT_STYLE[task.listContext]}`}
+                      className={`w-full rounded-lg border border-l-4 border-slate-200 bg-white p-2 text-left text-xs hover:bg-slate-50 ${CONTEXT_STYLE[task.listContext]}`}
                     >
-                      <span className="block font-semibold text-red-600 break-words">{task.title}</span>
+                      <span className="block font-semibold break-words text-red-600">{task.title}</span>
                       <span className="block text-[10px] text-slate-500">{formatTaskDates(task)}</span>
                     </button>
                   </li>
@@ -221,19 +247,19 @@ export const AgendaView: React.FC<AgendaViewProps> = ({ tasks, meetings, onEditT
                 key={date}
                 aria-labelledby={`agenda-day-${date}`}
                 aria-current={isToday ? 'date' : undefined}
-                className={`rounded-2xl border space-y-2 ${items.length ? 'p-4' : 'px-4 py-2.5'} ${
+                className={`space-y-2 rounded-2xl border ${items.length ? 'p-4' : 'px-4 py-2.5'} ${
                   isToday ? 'border-indigo-400 bg-indigo-50/40' : 'border-slate-200 bg-white'
                 }`}
               >
                 <div className="flex flex-wrap items-baseline justify-between gap-x-3">
                   <h3 id={`agenda-day-${date}`} className="text-sm font-bold text-slate-900 first-letter:uppercase">
                     {longDayFormat.format(toLocalDate(date))}
-                    {isToday && <span className="ml-2 text-[10px] font-bold uppercase text-indigo-700">Hoy</span>}
+                    {isToday && <span className="ml-2 text-[10px] font-bold text-indigo-700 uppercase">Hoy</span>}
                   </h3>
                   {items.length === 0 && <p className="text-xs text-slate-600">Sin nada programado</p>}
                 </div>
                 {items.length > 0 && (
-                  <ul className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
+                  <ul className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3">
                     {items.map((item) => (
                       <li key={item.key}>
                         <AgendaEntry item={item} onEditTask={onEditTask} />

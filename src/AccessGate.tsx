@@ -5,7 +5,13 @@ import App from './App';
 import { AccessRequestScreen } from './components/AccessRequestScreen';
 import { EmailVerificationScreen } from './components/EmailVerificationScreen';
 import { hasPassword, needsEmailVerification } from './services/auth';
-import { requestAccess, subscribeToIsAdmin, subscribeToOwnAccess, syncAccess, type OwnAccessStatus } from './services/access';
+import {
+  requestAccess,
+  subscribeToIsAdmin,
+  subscribeToOwnAccess,
+  syncAccess,
+  type OwnAccessStatus
+} from './services/access';
 import { deleteAccount, downloadAccountData } from './services/account';
 import { signOutAndClearCache, type FirebaseServices } from './services/firebase';
 import { saveUserProfile } from './services/repository';
@@ -37,15 +43,23 @@ export const AccessGate: React.FC<AccessGateProps> = ({ user, services }) => {
   useEffect(() => subscribeToIsAdmin(services.db, user.uid, setIsAdmin), [services.db, user.uid]);
 
   // Da de alta a la administración y confirma el estado con el servidor
-  const check = useCallback(() => {
+  // (isChecking empieza en true, así que la primera comprobación no necesita marcarlo)
+  const confirmWithServer = useCallback(
+    () =>
+      syncAccess(services.functions)
+        .then((result) => setCheckedStatus(result.status))
+        .catch((e) => console.warn('Could not check access:', e))
+        .finally(() => setIsChecking(false)),
+    [services.functions]
+  );
+  const check = () => {
     setIsChecking(true);
-    syncAccess(services.functions)
-      .then((result) => setCheckedStatus(result.status))
-      .catch((e) => console.warn('Could not check access:', e))
-      .finally(() => setIsChecking(false));
-  }, [services.functions]);
+    void confirmWithServer();
+  };
 
-  useEffect(check, [check]);
+  useEffect(() => {
+    void confirmWithServer();
+  }, [confirmWithServer]);
 
   useEffect(() => {
     if (isApproved) saveUserProfile(services.db, user).catch((e) => console.error('Error saving user profile:', e));
@@ -56,7 +70,9 @@ export const AccessGate: React.FC<AccessGateProps> = ({ user, services }) => {
       await requestAccess(services.functions, message);
     } catch (e) {
       const known = e instanceof FirebaseError ? REQUEST_ERRORS[e.code] : undefined;
-      throw new Error(known ?? 'No se pudo enviar la solicitud. Comprueba la conexión e inténtalo de nuevo.');
+      throw new Error(known ?? 'No se pudo enviar la solicitud. Comprueba la conexión e inténtalo de nuevo.', {
+        cause: e
+      });
     }
   };
 
@@ -79,7 +95,7 @@ export const AccessGate: React.FC<AccessGateProps> = ({ user, services }) => {
   // Mientras se consulta al servidor no se muestra el formulario (la administración se aprueba en ese paso)
   if (isChecking && (effectiveStatus === 'unknown' || effectiveStatus === 'none')) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-slate-50 text-sm text-slate-500" role="status">
+      <div className="flex min-h-screen items-center justify-center bg-slate-50 text-sm text-slate-500" role="status">
         Comprobando tu acceso…
       </div>
     );

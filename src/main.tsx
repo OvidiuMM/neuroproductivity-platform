@@ -1,5 +1,5 @@
-import {createRoot} from 'react-dom/client';
-import {AuthGate} from './AuthGate.tsx';
+import { createRoot } from 'react-dom/client';
+import { AuthGate } from './AuthGate.tsx';
 import './index.css';
 import { applyA11yPrefs, loadA11yPrefs } from './services/a11yPrefs';
 

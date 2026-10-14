@@ -21,7 +21,10 @@ export const hasPassword = (user: User) => user.providerData.some((p) => p.provi
 // Las cuentas con contraseña deben confirmar su email antes de solicitar acceso; las de Google ya vienen verificadas
 export const needsEmailVerification = (user: User) => hasPassword(user) && !user.emailVerified;
 
-export const signUpWithEmail = async (auth: Auth, { name, email, password }: { name: string; email: string; password: string }) => {
+export const signUpWithEmail = async (
+  auth: Auth,
+  { name, email, password }: { name: string; email: string; password: string }
+) => {
   const { user } = await createUserWithEmailAndPassword(auth, email.trim(), password);
   if (name.trim()) await updateProfile(user, { displayName: name.trim() });
   await sendEmailVerification(user);

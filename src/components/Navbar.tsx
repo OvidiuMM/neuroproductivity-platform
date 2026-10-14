@@ -1,6 +1,18 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { AppTab, ListContext, UserProfile } from '../types';
-import { Briefcase, User, Compass, ShieldCheck, ChevronDown, BookOpen, Menu, X, CalendarDays, UserCheck, LayoutDashboard } from 'lucide-react';
+import {
+  Briefcase,
+  User,
+  Compass,
+  ShieldCheck,
+  ChevronDown,
+  BookOpen,
+  Menu,
+  X,
+  CalendarDays,
+  UserCheck,
+  LayoutDashboard
+} from 'lucide-react';
 import { SyncIndicator, type SyncStatus } from './SyncIndicator';
 import { BRAND_NAME, BrandMark } from './BrandMark';
 
@@ -38,7 +50,7 @@ const PendingBadge: React.FC<{ count: number; corner?: boolean }> = ({ count, co
   count > 0 ? (
     <span
       aria-hidden="true"
-      className={`min-w-4 h-4 px-1 rounded-full bg-orange-700 text-white text-[10px] font-bold leading-4 text-center ${
+      className={`h-4 min-w-4 rounded-full bg-orange-700 px-1 text-center text-[10px] leading-4 font-bold text-white ${
         corner ? 'absolute -top-1.5 -right-1.5 ring-2 ring-white' : ''
       }`}
     >
@@ -48,9 +60,9 @@ const PendingBadge: React.FC<{ count: number; corner?: boolean }> = ({ count, co
 
 const Avatar: React.FC<{ user: UserProfile }> = ({ user }) =>
   user.photoUrl ? (
-    <img src={user.photoUrl} alt="" referrerPolicy="no-referrer" className="w-6 h-6 rounded-lg object-cover shrink-0" />
+    <img src={user.photoUrl} alt="" referrerPolicy="no-referrer" className="h-6 w-6 shrink-0 rounded-lg object-cover" />
   ) : (
-    <div className="w-6 h-6 rounded-lg bg-indigo-600 text-white font-bold text-[10px] flex items-center justify-center shrink-0 shadow-2xs">
+    <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-lg bg-indigo-600 text-[10px] font-bold text-white shadow-2xs">
       {user.initials}
     </div>
   );
@@ -109,26 +121,40 @@ export const Navbar: React.FC<NavbarProps> = ({
   };
 
   const contexts = [
-    { value: 'WORK' as const, label: 'Profesional', count: taskCounts.work, Icon: Briefcase, iconClass: 'text-indigo-600' },
-    { value: 'PERSONAL' as const, label: 'Personal', count: taskCounts.personal, Icon: User, iconClass: 'text-emerald-600' }
+    {
+      value: 'WORK' as const,
+      label: 'Profesional',
+      count: taskCounts.work,
+      Icon: Briefcase,
+      iconClass: 'text-indigo-600'
+    },
+    {
+      value: 'PERSONAL' as const,
+      label: 'Personal',
+      count: taskCounts.personal,
+      Icon: User,
+      iconClass: 'text-emerald-600'
+    }
   ];
 
   return (
-    <header className="sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b border-slate-200">
-      <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8">
+    <header className="sticky top-0 z-40 border-b border-slate-200 bg-white/95 backdrop-blur-md">
+      <div className="mx-auto max-w-7xl px-3 sm:px-6 lg:px-8">
         {/* Una sola fila; solo con el texto ampliado (panel de accesibilidad) puede pasar a varias */}
-        <div className="navbar-row flex flex-nowrap items-center justify-between min-h-14 py-2 gap-2 sm:gap-3">
+        <div className="navbar-row flex min-h-14 flex-nowrap items-center justify-between gap-2 py-2 sm:gap-3">
           {/* Marca: símbolo, nombre y versión en todos los tamaños */}
-          <div className="flex items-center gap-2 min-w-0 shrink-0">
+          <div className="flex min-w-0 shrink-0 items-center gap-2">
             <BrandMark size={36} />
-            <span className="text-lg font-extrabold tracking-[0.2em] text-slate-900 leading-tight whitespace-nowrap">{BRAND_NAME}</span>
-            <span className="text-[10px] font-mono font-bold bg-indigo-50 text-indigo-700 px-1.5 py-0.5 rounded border border-indigo-200 whitespace-nowrap">
+            <span className="text-lg leading-tight font-extrabold tracking-[0.2em] whitespace-nowrap text-slate-900">
+              {BRAND_NAME}
+            </span>
+            <span className="rounded border border-indigo-200 bg-indigo-50 px-1.5 py-0.5 font-mono text-[10px] font-bold whitespace-nowrap text-indigo-700">
               v{__APP_VERSION__}
             </span>
           </div>
 
           {/* Secciones (escritorio y tableta): solo icono hasta 1280 px; «Cómo funciona» y «Accesos», siempre */}
-          <nav aria-label="Secciones" className="hidden md:flex items-center gap-0.5 min-w-0">
+          <nav aria-label="Secciones" className="hidden min-w-0 items-center gap-0.5 md:flex">
             {sections.map(({ tab, label, icon: Icon, iconOnly }) => (
               <button
                 key={tab}
@@ -136,20 +162,26 @@ export const Navbar: React.FC<NavbarProps> = ({
                 aria-current={activeTab === tab ? 'page' : undefined}
                 aria-label={accessibleLabel(tab, label)}
                 title={accessibleLabel(tab, label)}
-                className={`relative h-9 px-2.5 rounded-lg text-xs font-semibold transition-colors flex items-center gap-1.5 ${
-                  activeTab === tab ? 'bg-slate-900 text-white shadow-sm' : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
+                className={`relative flex h-9 items-center gap-1.5 rounded-lg px-2.5 text-xs font-semibold transition-colors ${
+                  activeTab === tab
+                    ? 'bg-slate-900 text-white shadow-sm'
+                    : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
                 }`}
               >
-                <Icon className="w-4 h-4" aria-hidden="true" />
-                {!iconOnly && <span className="hidden xl:inline whitespace-nowrap">{label}</span>}
+                <Icon className="h-4 w-4" aria-hidden="true" />
+                {!iconOnly && <span className="hidden whitespace-nowrap xl:inline">{label}</span>}
                 {tab === 'access' && <PendingBadge count={pendingAccessCount} corner />}
               </button>
             ))}
           </nav>
 
-          <div className="flex items-center gap-2 shrink-0">
+          <div className="flex shrink-0 items-center gap-2">
             {/* Las dos listas, siempre a la vista */}
-            <div role="group" aria-label="Lista activa" className="flex items-center bg-slate-100 p-0.5 rounded-lg border border-slate-200">
+            <div
+              role="group"
+              aria-label="Lista activa"
+              className="flex items-center rounded-lg border border-slate-200 bg-slate-100 p-0.5"
+            >
               {contexts.map(({ value, label, count, Icon, iconClass }) => (
                 <button
                   key={value}
@@ -158,28 +190,30 @@ export const Navbar: React.FC<NavbarProps> = ({
                   aria-pressed={activeContext === value}
                   aria-label={`${label}, ${count} tareas`}
                   title={label}
-                  className={`h-8 px-2 text-xs font-semibold rounded-md transition-all flex items-center gap-1.5 ${
-                    activeContext === value ? 'bg-white text-slate-900 shadow-xs' : 'text-slate-600 hover:text-slate-900'
+                  className={`flex h-8 items-center gap-1.5 rounded-md px-2 text-xs font-semibold transition-all ${
+                    activeContext === value
+                      ? 'bg-white text-slate-900 shadow-xs'
+                      : 'text-slate-600 hover:text-slate-900'
                   }`}
                 >
-                  <Icon className={`w-3.5 h-3.5 ${iconClass}`} aria-hidden="true" />
-                  <span className="text-[10px] bg-slate-200 px-1.5 rounded-full font-mono">{count}</span>
+                  <Icon className={`h-3.5 w-3.5 ${iconClass}`} aria-hidden="true" />
+                  <span className="rounded-full bg-slate-200 px-1.5 font-mono text-[10px]">{count}</span>
                 </button>
               ))}
             </div>
 
             {/* Sincronización y cuenta (escritorio y tableta); en el móvil van en el menú */}
-            <div className="hidden md:flex items-center gap-2">
+            <div className="hidden items-center gap-2 md:flex">
               <SyncIndicator status={syncStatus} onSync={onForceSync} />
               <button
                 id="account-button"
                 onClick={onOpenAccount}
-                className="flex items-center gap-1.5 p-1 pl-1.5 pr-2 rounded-xl border border-slate-200 hover:border-slate-300 hover:bg-slate-50 transition-all text-xs"
+                className="flex items-center gap-1.5 rounded-xl border border-slate-200 p-1 pr-2 pl-1.5 text-xs transition-all hover:border-slate-300 hover:bg-slate-50"
                 title={`Tu cuenta: ${activeUser.name}`}
                 aria-label="Tu cuenta"
               >
                 <Avatar user={activeUser} />
-                <ChevronDown className="w-3 h-3 text-slate-500" aria-hidden="true" />
+                <ChevronDown className="h-3 w-3 text-slate-500" aria-hidden="true" />
               </button>
             </div>
 
@@ -191,11 +225,18 @@ export const Navbar: React.FC<NavbarProps> = ({
               aria-expanded={isMenuOpen}
               aria-controls="mobile-sections-menu"
               aria-label={menuLabel}
-              className="relative md:hidden w-9 h-9 shrink-0 rounded-lg border border-slate-200 text-slate-700 flex items-center justify-center hover:bg-slate-50"
+              className="relative flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-slate-200 text-slate-700 hover:bg-slate-50 md:hidden"
             >
-              {isMenuOpen ? <X className="w-4 h-4" aria-hidden="true" /> : <Menu className="w-4 h-4" aria-hidden="true" />}
+              {isMenuOpen ? (
+                <X className="h-4 w-4" aria-hidden="true" />
+              ) : (
+                <Menu className="h-4 w-4" aria-hidden="true" />
+              )}
               {((isAdmin && pendingAccessCount > 0) || syncStatus === 'pending' || syncStatus === 'offline') && (
-                <span aria-hidden="true" className="absolute -top-1 -right-1 w-2.5 h-2.5 rounded-full bg-orange-600 ring-2 ring-white" />
+                <span
+                  aria-hidden="true"
+                  className="absolute -top-1 -right-1 h-2.5 w-2.5 rounded-full bg-orange-600 ring-2 ring-white"
+                />
               )}
             </button>
           </div>
@@ -203,7 +244,12 @@ export const Navbar: React.FC<NavbarProps> = ({
 
         {/* Menú desplegable del móvil: secciones, sincronización y cuenta */}
         {isMenuOpen && (
-          <nav ref={menuRef} id="mobile-sections-menu" aria-label="Secciones" className="md:hidden border-t border-slate-100 py-2 space-y-2">
+          <nav
+            ref={menuRef}
+            id="mobile-sections-menu"
+            aria-label="Secciones"
+            className="space-y-2 border-t border-slate-100 py-2 md:hidden"
+          >
             <ul className="space-y-1">
               {sections.map(({ tab, label, icon: Icon }) => (
                 <li key={tab}>
@@ -212,18 +258,18 @@ export const Navbar: React.FC<NavbarProps> = ({
                     onClick={() => goTo(tab)}
                     aria-current={activeTab === tab ? 'page' : undefined}
                     aria-label={tab === 'access' ? accessibleLabel(tab, label) : undefined}
-                    className={`w-full px-3 py-2.5 rounded-lg text-sm font-semibold flex items-center gap-2.5 ${
+                    className={`flex w-full items-center gap-2.5 rounded-lg px-3 py-2.5 text-sm font-semibold ${
                       activeTab === tab ? 'bg-slate-900 text-white' : 'text-slate-700 hover:bg-slate-100'
                     }`}
                   >
-                    <Icon className="w-4 h-4" aria-hidden="true" />
+                    <Icon className="h-4 w-4" aria-hidden="true" />
                     {label}
                     {tab === 'access' && <PendingBadge count={pendingAccessCount} />}
                   </button>
                 </li>
               ))}
             </ul>
-            <div className="pt-2 border-t border-slate-100 grid grid-cols-1 gap-2">
+            <div className="grid grid-cols-1 gap-2 border-t border-slate-100 pt-2">
               <SyncIndicator status={syncStatus} onSync={onForceSync} withText />
               <button
                 type="button"
@@ -231,7 +277,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                   setIsMenuOpen(false);
                   onOpenAccount();
                 }}
-                className="w-full px-3 py-2.5 rounded-lg border border-slate-200 text-sm font-semibold text-slate-700 hover:bg-slate-50 flex items-center gap-2.5"
+                className="flex w-full items-center gap-2.5 rounded-lg border border-slate-200 px-3 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50"
               >
                 <Avatar user={activeUser} />
                 Tu cuenta

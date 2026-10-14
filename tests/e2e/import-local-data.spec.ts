@@ -1,13 +1,25 @@
 import { expect, test } from '@playwright/test';
 import { signInWithGoogle } from './helpers';
 
-test('offers to import data saved by the version without accounts, then clears it from the browser', async ({ page }) => {
+test('offers to import data saved by the version without accounts, then clears it from the browser', async ({
+  page
+}) => {
   await page.goto('/');
   await page.evaluate(() => {
     const created = '2026-10-01T09:00:00.000Z';
     localStorage.setItem(
       'neuro_users_v1',
-      JSON.stringify([{ id: 'user-ana', name: 'Ana', role: '', color: 'indigo', initials: 'A', authProvider: 'local', createdAt: created }])
+      JSON.stringify([
+        {
+          id: 'user-ana',
+          name: 'Ana',
+          role: '',
+          color: 'indigo',
+          initials: 'A',
+          authProvider: 'local',
+          createdAt: created
+        }
+      ])
     );
     localStorage.setItem(
       'neuro_tasks_v1',

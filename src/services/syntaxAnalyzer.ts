@@ -3,23 +3,80 @@
 
 const PHYSICAL_ACTION_VERBS = [
   // Infinitivos de acción física e inmediata
-  'llamar', 'telefonear', 'contactar',
-  'redactar', 'escribir', 'tipear', 'borrador',
-  'enviar', 'mandar', 'remitir', 'despachar',
-  'revisar', 'auditar', 'leer', 'inspeccionar', 'analizar', 'verificar', 'comprobar',
-  'comprar', 'adquirir', 'ordenar', 'pagar', 'abonar', 'transferir',
-  'programar', 'codificar', 'desarrollar', 'depurar', 'testear',
-  'diseñar', 'maquetar', 'bocetar', 'dibujar',
-  'organizar', 'clasificar', 'archivar', 'ordenar', 'limpiar',
-  'agendar', 'reservar', 'planificar', 'fijar',
-  'estudiar', 'repasar', 'memorizar',
-  'entrenar', 'correr', 'caminar', 'levantar', 'estirar', 'ejercitar',
-  'preparar', 'cocinar', 'elaborar', 'montar', 'armar',
-  'pedir', 'solicitar', 'requerir',
-  'firmar', 'rubricar', 'sellar',
-  'publicar', 'subir', 'descargar', 'exportar', 'importar',
-  'medir', 'calcular', 'presupuestar',
-  'reunir', 'conversar', 'preguntar', 'consultar'
+  'llamar',
+  'telefonear',
+  'contactar',
+  'redactar',
+  'escribir',
+  'tipear',
+  'borrador',
+  'enviar',
+  'mandar',
+  'remitir',
+  'despachar',
+  'revisar',
+  'auditar',
+  'leer',
+  'inspeccionar',
+  'analizar',
+  'verificar',
+  'comprobar',
+  'comprar',
+  'adquirir',
+  'ordenar',
+  'pagar',
+  'abonar',
+  'transferir',
+  'programar',
+  'codificar',
+  'desarrollar',
+  'depurar',
+  'testear',
+  'diseñar',
+  'maquetar',
+  'bocetar',
+  'dibujar',
+  'organizar',
+  'clasificar',
+  'archivar',
+  'ordenar',
+  'limpiar',
+  'agendar',
+  'reservar',
+  'planificar',
+  'fijar',
+  'estudiar',
+  'repasar',
+  'memorizar',
+  'entrenar',
+  'correr',
+  'caminar',
+  'levantar',
+  'estirar',
+  'ejercitar',
+  'preparar',
+  'cocinar',
+  'elaborar',
+  'montar',
+  'armar',
+  'pedir',
+  'solicitar',
+  'requerir',
+  'firmar',
+  'rubricar',
+  'sellar',
+  'publicar',
+  'subir',
+  'descargar',
+  'exportar',
+  'importar',
+  'medir',
+  'calcular',
+  'presupuestar',
+  'reunir',
+  'conversar',
+  'preguntar',
+  'consultar'
 ];
 
 // Raíces y formas conjugadas frecuentes en español
@@ -44,9 +101,15 @@ const ACTION_PATTERNS = [
 const AMORPHOUS_PROJECT_PATTERNS = [
   { match: /^(marketing|mercadeo)$/i, suggestion: 'Redactar plan de anuncios en Google para captación del trimestre' },
   { match: /^(coche|auto|vehículo)$/i, suggestion: 'Llamar al taller para pedir presupuesto de revisión técnica' },
-  { match: /^(finanzas|contabilidad)$/i, suggestion: 'Revisar hoja de cálculo de balance y conciliar extracto bancario' },
+  {
+    match: /^(finanzas|contabilidad)$/i,
+    suggestion: 'Revisar hoja de cálculo de balance y conciliar extracto bancario'
+  },
   { match: /^(salud|médico|doctor)$/i, suggestion: 'Pedir cita con el cardiólogo para analítica rutinaria' },
-  { match: /^(gimnasio|gym|ejercicio)$/i, suggestion: 'Preparar ropa deportiva y realizar 30 min de entrenamiento de fuerza' },
+  {
+    match: /^(gimnasio|gym|ejercicio)$/i,
+    suggestion: 'Preparar ropa deportiva y realizar 30 min de entrenamiento de fuerza'
+  },
   { match: /^(tesis|proyecto|informe)$/i, suggestion: 'Escribir el primer borrador de la introducción metodológica' },
   { match: /^(vacaciones|viaje)$/i, suggestion: 'Buscar vuelos y comparar 3 opciones de alojamiento' },
   { match: /^(casa|mudanza)$/i, suggestion: 'Embalar cajas de la habitación o contactar empresa de fletes' },
@@ -69,7 +132,7 @@ export function analyzeImmediateActionSyntax(title: string): SyntaxAnalysisResul
       isValid: false,
       detectedVerb: null,
       warning: 'El nombre de la tarea no puede estar vacío.',
-      assistantQuestion: 'Escribe una acción física concreta e inmediata.',
+      assistantQuestion: 'Escribe una acción física concreta e inmediata.'
     };
   }
 
@@ -95,7 +158,7 @@ export function analyzeImmediateActionSyntax(title: string): SyntaxAnalysisResul
     if (pattern.test(firstWord)) {
       return {
         isValid: true,
-        detectedVerb: firstWord,
+        detectedVerb: firstWord
       };
     }
   }
@@ -105,7 +168,7 @@ export function analyzeImmediateActionSyntax(title: string): SyntaxAnalysisResul
     if (firstWord.startsWith(verb.slice(0, 4)) || (words[1] && words[1].startsWith(verb.slice(0, 4)))) {
       return {
         isValid: true,
-        detectedVerb: verb,
+        detectedVerb: verb
       };
     }
   }
@@ -116,7 +179,8 @@ export function analyzeImmediateActionSyntax(title: string): SyntaxAnalysisResul
       isValid: false,
       detectedVerb: null,
       warning: 'Carencia de verbo transitivo de acción física motora.',
-      assistantQuestion: '¿Cuál es el primer paso físico e indivisible? Inicia con un verbo de acción (ej. "Llamar a...", "Redactar...", "Comprar...").',
+      assistantQuestion:
+        '¿Cuál es el primer paso físico e indivisible? Inicia con un verbo de acción (ej. "Llamar a...", "Redactar...", "Comprar...").',
       suggestion: `Llamar o redactar respecto a ${trimmed.toLowerCase()}`
     };
   }
@@ -125,7 +189,8 @@ export function analyzeImmediateActionSyntax(title: string): SyntaxAnalysisResul
   return {
     isValid: true,
     detectedVerb: null,
-    warning: 'Recomendación: Comienza con un verbo de acción en infinitivo o imperativo para reducir el umbral de activación motora.',
+    warning:
+      'Recomendación: Comienza con un verbo de acción en infinitivo o imperativo para reducir el umbral de activación motora.',
     assistantQuestion: '¿Es esta acción inmediatamente ejecutable sin ambigüedad?',
     suggestion: `Ejecutar: ${trimmed}`
   };
