@@ -3,6 +3,7 @@ import { describe, it } from 'node:test';
 import {
   formatTaskDates,
   getDeadlineState,
+  isUnchanged,
   normalizeTask,
   validateTaskDates,
   withStatus
@@ -98,4 +99,14 @@ describe('formatTaskDates and validateTaskDates', () => {
       /posterior/
     );
   });
+});
+
+it('a written task is unchanged while nobody has updated or completed it since', () => {
+  const written = { id: 't1', status: 'DONE', updatedAt: '2026-10-14T10:00:00.000Z' } as TaskItem;
+  const next = { id: 't2', status: 'PENDING', updatedAt: '2026-10-14T10:00:00.000Z' } as TaskItem;
+  assert.equal(isUnchanged([written, next], [next, written]), true);
+  // Otro dispositivo completó la siguiente repetición, la editó o la borró
+  assert.equal(isUnchanged([written, next], [written, { ...next, status: 'DONE' }]), false);
+  assert.equal(isUnchanged([written, next], [written, { ...next, updatedAt: '2026-10-14T10:00:03.000Z' }]), false);
+  assert.equal(isUnchanged([written, next], [written]), false);
 });

@@ -65,9 +65,11 @@ export const TaskActionsMenu: React.FC<TaskActionsMenuProps> = ({ task, onEdit, 
     setIsOpen((open) => !open);
   };
 
-  // Cada acción cierra el panel antes de actuar
+  // Cada acción cierra el panel y deja el foco en «⋯» antes de actuar: si la tarea sigue ahí (cambio de estado) el
+  // foco no se pierde, y una ventana que se abra (Editar) lo devolverá a este botón al cerrarse
   const act = (action: () => void) => () => {
     setIsOpen(false);
+    buttonRef.current?.focus();
     action();
   };
 
