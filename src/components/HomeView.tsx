@@ -1,11 +1,14 @@
 import React from 'react';
-import { ArrowRight, Brain, CalendarCheck, Flame, Gauge, Lightbulb, ListChecks, Timer } from 'lucide-react';
-import { AppTab, ListContext, MeetingGuard, TaskItem, WheelOfLifeLog } from '../types';
+import { ArrowRight, Brain, CalendarCheck, Flame, Gauge, Lightbulb, ListChecks, Target, Timer } from 'lucide-react';
+import { AppTab, Goal, ListContext, MeetingGuard, TaskItem, WheelOfLifeLog } from '../types';
+import { sortGoals } from '../services/goals';
+import { GoalProgress } from './GoalsPanel';
 import { computeStats, recommendationsFor } from '../services/stats';
 import { toLocalDate } from '../services/tasks';
 
 interface HomeViewProps {
   tasks: TaskItem[];
+  goals: Goal[];
   activeContext: ListContext;
   accountName: string;
   top10Count: number;
@@ -50,6 +53,7 @@ const Metric: React.FC<{ label: string; value: string; hint?: string }> = ({ lab
 // Pantalla de Inicio: el foco de la lista activa, estadísticas de las tareas y recomendaciones
 export const HomeView: React.FC<HomeViewProps> = ({
   tasks,
+  goals,
   activeContext,
   accountName,
   top10Count,
@@ -66,6 +70,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
   // eslint-disable-next-line react-hooks/purity
   const at = new Date(Math.max(now.getTime(), Date.now()));
   const stats = computeStats(contextTasks, at);
+  const activeGoals = sortGoals(goals).filter((g) => g.status === 'ACTIVE');
   const recommendations = recommendationsFor(stats, contextTasks, wheelLogs, at);
   const maxDaily = Math.max(1, ...stats.daily.map((d) => d.count));
   const datedDone = stats.onTime + stats.late;
@@ -267,6 +272,48 @@ export const HomeView: React.FC<HomeViewProps> = ({
                 </li>
               ))}
             </ul>
+          )}
+        </Card>
+
+        {/* METAS: las activas con su progreso (de las dos listas); se crean en la Rueda */}
+        <Card
+          title="Metas"
+          icon={<Target className="h-4 w-4 text-indigo-600" aria-hidden="true" />}
+          className="md:col-span-2 lg:col-span-3"
+        >
+          {activeGoals.length === 0 ? (
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <p className="text-xs text-slate-600">
+                Aún no tienes metas. Ponle una meta concreta al área de tu Rueda que más quieres mejorar.
+              </p>
+              <button
+                type="button"
+                onClick={() => onNavigate('wheel')}
+                className="inline-flex min-h-11 items-center gap-1.5 text-xs font-semibold text-indigo-700 hover:text-indigo-900"
+              >
+                Crear una meta en la Rueda <ArrowRight className="h-3.5 w-3.5" aria-hidden="true" />
+              </button>
+            </div>
+          ) : (
+            <>
+              <ul className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                {activeGoals.slice(0, 6).map((goal) => (
+                  <li key={goal.id} className="space-y-1.5">
+                    <p className="text-sm font-semibold break-words text-slate-900">{goal.title}</p>
+                    <p className="text-[11px] font-semibold text-indigo-700">{goal.area}</p>
+                    <GoalProgress goal={goal} tasks={tasks} />
+                  </li>
+                ))}
+              </ul>
+              <button
+                type="button"
+                onClick={() => onNavigate('wheel')}
+                className="inline-flex min-h-11 items-center gap-1.5 text-xs font-semibold text-indigo-700 hover:text-indigo-900"
+              >
+                {activeGoals.length > 6 ? `Ver las ${activeGoals.length} metas` : 'Gestionar las metas'}
+                <ArrowRight className="h-3.5 w-3.5" aria-hidden="true" />
+              </button>
+            </>
           )}
         </Card>
 

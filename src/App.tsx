@@ -14,6 +14,8 @@ import {
   WheelOfLifeLog,
   MeetingGuard,
   EmailDraft,
+  Goal,
+  GoalStatus,
   UserProfile
 } from './types';
 import { formatTaskDates, isArchived, isUnchanged, withStatus } from './services/tasks';
@@ -24,6 +26,8 @@ import {
   completeRecurringTask,
   deleteTask,
   undoCompleteRecurringTask,
+  saveGoal,
+  deleteGoal,
   importUserData,
   saveEmail,
   saveMeeting,
@@ -40,6 +44,7 @@ import { Navbar } from './components/Navbar';
 import { BottomNav, MORE_BUTTON_ID } from './components/BottomNav';
 import { PHONE_QUERY, useMediaQuery } from './hooks/useMediaQuery';
 import { MoreSheet } from './components/MoreSheet';
+import { GoalModal } from './components/GoalModal';
 import type { SyncStatus } from './components/SyncIndicator';
 import { TaskList } from './components/TaskList';
 import { TaskModal, type TaskFormData } from './components/TaskModal';
@@ -101,6 +106,9 @@ export default function App({ user, services, isAdmin = false }: AppProps) {
   const [wheelSynced, setWheelSynced] = useState(false);
   const [meetings, setMeetings] = useState<MeetingGuard[]>([]);
   const [emails, setEmails] = useState<EmailDraft[]>([]);
+  const [goals, setGoals] = useState<Goal[]>([]);
+  // Editor de metas: abierto con la meta que se edita, o vacío para crear una
+  const [goalEditor, setGoalEditor] = useState<{ goal?: Goal } | null>(null);
 
   // Datos de la versión sin cuentas que siguen en este navegador, pendientes de importar
   const [localProfiles, setLocalProfiles] = useState<LocalProfileSummary[]>(() => getLocalProfiles());
@@ -286,6 +294,16 @@ export default function App({ user, services, isAdmin = false }: AppProps) {
           trackSync('emails', info);
         },
         onError
+      ),
+      subscribeToCollection(
+        db,
+        uid,
+        'goals',
+        (items, info) => {
+          setGoals(items);
+          trackSync('goals', info);
+        },
+        onError
       )
     ];
     return () => unsubscribers.forEach((unsubscribe) => unsubscribe());
@@ -367,6 +385,30 @@ export default function App({ user, services, isAdmin = false }: AppProps) {
     }
   };
 
+  // METAS: si cambia de área, sus tareas heredan la nueva; al eliminarla, sus tareas se quedan sin meta
+  const handleSaveGoal = (goal: Goal) => {
+    const previous = goals.find((g) => g.id === goal.id);
+    const retagged =
+      previous && previous.area !== goal.area ? tasks.filter((t) => t.goalId === goal.id).map((t) => t.id) : [];
+    saveGoal(db, uid, goal, retagged).catch(reportError('guardar la meta'));
+    showToast(previous ? 'Meta guardada.' : 'Meta creada. Vincúlale tareas desde el formulario de cada tarea.');
+  };
+  const handleSetGoalStatus = (goal: Goal, status: GoalStatus) => {
+    saveGoal(db, uid, { ...goal, status, updatedAt: new Date().toISOString() }).catch(reportError('guardar la meta'));
+    showToast(
+      status === 'ACHIEVED' ? '¡Meta lograda!' : status === 'ARCHIVED' ? 'Meta archivada.' : 'Meta reactivada.'
+    );
+  };
+  const handleDeleteGoal = (goal: Goal) => {
+    deleteGoal(
+      db,
+      uid,
+      goal.id,
+      tasks.filter((t) => t.goalId === goal.id).map((t) => t.id)
+    ).catch(reportError('eliminar la meta'));
+    showToast('Meta eliminada. Sus tareas siguen en tus listas.');
+  };
+
   const handleDeleteTask = (id: string) => {
     const deleted = tasks.find((t) => t.id === id);
     deleteTask(db, uid, id).catch(reportError('eliminar la tarea'));
@@ -445,6 +487,7 @@ export default function App({ user, services, isAdmin = false }: AppProps) {
   // La pantalla de bienvenida no cuenta: es decorativa, se quita sola y deja pasar los clics mientras se desvanece
   const isDialogOpen =
     isMoreOpen ||
+    goalEditor !== null ||
     isTaskModalOpen ||
     isArchiveOpen ||
     isMeetingModalOpen ||
@@ -521,6 +564,7 @@ export default function App({ user, services, isAdmin = false }: AppProps) {
           {activeTab === 'home' && (
             <HomeView
               tasks={tasks}
+              goals={goals}
               activeContext={activeContext}
               accountName={profile.name}
               top10Count={top10Count}
@@ -537,6 +581,7 @@ export default function App({ user, services, isAdmin = false }: AppProps) {
           {activeTab === 'tasks' && (
             <TaskList
               tasks={tasks}
+              goals={goals}
               activeContext={activeContext}
               prefs={listPrefs}
               onPrefsChange={setListPrefs}
@@ -573,6 +618,11 @@ export default function App({ user, services, isAdmin = false }: AppProps) {
               showFirstStep={wheelSynced && wheelLogs.length === 0}
               onAppendSnapshot={handleAppendWheelSnapshot}
               onOpenHelp={() => navigate('help')}
+              goals={goals}
+              tasks={tasks}
+              onNewGoal={() => setGoalEditor({})}
+              onEditGoal={(goal) => setGoalEditor({ goal })}
+              onSetGoalStatus={handleSetGoalStatus}
             />
           )}
 
@@ -691,6 +741,7 @@ export default function App({ user, services, isAdmin = false }: AppProps) {
         initialContext={activeContext}
         initialSomeday={newTaskIsSomeday}
         editingTask={editingTask}
+        goals={goals}
       />
 
       {/* VENTANA DE TAREAS ARCHIVADAS (ESTADO HECHA) */}
@@ -736,6 +787,16 @@ export default function App({ user, services, isAdmin = false }: AppProps) {
         onClose={() => setIsAccessibilityOpen(false)}
         returnFocusTo={accountButton}
       />
+
+      {/* METAS: crear o editar (se monta al abrirse, así empieza limpio) */}
+      {goalEditor && (
+        <GoalModal
+          goal={goalEditor.goal}
+          onSave={handleSaveGoal}
+          onDelete={handleDeleteGoal}
+          onClose={() => setGoalEditor(null)}
+        />
+      )}
 
       {/* MODAL 5: IMPORTAR DATOS DE LA VERSIÓN SIN CUENTAS */}
       {isImportOpen && (
