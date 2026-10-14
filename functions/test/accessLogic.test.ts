@@ -50,6 +50,10 @@ describe('aprobación de accesos', () => {
     assert.deepEqual(decideRequest(undefined, now), { action: 'create' });
     assert.deepEqual(decideRequest(record(), now), { action: 'keep', status: 'pending' });
     assert.deepEqual(decideRequest(record({ status: 'approved' }), now), { action: 'keep', status: 'approved' });
+    // Con la aprobación libre, la pendiente se aprueba; las demás siguen igual
+    assert.deepEqual(decideRequest(record(), now, false), { action: 'approve' });
+    assert.deepEqual(decideRequest(record({ status: 'approved' }), now, false), { action: 'keep', status: 'approved' });
+    assert.deepEqual(decideRequest(undefined, now, false), { action: 'create' });
   });
 
   it('tras un rechazo o una retirada deja volver a pedir acceso pasado un día', () => {
