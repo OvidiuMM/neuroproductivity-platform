@@ -55,7 +55,8 @@ export const Navbar: React.FC<NavbarProps> = ({
   ];
 
   return (
-    <header className="sticky top-0 z-40 border-b border-slate-200 bg-white/95 backdrop-blur-md">
+    // Con viewport-fit=cover (pantalla completa en iOS) la cabecera deja sitio a la barra de estado y la muesca
+    <header className="sticky top-0 z-40 border-b border-slate-200 bg-white/95 pt-[env(safe-area-inset-top)] backdrop-blur-md">
       <div className="mx-auto max-w-7xl px-3 sm:px-6 lg:px-8">
         {/* Una sola fila; solo con el texto ampliado (panel de accesibilidad) puede pasar a varias */}
         <div className="navbar-row flex min-h-14 flex-nowrap items-center justify-between gap-2 py-2 sm:gap-3">

@@ -22,7 +22,7 @@ const openAccessTab = async (page: Page) => {
   await signInWithGoogle(page, ADMIN_EMAIL, 'Administración', { approve: false });
   // La cuenta de administración se aprueba sola y ve la pestaña con el número de pendientes
   await expect(page.getByRole('button', { name: 'Tu cuenta' })).toBeVisible(SERVER_CALL);
-  await page.getByRole('button', { name: /^Accesos, \d+ pendientes$/ }).click();
+  await page.getByRole('button', { name: /^Accesos, \d+ pendientes?$/ }).click();
   await expect(page.getByRole('heading', { name: 'Accesos' })).toBeVisible();
 };
 

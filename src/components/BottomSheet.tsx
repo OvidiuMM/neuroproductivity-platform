@@ -37,7 +37,7 @@ export const BottomSheet: React.FC<BottomSheetProps> = ({ isOpen, onClose, title
         role="dialog"
         aria-modal="true"
         aria-labelledby={titleId}
-        className="animate-in slide-in-from-bottom max-h-[85vh] w-full space-y-3 overflow-y-auto rounded-t-3xl bg-white p-4 pb-[calc(1rem+env(safe-area-inset-bottom))] shadow-2xl duration-200"
+        className="animate-in slide-in-from-bottom max-h-[85vh] w-full space-y-3 overflow-y-auto rounded-t-3xl bg-white pt-4 pr-[max(1rem,env(safe-area-inset-right))] pb-[calc(1rem+env(safe-area-inset-bottom))] pl-[max(1rem,env(safe-area-inset-left))] shadow-2xl duration-200"
       >
         <div className="flex items-center justify-between">
           <h2 id={titleId} className="text-sm font-bold text-slate-900">

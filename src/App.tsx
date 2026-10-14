@@ -38,6 +38,7 @@ import { arrangeTasks, parseListPrefs, type ListPrefs } from './services/taskLis
 import { useNow } from './hooks/useNow';
 import { Navbar } from './components/Navbar';
 import { BottomNav, MORE_BUTTON_ID } from './components/BottomNav';
+import { PHONE_QUERY, useMediaQuery } from './hooks/useMediaQuery';
 import { MoreSheet } from './components/MoreSheet';
 import type { SyncStatus } from './components/SyncIndicator';
 import { TaskList } from './components/TaskList';
@@ -420,6 +421,10 @@ export default function App({ user, services, isAdmin = false }: AppProps) {
   const isImportOpen = localProfiles.length > 0 && !isImportPostponed;
   // Hoja «Más» del móvil: secciones que no caben en la barra inferior, sincronización y cuenta
   const [isMoreOpen, setIsMoreOpen] = useState(false);
+  // Al pasar a tableta o escritorio (p. ej. girando el móvil) la hoja deja de verse: se cierra para que el resto de
+  // la app no se quede inerte
+  const isPhone = useMediaQuery(PHONE_QUERY);
+  if (isMoreOpen && !isPhone) setIsMoreOpen(false);
   // El botón de la cuenta está en la cabecera en escritorio y dentro de «Más» en el móvil
   const accountButton = () => {
     const header = document.getElementById('account-button');
@@ -458,7 +463,7 @@ export default function App({ user, services, isAdmin = false }: AppProps) {
 
   return (
     // En el móvil queda sitio abajo para la barra de secciones y el botón «Nueva tarea»
-    <div className="flex min-h-screen flex-col bg-slate-50 pb-[calc(9rem+env(safe-area-inset-bottom))] font-sans text-slate-900 antialiased selection:bg-indigo-500 selection:text-white md:pb-0">
+    <div className="flex min-h-screen flex-col bg-slate-50 pr-[env(safe-area-inset-right)] pb-[calc(9rem+env(safe-area-inset-bottom))] pl-[env(safe-area-inset-left)] font-sans text-slate-900 antialiased selection:bg-indigo-500 selection:text-white md:pb-0">
       {/* Con un diálogo abierto, el resto de la página queda inerte: ni el teclado ni los lectores de pantalla llegan */}
       <div className="contents" inert={isDialogOpen}>
         <a
@@ -612,7 +617,7 @@ export default function App({ user, services, isAdmin = false }: AppProps) {
           type="button"
           onClick={() => openNewTask()}
           aria-label="Nueva tarea"
-          className="fixed right-4 bottom-[calc(5rem+env(safe-area-inset-bottom))] z-40 flex h-14 w-14 items-center justify-center rounded-2xl bg-slate-900 text-white shadow-lg shadow-slate-900/30 transition-transform hover:bg-slate-800 active:scale-95 md:hidden"
+          className="fixed right-[calc(1rem+env(safe-area-inset-right))] bottom-[calc(5rem+env(safe-area-inset-bottom))] z-40 flex h-14 w-14 items-center justify-center rounded-2xl bg-slate-900 text-white shadow-lg shadow-slate-900/30 transition-transform hover:bg-slate-800 active:scale-95 md:hidden"
         >
           <Plus className="h-6 w-6" aria-hidden="true" />
         </button>
@@ -642,7 +647,7 @@ export default function App({ user, services, isAdmin = false }: AppProps) {
       {/* BANNER TOAST DE NOTIFICACIÓN: región viva siempre presente para que los lectores de pantalla lo anuncien */}
       <div role="status" aria-live="polite">
         {toast && (
-          <div className="animate-in slide-in-from-bottom-3 fixed right-4 bottom-[calc(9.5rem+env(safe-area-inset-bottom))] left-4 z-50 flex items-center gap-2.5 rounded-2xl bg-slate-900 px-4 py-3 text-xs text-white shadow-xl duration-200 md:right-6 md:bottom-6 md:left-auto">
+          <div className="animate-in slide-in-from-bottom-3 fixed right-[calc(1rem+env(safe-area-inset-right))] bottom-[calc(9.5rem+env(safe-area-inset-bottom))] left-[calc(1rem+env(safe-area-inset-left))] z-50 flex items-center gap-2.5 rounded-2xl bg-slate-900 px-4 py-3 text-xs text-white shadow-xl duration-200 md:right-6 md:bottom-6 md:left-auto">
             <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-400" aria-hidden="true" />
             <span className="font-semibold">{toast.message}</span>
             {toast.undo && (
