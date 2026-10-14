@@ -28,6 +28,8 @@ import {
   undoCompleteRecurringTask,
   saveGoal,
   deleteGoal,
+  subscribeToProfile,
+  markOnboardingSeen,
   importUserData,
   saveEmail,
   saveMeeting,
@@ -45,6 +47,14 @@ import { BottomNav, MORE_BUTTON_ID } from './components/BottomNav';
 import { PHONE_QUERY, useMediaQuery } from './hooks/useMediaQuery';
 import { MoreSheet } from './components/MoreSheet';
 import { GoalModal } from './components/GoalModal';
+import { WelcomeDialog } from './components/WelcomeDialog';
+import {
+  hasSeenLocally,
+  hasSeenOnboarding,
+  rememberLocally,
+  type OnboardingOutcome,
+  type OnboardingRecord
+} from './services/onboarding';
 import type { SyncStatus } from './components/SyncIndicator';
 import { TaskList } from './components/TaskList';
 import { TaskModal, type TaskFormData } from './components/TaskModal';
@@ -472,6 +482,32 @@ export default function App({ user, services, isAdmin = false }: AppProps) {
   };
 
   const isImportOpen = localProfiles.length > 0 && !isImportPostponed;
+  // BIENVENIDA: una vez por cuenta. Cuenta como vista si lo dice el perfil o este dispositivo; si no, se espera al
+  // perfil confirmado por el servidor para no mostrarla a quien ya la vio en otro dispositivo
+  const [profileOnboarding, setProfileOnboarding] = useState<{
+    record: OnboardingRecord | null;
+    fromServer: boolean;
+  }>({ record: null, fromServer: false });
+  const [seenOnThisDevice] = useState(() => hasSeenLocally(uid));
+  const [welcomeClosed, setWelcomeClosed] = useState(false);
+  useEffect(
+    () =>
+      subscribeToProfile(
+        db,
+        uid,
+        (record, fromServer) => setProfileOnboarding({ record, fromServer }),
+        (e) => console.error('Error loading profile:', e)
+      ),
+    [db, uid]
+  );
+  const isWelcomeOpen =
+    !welcomeClosed && profileOnboarding.fromServer && !hasSeenOnboarding(profileOnboarding.record, seenOnThisDevice);
+  const finishWelcome = (outcome: OnboardingOutcome) => {
+    rememberLocally(uid, outcome);
+    markOnboardingSeen(db, uid, outcome).catch(reportError('guardar tu progreso'));
+    setWelcomeClosed(true);
+  };
+
   // Hoja «Más» del móvil: secciones que no caben en la barra inferior, sincronización y cuenta
   const [isMoreOpen, setIsMoreOpen] = useState(false);
   // Al pasar a tableta o escritorio (p. ej. girando el móvil) la hoja deja de verse: se cierra para que el resto de
@@ -485,6 +521,7 @@ export default function App({ user, services, isAdmin = false }: AppProps) {
   };
   // La pantalla de bienvenida no cuenta: es decorativa, se quita sola y deja pasar los clics mientras se desvanece
   const isDialogOpen =
+    isWelcomeOpen ||
     isMoreOpen ||
     goalEditor !== null ||
     isTaskModalOpen ||
@@ -786,6 +823,9 @@ export default function App({ user, services, isAdmin = false }: AppProps) {
         onClose={() => setIsAccessibilityOpen(false)}
         returnFocusTo={accountButton}
       />
+
+      {/* BIENVENIDA DE LA PRIMERA VEZ */}
+      {isWelcomeOpen && <WelcomeDialog onFinish={finishWelcome} />}
 
       {/* METAS: crear o editar (se monta al abrirse, así empieza limpio) */}
       {goalEditor && (
