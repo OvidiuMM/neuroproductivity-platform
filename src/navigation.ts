@@ -27,11 +27,17 @@ export const SECTIONS: Section[] = [
   { tab: 'agenda', label: 'Agenda', short: 'Agenda', icon: CalendarDays },
   { tab: 'wheel', label: 'Rueda de la Vida', short: 'Rueda', icon: Compass },
   { tab: 'bermudas', label: 'Blindaje Bermudas', short: 'Bermudas', icon: ShieldCheck },
-  { tab: 'help', label: 'Cómo funciona', short: 'Ayuda', icon: BookOpen, iconOnly: true }
+  { tab: 'help', label: 'Ayuda', short: 'Ayuda', icon: BookOpen, iconOnly: true }
 ];
 
-// Solo para la administración, delante de «Cómo funciona»
-const ACCESS_SECTION: Section = { tab: 'access', label: 'Accesos', short: 'Accesos', icon: UserCheck, iconOnly: true };
+// Solo para la administración (solicitudes de acceso y mensajes de contacto), delante de «Ayuda»
+const ACCESS_SECTION: Section = {
+  tab: 'access',
+  label: 'Administración',
+  short: 'Administración',
+  icon: UserCheck,
+  iconOnly: true
+};
 
 export const sectionsFor = (isAdmin: boolean) =>
   isAdmin ? [...SECTIONS.slice(0, -1), ACCESS_SECTION, ...SECTIONS.slice(-1)] : SECTIONS;
@@ -39,7 +45,7 @@ export const sectionsFor = (isAdmin: boolean) =>
 // En el móvil estas van en la barra inferior; las demás, en «Más»
 export const PRIMARY_TABS: readonly AppTab[] = ['home', 'tasks', 'agenda', 'wheel'];
 
-// Nombre accesible con el número de solicitudes pendientes (el globo es solo visual)
+// Nombre accesible con lo pendiente en administración: solicitudes y mensajes nuevos (el globo es solo visual)
 export const sectionLabel = ({ tab, label }: Section, pendingAccessCount: number) =>
   tab === 'access' && pendingAccessCount > 0
     ? `${label}, ${pendingAccessCount} ${pendingAccessCount === 1 ? 'pendiente' : 'pendientes'}`

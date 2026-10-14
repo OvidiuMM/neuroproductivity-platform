@@ -71,7 +71,7 @@ export const Navbar: React.FC<NavbarProps> = ({
             </span>
           </div>
 
-          {/* Secciones (escritorio y tableta): solo icono hasta 1280 px; «Cómo funciona» y «Accesos», siempre */}
+          {/* Secciones (escritorio y tableta): solo icono hasta 1280 px; «Ayuda» y «Administración», siempre */}
           <nav aria-label="Secciones" className="hidden min-w-0 items-center gap-0.5 md:flex">
             {sections.map((section) => {
               const { tab, label, icon: Icon, iconOnly } = section;

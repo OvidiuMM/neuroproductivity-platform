@@ -22,8 +22,8 @@ const openAccessTab = async (page: Page) => {
   await signInWithGoogle(page, ADMIN_EMAIL, 'Administración', { approve: false });
   // La cuenta de administración se aprueba sola y ve la pestaña con el número de pendientes
   await expect(page.getByRole('button', { name: 'Tu cuenta' })).toBeVisible(SERVER_CALL);
-  await page.getByRole('button', { name: /^Accesos, \d+ pendientes?$/ }).click();
-  await expect(page.getByRole('heading', { name: 'Accesos' })).toBeVisible();
+  await page.getByRole('button', { name: /^Administración, \d+ pendientes?$/ }).click();
+  await expect(page.getByRole('heading', { name: 'Administración' })).toBeVisible();
 };
 
 const entryIn = (page: Page, group: RegExp, email: string) =>
@@ -36,7 +36,7 @@ test('a new account asks for access, the admin approves it and later revokes it'
 
   await requestAccessAs(userPage, email, 'Soy del equipo de pruebas');
   await openAccessTab(adminPage);
-  await expectNoHorizontalOverflow(adminPage, 'cabecera con la pestaña Accesos');
+  await expectNoHorizontalOverflow(adminPage, 'cabecera con la pestaña Administración');
 
   const pending = entryIn(adminPage, /^Pendientes/, email);
   await expect(pending).toContainText('Soy del equipo de pruebas');

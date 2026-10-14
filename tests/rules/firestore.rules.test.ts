@@ -173,6 +173,31 @@ describe('firestore.rules', () => {
     await assertFails(getDoc(doc(ana, 'admins/admin')));
   });
 
+  it('lets only the admin read contact messages and change just their status; nobody writes them from the app', async () => {
+    const ticket = { uid: 'ana', email: 'ana@example.com', type: 'bug', subject: 'a', description: 'b', status: 'new' };
+    await env.withSecurityRulesDisabled(async (ctx) => {
+      await setDoc(doc(ctx.firestore(), 'admins/admin'), {
+        email: 'admin@example.com',
+        since: '2026-10-11T10:00:00.000Z'
+      });
+      await setDoc(doc(ctx.firestore(), 'feedback_tickets/t1'), ticket);
+      await setDoc(doc(ctx.firestore(), 'feedback_limits/ana'), { sent: [] });
+    });
+    const ana = env.authenticatedContext('ana').firestore();
+    const admin = env.authenticatedContext('admin', { email: 'admin@example.com' }).firestore();
+
+    await assertSucceeds(getDocs(collection(admin, 'feedback_tickets')));
+    await assertSucceeds(updateDoc(doc(admin, 'feedback_tickets/t1'), { status: 'read', updatedAt: 'now' }));
+    await assertFails(updateDoc(doc(admin, 'feedback_tickets/t1'), { status: 'spam' }));
+    await assertFails(updateDoc(doc(admin, 'feedback_tickets/t1'), { description: 'otra' }));
+    await assertFails(deleteDoc(doc(admin, 'feedback_tickets/t1')));
+    // Quien escribe no puede leerlos ni crearlos directamente (pasa por la Cloud Function)
+    await assertFails(getDoc(doc(ana, 'feedback_tickets/t1')));
+    await assertFails(setDoc(doc(ana, 'feedback_tickets/t2'), ticket));
+    await assertFails(getDoc(doc(ana, 'feedback_limits/ana')));
+    await assertFails(getDoc(doc(admin, 'feedback_limits/ana')));
+  });
+
   it('ignores an admin marker whose email is not the reader’s (e.g. after changing the admin account)', async () => {
     await env.withSecurityRulesDisabled(async (ctx) => {
       await setDoc(doc(ctx.firestore(), 'admins/former'), {

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Check, UserCheck, UserX, X } from 'lucide-react';
+import { Check, UserX, X } from 'lucide-react';
 import type { AccessRequest, DecisionStatus } from '../services/access';
 
 interface AccessAdminViewProps {
@@ -89,16 +89,10 @@ export const AccessAdminView: React.FC<AccessAdminViewProps> = ({ requests, curr
 
   return (
     <div className="space-y-5">
-      <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-xs">
-        <h2 className="flex items-center gap-2 text-xl font-bold text-slate-900">
-          <UserCheck className="h-6 w-6 text-indigo-600" aria-hidden="true" />
-          Accesos
-        </h2>
-        <p className="mt-1 text-xs text-slate-600">
-          Aprueba quién puede usar la app. Cada solicitud nueva te llega también por email, y la persona recibe otro
-          cuando la apruebas.
-        </p>
-      </div>
+      <p className="text-xs text-slate-600">
+        Aprueba quién puede usar la app. Cada solicitud nueva te llega también por email, y la persona recibe otro
+        cuando la apruebas.
+      </p>
 
       {error && (
         <p role="alert" className="rounded-xl border border-red-200 bg-red-50 p-3 text-xs text-red-700">
