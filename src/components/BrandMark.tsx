@@ -18,4 +18,4 @@ export const BrandMark: React.FC<{ size?: number; className?: string }> = ({ siz
 );
 
 export const BRAND_NAME = 'CLAR';
-export const BRAND_TAGLINE = 'Gestión del tiempo y neuroproductividad';
+export const BRAND_TAGLINE = 'Decide qué hacer ahora, con claridad';

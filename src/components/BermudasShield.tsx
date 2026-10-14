@@ -21,12 +21,11 @@ export const BermudasShield: React.FC<BermudasShieldProps> = ({
       <div className="space-y-2 rounded-2xl border border-slate-200 bg-white p-6 shadow-xs">
         <h2 className="flex items-center gap-2 text-xl font-bold text-slate-900">
           <ShieldCheck className="h-6 w-6 text-indigo-600" />
-          Contención y Blindaje del Triángulo de las Bermudas Temporal
+          Protege tu tiempo
         </h2>
         <p className="max-w-3xl text-xs leading-relaxed text-slate-600">
-          Módulo 5: Neutralización de las tres vías primarias de fuga de tiempo y fragmentación atencional:{' '}
-          <strong>reuniones mal gestionadas</strong>, <strong>correo electrónico reactivo</strong> y{' '}
-          <strong>mensajería desestructurada</strong>.
+          Las tres grandes fugas de tiempo, el «triángulo de las Bermudas»: <strong>reuniones mal planteadas</strong>,{' '}
+          <strong>correo reactivo</strong> y <strong>mensajes sin orden</strong>.
         </p>
       </div>
 
@@ -37,10 +36,10 @@ export const BermudasShield: React.FC<BermudasShieldProps> = ({
             <div>
               <h3 className="flex items-center gap-2 text-sm font-bold text-slate-900">
                 <Calendar className="h-4 w-4 text-indigo-600" />
-                <span>Auditoría de Reuniones (MEETING_GUARD)</span>
+                <span>Reuniones</span>
               </h3>
               <p className="mt-0.5 text-[11px] text-slate-500">
-                Prohibidas antes de las 12:00 h · Fin estricto · Moderador nominal
+                Después de las 12:00, con hora de fin y alguien que modere
               </p>
             </div>
 
@@ -49,15 +48,15 @@ export const BermudasShield: React.FC<BermudasShieldProps> = ({
               className="flex items-center gap-1.5 rounded-xl bg-slate-900 px-3 py-1.5 text-xs font-bold text-white shadow-xs transition-colors hover:bg-slate-800"
             >
               <Plus className="h-3.5 w-3.5" />
-              <span>Agendar Reunión Blindada</span>
+              <span>Planificar una reunión</span>
             </button>
           </div>
 
           <div className="flex items-start gap-2 rounded-xl border border-amber-200 bg-amber-50/70 p-3 text-xs text-amber-900">
             <Clock className="mt-0.5 h-4 w-4 shrink-0 text-amber-600" />
             <p className="text-[11px] leading-relaxed">
-              <strong>Regla de Mañana Profunda:</strong> Cualquier convocatoria entre 08:00 y 11:59 h es bloqueada
-              algorítmicamente para preservar la corteza prefrontal en su momento de máxima agudeza biológica.
+              <strong>Mañanas libres:</strong> entre las 8:00 y las 12:00 no se ponen reuniones; es cuando mejor te
+              concentras.
             </p>
           </div>
 
@@ -75,7 +74,7 @@ export const BermudasShield: React.FC<BermudasShieldProps> = ({
                     <div className="flex items-start justify-between gap-2">
                       <h4 className="text-xs font-bold text-slate-900">{m.title}</h4>
                       <span className="rounded-md bg-emerald-100 px-2 py-0.5 font-mono text-[10px] font-bold text-emerald-800">
-                        {durationMin} min (Fin estricto)
+                        {durationMin} min
                       </span>
                     </div>
 
@@ -94,7 +93,7 @@ export const BermudasShield: React.FC<BermudasShieldProps> = ({
                     {m.agendaPoints && m.agendaPoints.length > 0 && (
                       <div className="border-t border-slate-200/60 pt-1.5">
                         <span className="mb-1 block text-[10px] font-bold text-slate-500 uppercase">
-                          Puntos Cerrados del Orden del Día:
+                          Orden del día:
                         </span>
                         <ul className="list-disc space-y-0.5 pl-4 text-xs text-slate-700">
                           {m.agendaPoints.map((pt, i) => (
@@ -116,9 +115,9 @@ export const BermudasShield: React.FC<BermudasShieldProps> = ({
             <div>
               <h3 className="flex items-center gap-2 text-sm font-bold text-slate-900">
                 <Mail className="h-4 w-4 text-indigo-600" />
-                <span>Mensajería con Redacción Inversa</span>
+                <span>Correos bien escritos</span>
               </h3>
-              <p className="mt-0.5 text-[11px] text-slate-500">Adjuntos → Cuerpo → Alerta No-Scroll → Destinatarios</p>
+              <p className="mt-0.5 text-[11px] text-slate-500">Primero el contenido, los destinatarios al final</p>
             </div>
 
             <button
@@ -126,15 +125,15 @@ export const BermudasShield: React.FC<BermudasShieldProps> = ({
               className="flex items-center gap-1.5 rounded-xl bg-slate-900 px-3 py-1.5 text-xs font-bold text-white shadow-xs transition-colors hover:bg-slate-800"
             >
               <Plus className="h-3.5 w-3.5" />
-              <span>Redactar Inversamente</span>
+              <span>Escribir un correo</span>
             </button>
           </div>
 
           <div className="flex items-start gap-2 rounded-xl border border-indigo-200 bg-indigo-50/70 p-3 text-xs text-indigo-950">
             <Mail className="mt-0.5 h-4 w-4 shrink-0 text-indigo-600" />
             <p className="text-[11px] leading-relaxed">
-              <strong>Secuencia Contra-Intuitiva:</strong> El campo "Para:" permanece férreamente bloqueado hasta
-              validar que el contenido esté sintetizado y los archivos hayan sido vinculados.
+              <strong>Al revés de lo habitual:</strong> el destinatario va al final, cuando el correo está listo, para
+              no enviarlo antes de tiempo.
             </p>
           </div>
 
@@ -156,9 +155,7 @@ export const BermudasShield: React.FC<BermudasShieldProps> = ({
                   <div className="flex flex-wrap items-center justify-between gap-2 border-t border-slate-200/60 pt-1 text-[11px]">
                     <div className="flex items-center gap-1.5 text-slate-500">
                       <Paperclip className="h-3.5 w-3.5 text-slate-500" />
-                      <span>
-                        {e.attachments.length > 0 ? `${e.attachments.length} adjunto(s)` : 'Sin adjuntos declarados'}
-                      </span>
+                      <span>{e.attachments.length > 0 ? `${e.attachments.length} adjunto(s)` : 'Sin adjuntos'}</span>
                     </div>
 
                     <div className="font-mono text-[10px] text-indigo-700">Para: {e.recipients.join(', ')}</div>

@@ -31,12 +31,12 @@ test('first sign-in opens the Wheel of Life at 0 with a first-step notice and a 
 
   await page.getByRole('button', { name: 'Ir a Rueda de la Vida' }).click();
   await page.getByRole('slider', { name: 'Puntuación de Salud' }).fill('7');
-  await page.getByRole('button', { name: 'Consolidar Estado' }).click();
+  await page.getByRole('button', { name: 'Guardar la evaluación' }).click();
   await expect(notice).toBeHidden();
 
   // La sesión y la evaluación persisten: al recargar, la app vuelve a abrir en Inicio
   await page.reload();
-  await expect(page.getByRole('heading', { name: 'Foco de Concentración Profesional' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Tu foco profesional' })).toBeVisible();
   await expect(page.getByText('Primer paso: evalúa tu Rueda de la Vida')).toBeHidden();
 });
 
@@ -52,10 +52,10 @@ test('the first-run jump to the Wheel never pulls the person out of a section th
   });
   await page.reload();
   await expect(page.getByRole('button', { name: 'Tu cuenta' })).toBeVisible();
-  await page.getByRole('button', { name: 'Listas Duales' }).click();
+  await page.getByRole('button', { name: 'Listas', exact: true }).click();
   await expect(page.locator('header [data-sync-status]')).toHaveAttribute('data-sync-status', 'synced', {
     timeout: 20_000
   });
-  await expect(page.getByRole('button', { name: 'Listas Duales' })).toHaveAttribute('aria-current', 'page');
-  await expect(page.getByRole('button', { name: 'Capturar Primera Acción' })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Listas', exact: true })).toHaveAttribute('aria-current', 'page');
+  await expect(page.getByRole('button', { name: 'Añadir la primera tarea' })).toBeVisible();
 });

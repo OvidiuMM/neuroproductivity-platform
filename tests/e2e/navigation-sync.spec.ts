@@ -31,19 +31,22 @@ test('phones use a bottom section bar, a «Más» sheet and a floating «Nueva t
   await expect(more).toHaveAttribute('aria-expanded', 'false');
   await more.click();
   const sheet = page.getByRole('dialog', { name: 'Más' });
-  await expect(sheet.getByRole('navigation').getByRole('button')).toHaveText(['Blindaje Bermudas', 'Ayuda']);
+  await expect(sheet.getByRole('navigation').getByRole('button')).toHaveText(['Tiempo protegido', 'Ayuda']);
   await expect(
     sheet.locator('[aria-label^="Sincronizado"], [aria-label^="Hay cambios"], [aria-label^="Sin conexión"]')
   ).toHaveCount(1);
   await expect(sheet.getByRole('button', { name: 'Tu cuenta' })).toBeVisible();
 
-  await sheet.getByRole('button', { name: 'Blindaje Bermudas' }).click();
+  await sheet.getByRole('button', { name: 'Tiempo protegido', exact: true }).click();
   await expect(sheet).toBeHidden();
-  await expect(page.getByRole('heading', { name: /Blindaje/ }).first()).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Protege tu tiempo' })).toBeVisible();
 
   // Escape cierra la hoja, que marca la sección activa, y el foco vuelve a «Más»
   await more.click();
-  await expect(sheet.getByRole('button', { name: 'Blindaje Bermudas' })).toHaveAttribute('aria-current', 'page');
+  await expect(sheet.getByRole('button', { name: 'Tiempo protegido', exact: true })).toHaveAttribute(
+    'aria-current',
+    'page'
+  );
   await page.keyboard.press('Escape');
   await expect(sheet).toBeHidden();
   await expect(more).toBeFocused();
@@ -65,7 +68,7 @@ test('phones use a bottom section bar, a «Más» sheet and a floating «Nueva t
   const barBox = (await bar.boundingBox())!;
   expect(newTaskBox.y + newTaskBox.height).toBeLessThanOrEqual(barBox.y);
   await newTask.click();
-  await expect(page.getByRole('dialog', { name: /Nueva Acción|Capturar/ })).toBeVisible();
+  await expect(page.getByRole('dialog', { name: 'Nueva tarea' })).toBeVisible();
 });
 
 test('turning a phone to a wider screen closes the «Más» sheet and leaves the app usable', async ({ page }) => {
@@ -104,8 +107,8 @@ test('sync indicator turns orange without connection and green after forcing a s
 
   // Sin conexión la tarea se guarda en el dispositivo y se ve al instante
   const title = `Llamar al fontanero ${Date.now().toString(36)}`;
-  await page.getByRole('button', { name: 'Listas Duales' }).click();
-  await page.getByRole('button', { name: 'Capturar Primera Acción' }).click();
+  await page.getByRole('button', { name: 'Listas', exact: true }).click();
+  await page.getByRole('button', { name: 'Añadir la primera tarea' }).click();
   await fillAndSaveTask(page, { title });
   await expect(page.getByRole('heading', { name: title })).toBeVisible();
   await expect(indicator).not.toHaveAttribute('data-sync-status', 'synced');
@@ -116,6 +119,6 @@ test('sync indicator turns orange without connection and green after forcing a s
 
   // Tras recargar, la tarea viene del servidor
   await page.reload();
-  await page.getByRole('button', { name: 'Listas Duales' }).click();
+  await page.getByRole('button', { name: 'Listas', exact: true }).click();
   await expect(page.getByRole('heading', { name: title })).toBeVisible();
 });

@@ -37,13 +37,13 @@ const SCREENS: { tab: AppTab; title: string; icon: React.ReactNode; points: stri
     icon: <Compass className="h-5 w-5 text-indigo-600" />,
     points: [
       'Puntúa de 0 a 10 tu satisfacción en 7 áreas: Salud, Carrera Profesional, Finanzas, Familia, Ocio, Relaciones y Espiritualidad.',
-      'Cada vez que pulsas «Consolidar Estado» se guarda una evaluación nueva; las anteriores nunca se modifican.',
+      'Cada vez que pulsas «Guardar la evaluación» se guarda una evaluación nueva; las anteriores nunca se modifican.',
       'Activa la comparativa histórica para superponer una evaluación anterior y ver qué áreas han mejorado.'
     ]
   },
   {
     tab: 'tasks',
-    title: 'Listas Duales',
+    title: 'Listas',
     icon: <Briefcase className="h-5 w-5 text-indigo-600" />,
     points: [
       'Dos listas separadas, Profesional y Personal, para no mezclar contextos. Cambia entre ellas con el selector de la barra superior.',
@@ -54,7 +54,7 @@ const SCREENS: { tab: AppTab; title: string; icon: React.ReactNode; points: stri
       'Puedes darle una fecha límite o un intervalo, con hora opcional: el título se pone violeta cuando falta menos de una semana y rojo cuando ha vencido. Las fechas se escriben como dd/mm/aaaa o se eligen en el calendario, con la semana empezando en lunes.',
       'Con fecha límite, el botón de calendario la añade a Google Calendar, Outlook o cualquier calendario (archivo .ics).',
       'Las tareas pueden repetirse (cada día, semana, mes o año; por ejemplo, «cada mes, el 2.º lunes»). Al repetir, «Inicio» es desde cuándo se repite y la fecha límite hasta cuándo; cada repetición vence su propio día. Al marcarla Hecha se archiva y se crea la siguiente.',
-      'Las ideas sin urgencia van a «Opciones Futuras» y no compiten con el Top 10.'
+      'Las ideas sin urgencia van a «Algún día» y no compiten con el Top 10.'
     ]
   },
   {
@@ -68,9 +68,10 @@ const SCREENS: { tab: AppTab; title: string; icon: React.ReactNode; points: stri
   },
   {
     tab: 'bermudas',
-    title: 'Blindaje Bermudas',
+    title: 'Tiempo protegido',
     icon: <ShieldCheck className="h-5 w-5 text-indigo-600" />,
     points: [
+      'El «triángulo de las Bermudas» del tiempo son sus tres grandes fugas: reuniones, correo y mensajes. Aquí las controlas.',
       'Reuniones: no se pueden programar antes de las 12:00 h y exigen hora de fin, orden del día y un moderador.',
       'Correo: primero adjuntos y cuerpo del mensaje; los destinatarios se desbloquean al final.'
     ]
@@ -186,7 +187,7 @@ export const HowItWorks: React.FC<HowItWorksProps> = ({ onNavigate, onStartTour,
             con la que se relaciona. Así lo que haces cada día queda vinculado a las áreas que quieres mejorar.
           </li>
           <li>
-            <strong>Tareas → Blindaje:</strong> las mañanas sin reuniones son el tiempo para trabajar tu Top 10.
+            <strong>Tareas → Tiempo protegido:</strong> las mañanas sin reuniones son el tiempo para trabajar tu Top 10.
           </li>
           <li>
             <strong>Vuelta a la Rueda:</strong> reevalúa la rueda cada cierto tiempo y compárala con evaluaciones

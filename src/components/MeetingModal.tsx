@@ -17,7 +17,7 @@ export const MeetingModal: React.FC<MeetingModalProps> = ({ isOpen, onClose, onS
   const [endTime, setEndTime] = useState('13:45');
   const [agendaInput, setAgendaInput] = useState('');
   const [agendaPoints, setAgendaPoints] = useState<string[]>([
-    'Revisión de avances del Top 10 operativo',
+    'Revisar el avance del Top 10',
     'Bloqueos técnicos y asignación de responsables'
   ]);
   const [moderatorName, setModeratorName] = useState('');
@@ -108,11 +108,9 @@ export const MeetingModal: React.FC<MeetingModalProps> = ({ isOpen, onClose, onS
           <div>
             <h2 id="meeting-modal-title" className="flex items-center gap-2 text-base font-bold text-slate-900">
               <Calendar className="h-5 w-5 text-indigo-600" />
-              Blindaje de Reunión (Triángulo de las Bermudas)
+              Nueva reunión
             </h2>
-            <p className="mt-0.5 text-xs text-slate-500">
-              Triple validación innegociable contra la fragmentación atencional
-            </p>
+            <p className="mt-0.5 text-xs text-slate-500">Con hora de fin, orden del día y alguien que modere</p>
           </div>
           <button
             onClick={onClose}
@@ -128,7 +126,7 @@ export const MeetingModal: React.FC<MeetingModalProps> = ({ isOpen, onClose, onS
           <div>
             <div className="mb-1 flex items-center justify-between">
               <label htmlFor="meeting-title" className="text-xs font-bold tracking-wider text-slate-600 uppercase">
-                Título de la Convocatoria <span className="text-red-500">*</span>
+                Título <span className="text-red-500">*</span>
               </label>
               <span className="text-[11px] text-slate-500">{title.length}/100</span>
             </div>
@@ -138,7 +136,7 @@ export const MeetingModal: React.FC<MeetingModalProps> = ({ isOpen, onClose, onS
               value={title}
               onChange={(e) => setTitle(e.target.value)}
               onBlur={() => setTouched({ ...touched, title: true })}
-              placeholder="ej. Sincronización técnica de sprint y cuellos de botella"
+              placeholder="ej. Revisión semanal del proyecto"
               className={`w-full rounded-xl border px-3.5 py-2.5 text-sm focus:ring-2 focus:outline-none ${
                 touched.title && !isTitleValid
                   ? 'border-red-400 bg-red-50/20 focus:ring-red-400'
@@ -204,7 +202,7 @@ export const MeetingModal: React.FC<MeetingModalProps> = ({ isOpen, onClose, onS
                 htmlFor="meeting-end"
                 className="mb-1 block text-xs font-bold tracking-wider text-slate-600 uppercase"
               >
-                Fin Estricto <span className="text-red-500">*</span>
+                Hora de fin <span className="text-red-500">*</span>
               </label>
               <input
                 id="meeting-end"
@@ -226,9 +224,7 @@ export const MeetingModal: React.FC<MeetingModalProps> = ({ isOpen, onClose, onS
               <div className="flex items-start gap-2.5">
                 <ShieldAlert className="mt-0.5 h-5 w-5 shrink-0 text-red-600" />
                 <div className="flex-1 space-y-1.5">
-                  <p className="font-bold text-red-800">
-                    Bloqueo Heurístico: Franja de Concentración Profunda Matutina
-                  </p>
+                  <p className="font-bold text-red-800">Las mañanas son para concentrarse</p>
                   <p className="text-[11px] leading-relaxed text-red-700">
                     Esta app no permite reuniones antes de las 12:00 h: las mañanas se reservan para el trabajo que
                     exige más concentración.
@@ -239,7 +235,7 @@ export const MeetingModal: React.FC<MeetingModalProps> = ({ isOpen, onClose, onS
                     className="mt-1 flex items-center gap-1.5 rounded-lg bg-red-700 px-3 py-1.5 text-xs font-bold text-white transition-colors hover:bg-red-800"
                   >
                     <Clock className="h-3.5 w-3.5" />
-                    <span>Reubicar algorítmicamente a las 13:00 h (Hora Valle)</span>
+                    <span>Pasarla a las 13:00</span>
                   </button>
                 </div>
               </div>
@@ -249,8 +245,7 @@ export const MeetingModal: React.FC<MeetingModalProps> = ({ isOpen, onClose, onS
           {/* ALERTA ORDEN DE HORA INVÁLIDO */}
           {!isTimeOrderValid && (
             <p className="flex items-center gap-1 text-xs text-red-600">
-              <AlertTriangle className="h-3.5 w-3.5" /> La hora de fin debe ser posterior a la hora de inicio (Ley de
-              Parkinson).
+              <AlertTriangle className="h-3.5 w-3.5" /> La hora de fin debe ser posterior a la de inicio.
             </p>
           )}
 
@@ -260,7 +255,7 @@ export const MeetingModal: React.FC<MeetingModalProps> = ({ isOpen, onClose, onS
               htmlFor="meeting-agenda-item"
               className="mb-1 block text-xs font-bold tracking-wider text-slate-600 uppercase"
             >
-              Orden del Día Cerrado (Obligatorio) <span className="text-red-500">*</span>
+              Orden del día <span className="text-red-500">*</span>
             </label>
             <div className="mb-2 flex gap-2">
               <input
@@ -330,7 +325,7 @@ export const MeetingModal: React.FC<MeetingModalProps> = ({ isOpen, onClose, onS
                 value={moderatorName}
                 onChange={(e) => setModeratorName(e.target.value)}
                 onBlur={() => setTouched({ ...touched, moderator: true })}
-                placeholder="Nombre del moderador nominal"
+                placeholder="Quién modera"
                 className={`w-full rounded-xl border px-3 py-2 text-xs focus:ring-2 focus:outline-none ${
                   touched.moderator && !isModeratorValid
                     ? 'border-red-400 bg-red-50/20 focus:ring-red-400'
@@ -338,7 +333,7 @@ export const MeetingModal: React.FC<MeetingModalProps> = ({ isOpen, onClose, onS
                 }`}
               />
               {touched.moderator && !isModeratorValid && (
-                <p className="mt-1 text-[11px] text-red-600">Designación nominal requerida.</p>
+                <p className="mt-1 text-[11px] text-red-600">Indica quién modera.</p>
               )}
             </div>
 
@@ -362,9 +357,7 @@ export const MeetingModal: React.FC<MeetingModalProps> = ({ isOpen, onClose, onS
 
           {/* CHECKLIST DE TRIPLE VALIDACIÓN EN VIVO */}
           <div className="space-y-1 rounded-xl border border-slate-200 bg-slate-50 p-3 text-xs">
-            <span className="mb-1 block font-bold text-slate-700">
-              Cumplimiento de Blindaje Triángulo de las Bermudas:
-            </span>
+            <span className="mb-1 block font-bold text-slate-700">Antes de guardar:</span>
             <div className="grid grid-cols-1 gap-2 text-[11px] sm:grid-cols-2">
               <div className="flex items-center gap-1.5">
                 {!isMorningMeeting && isTimeOrderValid ? (
@@ -373,7 +366,7 @@ export const MeetingModal: React.FC<MeetingModalProps> = ({ isOpen, onClose, onS
                   <span className="inline-block h-3.5 w-3.5 rounded-full border border-slate-300" />
                 )}
                 <span className={!isMorningMeeting ? 'text-slate-700' : 'text-slate-500'}>
-                  Horario valle (≥ 12:00 h) y fin estricto
+                  Después de las 12:00 y con hora de fin
                 </span>
               </div>
 
@@ -383,9 +376,7 @@ export const MeetingModal: React.FC<MeetingModalProps> = ({ isOpen, onClose, onS
                 ) : (
                   <span className="inline-block h-3.5 w-3.5 rounded-full border border-slate-300" />
                 )}
-                <span className={isAgendaValid ? 'text-slate-700' : 'text-slate-500'}>
-                  Orden del día cerrado no vacío
-                </span>
+                <span className={isAgendaValid ? 'text-slate-700' : 'text-slate-500'}>Con orden del día</span>
               </div>
 
               <div className="flex items-center gap-1.5">
@@ -394,9 +385,7 @@ export const MeetingModal: React.FC<MeetingModalProps> = ({ isOpen, onClose, onS
                 ) : (
                   <span className="inline-block h-3.5 w-3.5 rounded-full border border-slate-300" />
                 )}
-                <span className={isModeratorValid ? 'text-slate-700' : 'text-slate-500'}>
-                  Moderador nominal responsable
-                </span>
+                <span className={isModeratorValid ? 'text-slate-700' : 'text-slate-500'}>Con alguien que modere</span>
               </div>
 
               <div className="flex items-center gap-1.5">
@@ -405,7 +394,7 @@ export const MeetingModal: React.FC<MeetingModalProps> = ({ isOpen, onClose, onS
                 ) : (
                   <span className="inline-block h-3.5 w-3.5 rounded-full border border-slate-300" />
                 )}
-                <span className={isTitleValid ? 'text-slate-700' : 'text-slate-500'}>Título ≤ 100 caracteres</span>
+                <span className={isTitleValid ? 'text-slate-700' : 'text-slate-500'}>Hasta 100 caracteres</span>
               </div>
             </div>
           </div>
@@ -429,7 +418,7 @@ export const MeetingModal: React.FC<MeetingModalProps> = ({ isOpen, onClose, onS
               }`}
             >
               <Check className="h-4 w-4" />
-              <span>Guardar Convocatoria Blindada</span>
+              <span>Guardar la reunión</span>
             </button>
           </div>
         </form>

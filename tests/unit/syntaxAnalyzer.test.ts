@@ -30,7 +30,7 @@ describe('analyzeImmediateActionSyntax', () => {
     const result = analyzeImmediateActionSyntax('Proyecto');
 
     assert.equal(result.isValid, false);
-    assert.match(result.assistantQuestion ?? '', /acción motora/);
+    assert.match(result.assistantQuestion ?? '', /primer paso/);
   });
 
   it('allows a multi-word phrase and warns when it does not begin with an action', () => {
