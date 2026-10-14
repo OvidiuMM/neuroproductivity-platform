@@ -532,13 +532,17 @@ export default function App({ user, services, isAdmin = false }: AppProps) {
   // RECORRIDO GUIADO: tras la bienvenida o desde la guía. Empieza en las listas (allí están el Top 10 y los filtros);
   // al terminar, la primera vez, lleva a la Rueda para el primer paso
   const [isTourOpen, setIsTourOpen] = useState(false);
-  const startTour = () => {
+  // Solo el recorrido de la primera vez (tras la bienvenida automática) acaba en la Rueda; al repetirlo desde la
+  // ayuda, se vuelve a donde se estaba
+  const [isFirstRunTour, setIsFirstRunTour] = useState(false);
+  const startTour = (firstRun = false) => {
     navigate('tasks');
+    setIsFirstRunTour(firstRun);
     setIsTourOpen(true);
   };
   const finishTour = () => {
     setIsTourOpen(false);
-    if (wheelSynced && wheelLogs.length === 0) navigate('wheel');
+    if (isFirstRunTour && wheelSynced && wheelLogs.length === 0) navigate('wheel');
   };
 
   const finishWelcome = (outcome: OnboardingOutcome) => {
@@ -546,7 +550,7 @@ export default function App({ user, services, isAdmin = false }: AppProps) {
     markOnboardingSeen(db, uid, outcome).catch(reportError('guardar tu progreso'));
     setWelcomeClosed(true);
     setIsWelcomeReplay(false);
-    if (outcome === 'completed') startTour();
+    if (outcome === 'completed') startTour(!isWelcomeReplay);
   };
 
   // Hoja «Más» del móvil: secciones que no caben en la barra inferior, sincronización y cuenta
@@ -720,7 +724,7 @@ export default function App({ user, services, isAdmin = false }: AppProps) {
           {activeTab === 'help' && (
             <HowItWorks
               onNavigate={navigate}
-              onStartTour={startTour}
+              onStartTour={() => startTour()}
               onShowWelcome={() => setIsWelcomeReplay(true)}
               onContact={() => setIsFeedbackOpen(true)}
             />
