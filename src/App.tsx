@@ -71,7 +71,9 @@ import { ImportLocalDataModal } from './components/ImportLocalDataModal';
 import { HowItWorks } from './components/HowItWorks';
 import { AgendaView } from './components/AgendaView';
 import { HomeView } from './components/HomeView';
-import { AccessAdminView } from './components/AccessAdminView';
+import { AdminView } from './components/AdminView';
+import { FeedbackDialog } from './components/FeedbackDialog';
+import { setFeedbackStatus, subscribeToFeedback, type FeedbackTicket } from './services/feedbackApi';
 import { AccessibilityPanel } from './components/AccessibilityPanel';
 import { setAccess, subscribeToAccessRequests, type AccessRequest, type DecisionStatus } from './services/access';
 import { deleteAccount, downloadAccountData, signOutEverywhere } from './services/account';
@@ -147,12 +149,16 @@ export default function App({ user, services, isAdmin = false }: AppProps) {
   // ACCESOS (solo administración): solicitudes en vivo para la pestaña y su contador de pendientes
   const [accessRequests, setAccessRequests] = useState<AccessRequest[]>([]);
   const [accessError, setAccessError] = useState<string | null>(null);
+  // MENSAJES DE CONTACTO (solo administración)
+  const [feedbackTickets, setFeedbackTickets] = useState<FeedbackTicket[]>([]);
+  const [feedbackError, setFeedbackError] = useState<string | null>(null);
   // Al dejar de ser administración se vacían las solicitudes y se sale de su pestaña
   const [wasAdmin, setWasAdmin] = useState(isAdmin);
   if (wasAdmin !== isAdmin) {
     setWasAdmin(isAdmin);
     if (!isAdmin) {
       setAccessRequests([]);
+      setFeedbackTickets([]);
       setActiveTab((tab) => (tab === 'access' ? 'tasks' : tab));
     }
   }
@@ -163,7 +169,29 @@ export default function App({ user, services, isAdmin = false }: AppProps) {
       setAccessError('No se pudieron cargar las solicitudes de acceso.');
     });
   }, [db, isAdmin]);
-  const pendingAccessCount = accessRequests.filter((r) => r.status === 'pending').length;
+  useEffect(() => {
+    if (!isAdmin) return;
+    return subscribeToFeedback(db, setFeedbackTickets, (e) => {
+      console.error('Error loading feedback:', e);
+      setFeedbackError('No se pudieron cargar los mensajes.');
+    });
+  }, [db, isAdmin]);
+  // Lo pendiente en Administración: solicitudes por decidir y mensajes sin leer
+  const pendingAccessCount =
+    accessRequests.filter((r) => r.status === 'pending').length +
+    feedbackTickets.filter((t) => t.status === 'new').length;
+  const handleSetFeedbackStatus = async (ticket: FeedbackTicket, status: FeedbackTicket['status']) => {
+    setFeedbackError(null);
+    try {
+      await setFeedbackStatus(db, ticket.id, status);
+    } catch (e) {
+      console.error('Error updating feedback:', e);
+      setFeedbackError('No se pudo guardar el cambio. Revisa tu conexión e inténtalo de nuevo.');
+    }
+  };
+
+  // CONTACTO: desde la ayuda o la cuenta
+  const [isFeedbackOpen, setIsFeedbackOpen] = useState(false);
 
   const handleDecideAccess = async (targetUid: string, status: DecisionStatus) => {
     setAccessError(null);
@@ -542,6 +570,7 @@ export default function App({ user, services, isAdmin = false }: AppProps) {
   };
   // La pantalla de bienvenida no cuenta: es decorativa, se quita sola y deja pasar los clics mientras se desvanece
   const isDialogOpen =
+    isFeedbackOpen ||
     isWelcomeOpen ||
     isTourOpen ||
     isMoreOpen ||
@@ -697,15 +726,23 @@ export default function App({ user, services, isAdmin = false }: AppProps) {
 
           {/* PESTAÑA 4: CÓMO FUNCIONA LA APP */}
           {activeTab === 'help' && (
-            <HowItWorks onNavigate={navigate} onStartTour={startTour} onShowWelcome={() => setIsWelcomeReplay(true)} />
+            <HowItWorks
+              onNavigate={navigate}
+              onStartTour={startTour}
+              onShowWelcome={() => setIsWelcomeReplay(true)}
+              onContact={() => setIsFeedbackOpen(true)}
+            />
           )}
 
           {activeTab === 'access' && isAdmin && (
-            <AccessAdminView
+            <AdminView
               requests={accessRequests}
               currentUid={uid}
-              error={accessError}
+              accessError={accessError}
               onDecide={handleDecideAccess}
+              tickets={feedbackTickets}
+              feedbackError={feedbackError}
+              onSetFeedbackStatus={handleSetFeedbackStatus}
             />
           )}
         </main>
@@ -837,6 +874,10 @@ export default function App({ user, services, isAdmin = false }: AppProps) {
         onChangePassword={(currentPassword, newPassword) => changePassword(user, currentPassword, newPassword)}
         onSignOutEverywhere={() => signOutEverywhere(services)}
         returnFocusTo={accountButton}
+        onContact={() => {
+          setIsAccountMenuOpen(false);
+          setIsFeedbackOpen(true);
+        }}
         onOpenAccessibility={() => {
           setIsAccountMenuOpen(false);
           setIsAccessibilityOpen(true);
@@ -849,6 +890,15 @@ export default function App({ user, services, isAdmin = false }: AppProps) {
         onClose={() => setIsAccessibilityOpen(false)}
         returnFocusTo={accountButton}
       />
+
+      {/* CONTACTO: sugerencias, errores o mensajes (se monta al abrirse, así empieza limpio) */}
+      {isFeedbackOpen && (
+        <FeedbackDialog
+          functions={services.functions}
+          onClose={() => setIsFeedbackOpen(false)}
+          returnFocusTo={accountButton}
+        />
+      )}
 
       {/* BIENVENIDA DE LA PRIMERA VEZ */}
       {isWelcomeOpen && <WelcomeDialog onFinish={finishWelcome} />}

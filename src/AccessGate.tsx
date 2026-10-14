@@ -3,6 +3,7 @@ import type { User } from 'firebase/auth';
 import { FirebaseError } from 'firebase/app';
 import App from './App';
 import { AccessRequestScreen } from './components/AccessRequestScreen';
+import { FeedbackDialog } from './components/FeedbackDialog';
 import { EmailVerificationScreen } from './components/EmailVerificationScreen';
 import { hasPassword, needsEmailVerification } from './services/auth';
 import {
@@ -36,6 +37,8 @@ export const AccessGate: React.FC<AccessGateProps> = ({ user, services }) => {
   const [emailVerified, setEmailVerified] = useState(() => !needsEmailVerification(user));
   // Respuesta del servidor por si el documento aún no ha llegado (o no existe y la caché no lo sabe)
   const [checkedStatus, setCheckedStatus] = useState<OwnAccessStatus>('unknown');
+  // Contacto también sin acceso aprobado (p. ej. para preguntar por la solicitud)
+  const [isFeedbackOpen, setIsFeedbackOpen] = useState(false);
   const effectiveStatus = status === 'unknown' ? checkedStatus : status;
   const isApproved = effectiveStatus === 'approved';
 
@@ -102,15 +105,19 @@ export const AccessGate: React.FC<AccessGateProps> = ({ user, services }) => {
   }
 
   return (
-    <AccessRequestScreen
-      status={effectiveStatus}
-      email={user.email ?? ''}
-      onRequest={handleRequest}
-      onRetry={check}
-      onSignOut={() => signOutAndClearCache(services)}
-      onDownloadData={() => downloadAccountData(services, user)}
-      onDeleteAccount={(password) => deleteAccount(services, user, password)}
-      hasPassword={hasPassword(user)}
-    />
+    <>
+      <AccessRequestScreen
+        status={effectiveStatus}
+        email={user.email ?? ''}
+        onRequest={handleRequest}
+        onRetry={check}
+        onSignOut={() => signOutAndClearCache(services)}
+        onContact={() => setIsFeedbackOpen(true)}
+        onDownloadData={() => downloadAccountData(services, user)}
+        onDeleteAccount={(password) => deleteAccount(services, user, password)}
+        hasPassword={hasPassword(user)}
+      />
+      {isFeedbackOpen && <FeedbackDialog functions={services.functions} onClose={() => setIsFeedbackOpen(false)} />}
+    </>
   );
 };

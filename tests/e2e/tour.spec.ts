@@ -13,7 +13,7 @@ const expectSpotlightOn = async (page: Page, target: ReturnType<Page['locator']>
 };
 
 const startFromHelp = async (page: Page) => {
-  await openSection(page, 'Cómo funciona');
+  await openSection(page, 'Ayuda');
   await page.getByRole('button', { name: 'Repetir el recorrido' }).click();
 };
 

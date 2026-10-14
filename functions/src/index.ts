@@ -7,3 +7,4 @@ export const api = onRequest({ region: 'europe-west1', cors: true, maxInstances:
 
 // Aprobación de accesos: solicitud, decisión de la administración y avisos por email
 export { forgetAccess, requestAccess, revokeSessions, setAccess, syncAccess } from './access';
+export { submitFeedback } from './feedback';

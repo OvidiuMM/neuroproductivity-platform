@@ -2,7 +2,17 @@ import React, { useRef, useState } from 'react';
 import { useModalFocus } from '../hooks/useModalFocus';
 import { describeAuthError, MIN_PASSWORD_LENGTH } from '../services/auth';
 import { UserProfile } from '../types';
-import { X, LogOut, Download, Trash2, Cloud, Accessibility, KeyRound, MonitorSmartphone } from 'lucide-react';
+import {
+  X,
+  LogOut,
+  Download,
+  Trash2,
+  Cloud,
+  Accessibility,
+  KeyRound,
+  MonitorSmartphone,
+  MessageSquare
+} from 'lucide-react';
 import { DeleteAccountPanel } from './DeleteAccountPanel';
 
 interface AccountMenuProps {
@@ -17,6 +27,7 @@ interface AccountMenuProps {
   onChangePassword: (currentPassword: string, newPassword: string) => Promise<void>;
   onSignOutEverywhere: () => Promise<void>;
   onOpenAccessibility: () => void;
+  onContact: () => void;
   // Adónde vuelve el foco si el botón que abrió el menú ya no está (p. ej. la hoja «Más» del móvil)
   returnFocusTo?: () => HTMLElement | null;
 }
@@ -41,6 +52,7 @@ export const AccountMenu: React.FC<AccountMenuProps> = ({
   onChangePassword,
   onSignOutEverywhere,
   onOpenAccessibility,
+  onContact,
   returnFocusTo
 }) => {
   const [busy, setBusy] = useState<Busy>(null);
@@ -187,6 +199,10 @@ export const AccountMenu: React.FC<AccountMenuProps> = ({
             >
               <Download className="h-4 w-4 text-indigo-600" aria-hidden="true" />
               {busy === 'export' ? 'Preparando descarga…' : 'Descargar mis datos (JSON)'}
+            </button>
+            <button type="button" onClick={onContact} disabled={busy !== null} className={actionClass}>
+              <MessageSquare className="h-4 w-4 text-indigo-600" aria-hidden="true" />
+              Escríbenos: ideas, fallos o dudas
             </button>
           </div>
 
