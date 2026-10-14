@@ -66,7 +66,12 @@ import { SplashScreen } from './components/SplashScreen';
 import { AccountMenu } from './components/AccountMenu';
 import { ImportLocalDataModal } from './components/ImportLocalDataModal';
 import { HomeView } from './components/HomeView';
-import { setFeedbackStatus, subscribeToFeedback, type FeedbackTicket } from './services/feedbackApi';
+import {
+  loadClosedFeedback,
+  setFeedbackStatus,
+  subscribeToOpenFeedback,
+  type FeedbackTicket
+} from './services/feedbackApi';
 import { AccessibilityPanel } from './components/AccessibilityPanel';
 import { setAccess, subscribeToAccessRequests, type AccessRequest, type DecisionStatus } from './services/access';
 import { deleteAccount, downloadAccountData, signOutEverywhere } from './services/account';
@@ -161,7 +166,7 @@ export default function App({ user, services, isAdmin = false }: AppProps) {
   // ACCESOS (solo administración): solicitudes en vivo para la pestaña y su contador de pendientes
   const [accessRequests, setAccessRequests] = useState<AccessRequest[]>([]);
   const [accessError, setAccessError] = useState<string | null>(null);
-  // MENSAJES DE CONTACTO (solo administración)
+  // MENSAJES DE CONTACTO (solo administración): los abiertos en vivo; los cerrados, bajo demanda en su vista
   const [feedbackTickets, setFeedbackTickets] = useState<FeedbackTicket[]>([]);
   const [feedbackError, setFeedbackError] = useState<string | null>(null);
   // Al dejar de ser administración se vacían las solicitudes y se sale de su pestaña
@@ -183,7 +188,7 @@ export default function App({ user, services, isAdmin = false }: AppProps) {
   }, [db, isAdmin]);
   useEffect(() => {
     if (!isAdmin) return;
-    return subscribeToFeedback(db, setFeedbackTickets, (e) => {
+    return subscribeToOpenFeedback(db, setFeedbackTickets, (e) => {
       console.error('Error loading feedback:', e);
       setFeedbackError('No se pudieron cargar los mensajes.');
     });
@@ -540,13 +545,17 @@ export default function App({ user, services, isAdmin = false }: AppProps) {
   // RECORRIDO GUIADO: tras la bienvenida o desde la guía. Empieza en las listas (allí están el Top 10 y los filtros);
   // al terminar, la primera vez, lleva a la Rueda para el primer paso
   const [isTourOpen, setIsTourOpen] = useState(false);
-  const startTour = () => {
+  // Solo el recorrido de la primera vez (tras la bienvenida automática) acaba en la Rueda; al repetirlo desde la
+  // ayuda, se vuelve a donde se estaba
+  const [isFirstRunTour, setIsFirstRunTour] = useState(false);
+  const startTour = (firstRun = false) => {
     navigate('tasks');
+    setIsFirstRunTour(firstRun);
     setIsTourOpen(true);
   };
   const finishTour = () => {
     setIsTourOpen(false);
-    if (wheelSynced && wheelLogs.length === 0) navigate('wheel');
+    if (isFirstRunTour && wheelSynced && wheelLogs.length === 0) navigate('wheel');
   };
 
   const finishWelcome = (outcome: OnboardingOutcome) => {
@@ -554,7 +563,7 @@ export default function App({ user, services, isAdmin = false }: AppProps) {
     markOnboardingSeen(db, uid, outcome).catch(reportError('guardar tu progreso'));
     setWelcomeClosed(true);
     setIsWelcomeReplay(false);
-    if (outcome === 'completed') startTour();
+    if (outcome === 'completed') startTour(!isWelcomeReplay);
   };
 
   // Hoja «Más» del móvil: secciones que no caben en la barra inferior, sincronización y cuenta
@@ -729,7 +738,7 @@ export default function App({ user, services, isAdmin = false }: AppProps) {
             {activeTab === 'help' && (
               <HowItWorks
                 onNavigate={navigate}
-                onStartTour={startTour}
+                onStartTour={() => startTour()}
                 onShowWelcome={() => setIsWelcomeReplay(true)}
                 onContact={() => setIsFeedbackOpen(true)}
               />
@@ -744,6 +753,7 @@ export default function App({ user, services, isAdmin = false }: AppProps) {
                 tickets={feedbackTickets}
                 feedbackError={feedbackError}
                 onSetFeedbackStatus={handleSetFeedbackStatus}
+                loadClosedFeedback={(cursor) => loadClosedFeedback(db, cursor)}
               />
             )}
           </Suspense>

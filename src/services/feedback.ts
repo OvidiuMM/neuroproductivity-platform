@@ -25,6 +25,9 @@ export interface FeedbackContext {
 
 const match = (ua: string, pattern: RegExp) => ua.match(pattern)?.[1];
 
+// Android, iOS y iPadOS dan su versión mayor. Windows, macOS, ChromeOS y Linux van sin versión a propósito: sus
+// navegadores la congelan en el user-agent (Windows 10 y 11 dicen los dos «NT 10.0»; macOS, «10_15_7» desde hace años),
+// así que el número sería falso
 export const describeOs = (ua: string, maxTouchPoints = 0) => {
   const android = match(ua, /Android (\d+)/);
   if (android) return `Android ${android}`;
