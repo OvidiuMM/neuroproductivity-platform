@@ -484,7 +484,7 @@ export const TaskModal: React.FC<TaskModalProps> = ({
               />
             </div>
             {/* Debajo del campo y no encima: con títulos largos o texto ampliado taparía lo escrito */}
-            {syntaxResult.isValid && (
+            {syntaxResult.isValid && syntaxResult.detectedVerb && (
               <p className="mt-1 flex items-center gap-1 text-[11px] font-semibold text-emerald-700">
                 <Check className="h-3.5 w-3.5" aria-hidden="true" />
                 Verbo físico: {syntaxResult.detectedVerb}
