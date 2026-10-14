@@ -1,5 +1,12 @@
 import { expect, test, type Browser, type Page } from '@playwright/test';
-import { ADMIN_EMAIL, expectNoHorizontalOverflow, signInWithGoogle, uniqueEmail } from './helpers';
+import {
+  ADMIN_EMAIL,
+  callFunction,
+  createVerifiedAccount,
+  expectNoHorizontalOverflow,
+  signInWithGoogle,
+  uniqueEmail
+} from './helpers';
 
 // Esperas que pasan por una Cloud Function del emulador: con la suite en paralelo su arranque puede tardar
 const SERVER_CALL = { timeout: 15_000 };
@@ -74,4 +81,61 @@ test('a rejected account sees it and cannot ask again right away', async ({ brow
   await userPage.getByRole('button', { name: 'Volver a solicitar acceso' }).click();
   await expect(userPage.getByRole('alert')).toHaveText('Podrás volver a pedir acceso más adelante.');
   await expect(entryIn(adminPage, /^Rechazadas o retiradas/, email)).toContainText('Rechazada');
+});
+
+test('a blocked account sees it, and its email stays blocked even with a new account', async ({ browser }) => {
+  test.slow();
+  const SERVER_CALL = { timeout: 15_000 };
+  // Una cuenta con contraseña, con el email confirmado, que pide acceso
+  const { email, idToken } = await createVerifiedAccount();
+  expect((await callFunction('requestAccess', idToken, { message: '' })).status).toBe(200);
+
+  const adminPage = await openPage(browser);
+  await openAccessTab(adminPage);
+  const pendingEntry = entryIn(adminPage, /^Pendientes/, email);
+  await pendingEntry.getByRole('button', { name: /^Bloquear/ }).click();
+  const blocked = entryIn(adminPage, /^Bloqueadas/, email);
+  await expect(blocked).toContainText('Bloqueada');
+
+  // Al entrar, la cuenta está bloqueada y no puede pedir acceso
+  const sync = async (token: string) =>
+    ((await (await callFunction('syncAccess', token, {})).json()) as { result: { status: string } }).result.status;
+  expect(await sync(idToken)).toBe('blocked');
+  const again = await callFunction('requestAccess', idToken, { message: 'Otra vez' });
+  expect(((await again.json()) as { result: { status: string } }).result.status).toBe('blocked');
+
+  // Elimina la cuenta y crea otra con el mismo email: sigue bloqueada
+  expect((await callFunction('forgetAccess', idToken, {})).status).toBe(200);
+  await fetch('http://127.0.0.1:9399/identitytoolkit.googleapis.com/v1/accounts:delete?key=demo-api-key', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ idToken })
+  });
+  const second = await createVerifiedAccount(undefined, email);
+  await expect.poll(() => sync(second.idToken), SERVER_CALL).toBe('blocked');
+
+  // Desbloquear quita el bloqueo del email: la cuenta pasa a «retirada» y podrá volver a pedir acceso
+  const reblocked = entryIn(adminPage, /^Bloqueadas/, email);
+  await expect(reblocked).toHaveCount(1);
+  await reblocked.getByRole('button', { name: /^Desbloquear/ }).click();
+  await expect(reblocked).toHaveCount(0);
+  await expect(entryIn(adminPage, /^Rechazadas o retiradas/, email)).toContainText('Retirada');
+  expect(await sync(second.idToken)).toBe('revoked');
+});
+
+test('the person sees «Cuenta bloqueada» right away and cannot ask again', async ({ browser }) => {
+  // Dos inicios de sesión (persona y administración): con la suite en paralelo puede pasar de 30 s
+  test.slow();
+  const userPage = await openPage(browser);
+  const adminPage = await openPage(browser);
+  const email = uniqueEmail();
+  await requestAccessAs(userPage, email, 'Hola');
+  await openAccessTab(adminPage);
+  await entryIn(adminPage, /^Pendientes/, email)
+    .getByRole('button', { name: /^Bloquear/ })
+    .click();
+
+  await expect(userPage.getByRole('heading', { name: 'Cuenta bloqueada' })).toBeVisible();
+  await expect(userPage.getByRole('button', { name: 'Solicitar acceso' })).toHaveCount(0);
+  await expect(userPage.getByRole('button', { name: '¿Alguna duda o problema? Escríbenos' })).toBeVisible();
 });
