@@ -52,11 +52,21 @@ export const isCurrentAdminMarker = (marker: { email?: unknown } | undefined, ad
   normalizeEmail(marker.email) === normalizeEmail(adminEmail);
 
 export type RequestDecision =
-  { action: 'create' } | { action: 'keep'; status: AccessStatus } | { action: 'wait'; retryAt: string };
+  | { action: 'create' }
+  | { action: 'approve' }
+  | { action: 'keep'; status: AccessStatus }
+  | { action: 'wait'; retryAt: string };
 
-// Qué hacer cuando alguien pide acceso según el estado actual de su solicitud
-export const decideRequest = (current: AccessRecord | undefined, now: Date): RequestDecision => {
+// Qué hacer cuando alguien pide acceso según el estado actual de su solicitud y el modo de aprobación
+export const decideRequest = (
+  current: AccessRecord | undefined,
+  now: Date,
+  approvalRequired = true
+): RequestDecision => {
   if (!current) return { action: 'create' };
+  // Con la aprobación libre, una solicitud que seguía pendiente (p. ej. si el aprobado en bloque se interrumpió) se
+  // aprueba ya, como al entrar
+  if (current.status === 'pending' && !approvalRequired) return { action: 'approve' };
   if (current.status === 'pending' || current.status === 'approved' || current.status === 'blocked') {
     return { action: 'keep', status: current.status };
   }
