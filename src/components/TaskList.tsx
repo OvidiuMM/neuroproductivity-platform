@@ -83,6 +83,8 @@ export const TaskList: React.FC<TaskListProps> = ({
   // En el móvil, el orden y los filtros van en una hoja inferior
   const isPhone = useMediaQuery(PHONE_QUERY);
   const [isFilterSheetOpen, setIsFilterSheetOpen] = useState(false);
+  // Al pasar a tableta o escritorio la hoja no se ve: se cierra (y no reaparece al volver al móvil)
+  if (isFilterSheetOpen && !isPhone) setIsFilterSheetOpen(false);
 
   const clearFilters = () => setPrefs((p) => ({ ...p, filters: DEFAULT_LIST_PREFS.filters }));
 

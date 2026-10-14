@@ -41,4 +41,6 @@ export const PRIMARY_TABS: readonly AppTab[] = ['home', 'tasks', 'agenda', 'whee
 
 // Nombre accesible con el número de solicitudes pendientes (el globo es solo visual)
 export const sectionLabel = ({ tab, label }: Section, pendingAccessCount: number) =>
-  tab === 'access' && pendingAccessCount > 0 ? `${label}, ${pendingAccessCount} pendientes` : label;
+  tab === 'access' && pendingAccessCount > 0
+    ? `${label}, ${pendingAccessCount} ${pendingAccessCount === 1 ? 'pendiente' : 'pendientes'}`
+    : label;
