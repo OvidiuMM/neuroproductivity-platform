@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { TaskItem, ListContext, TaskPriority, TaskStatus, WheelCategory } from '../types';
+import { Goal, TaskItem, ListContext, TaskPriority, TaskStatus, WheelCategory } from '../types';
 import { PRIORITY_LABEL } from '../services/tasks';
 import {
   DEFAULT_LIST_PREFS,
@@ -52,6 +52,7 @@ interface FilterField {
 
 interface TaskListProps {
   tasks: TaskItem[];
+  goals: Goal[];
   activeContext: ListContext;
   // Orden y filtros del Top 10: los guarda App, que también los usa para el resumen «Top 10 Foco»
   prefs: ListPrefs;
@@ -66,6 +67,7 @@ interface TaskListProps {
 
 export const TaskList: React.FC<TaskListProps> = ({
   tasks,
+  goals,
   activeContext,
   prefs,
   onPrefsChange,
@@ -206,6 +208,10 @@ export const TaskList: React.FC<TaskListProps> = ({
       {hiddenByFilters === 1 ? '1 tarea oculta' : `${hiddenByFilters} tareas ocultas`} por los filtros.
     </span>
   );
+
+  // Cada tarjeta muestra la meta a la que contribuye
+  const goalsById = new Map(goals.map((g) => [g.id, g]));
+  const goalOf = (task: TaskItem) => (task.goalId ? goalsById.get(task.goalId) : undefined);
 
   const cardHandlers = {
     onChangeStatus,
@@ -444,7 +450,15 @@ export const TaskList: React.FC<TaskListProps> = ({
             ) : (
               <ol aria-label="Top 10" className="space-y-2.5">
                 {top10Tasks.map((task, index) => (
-                  <TaskCard key={task.id} task={task} now={now} variant="top" position={index + 1} {...cardHandlers} />
+                  <TaskCard
+                    key={task.id}
+                    goal={goalOf(task)}
+                    task={task}
+                    now={now}
+                    variant="top"
+                    position={index + 1}
+                    {...cardHandlers}
+                  />
                 ))}
               </ol>
             )}
@@ -466,6 +480,7 @@ export const TaskList: React.FC<TaskListProps> = ({
                 {peripheralTasks.map((task, index) => (
                   <TaskCard
                     key={task.id}
+                    goal={goalOf(task)}
                     task={task}
                     now={now}
                     variant="peripheral"
@@ -500,7 +515,7 @@ export const TaskList: React.FC<TaskListProps> = ({
           ) : (
             <ul aria-label="Quizá" className="space-y-2.5">
               {somedayTasks.map((task) => (
-                <TaskCard key={task.id} task={task} now={now} variant="someday" {...cardHandlers} />
+                <TaskCard key={task.id} goal={goalOf(task)} task={task} now={now} variant="someday" {...cardHandlers} />
               ))}
             </ul>
           )}

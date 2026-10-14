@@ -43,6 +43,22 @@ export interface TaskItem {
   estimateMinutes?: number; // duración estimada (opcional)
   recurrence?: Recurrence; // tarea recurrente (requiere fecha límite)
   nextOccurrenceId?: string; // id de la repetición creada al completarla (evita duplicarla si se reactiva)
+  goalId?: string; // meta a la que contribuye; el área de la Rueda se hereda de la meta
+}
+
+// Meta: un objetivo concreto dentro de un área de la Rueda, al que se vinculan tareas (áreas → metas → tareas)
+export type GoalStatus = 'ACTIVE' | 'ACHIEVED' | 'ARCHIVED';
+
+export interface Goal {
+  id: string;
+  userId: string;
+  title: string; // 1–100
+  area: WheelCategory;
+  why?: string; // el «para qué», hasta 280
+  targetDate?: string; // YYYY-MM-DD
+  status: GoalStatus;
+  createdAt: string; // ISO / UTC
+  updatedAt: string;
 }
 
 // Repetición de una tarea. Al marcarla Hecha se archiva y se crea la siguiente con la nueva fecha.
