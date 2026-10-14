@@ -75,7 +75,8 @@ export const GoalModal: React.FC<GoalModalProps> = ({ goal, onSave, onDelete, on
           </button>
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-4 p-6" noValidate>
+        {/* Con la validación del navegador: una fecha imposible (p. ej. 31/02) bloquea el envío con su mensaje */}
+        <form onSubmit={handleSubmit} className="space-y-4 p-6">
           <p className="text-xs leading-relaxed text-slate-600">
             Una meta concreta dentro de un área de tu Rueda. Vincúlale tareas para ver cómo avanza.
           </p>
