@@ -5,6 +5,8 @@ import {
   doc,
   getDocs,
   onSnapshot,
+  query,
+  where,
   runTransaction,
   setDoc,
   waitForPendingWrites,
@@ -124,30 +126,23 @@ export const restoreDeletedTask = async (db: Firestore, uid: string, task: TaskI
 export const deleteTask = (db: Firestore, uid: string, taskId: string) =>
   deleteDoc(doc(userCollection(db, uid, 'tasks'), taskId));
 
-// Meta y, si cambia de área, sus tareas con el área nueva (heredan el área de la meta), en un mismo lote. En las
-// tareas solo se tocan el área y la fecha de modificación: lo demás pudo cambiar en otro dispositivo, y la fecha nueva
-// hace que un «Deshacer» pendiente sobre ellas detecte el cambio
-export const saveGoal = (db: Firestore, uid: string, goal: Goal, retaggedTaskIds: string[] = []) => {
-  const batch = writeBatch(db);
-  batch.set(doc(userCollection(db, uid, 'goals'), goal.id), { ...goal, userId: uid });
-  for (const taskId of retaggedTaskIds) {
-    batch.update(doc(userCollection(db, uid, 'tasks'), taskId), {
-      wheelCategory: goal.area,
-      updatedAt: goal.updatedAt
-    });
-  }
-  return batch.commit();
-};
+// La meta sola: sus tareas toman el área de la meta al leerlas (applyGoalAreas), no hay que reescribirlas
+export const saveGoal = (db: Firestore, uid: string, goal: Goal) =>
+  setDoc(doc(userCollection(db, uid, 'goals'), goal.id), { ...goal, userId: uid });
 
-// Al eliminar una meta, sus tareas se quedan, sin meta (conservan el área); en ellas solo se quita el vínculo
-export const deleteGoal = (db: Firestore, uid: string, goalId: string, linkedTaskIds: string[]) => {
-  const batch = writeBatch(db);
-  batch.delete(doc(userCollection(db, uid, 'goals'), goalId));
+// Al eliminar una meta, sus tareas se quedan con el área que tenía y sin el vínculo. El vínculo a una meta que ya no
+// existe se ignora al leer, así que esta limpieza no tiene que ser atómica: busca las tareas vinculadas en ese momento
+// (también las de otros dispositivos ya sincronizadas) y las actualiza por lotes, sin límite de cantidad
+export const deleteGoal = async (db: Firestore, uid: string, goal: Goal) => {
+  await deleteDoc(doc(userCollection(db, uid, 'goals'), goal.id));
+  const linked = await getDocs(query(userCollection(db, uid, 'tasks'), where('goalId', '==', goal.id)));
   const updatedAt = new Date().toISOString();
-  for (const taskId of linkedTaskIds) {
-    batch.update(doc(userCollection(db, uid, 'tasks'), taskId), { goalId: deleteField(), updatedAt });
-  }
-  return batch.commit();
+  await commitInBatches(
+    db,
+    linked.docs.map(
+      (task) => (batch) => batch.update(task.ref, { goalId: deleteField(), wheelCategory: goal.area, updatedAt })
+    )
+  );
 };
 
 export const appendWheelLog = (db: Firestore, uid: string, log: WheelOfLifeLog) =>

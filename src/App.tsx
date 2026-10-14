@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useCallback, useState, useEffect, useRef } from 'react';
+import React, { useCallback, useMemo, useState, useEffect, useRef } from 'react';
 import type { User } from 'firebase/auth';
 import {
   AppTab,
@@ -46,6 +46,7 @@ import { BottomNav, MORE_BUTTON_ID } from './components/BottomNav';
 import { PHONE_QUERY, useMediaQuery } from './hooks/useMediaQuery';
 import { MoreSheet } from './components/MoreSheet';
 import { GoalModal } from './components/GoalModal';
+import { applyGoalAreas } from './services/goals';
 import type { SyncStatus } from './components/SyncIndicator';
 import { TaskList } from './components/TaskList';
 import { TaskModal, type TaskFormData } from './components/TaskModal';
@@ -102,12 +103,14 @@ export default function App({ user, services, isAdmin = false }: AppProps) {
   const [isAccessibilityOpen, setIsAccessibilityOpen] = useState(false);
 
   // Datos de la cuenta, sincronizados en tiempo real con Firestore (y disponibles sin conexión desde la caché)
-  const [tasks, setTasks] = useState<TaskItem[]>([]);
+  const [storedTasks, setTasks] = useState<TaskItem[]>([]);
   const [wheelLogs, setWheelLogs] = useState<WheelOfLifeLog[]>([]);
   const [wheelSynced, setWheelSynced] = useState(false);
   const [meetings, setMeetings] = useState<MeetingGuard[]>([]);
   const [emails, setEmails] = useState<EmailDraft[]>([]);
   const [goals, setGoals] = useState<Goal[]>([]);
+  // Las tareas vinculadas a una meta tienen el área de la meta
+  const tasks = useMemo(() => applyGoalAreas(storedTasks, goals), [storedTasks, goals]);
   // Editor de metas: abierto con la meta que se edita, o vacío para crear una
   const [goalEditor, setGoalEditor] = useState<{ goal?: Goal } | null>(null);
 
@@ -384,9 +387,7 @@ export default function App({ user, services, isAdmin = false }: AppProps) {
   // METAS: si cambia de área, sus tareas heredan la nueva; al eliminarla, sus tareas se quedan sin meta
   const handleSaveGoal = (goal: Goal) => {
     const previous = goals.find((g) => g.id === goal.id);
-    const retagged =
-      previous && previous.area !== goal.area ? tasks.filter((t) => t.goalId === goal.id).map((t) => t.id) : [];
-    saveGoal(db, uid, goal, retagged).catch(reportError('guardar la meta'));
+    saveGoal(db, uid, goal).catch(reportError('guardar la meta'));
     showToast(previous ? 'Meta guardada.' : 'Meta creada. Vincúlale tareas desde el formulario de cada tarea.');
   };
   const handleSetGoalStatus = (goal: Goal, status: GoalStatus) => {
@@ -396,12 +397,7 @@ export default function App({ user, services, isAdmin = false }: AppProps) {
     );
   };
   const handleDeleteGoal = (goal: Goal) => {
-    deleteGoal(
-      db,
-      uid,
-      goal.id,
-      tasks.filter((t) => t.goalId === goal.id).map((t) => t.id)
-    ).catch(reportError('eliminar la meta'));
+    deleteGoal(db, uid, goal).catch(reportError('eliminar la meta'));
     showToast('Meta eliminada. Sus tareas siguen en tus listas.');
   };
 
