@@ -197,13 +197,16 @@ export default function App({ user, services, isAdmin = false }: AppProps) {
   const pendingAccessCount =
     accessRequests.filter((r) => r.status === 'pending').length +
     feedbackTickets.filter((t) => t.status === 'new').length;
+  // Devuelve si se guardó: la vista solo ajusta su lista de cerrados cuando la escritura fue bien
   const handleSetFeedbackStatus = async (ticket: FeedbackTicket, status: FeedbackTicket['status']) => {
     setFeedbackError(null);
     try {
       await setFeedbackStatus(db, ticket.id, status);
+      return true;
     } catch (e) {
       console.error('Error updating feedback:', e);
       setFeedbackError('No se pudo guardar el cambio. Revisa tu conexión e inténtalo de nuevo.');
+      return false;
     }
   };
 
