@@ -33,6 +33,12 @@ service cloud.firestore {
       allow read: if isOwner(uid);
     }
 
+    // Configuración que fija la administración (p. ej. si hay que aprobar las cuentas): la escriben las Cloud
+    // Functions. La lista negra por email (blocked_emails) no la ve nadie desde la app.
+    match /settings/{name} {
+      allow read: if isAdmin();
+    }
+
     // Mensajes de contacto: los escribe la Cloud Function submitFeedback. La administración los lee y solo cambia
     // su estado (nuevo, leído, cerrado); el contador de envíos (feedback_limits) no lo ve nadie desde la app.
     match /feedback_tickets/{ticketId} {

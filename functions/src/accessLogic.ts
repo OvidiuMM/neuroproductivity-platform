@@ -1,6 +1,8 @@
 // Reglas de la aprobación de accesos, sin dependencias de Firebase para poder probarlas aisladas
 
-export type AccessStatus = 'pending' | 'approved' | 'rejected' | 'revoked';
+// blocked: lista negra. No puede volver a pedir acceso, ni entrar sola con la aprobación libre; también se bloquea su
+// email, así que tampoco puede volver con otra cuenta
+export type AccessStatus = 'pending' | 'approved' | 'rejected' | 'revoked' | 'blocked';
 export type DecisionStatus = Exclude<AccessStatus, 'pending'>;
 
 // Documento access/{uid}: solo lo escriben las Cloud Functions
@@ -26,7 +28,7 @@ export const MESSAGE_MAX_LENGTH = 500;
 export const REQUEST_COOLDOWN_MS = 24 * 60 * 60 * 1000;
 // En los proyectos demo (emuladores) esta cuenta hace de administración
 export const DEMO_ADMIN_EMAIL = 'admin@example.com';
-export const DECISIONS: readonly DecisionStatus[] = ['approved', 'rejected', 'revoked'];
+export const DECISIONS: readonly DecisionStatus[] = ['approved', 'rejected', 'revoked', 'blocked'];
 
 export const normalizeEmail = (email?: string | null) => (email ?? '').trim().toLowerCase();
 
@@ -50,21 +52,56 @@ export const isCurrentAdminMarker = (marker: { email?: unknown } | undefined, ad
   normalizeEmail(marker.email) === normalizeEmail(adminEmail);
 
 export type RequestDecision =
-  { action: 'create' } | { action: 'keep'; status: AccessStatus } | { action: 'wait'; retryAt: string };
+  | { action: 'create' }
+  | { action: 'approve' }
+  | { action: 'keep'; status: AccessStatus }
+  | { action: 'wait'; retryAt: string };
 
-// Qué hacer cuando alguien pide acceso según el estado actual de su solicitud
-export const decideRequest = (current: AccessRecord | undefined, now: Date): RequestDecision => {
+// Qué hacer cuando alguien pide acceso según el estado actual de su solicitud y el modo de aprobación
+export const decideRequest = (
+  current: AccessRecord | undefined,
+  now: Date,
+  approvalRequired = true
+): RequestDecision => {
   if (!current) return { action: 'create' };
-  if (current.status === 'pending' || current.status === 'approved') return { action: 'keep', status: current.status };
+  // Con la aprobación libre, una solicitud que seguía pendiente (p. ej. si el aprobado en bloque se interrumpió) se
+  // aprueba ya, como al entrar
+  if (current.status === 'pending' && !approvalRequired) return { action: 'approve' };
+  if (current.status === 'pending' || current.status === 'approved' || current.status === 'blocked') {
+    return { action: 'keep', status: current.status };
+  }
   const retryAt = Date.parse(current.decidedAt ?? current.requestedAt) + REQUEST_COOLDOWN_MS;
   return now.getTime() >= retryAt ? { action: 'create' } : { action: 'wait', retryAt: new Date(retryAt).toISOString() };
 };
 
-// Aprobar desde cualquier estado no aprobado, rechazar solo pendientes y retirar solo aprobados
+// Aprobar desde cualquier estado no aprobado (también desbloquea), rechazar solo pendientes, retirar a quien tiene
+// acceso o está bloqueado (desbloquear sin dar acceso) y bloquear desde cualquier otro estado
 export const canDecide = (from: AccessStatus, to: DecisionStatus) =>
   (to === 'approved' && from !== 'approved') ||
   (to === 'rejected' && from === 'pending') ||
-  (to === 'revoked' && from === 'approved');
+  (to === 'revoked' && (from === 'approved' || from === 'blocked')) ||
+  (to === 'blocked' && from !== 'blocked');
+
+// Qué hacer con el acceso de una cuenta al entrar (syncAccess), según el modo de aprobación:
+// - email en la lista negra: se bloquea la cuenta (si aún no lo está);
+// - aprobación libre: una cuenta sin solicitud o pendiente, con el email confirmado, entra sola. Las rechazadas,
+//   retiradas o bloqueadas siguen así: son decisiones de la administración.
+export type SyncAction = 'keep' | 'approve' | 'block';
+export const decideOnSync = ({
+  current,
+  approvalRequired,
+  emailBlocked,
+  emailVerified
+}: {
+  current: AccessStatus | undefined;
+  approvalRequired: boolean;
+  emailBlocked: boolean;
+  emailVerified: boolean;
+}): SyncAction => {
+  if (emailBlocked) return current === 'blocked' ? 'keep' : 'block';
+  if (approvalRequired || !emailVerified) return 'keep';
+  return current === undefined || current === 'pending' ? 'approve' : 'keep';
+};
 
 // Avisos: a la administración por cada solicitud nueva y a la persona cuando se aprueba su acceso
 export type AccessEmail = 'new-request' | 'approved';
@@ -77,7 +114,7 @@ export const buildEmail = (kind: AccessEmail, record: AccessRecord, appUrl: stri
         text: [
           `${record.name || 'Alguien'} (${record.email}) quiere acceder a CLAR.`,
           record.message ? `\nMensaje:\n${record.message}` : '',
-          `\nRevisa la solicitud en la pestaña «Accesos»: ${appUrl}`
+          `\nRevísala en «Administración» → «Solicitudes»: ${appUrl}`
         ].join('\n')
       }
     : {

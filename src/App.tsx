@@ -77,7 +77,14 @@ import {
   type FeedbackTicket
 } from './services/feedbackApi';
 import { AccessibilityPanel } from './components/AccessibilityPanel';
-import { setAccess, subscribeToAccessRequests, type AccessRequest, type DecisionStatus } from './services/access';
+import {
+  setAccess,
+  subscribeToAccessRequests,
+  type AccessRequest,
+  type DecisionStatus,
+  setAccessMode,
+  subscribeToApprovalRequired
+} from './services/access';
 import { deleteAccount, downloadAccountData, signOutEverywhere } from './services/account';
 import { changePassword, hasPassword } from './services/auth';
 import { CheckCircle2, Plus } from 'lucide-react';
@@ -163,6 +170,32 @@ export default function App({ user, services, isAdmin = false }: AppProps) {
   // ACCESOS (solo administración): solicitudes en vivo para la pestaña y su contador de pendientes
   const [accessRequests, setAccessRequests] = useState<AccessRequest[]>([]);
   const [accessError, setAccessError] = useState<string | null>(null);
+  // APROBACIÓN DE CUENTAS (solo administración): obligatoria o libre
+  const [approvalRequired, setApprovalRequired] = useState<boolean | null>(null);
+  useEffect(() => {
+    if (!isAdmin) return;
+    return subscribeToApprovalRequired(db, setApprovalRequired, (e) => {
+      console.error('Error loading access settings:', e);
+      setAccessError('No se pudo cargar la configuración de la aprobación de cuentas.');
+    });
+  }, [db, isAdmin]);
+  const handleSetApprovalRequired = async (required: boolean) => {
+    setAccessError(null);
+    try {
+      const { approved } = await setAccessMode(services.functions, required);
+      showToast(
+        required
+          ? 'Aprobación obligatoria activada.'
+          : approved > 0
+            ? `Aprobación desactivada. Se han aprobado ${approved === 1 ? '1 solicitud' : `${approved} solicitudes`}.`
+            : 'Aprobación desactivada: las cuentas nuevas entran solas.'
+      );
+    } catch (e) {
+      console.error('Error changing access mode:', e);
+      setAccessError('No se pudo cambiar la aprobación de cuentas. Revisa tu conexión e inténtalo de nuevo.');
+    }
+  };
+
   // MENSAJES DE CONTACTO (solo administración): los abiertos en vivo; los cerrados, bajo demanda en su vista
   const [feedbackTickets, setFeedbackTickets] = useState<FeedbackTicket[]>([]);
   const [feedbackError, setFeedbackError] = useState<string | null>(null);
@@ -754,6 +787,8 @@ export default function App({ user, services, isAdmin = false }: AppProps) {
                 currentUid={uid}
                 accessError={accessError}
                 onDecide={handleDecideAccess}
+                approvalRequired={approvalRequired}
+                onSetApprovalRequired={handleSetApprovalRequired}
                 tickets={feedbackTickets}
                 feedbackError={feedbackError}
                 onSetFeedbackStatus={handleSetFeedbackStatus}

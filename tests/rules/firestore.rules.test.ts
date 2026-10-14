@@ -198,6 +198,25 @@ describe('firestore.rules', () => {
     await assertFails(getDoc(doc(admin, 'feedback_limits/ana')));
   });
 
+  it('lets only the admin read the access settings; nobody reads or writes the email blocklist', async () => {
+    await env.withSecurityRulesDisabled(async (ctx) => {
+      await setDoc(doc(ctx.firestore(), 'admins/admin'), {
+        email: 'admin@example.com',
+        since: '2026-10-11T10:00:00.000Z'
+      });
+      await setDoc(doc(ctx.firestore(), 'settings/access'), { approvalRequired: false });
+      await setDoc(doc(ctx.firestore(), 'blocked_emails/x%40example.com'), { uid: 'x' });
+    });
+    const ana = env.authenticatedContext('ana').firestore();
+    const admin = env.authenticatedContext('admin', { email: 'admin@example.com' }).firestore();
+
+    await assertSucceeds(getDoc(doc(admin, 'settings/access')));
+    await assertFails(getDoc(doc(ana, 'settings/access')));
+    await assertFails(setDoc(doc(admin, 'settings/access'), { approvalRequired: true }));
+    await assertFails(getDoc(doc(admin, 'blocked_emails/x%40example.com')));
+    await assertFails(setDoc(doc(ana, 'blocked_emails/ana%40example.com'), { uid: 'ana' }));
+  });
+
   it('ignores an admin marker whose email is not the reader’s (e.g. after changing the admin account)', async () => {
     await env.withSecurityRulesDisabled(async (ctx) => {
       await setDoc(doc(ctx.firestore(), 'admins/former'), {

@@ -2,7 +2,8 @@ import { collection, doc, onSnapshot, orderBy, query, type Firestore } from 'fir
 import { httpsCallable, type Functions } from 'firebase/functions';
 
 // Aprobación de accesos: access/{uid} y admins/{uid} solo los escriben las Cloud Functions (functions/src/access.ts)
-export type AccessStatus = 'pending' | 'approved' | 'rejected' | 'revoked';
+// blocked: lista negra (también su email)
+export type AccessStatus = 'pending' | 'approved' | 'rejected' | 'revoked' | 'blocked';
 export type DecisionStatus = Exclude<AccessStatus, 'pending'>;
 // 'none': sin solicitud; 'unknown': aún no se ha podido consultar al servidor (p. ej. sin conexión)
 export type OwnAccessStatus = AccessStatus | 'none' | 'unknown';
@@ -67,3 +68,23 @@ export const setAccess = async (functions: Functions, uid: string, status: Decis
 export const forgetAccess = async (functions: Functions) => {
   await httpsCallable(functions, 'forgetAccess')();
 };
+
+// Aprobación de cuentas (solo administración): obligatoria o libre. Sin configuración guardada, es obligatoria.
+export const subscribeToApprovalRequired = (
+  db: Firestore,
+  onChange: (approvalRequired: boolean) => void,
+  onError: (error: Error) => void
+) =>
+  onSnapshot(
+    doc(db, 'settings', 'access'),
+    (snapshot) => onChange(snapshot.data()?.approvalRequired !== false),
+    onError
+  );
+
+export const setAccessMode = async (functions: Functions, approvalRequired: boolean) =>
+  (
+    await httpsCallable<{ approvalRequired: boolean }, { approvalRequired: boolean; approved: number }>(
+      functions,
+      'setAccessMode'
+    )({ approvalRequired })
+  ).data;

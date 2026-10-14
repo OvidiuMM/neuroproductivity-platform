@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Clock, Download, LogOut, Send, ShieldAlert, Trash2, WifiOff } from 'lucide-react';
+import { Ban, Clock, Download, LogOut, Send, ShieldAlert, Trash2, WifiOff } from 'lucide-react';
 import { BRAND_NAME, BrandMark } from './BrandMark';
 import { ACCESS_MESSAGE_MAX_LENGTH, type OwnAccessStatus } from '../services/access';
 import { describeAuthError } from '../services/auth';
@@ -35,13 +35,24 @@ const COPY: Record<AccessRequestScreenProps['status'], { title: string; text: st
     title: 'Acceso retirado',
     text: 'Tu acceso a CLAR se ha retirado. Tus datos siguen guardados. Pasado un día puedes volver a solicitarlo.'
   },
+  blocked: {
+    title: 'Cuenta bloqueada',
+    text: 'Esta cuenta no puede usar CLAR. Si crees que es un error, escríbenos.'
+  },
   unknown: {
     title: 'No se pudo comprobar tu acceso',
     text: 'Necesitas conexión a internet para comprobar si tu cuenta tiene acceso.'
   }
 };
 
-const ICONS = { none: Send, pending: Clock, rejected: ShieldAlert, revoked: ShieldAlert, unknown: WifiOff };
+const ICONS = {
+  none: Send,
+  pending: Clock,
+  rejected: ShieldAlert,
+  revoked: ShieldAlert,
+  blocked: Ban,
+  unknown: WifiOff
+};
 
 // Pantalla para las cuentas sin acceso aprobado: solicitud con mensaje opcional y estado de la solicitud
 export const AccessRequestScreen: React.FC<AccessRequestScreenProps> = ({
