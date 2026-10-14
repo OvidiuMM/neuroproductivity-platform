@@ -106,17 +106,20 @@ export const AccessGate: React.FC<AccessGateProps> = ({ user, services }) => {
 
   return (
     <>
-      <AccessRequestScreen
-        status={effectiveStatus}
-        email={user.email ?? ''}
-        onRequest={handleRequest}
-        onRetry={check}
-        onSignOut={() => signOutAndClearCache(services)}
-        onContact={() => setIsFeedbackOpen(true)}
-        onDownloadData={() => downloadAccountData(services, user)}
-        onDeleteAccount={(password) => deleteAccount(services, user, password)}
-        hasPassword={hasPassword(user)}
-      />
+      {/* Con la ventana de contacto abierta, la pantalla de detrás queda inerte */}
+      <div className="contents" inert={isFeedbackOpen}>
+        <AccessRequestScreen
+          status={effectiveStatus}
+          email={user.email ?? ''}
+          onRequest={handleRequest}
+          onRetry={check}
+          onSignOut={() => signOutAndClearCache(services)}
+          onContact={() => setIsFeedbackOpen(true)}
+          onDownloadData={() => downloadAccountData(services, user)}
+          onDeleteAccount={(password) => deleteAccount(services, user, password)}
+          hasPassword={hasPassword(user)}
+        />
+      </div>
       {isFeedbackOpen && <FeedbackDialog functions={services.functions} onClose={() => setIsFeedbackOpen(false)} />}
     </>
   );

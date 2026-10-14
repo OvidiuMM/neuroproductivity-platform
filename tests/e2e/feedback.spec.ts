@@ -60,8 +60,17 @@ test('a person writes from the help with the technical details and the admin rea
   await item.getByRole('button', { name: `Marcar como leído: ${subject}` }).click();
   const read = admin.getByRole('listitem', { name: `${subject} (Leído)` });
   await read.getByRole('button', { name: `Cerrar: ${subject}` }).click();
+  await expect(admin.getByRole('listitem', { name: new RegExp(subject) })).toHaveCount(0);
+
+  // Los cerrados se cargan al pedirlos, y desde ahí se puede reabrir
+  const closed = admin.getByRole('region', { name: /^Cerrados/ });
+  await closed.getByRole('button', { name: 'Ver los cerrados' }).click();
+  const closedItem = closed.getByRole('listitem', { name: `${subject} (Cerrado)` });
+  await expect(closedItem).toBeVisible();
+  await closedItem.getByRole('button', { name: `Reabrir: ${subject}` }).click();
+  await expect(closedItem).toBeHidden();
   await expect(
-    admin.getByRole('region', { name: /^Cerrados/ }).getByRole('listitem', { name: `${subject} (Cerrado)` })
+    admin.getByRole('region', { name: /^Abiertos/ }).getByRole('listitem', { name: `${subject} (Leído)` })
   ).toBeVisible();
 });
 

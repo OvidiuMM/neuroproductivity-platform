@@ -1,12 +1,15 @@
 import React, { useState } from 'react';
 import { Mail } from 'lucide-react';
 import { FEEDBACK_TYPES } from '../services/feedback';
-import type { FeedbackStatus, FeedbackTicket } from '../services/feedbackApi';
+import type { ClosedFeedbackPage, FeedbackStatus, FeedbackTicket } from '../services/feedbackApi';
 
 interface FeedbackAdminViewProps {
+  // Abiertos (nuevos y leídos), en vivo
   tickets: FeedbackTicket[];
   error: string | null;
   onSetStatus: (ticket: FeedbackTicket, status: FeedbackStatus) => Promise<void>;
+  // Cerrados, por páginas y bajo demanda
+  loadClosed: (cursor: ClosedFeedbackPage['cursor']) => Promise<ClosedFeedbackPage>;
 }
 
 const dateTime = new Intl.DateTimeFormat('es-ES', { dateStyle: 'medium', timeStyle: 'short' });
@@ -19,15 +22,37 @@ const STATUS_CLASS: Record<FeedbackStatus, string> = {
 };
 
 // Mensajes de contacto: los nuevos y leídos a la vista, los cerrados aparte. Se responde por email.
-export const FeedbackAdminView: React.FC<FeedbackAdminViewProps> = ({ tickets, error, onSetStatus }) => {
+export const FeedbackAdminView: React.FC<FeedbackAdminViewProps> = ({ tickets, error, onSetStatus, loadClosed }) => {
   const [busyId, setBusyId] = useState<string | null>(null);
-  const open = tickets.filter((t) => t.status !== 'closed');
-  const closed = tickets.filter((t) => t.status === 'closed');
+  const open = tickets;
+  // Cerrados: no se cargan hasta que se piden
+  const [closed, setClosed] = useState<FeedbackTicket[] | null>(null);
+  const [closedPage, setClosedPage] = useState<ClosedFeedbackPage | null>(null);
+  const [loadingClosed, setLoadingClosed] = useState(false);
+  const [closedError, setClosedError] = useState<string | null>(null);
+
+  const loadMoreClosed = async () => {
+    setLoadingClosed(true);
+    setClosedError(null);
+    try {
+      const page = await loadClosed(closedPage?.cursor ?? null);
+      setClosed((current) => [...(current ?? []), ...page.tickets]);
+      setClosedPage(page);
+    } catch (e) {
+      console.error('Error loading closed feedback:', e);
+      setClosedError('No se pudieron cargar los mensajes cerrados.');
+    } finally {
+      setLoadingClosed(false);
+    }
+  };
 
   const setStatus = async (ticket: FeedbackTicket, status: FeedbackStatus) => {
     setBusyId(ticket.id);
     try {
       await onSetStatus(ticket, status);
+      // La lista de cerrados ya cargada se ajusta aquí (los abiertos llegan en vivo)
+      if (status === 'closed') setClosed((current) => current && [{ ...ticket, status }, ...current]);
+      else setClosed((current) => current && current.filter((t) => t.id !== ticket.id));
     } finally {
       setBusyId(null);
     }
@@ -50,8 +75,8 @@ export const FeedbackAdminView: React.FC<FeedbackAdminViewProps> = ({ tickets, e
         <span className="text-slate-500">{dateTime.format(new Date(ticket.createdAt))}</span>
       </div>
       <h4 className="text-sm font-bold break-words text-slate-900">{ticket.subject}</h4>
-      <p className="text-xs whitespace-pre-wrap text-slate-700">{ticket.description}</p>
-      <p className="text-xs text-slate-600">
+      <p className="text-xs break-words whitespace-pre-wrap text-slate-700">{ticket.description}</p>
+      <p className="text-xs break-words text-slate-600">
         {ticket.name || 'Sin nombre'} · {ticket.email}
       </p>
       {ticket.context && (
@@ -122,14 +147,25 @@ export const FeedbackAdminView: React.FC<FeedbackAdminViewProps> = ({ tickets, e
           <ul className="space-y-3">{open.map(renderTicket)}</ul>
         )}
       </section>
-      {closed.length > 0 && (
-        <section aria-labelledby="feedback-closed" className="space-y-3">
-          <h3 id="feedback-closed" className="text-xs font-bold tracking-wider text-slate-700 uppercase">
-            Cerrados ({closed.length})
-          </h3>
-          <ul className="space-y-3">{closed.map(renderTicket)}</ul>
-        </section>
-      )}
+      <section aria-labelledby="feedback-closed" className="space-y-3">
+        <h3 id="feedback-closed" className="text-xs font-bold tracking-wider text-slate-700 uppercase">
+          Cerrados{closed ? ` (${closed.length}${closedPage?.hasMore ? '+' : ''})` : ''}
+        </h3>
+        {closedError && (
+          <p role="alert" className="text-xs text-red-700">
+            {closedError}
+          </p>
+        )}
+        {closed && closed.length === 0 && !closedPage?.hasMore && (
+          <p className="text-xs text-slate-600">No hay mensajes cerrados.</p>
+        )}
+        {closed && closed.length > 0 && <ul className="space-y-3">{closed.map(renderTicket)}</ul>}
+        {(!closed || closedPage?.hasMore) && (
+          <button type="button" onClick={loadMoreClosed} disabled={loadingClosed} className={actionClass}>
+            {loadingClosed ? 'Cargando…' : closed ? 'Cargar más' : 'Ver los cerrados'}
+          </button>
+        )}
+      </section>
     </div>
   );
 };
