@@ -11,6 +11,7 @@ import {
 import type { User } from 'firebase/auth';
 import { EmailDraft, Goal, MeetingGuard, TaskItem, WheelOfLifeLog } from '../types';
 import { normalizeTask } from './tasks';
+import { onboardingRecord, type OnboardingOutcome, type OnboardingRecord } from './onboarding';
 
 // Datos de cada persona en users/{uid}/<colección>/<id>. Las reglas (firestore.rules) solo dejan acceder al propio uid.
 export type UserCollection = 'tasks' | 'wheelLogs' | 'meetings' | 'emails' | 'goals';
@@ -129,6 +130,24 @@ export const saveUserProfile = (db: Firestore, user: User) =>
     },
     { merge: true }
   );
+
+// Perfil (users/{uid}) en vivo: por ahora solo interesa si ya vio la bienvenida. `fromServer` dice si el dato ya
+// está confirmado por el servidor (al principio puede venir solo de la caché, o no existir aún)
+export const subscribeToProfile = (
+  db: Firestore,
+  uid: string,
+  onData: (profile: OnboardingRecord | null, fromServer: boolean) => void,
+  onError: (error: Error) => void
+) =>
+  onSnapshot(
+    doc(db, 'users', uid),
+    { includeMetadataChanges: true },
+    (snapshot) => onData((snapshot.data() as OnboardingRecord | undefined) ?? null, !snapshot.metadata.fromCache),
+    onError
+  );
+
+export const markOnboardingSeen = (db: Firestore, uid: string, outcome: OnboardingOutcome) =>
+  setDoc(doc(db, 'users', uid), onboardingRecord(outcome), { merge: true });
 
 // Firestore admite como máximo 500 operaciones por lote
 const BATCH_LIMIT = 450;

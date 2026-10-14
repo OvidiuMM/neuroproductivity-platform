@@ -191,6 +191,18 @@ test('goals: dialog, panel in the Wheel and card in Inicio', async ({ page }) =>
   await expectNoViolations(page, 'inicio con metas');
 });
 
+test('welcome dialog, every step', async ({ page }) => {
+  await page.goto('/');
+  await signInWithGoogle(page, undefined, undefined, { onboarded: false });
+  const dialog = page.getByRole('dialog');
+  await expect(dialog.getByRole('heading', { name: 'Te damos la bienvenida a CLAR' })).toBeVisible();
+  await expectNoViolations(page, 'bienvenida: por qué');
+  await dialog.getByRole('button', { name: 'Siguiente' }).click();
+  await expectNoViolations(page, 'bienvenida: el método');
+  await dialog.getByRole('button', { name: 'Siguiente' }).click();
+  await expectNoViolations(page, 'bienvenida: cómo empezar');
+});
+
 test('email sign-up and email confirmation screens', async ({ page }) => {
   await page.goto('/');
   await page.getByRole('button', { name: 'Crear una cuenta' }).click();
