@@ -58,7 +58,7 @@ export const SplashScreen: React.FC<SplashScreenProps> = ({
       }}
       role="status"
       aria-label={`Cargando ${BRAND_NAME}`}
-      className={`fixed inset-0 z-50 flex flex-col items-center justify-between bg-slate-950 p-8 transition-all duration-300 select-none ${
+      className={`fixed inset-0 z-50 flex flex-col items-center justify-between bg-slate-950 p-8 pt-[max(2rem,env(safe-area-inset-top))] pb-[max(2rem,env(safe-area-inset-bottom))] transition-all duration-300 select-none ${
         isFadingOut ? 'pointer-events-none scale-98 opacity-0' : 'scale-100 opacity-100'
       }`}
     >

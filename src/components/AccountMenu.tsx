@@ -17,6 +17,8 @@ interface AccountMenuProps {
   onChangePassword: (currentPassword: string, newPassword: string) => Promise<void>;
   onSignOutEverywhere: () => Promise<void>;
   onOpenAccessibility: () => void;
+  // Adónde vuelve el foco si el botón que abrió el menú ya no está (p. ej. la hoja «Más» del móvil)
+  returnFocusTo?: () => HTMLElement | null;
 }
 
 type Busy = 'export' | 'delete' | 'password' | 'everywhere' | null;
@@ -38,7 +40,8 @@ export const AccountMenu: React.FC<AccountMenuProps> = ({
   onDeleteAccount,
   onChangePassword,
   onSignOutEverywhere,
-  onOpenAccessibility
+  onOpenAccessibility,
+  returnFocusTo
 }) => {
   const [busy, setBusy] = useState<Busy>(null);
   const [panel, setPanel] = useState<Panel>(null);
@@ -48,7 +51,7 @@ export const AccountMenu: React.FC<AccountMenuProps> = ({
   const [newPassword, setNewPassword] = useState('');
 
   const dialogRef = useRef<HTMLDivElement>(null);
-  useModalFocus(isOpen, dialogRef, onClose);
+  useModalFocus(isOpen, dialogRef, onClose, returnFocusTo);
 
   // El menú sigue montado cerrado: lo escrito (contraseñas incluidas) no debe verse al volver a abrirlo
   const clearPasswords = () => {
