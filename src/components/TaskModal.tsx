@@ -359,7 +359,8 @@ export const TaskModal: React.FC<TaskModalProps> = ({
       description: description.trim(),
       priority,
       isSomeday,
-      goalId: goal?.id,
+      // El vínculo se conserva aunque la meta aún no haya llegado (las metas y las tareas cargan por separado)
+      goalId: goalId || undefined,
       wheelCategory: goal ? goal.area : wheelCategory,
       wheelCategoryConfidence,
       linkedBy,
@@ -558,6 +559,7 @@ export const TaskModal: React.FC<TaskModalProps> = ({
                 className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-400 focus:outline-none"
               >
                 <option value="">(Sin meta)</option>
+                {goalId && !goal && <option value={goalId}>(Meta no disponible ahora)</option>}
                 {WHEEL_CATEGORIES.filter((area) => goalOptions.some((g) => g.area === area)).map((area) => (
                   <optgroup key={area} label={area}>
                     {goalOptions
