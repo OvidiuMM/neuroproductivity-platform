@@ -1,5 +1,5 @@
 import { expect, test, type Page } from '@playwright/test';
-import { fillAndSaveTask, localDateFromToday, signInWithGoogle } from './helpers';
+import { fillAndSaveTask, localDateFromToday, openSection, signInWithGoogle } from './helpers';
 
 const unique = () => Date.now().toString(36);
 
@@ -37,14 +37,14 @@ test('ranks the Top 10 by effective priority and filters it by estimate and dead
   await fillAndSaveTask(page, { title: long, priority: 'HIGH', estimateMinutes: 120 });
 
   // La tarea lejana muestra la prioridad rebajada y por qué
-  const farRow = page.locator('div.rounded-2xl', { has: page.getByRole('heading', { name: far }) }).last();
+  const farRow = page.getByRole('listitem').filter({ has: page.getByRole('heading', { name: far }) });
   await expect(farRow.getByText('MEDIA', { exact: true })).toBeVisible();
   await expect(farRow.getByText('plazo > 1 semana')).toBeVisible();
 
-  // Los botones de cada tarea son grandes, fáciles de pulsar
-  for (const name of [`Editar «${far}»`, `Eliminar «${far}»`, `Añadir «${far}» al calendario`]) {
+  // Completar y «⋯» son grandes, fáciles de pulsar (al menos 44 px)
+  for (const name of [`Marcar «${far}» como hecha`, `Acciones de «${far}»`]) {
     const box = (await page.getByRole('button', { name, exact: true }).boundingBox())!;
-    expect(Math.min(box.width, box.height), name).toBeGreaterThanOrEqual(40);
+    expect(Math.min(box.width, box.height), name).toBeGreaterThanOrEqual(44);
   }
 
   // Orden por prioridad efectiva: Alta (sin fecha) → Media que vence antes → Media lejana
@@ -83,4 +83,34 @@ test('ranks the Top 10 by effective priority and filters it by estimate and dead
 
   await page.getByRole('button', { name: 'Quitar filtros' }).click();
   await expect.poll(() => top10Titles(page)).toEqual([quick, far, long]);
+});
+
+test('on a phone, sort and filters open in a sheet and active filters are removable chips', async ({ page }) => {
+  await page.setViewportSize({ width: 375, height: 800 });
+  await page.goto('/');
+  await signInWithGoogle(page);
+  await openSection(page, 'Listas Duales');
+
+  const short = `Enviar el recibo ${unique()}`;
+  const long = `Preparar la reunión ${unique()}`;
+  await page.getByRole('button', { name: 'Capturar Primera Acción' }).click();
+  await fillAndSaveTask(page, { title: short, estimateMinutes: 15 });
+  await page.getByRole('button', { name: 'Añadir tarea', exact: true }).click();
+  await fillAndSaveTask(page, { title: long, estimateMinutes: 120 });
+
+  const open = page.getByRole('button', { name: 'Ordenar y filtrar' });
+  await open.click();
+  const sheet = page.getByRole('dialog', { name: 'Ordenar y filtrar' });
+  await sheet.getByLabel('Ordenar por:').selectOption('estimate');
+  await sheet.getByLabel('Estimación hasta').selectOption('30');
+  await sheet.getByRole('button', { name: 'Ver 1 tarea' }).click();
+  await expect(sheet).toBeHidden();
+  await expect(page.getByRole('button', { name: 'Ordenar y filtrar (1)' })).toBeFocused();
+  await expect.poll(() => top10Titles(page)).toEqual([short]);
+
+  // El filtro activo queda a la vista y se quita con un toque
+  const chip = page.getByRole('button', { name: 'Quitar el filtro Estimación hasta: 30 min' });
+  await chip.click();
+  await expect(chip).toBeHidden();
+  await expect.poll(() => top10Titles(page)).toEqual([short, long]);
 });

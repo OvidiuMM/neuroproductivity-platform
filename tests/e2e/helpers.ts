@@ -86,6 +86,7 @@ export const localDateFromToday = (days: number) => {
 
 interface NewTask {
   title: string;
+  description?: string;
   dueDate?: string;
   dueTime?: string;
   startDate?: string;
@@ -94,16 +95,24 @@ interface NewTask {
   repeat?: { frequency: 'DAILY' | 'WEEKLY' | 'MONTHLY' | 'YEARLY'; monthlyOption?: string | RegExp };
 }
 
+// Despliega «Más opciones» del formulario de tarea (descripción, estimación, área, inicio, repetición…) si está plegado
+export const showMoreOptions = async (page: Page) => {
+  const toggle = page.getByRole('button', { name: /^Más opciones/ });
+  if ((await toggle.getAttribute('aria-expanded')) === 'false') await toggle.click();
+};
+
 // Rellena y guarda el formulario de tarea, que ya debe estar abierto
 export const fillAndSaveTask = async (page: Page, task: NewTask) => {
   await page.getByPlaceholder('ej. Llamar al proveedor para acordar el plazo de entrega').fill(task.title);
-  await page
-    .getByPlaceholder('Detalla el resultado esperado, personas involucradas o requerimientos físicos previos...')
-    .fill('Confirmar la fecha y hora de entrega.');
   if (task.dueDate) await page.getByLabel('Fecha límite', { exact: true }).fill(task.dueDate);
   if (task.dueTime) await page.getByLabel('Hora límite').fill(task.dueTime);
-  if (task.startDate) await page.getByLabel('Fecha de inicio', { exact: true }).fill(task.startDate);
   if (task.priority) await page.getByLabel('Nivel de Prioridad').selectOption(task.priority);
+  if (task.description || task.startDate || task.estimateMinutes || task.repeat) await showMoreOptions(page);
+  if (task.description)
+    await page
+      .getByPlaceholder('Detalla el resultado esperado, personas involucradas o requerimientos físicos previos...')
+      .fill(task.description);
+  if (task.startDate) await page.getByLabel('Fecha de inicio', { exact: true }).fill(task.startDate);
   if (task.estimateMinutes) await page.getByLabel('Estimación (duración)').selectOption(String(task.estimateMinutes));
   if (task.repeat) {
     await page.getByLabel('Repetir').selectOption(task.repeat.frequency);
@@ -182,3 +191,11 @@ export const openSection = async (page: Page, name: string) => {
     await page.getByRole('button', { name: /^Más secciones/ }).click();
   await page.getByRole('button', { name, exact: true }).click();
 };
+
+// Marca una tarea como hecha con el círculo de su tarjeta
+export const completeTask = (page: Page, title: string) =>
+  page.getByRole('button', { name: `Marcar «${title}» como hecha`, exact: true }).click();
+
+// Abre el panel «⋯» de una tarea: Editar, Estado, Añadir al calendario y Eliminar
+export const openTaskActions = (page: Page, title: string) =>
+  page.getByRole('button', { name: `Acciones de «${title}»`, exact: true }).click();

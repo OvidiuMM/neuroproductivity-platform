@@ -1,6 +1,6 @@
 import { readFileSync } from 'node:fs';
 import { expect, test } from '@playwright/test';
-import { fillAndSaveTask, signInWithGoogle } from './helpers';
+import { completeTask, fillAndSaveTask, openTaskActions, showMoreOptions, signInWithGoogle } from './helpers';
 
 const pad = (n: number) => String(n).padStart(2, '0');
 const toDateString = (d: Date) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
@@ -31,6 +31,7 @@ test('a task repeated on the second Monday of every month creates its next occur
   const title = `Preparar el informe mensual ${Date.now().toString(36)}`;
   await page.getByRole('button', { name: 'Capturar Primera Acción' }).click();
   // Al repetir, «Inicio» es desde cuándo se repite y ancla la regla (el 2.º lunes)
+  await showMoreOptions(page);
   await page.getByLabel('Repetir').selectOption('MONTHLY');
   await page.getByLabel('Fecha de inicio', { exact: true }).fill(toDateString(due));
   await page.getByRole('radio', { name: 'El 2.º lunes' }).check();
@@ -43,19 +44,26 @@ test('a task repeated on the second Monday of every month creates its next occur
   await expect(page.getByText('Cada mes, el 2.º lunes').first()).toBeVisible();
 
   // El .ics exporta la serie completa
-  await page.getByRole('button', { name: `Añadir «${title}» al calendario`, exact: true }).click();
+  await openTaskActions(page, title);
   const downloadPromise = page.waitForEvent('download');
-  await page.getByRole('menuitem', { name: /Descargar \.ics/ }).click();
+  await page.getByRole('button', { name: /Descargar \.ics/ }).click();
   const ics = readFileSync(await (await downloadPromise).path(), 'utf8');
   expect(ics).toContain('RRULE:FREQ=MONTHLY;INTERVAL=1;BYDAY=2MO');
-  await page.keyboard.press('Escape');
-  await page.mouse.click(5, 400);
 
   // Al marcarla Hecha, se archiva y aparece la siguiente con la fecha del 2.º lunes del mes siguiente
-  await page.getByLabel(`Estado de «${title}»`).selectOption('DONE');
+  await completeTask(page, title);
   await expect(page.getByText(`Vence: ${dateFormat.format(next)}`)).toBeVisible();
   await expect(page.getByRole('heading', { name: title })).toHaveCount(1);
+  await openTaskActions(page, title);
   await expect(page.getByLabel(`Estado de «${title}»`)).toHaveValue('PENDING');
+  await page.keyboard.press('Escape');
+
+  // «Deshacer» devuelve la tarea y quita la repetición creada; volver a marcarla la crea de nuevo
+  await page.getByRole('button', { name: 'Deshacer' }).click();
+  await expect(page.getByText(`Vence: ${dateFormat.format(next)}`)).toBeHidden();
+  await expect(page.getByText(`Vence: ${dateFormat.format(due)}`)).toBeVisible();
+  await completeTask(page, title);
+  await expect(page.getByText(`Vence: ${dateFormat.format(next)}`)).toBeVisible();
 
   // Reactivar la archivada y volver a completarla no crea una repetición duplicada
   await page.getByRole('button', { name: /Archivadas/ }).click();
@@ -63,7 +71,10 @@ test('a task repeated on the second Monday of every month creates its next occur
   await archive.getByLabel(`Estado de «${title}»`).selectOption('PENDING');
   await archive.getByRole('button', { name: 'Cerrar' }).click();
   await expect(page.getByRole('heading', { name: title })).toHaveCount(2);
-  await page.getByLabel(`Estado de «${title}»`).first().selectOption('DONE');
+  await page
+    .getByRole('button', { name: `Marcar «${title}» como hecha` })
+    .first()
+    .click();
   await expect(page.getByRole('heading', { name: title })).toHaveCount(1);
 });
 
@@ -72,6 +83,7 @@ test('turning repetition off keeps the first repetition as the due date, without
   await signInWithGoogle(page);
   await page.getByRole('button', { name: 'Listas Duales' }).click();
   await page.getByRole('button', { name: 'Capturar Primera Acción' }).click();
+  await showMoreOptions(page);
   await page.getByLabel('Repetir').selectOption('WEEKLY');
   const start = new Date();
   start.setDate(start.getDate() + 3);
@@ -98,20 +110,22 @@ test('editing a repetition that fell on a shorter month keeps the series day', a
   const endOfFebruary = new Date(year, 2, 0);
   const title = `Pagar el alquiler ${Date.now().toString(36)}`;
   await page.getByRole('button', { name: 'Capturar Primera Acción' }).click();
+  await showMoreOptions(page);
   await page.getByLabel('Repetir').selectOption('MONTHLY');
   await page.getByLabel('Fecha de inicio', { exact: true }).fill(`${year}-01-31`);
   await fillAndSaveTask(page, { title });
-  await page.getByLabel(`Estado de «${title}»`).selectOption('DONE');
+  await completeTask(page, title);
   await expect(
     page.getByText(dateFormat.format(endOfFebruary).replace(/ \d{4}$/, ''), { exact: false }).first()
   ).toBeVisible();
 
   // Abrir y guardar la de febrero sin cambios no mueve la serie a su último día
+  await openTaskActions(page, title);
   await page.getByRole('button', { name: `Editar «${title}»` }).click();
   await expect(page.getByRole('radio', { name: 'El día 31' })).toBeChecked();
   await page.getByRole('button', { name: 'Actualizar Acción' }).click();
   await expect(page.getByRole('button', { name: 'Actualizar Acción' })).toBeHidden();
-  await page.getByLabel(`Estado de «${title}»`).selectOption('DONE');
+  await completeTask(page, title);
   await expect(
     page.getByText(dateFormat.format(new Date(year, 2, 31)).replace(/ \d{4}$/, ''), { exact: false }).first()
   ).toBeVisible();

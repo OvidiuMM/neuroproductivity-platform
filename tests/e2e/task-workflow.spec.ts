@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test';
-import { signInWithGoogle } from './helpers';
+import { showMoreOptions, signInWithGoogle } from './helpers';
 
 test('creates a task and persists it after reloading', async ({ page }) => {
   await page.goto('/');
@@ -12,6 +12,7 @@ test('creates a task and persists it after reloading', async ({ page }) => {
 
   const title = `Llamar al proveedor E2E ${Date.now()}`;
   await page.getByPlaceholder('ej. Llamar al proveedor para acordar el plazo de entrega').fill(title);
+  await showMoreOptions(page);
   await page
     .getByPlaceholder('Detalla el resultado esperado, personas involucradas o requerimientos físicos previos...')
     .fill('Confirmar la fecha y hora de entrega.');

@@ -1,6 +1,13 @@
 import { readFileSync } from 'node:fs';
 import { expect, test } from '@playwright/test';
-import { expectNoHorizontalOverflow, fillAndSaveTask, localDateFromToday, signInWithGoogle } from './helpers';
+import {
+  completeTask,
+  expectNoHorizontalOverflow,
+  fillAndSaveTask,
+  localDateFromToday,
+  openTaskActions,
+  signInWithGoogle
+} from './helpers';
 
 const unique = () => Date.now().toString(36);
 
@@ -54,7 +61,13 @@ test('archives a task when marked done and reactivates it from the archive', asy
   await fillAndSaveTask(page, { title });
   await expect(page.getByRole('heading', { name: title })).toBeVisible();
 
-  await page.getByLabel(`Estado de «${title}»`).selectOption('DONE');
+  await completeTask(page, title);
+  await expect(page.getByRole('heading', { name: title })).toBeHidden();
+
+  // «Deshacer» la devuelve a la lista; volver a marcarla la archiva
+  await page.getByRole('button', { name: 'Deshacer' }).click();
+  await expect(page.getByRole('heading', { name: title })).toBeVisible();
+  await completeTask(page, title);
   await expect(page.getByRole('heading', { name: title })).toBeHidden();
 
   const archiveButton = page.getByRole('button', { name: /Archivadas/ });
@@ -78,8 +91,48 @@ test('archives a task when marked done and reactivates it from the archive', asy
   await expect(archive.getByText(title)).toBeHidden();
   await archive.getByRole('button', { name: 'Cerrar' }).click();
 
+  // Reactivada «En progreso»: la tarjeta lo indica (las pendientes no llevan estado)
+  const card = page.getByRole('listitem').filter({ has: page.getByRole('heading', { name: title }) });
+  await expect(card.getByText('En progreso', { exact: true })).toBeVisible();
+});
+
+test('changing the status from «⋯» with the keyboard leaves the focus on that button', async ({ page }) => {
+  await page.goto('/');
+  await signInWithGoogle(page);
+  await page.getByRole('button', { name: 'Listas Duales' }).click();
+
+  const title = `Llamar a la academia ${unique()}`;
+  await page.getByRole('button', { name: 'Capturar Primera Acción' }).click();
+  await fillAndSaveTask(page, { title });
+  const actions = page.getByRole('button', { name: `Acciones de «${title}»` });
+  await actions.focus();
+  await page.keyboard.press('Enter');
+  await page.keyboard.press('Tab');
+  await page.keyboard.press('Tab');
+  const status = page.getByLabel(`Estado de «${title}»`);
+  await expect(status).toBeFocused();
+  await status.selectOption('IN_PROGRESS');
+  await expect(status).toBeHidden();
+  await expect(actions).toBeFocused();
+});
+
+test('a deleted task can be brought back with «Deshacer»', async ({ page }) => {
+  await page.goto('/');
+  await signInWithGoogle(page);
+  await page.getByRole('button', { name: 'Listas Duales' }).click();
+
+  const title = `Llamar a la gestoría ${unique()}`;
+  await page.getByRole('button', { name: 'Capturar Primera Acción' }).click();
+  await fillAndSaveTask(page, { title });
+  await openTaskActions(page, title);
+  await page.getByRole('button', { name: `Eliminar «${title}»` }).click();
+  await expect(page.getByRole('heading', { name: title })).toBeHidden();
+  await page.getByRole('button', { name: 'Deshacer' }).click();
   await expect(page.getByRole('heading', { name: title })).toBeVisible();
-  await expect(page.getByLabel(`Estado de «${title}»`)).toHaveValue('IN_PROGRESS');
+  // Sigue ahí tras recargar: se ha vuelto a guardar
+  await page.reload();
+  await page.getByRole('button', { name: 'Listas Duales' }).click();
+  await expect(page.getByRole('heading', { name: title })).toBeVisible();
 });
 
 test('adds a task with a due date to Google, Outlook or an .ics calendar file', async ({ page }) => {
@@ -91,21 +144,21 @@ test('adds a task with a due date to Google, Outlook or an .ics calendar file', 
   await page.getByRole('button', { name: 'Capturar Primera Acción' }).click();
   await fillAndSaveTask(page, { title, dueDate: localDateFromToday(10), dueTime: '10:30' });
 
-  await page.getByRole('button', { name: `Añadir «${title}» al calendario`, exact: true }).click();
-  const menu = page.getByRole('menu');
+  await openTaskActions(page, title);
+  const menu = page.getByRole('list', { name: 'Añadir al calendario' });
 
-  const google = new URL((await menu.getByRole('menuitem', { name: 'Google Calendar' }).getAttribute('href'))!);
+  const google = new URL((await menu.getByRole('link', { name: 'Google Calendar' }).getAttribute('href'))!);
   expect(google.hostname).toBe('calendar.google.com');
   expect(google.searchParams.get('text')).toBe(title);
   expect(google.searchParams.get('dates')).toMatch(/^\d{8}T\d{6}Z\/\d{8}T\d{6}Z$/);
 
-  const personal = new URL((await menu.getByRole('menuitem', { name: /Outlook\.com/ }).getAttribute('href'))!);
+  const personal = new URL((await menu.getByRole('link', { name: /Outlook\.com/ }).getAttribute('href'))!);
   expect(personal.hostname).toBe('outlook.live.com');
-  const work = new URL((await menu.getByRole('menuitem', { name: /Microsoft 365/ }).getAttribute('href'))!);
+  const work = new URL((await menu.getByRole('link', { name: /Microsoft 365/ }).getAttribute('href'))!);
   expect(work.hostname).toBe('outlook.office.com');
 
   const downloadPromise = page.waitForEvent('download');
-  await menu.getByRole('menuitem', { name: /Descargar \.ics/ }).click();
+  await menu.getByRole('button', { name: /Descargar \.ics/ }).click();
   const download = await downloadPromise;
   expect(download.suggestedFilename()).toMatch(/\.ics$/);
   const ics = readFileSync(await download.path(), 'utf8');
@@ -113,7 +166,7 @@ test('adds a task with a due date to Google, Outlook or an .ics calendar file', 
   expect(ics).toContain(`SUMMARY:${title}`);
 });
 
-test('disables the calendar button for tasks without a due date', async ({ page }) => {
+test('explains that a task needs a due date to go to the calendar', async ({ page }) => {
   await page.goto('/');
   await signInWithGoogle(page);
   await page.getByRole('button', { name: 'Listas Duales' }).click();
@@ -122,9 +175,9 @@ test('disables the calendar button for tasks without a due date', async ({ page 
   await page.getByRole('button', { name: 'Capturar Primera Acción' }).click();
   await fillAndSaveTask(page, { title });
 
-  await expect(
-    page.getByRole('button', { name: `Añadir «${title}» al calendario (necesita fecha límite)` })
-  ).toBeDisabled();
+  await openTaskActions(page, title);
+  await expect(page.getByText('Pon una fecha límite para añadirla al calendario.')).toBeVisible();
+  await expect(page.getByRole('link', { name: 'Google Calendar' })).toHaveCount(0);
 });
 
 test('updates deadline colors while the page stays open', async ({ page }) => {

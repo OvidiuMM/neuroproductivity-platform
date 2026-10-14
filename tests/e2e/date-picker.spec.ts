@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test';
-import { openSection, signInWithGoogle } from './helpers';
+import { openSection, showMoreOptions, signInWithGoogle } from './helpers';
 
 const fullDay = new Intl.DateTimeFormat('es-ES', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
 const longDay = new Intl.DateTimeFormat('es-ES', { weekday: 'long', day: 'numeric', month: 'long' });
@@ -53,9 +53,6 @@ test('date fields use a Monday-first calendar and dd/mm/aaaa, with keyboard supp
   await expect(dueDate).toHaveValue('05/03/2027');
   const title = `Revisar el contrato ${Date.now().toString(36)}`;
   await page.getByPlaceholder('ej. Llamar al proveedor para acordar el plazo de entrega').fill(title);
-  await page
-    .getByPlaceholder('Detalla el resultado esperado, personas involucradas o requerimientos físicos previos...')
-    .fill('Confirmar las cláusulas de entrega.');
   await dueDate.fill('31/02/2027');
   await expect(dueDate).toHaveAttribute('aria-invalid', 'true');
   await page.getByRole('button', { name: 'Guardar Acción Operativa' }).click();
@@ -95,6 +92,7 @@ test('the calendar stays inside the screen on a phone', async ({ page }) => {
   await signInWithGoogle(page);
   await openSection(page, 'Listas Duales');
   await page.getByRole('button', { name: 'Capturar Primera Acción' }).click();
+  await showMoreOptions(page);
   await page.getByLabel('Repetir').selectOption('MONTHLY');
 
   for (const name of ['Calendario: Fecha límite', 'Calendario: Fecha de inicio']) {

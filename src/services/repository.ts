@@ -75,6 +75,14 @@ export const completeRecurringTask = (db: Firestore, uid: string, done: TaskItem
   return batch.commit();
 };
 
+// Deshacer una tarea recurrente hecha: vuelve tal como estaba y desaparece la repetición que se había creado
+export const undoCompleteRecurringTask = (db: Firestore, uid: string, original: TaskItem, nextId: string) => {
+  const batch = writeBatch(db);
+  batch.set(doc(userCollection(db, uid, 'tasks'), original.id), { ...original, userId: uid });
+  batch.delete(doc(userCollection(db, uid, 'tasks'), nextId));
+  return batch.commit();
+};
+
 export const deleteTask = (db: Firestore, uid: string, taskId: string) =>
   deleteDoc(doc(userCollection(db, uid, 'tasks'), taskId));
 
