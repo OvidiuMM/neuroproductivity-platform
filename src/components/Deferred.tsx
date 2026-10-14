@@ -1,5 +1,5 @@
-import React, { Component, Suspense, useRef, type ReactNode } from 'react';
-import { useModalFocus } from '../hooks/useModalFocus';
+import React, { Component, Suspense, useRef, useState, type ReactNode } from 'react';
+import { ModalOpenerContext, useModalFocus } from '../hooks/useModalFocus';
 
 // Si la descarga de una parte de la app falla, se avisa con «Reintentar» en lugar de dejar la app en blanco: el
 // fallo no sale de aquí (el resto de la app, la navegación incluida, sigue funcionando)
@@ -99,13 +99,22 @@ const PendingDialog: React.FC<{ failed: boolean; onRetry?: () => void; onCancel:
 };
 
 // Ventana que se descarga al abrirse: mientras tanto se ve una provisional que se puede cancelar, y si falla, otra con
-// «Reintentar» y «Cancelar». Cancelar cierra lo que se estaba abriendo.
+// «Reintentar» y «Cancelar». Cancelar cierra lo que se estaba abriendo. Guarda el elemento que la abrió (aún con el
+// foco al montarse) para que, al cerrarla, el foco vuelva a él.
 export const DeferredDialog: React.FC<{ retry: () => void; onCancel: () => void; children: ReactNode }> = ({
   retry,
   onCancel,
   children
-}) => (
-  <LoadErrorBoundary onRetry={retry} fallback={(again) => <PendingDialog failed onRetry={again} onCancel={onCancel} />}>
-    <Suspense fallback={<PendingDialog failed={false} onCancel={onCancel} />}>{children}</Suspense>
-  </LoadErrorBoundary>
-);
+}) => {
+  const [opener] = useState(() => document.activeElement as HTMLElement | null);
+  return (
+    <ModalOpenerContext.Provider value={opener}>
+      <LoadErrorBoundary
+        onRetry={retry}
+        fallback={(again) => <PendingDialog failed onRetry={again} onCancel={onCancel} />}
+      >
+        <Suspense fallback={<PendingDialog failed={false} onCancel={onCancel} />}>{children}</Suspense>
+      </LoadErrorBoundary>
+    </ModalOpenerContext.Provider>
+  );
+};

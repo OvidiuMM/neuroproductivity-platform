@@ -3,6 +3,7 @@ import { adminAuth, adminDb } from './adminApp';
 import { HttpsError, onCall, type CallableRequest } from 'firebase-functions/https';
 import * as logger from 'firebase-functions/logger';
 import { defineSecret, defineString } from 'firebase-functions/params';
+import type { DocumentReference, Transaction } from 'firebase-admin/firestore';
 import nodemailer from 'nodemailer';
 import {
   canDecide,
@@ -46,29 +47,41 @@ export const appUrl = () => publicAppUrl(appUrlParam.value(), process.env.GCLOUD
 
 // Avisos por email (Gmail con contraseña de aplicación). En los emuladores no se envía nada. Un fallo del
 // correo no deshace la solicitud, la decisión ni el mensaje: queda en los logs, sin datos personales (ni el uid).
+const EMAIL_CONCURRENCY = 3;
+const createTransport = (pool = false) =>
+  nodemailer.createTransport({
+    service: 'gmail',
+    auth: { user: gmailUser.value(), pass: gmailAppPassword.value() },
+    // Varios correos seguidos (aprobaciones en bloque) comparten unas pocas conexiones
+    ...(pool ? { pool: true, maxConnections: EMAIL_CONCURRENCY } : {})
+  });
+
 export const sendEmail = async (
   kind: string,
   to: string,
-  { subject, text, replyTo }: { subject: string; text: string; replyTo?: string }
+  { subject, text, replyTo }: { subject: string; text: string; replyTo?: string },
+  transport?: ReturnType<typeof createTransport>
 ) => {
   if (isEmulator || !gmailUser.value() || !to) {
     logger.info('Email skipped', { kind, emulator: isEmulator });
     return;
   }
   try {
-    const transport = nodemailer.createTransport({
-      service: 'gmail',
-      auth: { user: gmailUser.value(), pass: gmailAppPassword.value() }
+    await (transport ?? createTransport()).sendMail({
+      from: `CLAR <${gmailUser.value()}>`,
+      to,
+      subject,
+      text,
+      replyTo
     });
-    await transport.sendMail({ from: `CLAR <${gmailUser.value()}>`, to, subject, text, replyTo });
     logger.info('Email sent', { kind });
   } catch (error) {
     logger.error('Email failed', { kind, code: (error as { code?: string }).code ?? 'unknown' });
   }
 };
 
-const sendAccessEmail = (kind: AccessEmail, record: AccessRecord) =>
-  sendEmail(kind, kind === 'new-request' ? adminEmail() : record.email, buildEmail(kind, record, appUrl()));
+const sendAccessEmail = (kind: AccessEmail, record: AccessRecord, transport?: ReturnType<typeof createTransport>) =>
+  sendEmail(kind, kind === 'new-request' ? adminEmail() : record.email, buildEmail(kind, record, appUrl()), transport);
 
 // Borra las marcas de administración que no son de la cuenta configurada. Se hace en cada llamada, así una
 // cuenta que deja de ser administración pierde la lectura de las solicitudes aunque no vuelva a entrar.
@@ -81,12 +94,21 @@ const removeStaleAdminMarkers = async () => {
 
 // Modo de aprobación (settings/access): obligatoria salvo que la administración la haya desactivado
 const settingsRef = () => db().doc('settings/access');
-const isApprovalRequired = async () => (await settingsRef().get()).data()?.approvalRequired !== false;
 
 // Lista negra por email (blocked_emails/{email}): una cuenta bloqueada no vuelve con otra cuenta del mismo email.
 // Se conserva aunque la cuenta se elimine: es lo que impide volver a entrar.
 const blockedEmailRef = (email: string) => db().doc(`blocked_emails/${encodeURIComponent(email)}`);
-const isEmailBlocked = async (email: string) => Boolean(email) && (await blockedEmailRef(email).get()).exists;
+
+// El modo de aprobación y la lista negra se leen dentro de la misma transacción que la solicitud: si cambian
+// mientras tanto, la transacción se repite y decide con lo nuevo (no aprueba con un modo ya cambiado ni deshace
+// un desbloqueo)
+const readPolicy = async (tx: Transaction, email: string) => {
+  const [settings, blocked] = await Promise.all([
+    tx.get(settingsRef()),
+    email ? tx.get(blockedEmailRef(email)) : Promise.resolve(null)
+  ]);
+  return { approvalRequired: settings.data()?.approvalRequired !== false, emailBlocked: Boolean(blocked?.exists) };
+};
 
 export const requireAuth = (request: CallableRequest) => {
   if (!request.auth) throw new HttpsError('unauthenticated', 'Inicia sesión para continuar.');
@@ -124,9 +146,8 @@ export const syncAccess = onCall({ region: REGION }, async (request) => {
 
   // El resto: según la lista negra y el modo de aprobación, la cuenta puede quedar bloqueada o entrar sola
   const email = normalizeEmail(auth.token.email);
-  const [approvalRequired, emailBlocked] = await Promise.all([isApprovalRequired(), isEmailBlocked(email)]);
   const status = await db().runTransaction(async (tx) => {
-    const access = await tx.get(accessRef);
+    const [access, { approvalRequired, emailBlocked }] = await Promise.all([tx.get(accessRef), readPolicy(tx, email)]);
     const current = access.data() as AccessRecord | undefined;
     const action = decideOnSync({
       current: current?.status,
@@ -157,13 +178,12 @@ export const requestAccess = onCall({ region: REGION, secrets: emailSecrets }, a
     throw new HttpsError('permission-denied', 'Verifica tu email antes de solicitar acceso.');
   const message = normalizeMessage((request.data as { message?: unknown } | null)?.message);
   const ref = db().doc(`access/${auth.uid}`);
-  const [approvalRequired, emailBlocked] = await Promise.all([
-    isApprovalRequired(),
-    isEmailBlocked(normalizeEmail(auth.token.email))
-  ]);
 
   const created = await db().runTransaction(async (tx) => {
-    const current = await tx.get(ref);
+    const [current, { approvalRequired, emailBlocked }] = await Promise.all([
+      tx.get(ref),
+      readPolicy(tx, normalizeEmail(auth.token.email))
+    ]);
     // Email en la lista negra: la cuenta queda bloqueada y no se crea solicitud
     if (emailBlocked) {
       const now = new Date().toISOString();
@@ -232,9 +252,27 @@ export const setAccess = onCall({ region: REGION, secrets: emailSecrets }, async
 });
 
 // Activa o desactiva la aprobación obligatoria de cuentas. Al pasar a libre, las solicitudes pendientes se aprueban
-// al momento (y cada persona recibe su aviso)
-const BATCH_LIMIT = 450;
-export const setAccessMode = onCall({ region: REGION, secrets: emailSecrets }, async (request) => {
+// al momento (y cada persona recibe su aviso). Cada una se aprueba en su propia transacción, que comprueba antes que
+// sigue pendiente, que su email no está bloqueado y que la aprobación sigue libre: si entretanto se rechazó, se
+// bloqueó o se volvió a activar la aprobación, no se toca. Solo se cuentan y avisan las que de verdad se aprobaron.
+// Una solicitud que llega mientras tanto lee el modo nuevo en su transacción y se aprueba sola.
+const APPROVE_CONCURRENCY = 10;
+const inChunks = async <T>(items: T[], size: number, run: (item: T) => Promise<void>) => {
+  for (let i = 0; i < items.length; i += size) await Promise.all(items.slice(i, i + size).map(run));
+};
+
+const approveIfStillPending = (ref: DocumentReference, decidedAt: string) =>
+  db().runTransaction(async (tx) => {
+    const snapshot = await tx.get(ref);
+    const current = snapshot.data() as AccessRecord | undefined;
+    if (current?.status !== 'pending') return null;
+    const { approvalRequired, emailBlocked } = await readPolicy(tx, normalizeEmail(current.email));
+    if (approvalRequired || emailBlocked) return null;
+    tx.update(ref, { status: 'approved', decidedAt });
+    return { ...current, status: 'approved' as const, decidedAt };
+  });
+
+export const setAccessMode = onCall({ region: REGION, secrets: emailSecrets, timeoutSeconds: 300 }, async (request) => {
   const auth = requireAuth(request);
   await removeStaleAdminMarkers();
   if (!isAdminToken(auth.token, adminEmail())) {
@@ -249,18 +287,22 @@ export const setAccessMode = onCall({ region: REGION, secrets: emailSecrets }, a
   if (approvalRequired) return { approvalRequired, approved: 0 };
 
   const pending = await db().collection('access').where('status', '==', 'pending').get();
-  for (let i = 0; i < pending.docs.length; i += BATCH_LIMIT) {
-    const batch = db().batch();
-    pending.docs.slice(i, i + BATCH_LIMIT).forEach((d) => batch.update(d.ref, { status: 'approved', decidedAt: now }));
-    await batch.commit();
+  const approved: AccessRecord[] = [];
+  await inChunks(pending.docs, APPROVE_CONCURRENCY, async (d) => {
+    const record = await approveIfStillPending(d.ref, now);
+    if (record) approved.push(record);
+  });
+  logger.info('Pending requests approved', { approved: approved.length, skipped: pending.size - approved.length });
+
+  // Avisos con unas pocas conexiones compartidas; un fallo queda en los logs y no afecta a los demás
+  const toNotify = approved.filter((record) => normalizeEmail(record.email) !== normalizeEmail(adminEmail()));
+  const transport = isEmulator || !gmailUser.value() || toNotify.length === 0 ? undefined : createTransport(true);
+  try {
+    await inChunks(toNotify, EMAIL_CONCURRENCY, (record) => sendAccessEmail('approved', record, transport));
+  } finally {
+    transport?.close();
   }
-  for (const d of pending.docs) {
-    const record = d.data() as AccessRecord;
-    if (normalizeEmail(record.email) !== normalizeEmail(adminEmail())) {
-      await sendAccessEmail('approved', { ...record, status: 'approved', decidedAt: now });
-    }
-  }
-  return { approvalRequired, approved: pending.size };
+  return { approvalRequired, approved: approved.length };
 });
 
 // Al eliminar la cuenta se borra también la solicitud de acceso (la lista negra por email se conserva)

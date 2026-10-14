@@ -1,7 +1,11 @@
-import { RefObject, useEffect, useLayoutEffect, useRef } from 'react';
+import { RefObject, createContext, useContext, useEffect, useLayoutEffect, useRef } from 'react';
 
 const FOCUSABLE =
   'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
+
+// Elemento que abrió una ventana que se descarga al abrirse (DeferredDialog). Cuando llega la ventana de verdad, el
+// fondo ya está inerte y ha perdido el foco, así que no sabría adónde devolverlo: lo guarda quien la abrió.
+export const ModalOpenerContext = createContext<HTMLElement | null>(null);
 
 // Foco accesible para ventanas modales: al abrir lleva el foco dentro (al elemento con data-autofocus
 // o al primero enfocable), lo mantiene dentro con Tab / Mayús+Tab, cierra con Escape y, al cerrar,
@@ -14,6 +18,7 @@ export const useModalFocus = (
   returnFocusTo?: () => HTMLElement | null
 ) => {
   // onClose suele ser una función nueva en cada render; con una ref el efecto no se repite por ello
+  const opener = useContext(ModalOpenerContext);
   const onCloseRef = useRef(onClose);
   const returnFocusRef = useRef(returnFocusTo);
   useLayoutEffect(() => {
@@ -25,7 +30,7 @@ export const useModalFocus = (
     const container = containerRef.current;
     if (!isOpen || !container) return;
 
-    const previouslyFocused = document.activeElement as HTMLElement | null;
+    const previouslyFocused = opener ?? (document.activeElement as HTMLElement | null);
     const focusables = () => [...container.querySelectorAll<HTMLElement>(FOCUSABLE)];
     (container.querySelector<HTMLElement>('[data-autofocus]') ?? focusables()[0])?.focus();
 
@@ -61,5 +66,5 @@ export const useModalFocus = (
       const canReturn = previouslyFocused && previouslyFocused !== document.body && previouslyFocused.isConnected;
       (canReturn ? previouslyFocused : returnFocusRef.current?.())?.focus();
     };
-  }, [isOpen, containerRef]);
+  }, [isOpen, containerRef, opener]);
 };

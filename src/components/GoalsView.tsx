@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useRef, useState } from 'react';
 import {
   AlertTriangle,
   ArrowRight,
@@ -159,6 +159,13 @@ export const GoalsView: React.FC<GoalsViewProps> = ({
   onOpenWheel
 }) => {
   const [showClosed, setShowClosed] = useState(false);
+  // Botón «Nueva meta» de cada área: siempre está, así que es donde vuelve el foco al crear una meta desde «Necesitan
+  // atención» (ese botón desaparece en cuanto el área tiene meta)
+  const areaButtons = useRef<Partial<Record<WheelCategory, HTMLButtonElement | null>>>({});
+  const newGoalFromAttention = (area: WheelCategory) => {
+    areaButtons.current[area]?.focus({ preventScroll: true });
+    onNewGoal(area);
+  };
   const areas = areasWithGoals(goals, scores ?? null);
   const needAttention = areas.filter((a) => a.weak && a.goals.length === 0);
   const closed = sortGoals(goals).filter((g) => g.status !== 'ACTIVE');
@@ -227,7 +234,7 @@ export const GoalsView: React.FC<GoalsViewProps> = ({
               <li key={area}>
                 <button
                   type="button"
-                  onClick={() => onNewGoal(area)}
+                  onClick={() => newGoalFromAttention(area)}
                   className="inline-flex min-h-11 items-center gap-1.5 rounded-xl border border-amber-300 bg-white px-3 text-xs font-semibold text-amber-950 hover:bg-amber-100"
                 >
                   <Plus className="h-3.5 w-3.5" aria-hidden="true" />
@@ -262,6 +269,9 @@ export const GoalsView: React.FC<GoalsViewProps> = ({
               </div>
               <button
                 type="button"
+                ref={(button) => {
+                  areaButtons.current[area] = button;
+                }}
                 onClick={() => onNewGoal(area)}
                 aria-label={`Nueva meta en ${area}`}
                 className={linkButton}
