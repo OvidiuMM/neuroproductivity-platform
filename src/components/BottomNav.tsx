@@ -30,13 +30,16 @@ export const BottomNav: React.FC<BottomNavProps> = ({
 }) => {
   const primary = SECTIONS.filter(({ tab }) => PRIMARY_TABS.includes(tab));
   const moreIsCurrent = !PRIMARY_TABS.includes(activeTab);
-  const moreLabel =
-    pendingAccessCount > 0 ? `Más secciones, ${pendingAccessCount} solicitudes de acceso pendientes` : 'Más secciones';
+  const pending =
+    pendingAccessCount === 1
+      ? '1 solicitud de acceso pendiente'
+      : `${pendingAccessCount} solicitudes de acceso pendientes`;
+  const moreLabel = pendingAccessCount > 0 ? `Más secciones, ${pending}` : 'Más secciones';
 
   return (
     <nav
       aria-label="Secciones"
-      className="fixed inset-x-0 bottom-0 z-40 border-t border-slate-200 bg-white/95 pb-[env(safe-area-inset-bottom)] backdrop-blur-md md:hidden"
+      className="fixed inset-x-0 bottom-0 z-40 border-t border-slate-200 bg-white/95 pr-[env(safe-area-inset-right)] pb-[env(safe-area-inset-bottom)] pl-[env(safe-area-inset-left)] backdrop-blur-md md:hidden"
     >
       <ul className="mx-auto grid max-w-lg grid-cols-5">
         {primary.map(({ tab, label, short, icon: Icon }) => (

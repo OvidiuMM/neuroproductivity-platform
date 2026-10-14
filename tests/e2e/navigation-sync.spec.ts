@@ -68,6 +68,20 @@ test('phones use a bottom section bar, a «Más» sheet and a floating «Nueva t
   await expect(page.getByRole('dialog', { name: /Nueva Acción|Capturar/ })).toBeVisible();
 });
 
+test('turning a phone to a wider screen closes the «Más» sheet and leaves the app usable', async ({ page }) => {
+  await page.setViewportSize({ width: 375, height: 800 });
+  await page.goto('/');
+  await signInWithGoogle(page);
+  await page.getByRole('button', { name: 'Más secciones' }).click();
+  await expect(page.getByRole('dialog', { name: 'Más' })).toBeVisible();
+
+  await page.setViewportSize({ width: 1024, height: 768 });
+  await expect(page.getByRole('dialog', { name: 'Más' })).toBeHidden();
+  // Nada queda inerte: las pestañas de la cabecera responden
+  await page.locator('header').getByRole('button', { name: 'Agenda' }).click();
+  await expect(page.getByRole('heading', { name: 'Agenda' })).toBeVisible();
+});
+
 test('the requirements view no longer exists', async ({ page }) => {
   await page.goto('/');
   await signInWithGoogle(page);

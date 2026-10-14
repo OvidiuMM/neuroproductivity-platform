@@ -58,7 +58,7 @@ export const MoreSheet: React.FC<MoreSheetProps> = ({
         role="dialog"
         aria-modal="true"
         aria-labelledby="more-sheet-title"
-        className="animate-in slide-in-from-bottom w-full space-y-3 rounded-t-3xl bg-white p-4 pb-[calc(1rem+env(safe-area-inset-bottom))] shadow-2xl duration-200"
+        className="animate-in slide-in-from-bottom w-full space-y-3 rounded-t-3xl bg-white pt-4 pr-[max(1rem,env(safe-area-inset-right))] pb-[calc(1rem+env(safe-area-inset-bottom))] pl-[max(1rem,env(safe-area-inset-left))] shadow-2xl duration-200"
       >
         <div className="flex items-center justify-between">
           <h2 id="more-sheet-title" className="text-sm font-bold text-slate-900">
