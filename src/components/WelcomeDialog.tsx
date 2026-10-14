@@ -163,7 +163,7 @@ export const WelcomeDialog: React.FC<WelcomeDialogProps> = ({ onFinish }) => {
                 onClick={() => (isLast ? onFinish('completed') : setStep((s) => s + 1))}
                 className="inline-flex min-h-11 items-center gap-2 rounded-xl bg-slate-900 px-5 text-sm font-bold text-white hover:bg-slate-800"
               >
-                {isLast ? 'Empezar' : 'Siguiente'}
+                {isLast ? 'Empezar el recorrido' : 'Siguiente'}
                 <ArrowRight className="h-4 w-4" aria-hidden="true" />
               </button>
             </div>

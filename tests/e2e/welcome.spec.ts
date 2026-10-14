@@ -20,10 +20,12 @@ test('a new account sees the welcome once: why, the method and how to start', as
   await dialog.getByRole('button', { name: 'Siguiente' }).click();
   await dialog.getByRole('button', { name: 'Siguiente' }).click();
   await expect(dialog.getByRole('heading', { name: 'Tu rutina en tres pasos' })).toBeFocused();
-  await dialog.getByRole('button', { name: 'Empezar' }).click();
-  await expect(dialog).toBeHidden();
+  await dialog.getByRole('button', { name: 'Empezar el recorrido' }).click();
 
-  // Debajo seguía la app: el primer paso es evaluar la Rueda
+  // Sigue el recorrido guiado; al salir de él, el primer paso es evaluar la Rueda
+  await expect(page.getByRole('dialog', { name: 'Captura una tarea' })).toBeVisible();
+  await page.keyboard.press('Escape');
+  await expect(page.getByRole('dialog')).toHaveCount(0);
   await expect(page.getByText('Primer paso: evalúa tu Rueda de la Vida')).toBeVisible();
 
   // Queda en el perfil, para cualquier dispositivo, y no vuelve a salir

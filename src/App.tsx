@@ -48,6 +48,8 @@ import { PHONE_QUERY, useMediaQuery } from './hooks/useMediaQuery';
 import { MoreSheet } from './components/MoreSheet';
 import { GoalModal } from './components/GoalModal';
 import { WelcomeDialog } from './components/WelcomeDialog';
+import { ProductTour } from './components/ProductTour';
+import { TOUR_STEPS } from './tourSteps';
 import {
   hasSeenLocally,
   hasSeenOnboarding,
@@ -500,12 +502,30 @@ export default function App({ user, services, isAdmin = false }: AppProps) {
       ),
     [db, uid]
   );
+  // También se puede volver a ver desde la guía
+  const [isWelcomeReplay, setIsWelcomeReplay] = useState(false);
   const isWelcomeOpen =
-    !welcomeClosed && profileOnboarding.fromServer && !hasSeenOnboarding(profileOnboarding.record, seenOnThisDevice);
+    isWelcomeReplay ||
+    (!welcomeClosed && profileOnboarding.fromServer && !hasSeenOnboarding(profileOnboarding.record, seenOnThisDevice));
+
+  // RECORRIDO GUIADO: tras la bienvenida o desde la guía. Empieza en las listas (allí están el Top 10 y los filtros);
+  // al terminar, la primera vez, lleva a la Rueda para el primer paso
+  const [isTourOpen, setIsTourOpen] = useState(false);
+  const startTour = () => {
+    navigate('tasks');
+    setIsTourOpen(true);
+  };
+  const finishTour = () => {
+    setIsTourOpen(false);
+    if (wheelSynced && wheelLogs.length === 0) navigate('wheel');
+  };
+
   const finishWelcome = (outcome: OnboardingOutcome) => {
     rememberLocally(uid, outcome);
     markOnboardingSeen(db, uid, outcome).catch(reportError('guardar tu progreso'));
     setWelcomeClosed(true);
+    setIsWelcomeReplay(false);
+    if (outcome === 'completed') startTour();
   };
 
   // Hoja «Más» del móvil: secciones que no caben en la barra inferior, sincronización y cuenta
@@ -522,6 +542,7 @@ export default function App({ user, services, isAdmin = false }: AppProps) {
   // La pantalla de bienvenida no cuenta: es decorativa, se quita sola y deja pasar los clics mientras se desvanece
   const isDialogOpen =
     isWelcomeOpen ||
+    isTourOpen ||
     isMoreOpen ||
     goalEditor !== null ||
     isTaskModalOpen ||
@@ -583,6 +604,7 @@ export default function App({ user, services, isAdmin = false }: AppProps) {
           <button
             type="button"
             onClick={() => openNewTask()}
+            data-tour="new-task"
             className="inline-flex h-10 w-full items-center justify-center gap-2 rounded-xl bg-slate-900 px-4 text-sm font-bold text-white shadow-sm transition-colors hover:bg-slate-800 sm:w-auto"
           >
             <Plus className="h-4 w-4" aria-hidden="true" />
@@ -673,7 +695,9 @@ export default function App({ user, services, isAdmin = false }: AppProps) {
           )}
 
           {/* PESTAÑA 4: CÓMO FUNCIONA LA APP */}
-          {activeTab === 'help' && <HowItWorks onNavigate={navigate} />}
+          {activeTab === 'help' && (
+            <HowItWorks onNavigate={navigate} onStartTour={startTour} onShowWelcome={() => setIsWelcomeReplay(true)} />
+          )}
 
           {activeTab === 'access' && isAdmin && (
             <AccessAdminView
@@ -714,6 +738,7 @@ export default function App({ user, services, isAdmin = false }: AppProps) {
         <button
           type="button"
           onClick={() => openNewTask()}
+          data-tour="new-task"
           aria-label="Nueva tarea"
           className="fixed right-[calc(1rem+env(safe-area-inset-right))] bottom-[calc(5rem+env(safe-area-inset-bottom))] z-40 flex h-14 w-14 items-center justify-center rounded-2xl bg-slate-900 text-white shadow-lg shadow-slate-900/30 transition-transform hover:bg-slate-800 active:scale-95 md:hidden"
         >
@@ -826,6 +851,7 @@ export default function App({ user, services, isAdmin = false }: AppProps) {
 
       {/* BIENVENIDA DE LA PRIMERA VEZ */}
       {isWelcomeOpen && <WelcomeDialog onFinish={finishWelcome} />}
+      {isTourOpen && <ProductTour steps={TOUR_STEPS} onFinish={finishTour} />}
 
       {/* METAS: crear o editar (se monta al abrirse, así empieza limpio) */}
       {goalEditor && (
