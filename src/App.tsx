@@ -75,7 +75,12 @@ import { AgendaView } from './components/AgendaView';
 import { HomeView } from './components/HomeView';
 import { AdminView } from './components/AdminView';
 import { FeedbackDialog } from './components/FeedbackDialog';
-import { setFeedbackStatus, subscribeToFeedback, type FeedbackTicket } from './services/feedbackApi';
+import {
+  loadClosedFeedback,
+  setFeedbackStatus,
+  subscribeToOpenFeedback,
+  type FeedbackTicket
+} from './services/feedbackApi';
 import { AccessibilityPanel } from './components/AccessibilityPanel';
 import { setAccess, subscribeToAccessRequests, type AccessRequest, type DecisionStatus } from './services/access';
 import { deleteAccount, downloadAccountData, signOutEverywhere } from './services/account';
@@ -153,7 +158,7 @@ export default function App({ user, services, isAdmin = false }: AppProps) {
   // ACCESOS (solo administración): solicitudes en vivo para la pestaña y su contador de pendientes
   const [accessRequests, setAccessRequests] = useState<AccessRequest[]>([]);
   const [accessError, setAccessError] = useState<string | null>(null);
-  // MENSAJES DE CONTACTO (solo administración)
+  // MENSAJES DE CONTACTO (solo administración): los abiertos en vivo; los cerrados, bajo demanda en su vista
   const [feedbackTickets, setFeedbackTickets] = useState<FeedbackTicket[]>([]);
   const [feedbackError, setFeedbackError] = useState<string | null>(null);
   // Al dejar de ser administración se vacían las solicitudes y se sale de su pestaña
@@ -175,7 +180,7 @@ export default function App({ user, services, isAdmin = false }: AppProps) {
   }, [db, isAdmin]);
   useEffect(() => {
     if (!isAdmin) return;
-    return subscribeToFeedback(db, setFeedbackTickets, (e) => {
+    return subscribeToOpenFeedback(db, setFeedbackTickets, (e) => {
       console.error('Error loading feedback:', e);
       setFeedbackError('No se pudieron cargar los mensajes.');
     });
@@ -739,6 +744,7 @@ export default function App({ user, services, isAdmin = false }: AppProps) {
               tickets={feedbackTickets}
               feedbackError={feedbackError}
               onSetFeedbackStatus={handleSetFeedbackStatus}
+              loadClosedFeedback={(cursor) => loadClosedFeedback(db, cursor)}
             />
           )}
         </main>
