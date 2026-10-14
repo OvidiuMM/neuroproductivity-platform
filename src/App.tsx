@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useCallback, useState, useEffect, useRef } from 'react';
+import React, { useCallback, useMemo, useState, useEffect, useRef } from 'react';
 import type { User } from 'firebase/auth';
 import {
   AppTab,
@@ -18,14 +18,15 @@ import {
   GoalStatus,
   UserProfile
 } from './types';
-import { formatTaskDates, isArchived, isUnchanged, withStatus } from './services/tasks';
+import { formatTaskDates, isArchived, withStatus } from './services/tasks';
 import { nextRecurringTask } from './services/recurrence';
 import { forceSync, signOutAndClearCache, type FirebaseServices } from './services/firebase';
 import {
   appendWheelLog,
   completeRecurringTask,
   deleteTask,
-  undoCompleteRecurringTask,
+  undoTaskChange,
+  restoreDeletedTask,
   saveGoal,
   deleteGoal,
   subscribeToProfile,
@@ -55,6 +56,7 @@ import {
   type OnboardingOutcome,
   type OnboardingRecord
 } from './services/onboarding';
+import { applyGoalAreas } from './services/goals';
 import type { SyncStatus } from './components/SyncIndicator';
 import { TaskList } from './components/TaskList';
 import { TaskModal, type TaskFormData } from './components/TaskModal';
@@ -111,12 +113,14 @@ export default function App({ user, services, isAdmin = false }: AppProps) {
   const [isAccessibilityOpen, setIsAccessibilityOpen] = useState(false);
 
   // Datos de la cuenta, sincronizados en tiempo real con Firestore (y disponibles sin conexión desde la caché)
-  const [tasks, setTasks] = useState<TaskItem[]>([]);
+  const [storedTasks, setTasks] = useState<TaskItem[]>([]);
   const [wheelLogs, setWheelLogs] = useState<WheelOfLifeLog[]>([]);
   const [wheelSynced, setWheelSynced] = useState(false);
   const [meetings, setMeetings] = useState<MeetingGuard[]>([]);
   const [emails, setEmails] = useState<EmailDraft[]>([]);
   const [goals, setGoals] = useState<Goal[]>([]);
+  // Las tareas vinculadas a una meta tienen el área de la meta
+  const tasks = useMemo(() => applyGoalAreas(storedTasks, goals), [storedTasks, goals]);
   // Editor de metas: abierto con la meta que se edita, o vacío para crear una
   const [goalEditor, setGoalEditor] = useState<{ goal?: Goal } | null>(null);
 
@@ -352,35 +356,30 @@ export default function App({ user, services, isAdmin = false }: AppProps) {
   };
 
   // "Hecha" archiva la tarea; cualquier otro estado la devuelve a su lista
-  // Últimas tareas recibidas, también las cambiadas en otros dispositivos: «Deshacer» comprueba con ellas que no
-  // ha cambiado nada desde que se escribió
-  const latestTasks = useRef(tasks);
-  useEffect(() => {
-    latestTasks.current = tasks;
-  }, [tasks]);
+  // «Deshacer»: comprueba en el servidor que nada ha cambiado y restaura con la hora de ahora (es un cambio nuevo)
+  const undo = (attempt: () => Promise<boolean>) => () => {
+    showToast('Deshaciendo…');
+    attempt()
+      .then((done) => showToast(done ? 'Tarea recuperada.' : 'No se puede deshacer: la tarea ha cambiado entretanto.'))
+      .catch((e: unknown) => {
+        console.error('Error al deshacer:', e);
+        showToast('No se pudo deshacer: hace falta conexión. Puedes cambiarlo a mano.');
+      });
+  };
 
   const handleChangeStatus = (task: TaskItem, status: TaskStatus) => {
     if (status === task.status) return;
     // Tarea recurrente marcada como Hecha: se crea la siguiente repetición (una sola vez por tarea)
     const next = status === 'DONE' && !task.nextOccurrenceId ? nextRecurringTask(task) : null;
     const updated = withStatus(task, status);
-    // Deshacer devuelve la tarea tal como estaba (y quita la repetición que se acaba de crear), pero solo si lo
-    // escrito sigue igual: si entretanto se cambió aquí o en otro dispositivo, se avisa en vez de pisarlo.
-    // Se comprueba con los datos en vivo y no con una transacción, que sin conexión no funcionaría.
-    const restore = (written: TaskItem[], save: () => Promise<void>) => () => {
-      if (!isUnchanged(written, latestTasks.current)) {
-        showToast('No se puede deshacer: la tarea ha cambiado entretanto.');
-        return;
-      }
-      save().catch(reportError('deshacer el cambio'));
-      showToast('Tarea recuperada.');
-    };
+    // Deshacer devuelve la tarea como estaba (y quita la repetición que se acaba de crear) si nada cambió entretanto
+    const restored = () => ({ ...task, updatedAt: new Date().toISOString() });
     if (next) {
       const done = { ...updated, nextOccurrenceId: next.id };
       completeRecurringTask(db, uid, done, next).catch(reportError('guardar la tarea y su siguiente repetición'));
       showToast(
         `Tarea hecha y archivada. Siguiente repetición: ${formatTaskDates(next)?.replace('Vence: ', '')}.`,
-        restore([done, next], () => undoCompleteRecurringTask(db, uid, task, next.id))
+        undo(() => undoTaskChange(db, uid, [done, next], restored(), next.id))
       );
       return;
     }
@@ -388,7 +387,7 @@ export default function App({ user, services, isAdmin = false }: AppProps) {
     if (status === 'DONE') {
       showToast(
         'Tarea hecha y archivada. La encontrarás en «Archivadas».',
-        restore([updated], () => saveTask(db, uid, task))
+        undo(() => undoTaskChange(db, uid, [updated], restored()))
       );
     } else if (isArchived(task)) {
       showToast('Tarea reactivada: vuelve a su lista.');
@@ -398,9 +397,7 @@ export default function App({ user, services, isAdmin = false }: AppProps) {
   // METAS: si cambia de área, sus tareas heredan la nueva; al eliminarla, sus tareas se quedan sin meta
   const handleSaveGoal = (goal: Goal) => {
     const previous = goals.find((g) => g.id === goal.id);
-    const retagged =
-      previous && previous.area !== goal.area ? tasks.filter((t) => t.goalId === goal.id).map((t) => t.id) : [];
-    saveGoal(db, uid, goal, retagged).catch(reportError('guardar la meta'));
+    saveGoal(db, uid, goal).catch(reportError('guardar la meta'));
     showToast(previous ? 'Meta guardada.' : 'Meta creada. Vincúlale tareas desde el formulario de cada tarea.');
   };
   const handleSetGoalStatus = (goal: Goal, status: GoalStatus) => {
@@ -410,12 +407,7 @@ export default function App({ user, services, isAdmin = false }: AppProps) {
     );
   };
   const handleDeleteGoal = (goal: Goal) => {
-    deleteGoal(
-      db,
-      uid,
-      goal.id,
-      tasks.filter((t) => t.goalId === goal.id).map((t) => t.id)
-    ).catch(reportError('eliminar la meta'));
+    deleteGoal(db, uid, goal).catch(reportError('eliminar la meta'));
     showToast('Meta eliminada. Sus tareas siguen en tus listas.');
   };
 
@@ -424,11 +416,7 @@ export default function App({ user, services, isAdmin = false }: AppProps) {
     deleteTask(db, uid, id).catch(reportError('eliminar la tarea'));
     showToast(
       'Acción eliminada del inventario.',
-      deleted &&
-        (() => {
-          saveTask(db, uid, deleted).catch(reportError('recuperar la tarea'));
-          showToast('Tarea recuperada.');
-        })
+      deleted && undo(() => restoreDeletedTask(db, uid, { ...deleted, updatedAt: new Date().toISOString() }))
     );
   };
 
