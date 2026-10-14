@@ -489,8 +489,13 @@ export default function App({ user, services, isAdmin = false }: AppProps) {
       ),
     [db, uid]
   );
+  // Si al entrar por primera vez hay datos de la versión sin cuentas, primero se resuelve su importación: una sola
+  // ventana modal a la vez
   const isWelcomeOpen =
-    !welcomeClosed && profileOnboarding.fromServer && !hasSeenOnboarding(profileOnboarding.record, seenOnThisDevice);
+    !welcomeClosed &&
+    !isImportOpen &&
+    profileOnboarding.fromServer &&
+    !hasSeenOnboarding(profileOnboarding.record, seenOnThisDevice);
   const finishWelcome = (outcome: OnboardingOutcome) => {
     rememberLocally(uid, outcome);
     markOnboardingSeen(db, uid, outcome).catch(reportError('guardar tu progreso'));
