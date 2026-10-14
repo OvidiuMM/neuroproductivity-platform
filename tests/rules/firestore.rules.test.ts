@@ -77,6 +77,19 @@ describe('firestore.rules', () => {
     await assertSucceeds(deleteDoc(ref));
   });
 
+  it('keeps goals private to their owner, who can create, change and delete them', async () => {
+    const goal = { id: 'goal-1', title: 'Correr una media maratón', area: 'Salud', status: 'ACTIVE' };
+    const ana = env.authenticatedContext('ana').firestore();
+    const bruno = env.authenticatedContext('bruno').firestore();
+
+    await assertSucceeds(setDoc(doc(ana, 'users/ana/goals/goal-1'), goal));
+    await assertSucceeds(updateDoc(doc(ana, 'users/ana/goals/goal-1'), { status: 'ACHIEVED' }));
+    await assertFails(getDoc(doc(bruno, 'users/ana/goals/goal-1')));
+    await assertFails(setDoc(doc(bruno, 'users/ana/goals/goal-2'), goal));
+    await assertFails(deleteDoc(doc(bruno, 'users/ana/goals/goal-1')));
+    await assertSucceeds(deleteDoc(doc(ana, 'users/ana/goals/goal-1')));
+  });
+
   it('rejects collections outside the allowed list', async () => {
     const ana = env.authenticatedContext('ana').firestore();
 

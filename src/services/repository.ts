@@ -9,18 +9,19 @@ import {
   type Firestore
 } from 'firebase/firestore';
 import type { User } from 'firebase/auth';
-import { EmailDraft, MeetingGuard, TaskItem, WheelOfLifeLog } from '../types';
+import { EmailDraft, Goal, MeetingGuard, TaskItem, WheelOfLifeLog } from '../types';
 import { normalizeTask } from './tasks';
 
 // Datos de cada persona en users/{uid}/<colección>/<id>. Las reglas (firestore.rules) solo dejan acceder al propio uid.
-export type UserCollection = 'tasks' | 'wheelLogs' | 'meetings' | 'emails';
-export const USER_COLLECTIONS: UserCollection[] = ['tasks', 'wheelLogs', 'meetings', 'emails'];
+export type UserCollection = 'tasks' | 'wheelLogs' | 'meetings' | 'emails' | 'goals';
+export const USER_COLLECTIONS: UserCollection[] = ['tasks', 'wheelLogs', 'meetings', 'emails', 'goals'];
 
 export interface UserData {
   tasks: TaskItem[];
   wheelLogs: WheelOfLifeLog[];
   meetings: MeetingGuard[];
   emails: EmailDraft[];
+  goals: Goal[];
 }
 
 const userCollection = (db: Firestore, uid: string, name: UserCollection) => collection(db, 'users', uid, name);
@@ -32,7 +33,8 @@ const SORTERS = {
   tasks: (a: TaskItem, b: TaskItem) => byDateDesc(a.createdAt, b.createdAt),
   wheelLogs: (a: WheelOfLifeLog, b: WheelOfLifeLog) => a.timestamp.localeCompare(b.timestamp),
   meetings: (a: MeetingGuard, b: MeetingGuard) => byDateDesc(a.createdAt, b.createdAt),
-  emails: (a: EmailDraft, b: EmailDraft) => byDateDesc(a.sentAt, b.sentAt)
+  emails: (a: EmailDraft, b: EmailDraft) => byDateDesc(a.sentAt, b.sentAt),
+  goals: (a: Goal, b: Goal) => byDateDesc(a.createdAt, b.createdAt)
 };
 
 export interface SnapshotInfo {
@@ -85,6 +87,26 @@ export const undoCompleteRecurringTask = (db: Firestore, uid: string, original: 
 
 export const deleteTask = (db: Firestore, uid: string, taskId: string) =>
   deleteDoc(doc(userCollection(db, uid, 'tasks'), taskId));
+
+// Meta y, si cambia de área, sus tareas con el área nueva (heredan el área de la meta), en un mismo lote
+export const saveGoal = (db: Firestore, uid: string, goal: Goal, retagged: TaskItem[] = []) => {
+  const batch = writeBatch(db);
+  batch.set(doc(userCollection(db, uid, 'goals'), goal.id), { ...goal, userId: uid });
+  for (const task of retagged) {
+    batch.set(doc(userCollection(db, uid, 'tasks'), task.id), { ...task, wheelCategory: goal.area, userId: uid });
+  }
+  return batch.commit();
+};
+
+// Al eliminar una meta, sus tareas se quedan, sin meta (conservan el área)
+export const deleteGoal = (db: Firestore, uid: string, goalId: string, linked: TaskItem[]) => {
+  const batch = writeBatch(db);
+  batch.delete(doc(userCollection(db, uid, 'goals'), goalId));
+  for (const { goalId: _goalId, ...task } of linked) {
+    batch.set(doc(userCollection(db, uid, 'tasks'), task.id), { ...task, userId: uid });
+  }
+  return batch.commit();
+};
 
 export const appendWheelLog = (db: Firestore, uid: string, log: WheelOfLifeLog) =>
   setDoc(doc(userCollection(db, uid, 'wheelLogs'), log.id), { ...log, userId: uid });

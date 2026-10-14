@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { useModalFocus } from '../hooks/useModalFocus';
 import {
+  Goal,
   TaskItem,
   ListContext,
   TaskPriority,
@@ -52,9 +53,12 @@ import {
   ListPlus,
   CalendarClock,
   ChevronDown,
-  Repeat
+  Repeat,
+  Target
 } from 'lucide-react';
 import { DateField } from './DateField';
+import { suggestGoal } from '../services/goals';
+import { WHEEL_CATEGORIES } from '../services/wheel';
 
 export type TaskFormData = Omit<TaskItem, 'id' | 'createdAt' | 'updatedAt' | 'status' | 'doneAt'>;
 
@@ -66,6 +70,8 @@ interface TaskModalProps {
   // Al abrir desde "Opciones Futuras" la tarea nueva se marca como "Quizá"
   initialSomeday?: boolean;
   editingTask?: TaskItem | null;
+  // Metas a las que se puede vincular la tarea (el área de la Rueda se hereda de la meta)
+  goals: Goal[];
 }
 
 const WHEEL_CATEGORIES_LIST: WheelCategory[] = [
@@ -84,9 +90,11 @@ export const TaskModal: React.FC<TaskModalProps> = ({
   onSaveTask,
   initialContext,
   initialSomeday = false,
-  editingTask
+  editingTask,
+  goals
 }) => {
   const [title, setTitle] = useState('');
+  const [goalId, setGoalId] = useState('');
   const [description, setDescription] = useState('');
   // Identificador de la última inferencia NLP: invalida resultados que llegan tras cerrar o reiniciar el formulario
   const nlpRequest = useRef(0);
@@ -135,7 +143,7 @@ export const TaskModal: React.FC<TaskModalProps> = ({
         Boolean(
           editingTask.description ||
           editingTask.estimateMinutes ||
-          editingTask.wheelCategory ||
+          (editingTask.wheelCategory && !editingTask.goalId) ||
           editingTask.startDate ||
           editingTask.recurrence ||
           editingTask.isSomeday ||
@@ -143,6 +151,7 @@ export const TaskModal: React.FC<TaskModalProps> = ({
         )
       );
       setTitle(editingTask.title);
+      setGoalId(editingTask.goalId ?? '');
       setDescription(editingTask.description);
       setListContext(editingTask.listContext);
       setPriority(editingTask.priority);
@@ -165,6 +174,7 @@ export const TaskModal: React.FC<TaskModalProps> = ({
     } else {
       setShowMore(initialSomeday);
       setTitle('');
+      setGoalId('');
       setDescription('');
       setListContext(initialContext);
       setPriority('MEDIUM');
@@ -233,6 +243,21 @@ export const TaskModal: React.FC<TaskModalProps> = ({
 
   const handleRemoveObservation = (id: string) => {
     setObservations(observations.filter((o) => o.id !== id));
+  };
+
+  // METAS: la elegida, las que se pueden elegir (activas, y la ya vinculada aunque esté lograda o archivada) y la
+  // sugerida por las palabras del título mientras no haya ninguna elegida
+  const goal = goals.find((g) => g.id === goalId);
+  const goalOptions = goals.filter((g) => g.status === 'ACTIVE' || g.id === goalId);
+  const suggestedGoal = useMemo(() => (goalId ? null : suggestGoal(title, goals)), [goalId, title, goals]);
+  const chooseGoal = (id: string) => {
+    setGoalId(id);
+    const chosen = goals.find((g) => g.id === id);
+    if (chosen) {
+      setWheelCategory(chosen.area);
+      setLinkedBy('MANUAL');
+      setNlpResult(null);
+    }
   };
 
   // Reglas de Validación de Entrada (Estricto cumplimiento de especificaciones)
@@ -334,7 +359,8 @@ export const TaskModal: React.FC<TaskModalProps> = ({
       description: description.trim(),
       priority,
       isSomeday,
-      wheelCategory,
+      goalId: goal?.id,
+      wheelCategory: goal ? goal.area : wheelCategory,
       wheelCategoryConfidence,
       linkedBy,
       observations,
@@ -515,6 +541,51 @@ export const TaskModal: React.FC<TaskModalProps> = ({
             )}
           </div>
 
+          {/* META: a qué meta contribuye la tarea (solo si hay metas) */}
+          {goalOptions.length > 0 && (
+            <div>
+              <label
+                htmlFor="task-goal"
+                className="mb-1.5 block text-xs font-bold tracking-wider text-slate-600 uppercase"
+              >
+                Meta <span className="font-normal tracking-normal text-slate-500 normal-case">(opcional)</span>
+              </label>
+              <select
+                id="task-goal"
+                value={goalId}
+                onChange={(e) => chooseGoal(e.target.value)}
+                className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-400 focus:outline-none"
+              >
+                <option value="">(Sin meta)</option>
+                {WHEEL_CATEGORIES.filter((area) => goalOptions.some((g) => g.area === area)).map((area) => (
+                  <optgroup key={area} label={area}>
+                    {goalOptions
+                      .filter((g) => g.area === area)
+                      .map((g) => (
+                        <option key={g.id} value={g.id}>
+                          {g.title}
+                          {g.status === 'ACHIEVED' ? ' (lograda)' : g.status === 'ARCHIVED' ? ' (archivada)' : ''}
+                        </option>
+                      ))}
+                  </optgroup>
+                ))}
+              </select>
+              {goal && (
+                <p className="mt-1 text-[11px] text-slate-500">Área de la Rueda: {goal.area} (la de la meta).</p>
+              )}
+              {suggestedGoal && (
+                <button
+                  type="button"
+                  onClick={() => chooseGoal(suggestedGoal.id)}
+                  className="mt-1.5 inline-flex min-h-9 items-center gap-1.5 rounded-lg border border-indigo-200 bg-indigo-50 px-2.5 text-left text-xs font-semibold text-indigo-800 hover:bg-indigo-100"
+                >
+                  <Target className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+                  Vincular a «{suggestedGoal.title}»
+                </button>
+              )}
+            </div>
+          )}
+
           {/* FECHA LÍMITE: a la vista; el inicio y la repetición están en «Más opciones» */}
           <div className="space-y-1.5">
             <span className="mb-1.5 block text-xs font-bold tracking-wider text-slate-600 uppercase">
@@ -631,7 +702,7 @@ export const TaskModal: React.FC<TaskModalProps> = ({
                   </p>
                 )}
 
-                {nlpResult && nlpResult.category && nlpResult.isAboveThreshold && (
+                {!goal && nlpResult && nlpResult.category && nlpResult.isAboveThreshold && (
                   <div className="animate-in fade-in mt-2 flex items-center justify-between rounded-xl border border-indigo-200 bg-indigo-50 p-2.5 text-xs">
                     <div className="flex items-center gap-2 text-indigo-950">
                       <Sparkles className="h-4 w-4 text-indigo-600" />
@@ -692,7 +763,8 @@ export const TaskModal: React.FC<TaskModalProps> = ({
                   </label>
                   <select
                     id="task-category"
-                    value={wheelCategory || ''}
+                    value={(goal ? goal.area : wheelCategory) || ''}
+                    disabled={Boolean(goal)}
                     onChange={(e) => {
                       setWheelCategory((e.target.value as WheelCategory) || undefined);
                       setLinkedBy('MANUAL');
