@@ -127,7 +127,7 @@ export const WheelOfLife: React.FC<WheelOfLifeProps> = ({
             className="flex items-center gap-1.5 rounded-xl border border-indigo-200 bg-white px-3.5 py-2 text-xs font-bold whitespace-nowrap text-indigo-700 transition-colors hover:bg-indigo-100"
           >
             <BookOpen className="h-3.5 w-3.5" />
-            <span>Cómo funciona la app</span>
+            <span>Ver la ayuda</span>
           </button>
         </div>
       )}

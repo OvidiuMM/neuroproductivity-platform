@@ -72,7 +72,7 @@ test('main sections, forms and dialogs', async ({ page }) => {
   await page.getByRole('button', { name: 'Blindaje Bermudas' }).click();
   await expectNoViolations(page, 'blindaje bermudas');
 
-  await page.getByRole('button', { name: 'Cómo funciona' }).click();
+  await page.getByRole('button', { name: 'Ayuda' }).click();
   await expectNoViolations(page, 'cómo funciona');
 
   await page.getByRole('button', { name: 'Tu cuenta' }).click();
@@ -206,11 +206,30 @@ test('welcome dialog, every step', async ({ page }) => {
 test('guided tour bubble', async ({ page }) => {
   await page.goto('/');
   await signInWithGoogle(page);
-  await page.getByRole('button', { name: 'Cómo funciona' }).click();
+  await page.getByRole('button', { name: 'Ayuda' }).click();
   await expectNoViolations(page, 'guía con la guía rápida');
   await page.getByRole('button', { name: 'Repetir el recorrido' }).click();
   await expect(page.getByRole('dialog', { name: 'Captura una tarea' })).toBeVisible();
   await expectNoViolations(page, 'recorrido guiado');
+});
+
+test('contact dialog from the account menu and from the access request screen', async ({ page, browser }) => {
+  await page.goto('/');
+  await signInWithGoogle(page);
+  await page.getByRole('button', { name: 'Tu cuenta' }).click();
+  await page.getByRole('button', { name: 'Escríbenos: ideas, fallos o dudas' }).click();
+  const dialog = page.getByRole('dialog', { name: 'Escríbenos' });
+  await dialog.getByRole('checkbox', { name: /Adjuntar información técnica/ }).check();
+  await expectNoViolations(page, 'contacto (con la información técnica a la vista)');
+
+  // Sin acceso aprobado también se puede escribir
+  const pending = await (await browser.newContext()).newPage();
+  await pending.goto('/');
+  await signInWithGoogle(pending, undefined, undefined, { approve: false });
+  await expect(pending.getByRole('heading', { name: 'Solicita acceso' })).toBeVisible(SERVER_CALL);
+  await pending.getByRole('button', { name: '¿Alguna duda o problema? Escríbenos' }).click();
+  await expect(pending.getByRole('dialog', { name: 'Escríbenos' })).toBeVisible();
+  await expectNoViolations(pending, 'contacto desde la solicitud de acceso');
 });
 
 test('email sign-up and email confirmation screens', async ({ page }) => {
@@ -232,7 +251,7 @@ test('email sign-up and email confirmation screens', async ({ page }) => {
 test('admin access tab', async ({ page }) => {
   await page.goto('/');
   await signInWithGoogle(page, ADMIN_EMAIL, 'Administración', { approve: false });
-  await page.getByRole('button', { name: /^Accesos/ }).click();
-  await expect(page.getByRole('heading', { name: 'Accesos' })).toBeVisible();
+  await page.getByRole('button', { name: /^Administración/ }).click();
+  await expect(page.getByRole('heading', { name: 'Administración' })).toBeVisible();
   await expectNoViolations(page, 'accesos');
 });

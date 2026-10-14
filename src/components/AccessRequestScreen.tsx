@@ -12,6 +12,7 @@ interface AccessRequestScreenProps {
   onRequest: (message: string) => Promise<void>;
   onRetry: () => void;
   onSignOut: () => void;
+  onContact: () => void;
   onDownloadData: () => Promise<void>;
   onDeleteAccount: (password?: string) => Promise<void>;
   hasPassword: boolean;
@@ -49,6 +50,7 @@ export const AccessRequestScreen: React.FC<AccessRequestScreenProps> = ({
   onRequest,
   onRetry,
   onSignOut,
+  onContact,
   onDownloadData,
   onDeleteAccount,
   hasPassword
@@ -210,6 +212,14 @@ export const AccessRequestScreen: React.FC<AccessRequestScreenProps> = ({
               Para revisar tu solicitud se guardan tu nombre, tu email, tu foto de perfil (si entras con Google) y el
               mensaje, en servidores de Google Cloud en la Unión Europea (Bélgica).
             </p>
+
+            <button
+              type="button"
+              onClick={onContact}
+              className="flex w-full items-center justify-center gap-2 rounded-2xl border border-slate-200 px-4 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50"
+            >
+              ¿Alguna duda o problema? Escríbenos
+            </button>
 
             <button
               type="button"

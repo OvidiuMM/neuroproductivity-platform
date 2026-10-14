@@ -31,7 +31,7 @@ test('phones use a bottom section bar, a «Más» sheet and a floating «Nueva t
   await expect(more).toHaveAttribute('aria-expanded', 'false');
   await more.click();
   const sheet = page.getByRole('dialog', { name: 'Más' });
-  await expect(sheet.getByRole('navigation').getByRole('button')).toHaveText(['Blindaje Bermudas', 'Cómo funciona']);
+  await expect(sheet.getByRole('navigation').getByRole('button')).toHaveText(['Blindaje Bermudas', 'Ayuda']);
   await expect(
     sheet.locator('[aria-label^="Sincronizado"], [aria-label^="Hay cambios"], [aria-label^="Sin conexión"]')
   ).toHaveCount(1);

@@ -231,3 +231,43 @@ export const completeTask = (page: Page, title: string) =>
 // Abre el panel «⋯» de una tarea: Editar, Estado, Añadir al calendario y Eliminar
 export const openTaskActions = (page: Page, title: string) =>
   page.getByRole('button', { name: `Acciones de «${title}»`, exact: true }).click();
+
+// Cuenta con email y contraseña ya confirmada, creada directamente en el emulador de Auth, con su token
+export const createVerifiedAccount = async (password = 'clave-segura-1') => {
+  const email = uniqueEmail();
+  const auth = 'http://127.0.0.1:9399/identitytoolkit.googleapis.com/v1';
+  const json = { 'Content-Type': 'application/json' };
+  const signUp = await fetch(`${auth}/accounts:signUp?key=demo-api-key`, {
+    method: 'POST',
+    headers: json,
+    body: JSON.stringify({ email, password, returnSecureToken: true })
+  });
+  const { localId: uid } = (await signUp.json()) as { localId: string };
+  await fetch(`${auth}/projects/${EMULATOR_PROJECT}/accounts:update`, {
+    method: 'POST',
+    headers: OWNER_HEADERS,
+    body: JSON.stringify({ localId: uid, emailVerified: true })
+  });
+  const signIn = await fetch(`${auth}/accounts:signInWithPassword?key=demo-api-key`, {
+    method: 'POST',
+    headers: json,
+    body: JSON.stringify({ email, password, returnSecureToken: true })
+  });
+  const { idToken } = (await signIn.json()) as { idToken: string };
+  return { email, uid, idToken };
+};
+
+// Documentos de una colección del emulador de Firestore (id y campos simples)
+export const listDocuments = async (collection: string) => {
+  const res = await fetch(
+    `http://127.0.0.1:8281/v1/projects/${EMULATOR_PROJECT}/databases/(default)/documents/${collection}?pageSize=300`,
+    { headers: OWNER_HEADERS }
+  );
+  const { documents = [] } = (await res.json()) as {
+    documents?: { name: string; fields: Record<string, Record<string, unknown>> }[];
+  };
+  return documents.map(({ name, fields }) => ({
+    id: name.split('/').pop()!,
+    ...Object.fromEntries(Object.entries(fields).map(([key, value]) => [key, Object.values(value)[0]]))
+  })) as ({ id: string } & Record<string, unknown>)[];
+};

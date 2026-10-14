@@ -1,3 +1,4 @@
+import { forgetFeedback } from './feedbackCleanup';
 import { adminAuth, adminDb } from './adminApp';
 import { HttpsError, onCall, type CallableRequest } from 'firebase-functions/https';
 import * as logger from 'firebase-functions/logger';
@@ -19,7 +20,7 @@ import {
   type DecisionStatus
 } from './accessLogic';
 
-const REGION = 'europe-west1';
+export const REGION = 'europe-west1';
 
 // En CI se escriben en functions/.env desde los secretos del repositorio; la contraseña va en Secret Manager
 const adminEmailParam = defineString('ADMIN_EMAIL', {
@@ -31,20 +32,23 @@ const gmailAppPassword = defineSecret('GMAIL_APP_PASSWORD');
 const isEmulator = process.env.FUNCTIONS_EMULATOR === 'true';
 // En los emuladores no se envían correos; sin el secreto enlazado, el emulador no intenta leerlo de Secret Manager
 // (cada intento bloquea la llamada varios segundos)
-const emailSecrets = isEmulator ? [] : [gmailAppPassword];
+export const emailSecrets = isEmulator ? [] : [gmailAppPassword];
 
 const db = adminDb;
 
 const isDemoProject = () => (process.env.GCLOUD_PROJECT ?? '').startsWith('demo-');
-const adminEmail = () => (isDemoProject() ? DEMO_ADMIN_EMAIL : adminEmailParam.value());
-const appUrl = () => `https://${process.env.GCLOUD_PROJECT}.web.app`;
+export const adminEmail = () => (isDemoProject() ? DEMO_ADMIN_EMAIL : adminEmailParam.value());
+export const appUrl = () => `https://${process.env.GCLOUD_PROJECT}.web.app`;
 
 // Avisos por email (Gmail con contraseña de aplicación). En los emuladores no se envía nada. Un fallo del
-// correo no deshace la solicitud ni la decisión: queda en los logs, sin datos personales (ni el uid).
-const sendAccessEmail = async (kind: AccessEmail, record: AccessRecord) => {
-  const to = kind === 'new-request' ? adminEmail() : record.email;
+// correo no deshace la solicitud, la decisión ni el mensaje: queda en los logs, sin datos personales (ni el uid).
+export const sendEmail = async (
+  kind: string,
+  to: string,
+  { subject, text, replyTo }: { subject: string; text: string; replyTo?: string }
+) => {
   if (isEmulator || !gmailUser.value() || !to) {
-    logger.info('Access email skipped', { kind, emulator: isEmulator });
+    logger.info('Email skipped', { kind, emulator: isEmulator });
     return;
   }
   try {
@@ -52,13 +56,15 @@ const sendAccessEmail = async (kind: AccessEmail, record: AccessRecord) => {
       service: 'gmail',
       auth: { user: gmailUser.value(), pass: gmailAppPassword.value() }
     });
-    const { subject, text } = buildEmail(kind, record, appUrl());
-    await transport.sendMail({ from: `CLAR <${gmailUser.value()}>`, to, subject, text });
-    logger.info('Access email sent', { kind });
+    await transport.sendMail({ from: `CLAR <${gmailUser.value()}>`, to, subject, text, replyTo });
+    logger.info('Email sent', { kind });
   } catch (error) {
-    logger.error('Access email failed', { kind, code: (error as { code?: string }).code ?? 'unknown' });
+    logger.error('Email failed', { kind, code: (error as { code?: string }).code ?? 'unknown' });
   }
 };
+
+const sendAccessEmail = (kind: AccessEmail, record: AccessRecord) =>
+  sendEmail(kind, kind === 'new-request' ? adminEmail() : record.email, buildEmail(kind, record, appUrl()));
 
 // Borra las marcas de administración que no son de la cuenta configurada. Se hace en cada llamada, así una
 // cuenta que deja de ser administración pierde la lectura de las solicitudes aunque no vuelva a entrar.
@@ -69,7 +75,7 @@ const removeStaleAdminMarkers = async () => {
   );
 };
 
-const requireAuth = (request: CallableRequest) => {
+export const requireAuth = (request: CallableRequest) => {
   if (!request.auth) throw new HttpsError('unauthenticated', 'Inicia sesión para continuar.');
   return request.auth;
 };
@@ -177,7 +183,11 @@ export const setAccess = onCall({ region: REGION, secrets: emailSecrets }, async
 // Al eliminar la cuenta se borra también la solicitud de acceso
 export const forgetAccess = onCall({ region: REGION }, async (request) => {
   const auth = requireAuth(request);
-  await Promise.all([db().doc(`access/${auth.uid}`).delete(), db().doc(`admins/${auth.uid}`).delete()]);
+  await Promise.all([
+    db().doc(`access/${auth.uid}`).delete(),
+    db().doc(`admins/${auth.uid}`).delete(),
+    forgetFeedback(auth.uid)
+  ]);
   return { ok: true };
 });
 

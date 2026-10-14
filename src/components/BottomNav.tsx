@@ -31,9 +31,7 @@ export const BottomNav: React.FC<BottomNavProps> = ({
   const primary = SECTIONS.filter(({ tab }) => PRIMARY_TABS.includes(tab));
   const moreIsCurrent = !PRIMARY_TABS.includes(activeTab);
   const pending =
-    pendingAccessCount === 1
-      ? '1 solicitud de acceso pendiente'
-      : `${pendingAccessCount} solicitudes de acceso pendientes`;
+    pendingAccessCount === 1 ? '1 pendiente en Administración' : `${pendingAccessCount} pendientes en Administración`;
   const moreLabel = pendingAccessCount > 0 ? `Más secciones, ${pending}` : 'Más secciones';
 
   return (

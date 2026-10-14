@@ -5,9 +5,9 @@ import { PRIMARY_TABS, sectionLabel, sectionsFor } from '../../src/navigation';
 const access = sectionsFor(true).find((s) => s.tab === 'access')!;
 
 test('the access section says how many requests are pending, in singular or plural', () => {
-  assert.equal(sectionLabel(access, 0), 'Accesos');
-  assert.equal(sectionLabel(access, 1), 'Accesos, 1 pendiente');
-  assert.equal(sectionLabel(access, 3), 'Accesos, 3 pendientes');
+  assert.equal(sectionLabel(access, 0), 'Administración');
+  assert.equal(sectionLabel(access, 1), 'Administración, 1 pendiente');
+  assert.equal(sectionLabel(access, 3), 'Administración, 3 pendientes');
 });
 
 test('only the admin gets the access section, before the help', () => {

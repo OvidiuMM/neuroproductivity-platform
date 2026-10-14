@@ -17,6 +17,7 @@ interface HowItWorksProps {
   // Volver a ver el recorrido guiado o la bienvenida
   onStartTour: () => void;
   onShowWelcome: () => void;
+  onContact: () => void;
 }
 
 const SCREENS: { tab: AppTab; title: string; icon: React.ReactNode; points: string[] }[] = [
@@ -76,13 +77,13 @@ const SCREENS: { tab: AppTab; title: string; icon: React.ReactNode; points: stri
   }
 ];
 
-export const HowItWorks: React.FC<HowItWorksProps> = ({ onNavigate, onStartTour, onShowWelcome }) => {
+export const HowItWorks: React.FC<HowItWorksProps> = ({ onNavigate, onStartTour, onShowWelcome, onContact }) => {
   return (
     <div className="space-y-6">
       <div className="space-y-2 rounded-2xl border border-slate-200 bg-white p-6 shadow-xs">
         <h2 className="flex items-center gap-2 text-xl font-bold text-slate-900">
           <BookOpen className="h-6 w-6 text-indigo-600" />
-          Cómo funciona la app
+          Ayuda
         </h2>
         <p className="max-w-3xl text-sm leading-relaxed text-slate-600">
           CLAR sigue tres pasos: primero decides qué áreas de tu vida quieres mejorar, luego conviertes esa intención en
@@ -95,7 +96,7 @@ export const HowItWorks: React.FC<HowItWorksProps> = ({ onNavigate, onStartTour,
         <div>
           <h3 className="text-sm font-bold text-slate-900">Guía rápida</h3>
           <p className="text-xs text-slate-700">
-            Un recorrido de un minuto por lo esencial, o la introducción al método.
+            Un recorrido de un minuto por lo esencial, la introducción al método, o escríbenos con una idea o un fallo.
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
@@ -112,6 +113,13 @@ export const HowItWorks: React.FC<HowItWorksProps> = ({ onNavigate, onStartTour,
             className="inline-flex min-h-11 items-center rounded-xl border border-slate-300 bg-white px-4 text-sm font-semibold text-slate-800 hover:bg-slate-50"
           >
             Ver la introducción
+          </button>
+          <button
+            type="button"
+            onClick={onContact}
+            className="inline-flex min-h-11 items-center rounded-xl border border-slate-300 bg-white px-4 text-sm font-semibold text-slate-800 hover:bg-slate-50"
+          >
+            Escríbenos
           </button>
         </div>
       </div>
