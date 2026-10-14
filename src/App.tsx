@@ -16,14 +16,15 @@ import {
   EmailDraft,
   UserProfile
 } from './types';
-import { formatTaskDates, isArchived, isUnchanged, withStatus } from './services/tasks';
+import { formatTaskDates, isArchived, withStatus } from './services/tasks';
 import { nextRecurringTask } from './services/recurrence';
 import { forceSync, signOutAndClearCache, type FirebaseServices } from './services/firebase';
 import {
   appendWheelLog,
   completeRecurringTask,
   deleteTask,
-  undoCompleteRecurringTask,
+  undoTaskChange,
+  restoreDeletedTask,
   importUserData,
   saveEmail,
   saveMeeting,
@@ -324,35 +325,30 @@ export default function App({ user, services, isAdmin = false }: AppProps) {
   };
 
   // "Hecha" archiva la tarea; cualquier otro estado la devuelve a su lista
-  // Últimas tareas recibidas, también las cambiadas en otros dispositivos: «Deshacer» comprueba con ellas que no
-  // ha cambiado nada desde que se escribió
-  const latestTasks = useRef(tasks);
-  useEffect(() => {
-    latestTasks.current = tasks;
-  }, [tasks]);
+  // «Deshacer»: comprueba en el servidor que nada ha cambiado y restaura con la hora de ahora (es un cambio nuevo)
+  const undo = (attempt: () => Promise<boolean>) => () => {
+    showToast('Deshaciendo…');
+    attempt()
+      .then((done) => showToast(done ? 'Tarea recuperada.' : 'No se puede deshacer: la tarea ha cambiado entretanto.'))
+      .catch((e: unknown) => {
+        console.error('Error al deshacer:', e);
+        showToast('No se pudo deshacer: hace falta conexión. Puedes cambiarlo a mano.');
+      });
+  };
 
   const handleChangeStatus = (task: TaskItem, status: TaskStatus) => {
     if (status === task.status) return;
     // Tarea recurrente marcada como Hecha: se crea la siguiente repetición (una sola vez por tarea)
     const next = status === 'DONE' && !task.nextOccurrenceId ? nextRecurringTask(task) : null;
     const updated = withStatus(task, status);
-    // Deshacer devuelve la tarea tal como estaba (y quita la repetición que se acaba de crear), pero solo si lo
-    // escrito sigue igual: si entretanto se cambió aquí o en otro dispositivo, se avisa en vez de pisarlo.
-    // Se comprueba con los datos en vivo y no con una transacción, que sin conexión no funcionaría.
-    const restore = (written: TaskItem[], save: () => Promise<void>) => () => {
-      if (!isUnchanged(written, latestTasks.current)) {
-        showToast('No se puede deshacer: la tarea ha cambiado entretanto.');
-        return;
-      }
-      save().catch(reportError('deshacer el cambio'));
-      showToast('Tarea recuperada.');
-    };
+    // Deshacer devuelve la tarea como estaba (y quita la repetición que se acaba de crear) si nada cambió entretanto
+    const restored = () => ({ ...task, updatedAt: new Date().toISOString() });
     if (next) {
       const done = { ...updated, nextOccurrenceId: next.id };
       completeRecurringTask(db, uid, done, next).catch(reportError('guardar la tarea y su siguiente repetición'));
       showToast(
         `Tarea hecha y archivada. Siguiente repetición: ${formatTaskDates(next)?.replace('Vence: ', '')}.`,
-        restore([done, next], () => undoCompleteRecurringTask(db, uid, task, next.id))
+        undo(() => undoTaskChange(db, uid, [done, next], restored(), next.id))
       );
       return;
     }
@@ -360,7 +356,7 @@ export default function App({ user, services, isAdmin = false }: AppProps) {
     if (status === 'DONE') {
       showToast(
         'Tarea hecha y archivada. La encontrarás en «Archivadas».',
-        restore([updated], () => saveTask(db, uid, task))
+        undo(() => undoTaskChange(db, uid, [updated], restored()))
       );
     } else if (isArchived(task)) {
       showToast('Tarea reactivada: vuelve a su lista.');
@@ -372,11 +368,7 @@ export default function App({ user, services, isAdmin = false }: AppProps) {
     deleteTask(db, uid, id).catch(reportError('eliminar la tarea'));
     showToast(
       'Acción eliminada del inventario.',
-      deleted &&
-        (() => {
-          saveTask(db, uid, deleted).catch(reportError('recuperar la tarea'));
-          showToast('Tarea recuperada.');
-        })
+      deleted && undo(() => restoreDeletedTask(db, uid, { ...deleted, updatedAt: new Date().toISOString() }))
     );
   };
 

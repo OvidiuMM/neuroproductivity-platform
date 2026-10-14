@@ -4,13 +4,15 @@ import {
   doc,
   getDocs,
   onSnapshot,
+  runTransaction,
   setDoc,
+  waitForPendingWrites,
   writeBatch,
   type Firestore
 } from 'firebase/firestore';
 import type { User } from 'firebase/auth';
 import { EmailDraft, MeetingGuard, TaskItem, WheelOfLifeLog } from '../types';
-import { normalizeTask } from './tasks';
+import { isUnchanged, normalizeTask } from './tasks';
 
 // Datos de cada persona en users/{uid}/<colección>/<id>. Las reglas (firestore.rules) solo dejan acceder al propio uid.
 export type UserCollection = 'tasks' | 'wheelLogs' | 'meetings' | 'emails';
@@ -75,12 +77,45 @@ export const completeRecurringTask = (db: Firestore, uid: string, done: TaskItem
   return batch.commit();
 };
 
-// Deshacer una tarea recurrente hecha: vuelve tal como estaba y desaparece la repetición que se había creado
-export const undoCompleteRecurringTask = (db: Firestore, uid: string, original: TaskItem, nextId: string) => {
-  const batch = writeBatch(db);
-  batch.set(doc(userCollection(db, uid, 'tasks'), original.id), { ...original, userId: uid });
-  batch.delete(doc(userCollection(db, uid, 'tasks'), nextId));
-  return batch.commit();
+// «Deshacer» necesita al servidor: primero se espera a que confirme lo que se acaba de escribir (o se desiste si no
+// hay conexión) y después se comprueba y se restaura en una transacción, para no pisar cambios de otro dispositivo
+const UNDO_SYNC_TIMEOUT_MS = 5_000;
+const whenSynced = (db: Firestore) =>
+  Promise.race([
+    waitForPendingWrites(db),
+    new Promise<never>((_, reject) => setTimeout(() => reject(new Error('offline')), UNDO_SYNC_TIMEOUT_MS))
+  ]);
+
+// Deshacer un cambio de estado: solo si las tareas escritas siguen igual (mismo estado y fecha de modificación) se
+// restaura la anterior y, si se creó, se borra la siguiente repetición. Devuelve false si algo cambió entretanto.
+export const undoTaskChange = async (
+  db: Firestore,
+  uid: string,
+  written: TaskItem[],
+  restored: TaskItem,
+  removeId?: string
+) => {
+  await whenSynced(db);
+  const tasks = userCollection(db, uid, 'tasks');
+  return runTransaction(db, async (tx) => {
+    const snapshots = await Promise.all(written.map((task) => tx.get(doc(tasks, task.id))));
+    const current = snapshots.filter((s) => s.exists()).map((s) => s.data() as TaskItem);
+    if (!isUnchanged(written, current)) return false;
+    tx.set(doc(tasks, restored.id), { ...restored, userId: uid });
+    if (removeId) tx.delete(doc(tasks, removeId));
+    return true;
+  });
+};
+
+// Recuperar una tarea eliminada, solo si nadie la ha vuelto a crear entretanto
+export const restoreDeletedTask = async (db: Firestore, uid: string, task: TaskItem) => {
+  await whenSynced(db);
+  const ref = doc(userCollection(db, uid, 'tasks'), task.id);
+  return runTransaction(db, async (tx) => {
+    if ((await tx.get(ref)).exists()) return false;
+    tx.set(ref, { ...task, userId: uid });
+    return true;
+  });
 };
 
 export const deleteTask = (db: Firestore, uid: string, taskId: string) =>
