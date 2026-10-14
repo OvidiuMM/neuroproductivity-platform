@@ -517,9 +517,14 @@ export const TaskModal: React.FC<TaskModalProps> = ({
 
           {/* FECHA LÍMITE: a la vista; el inicio y la repetición están en «Más opciones» */}
           <div className="space-y-1.5">
-            <span className="block text-[11px] font-semibold text-slate-700">
+            <span className="mb-1.5 block text-xs font-bold tracking-wider text-slate-600 uppercase">
               Fecha límite
-              {isRepeating && <span className="font-normal text-slate-600"> · fin de la repetición (opcional)</span>}
+              {isRepeating && (
+                <span className="font-normal tracking-normal text-slate-600 normal-case">
+                  {' '}
+                  · fin de la repetición (opcional)
+                </span>
+              )}
             </span>
             <div className="flex gap-2">
               <DateField
