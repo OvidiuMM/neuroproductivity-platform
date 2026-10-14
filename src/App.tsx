@@ -388,7 +388,8 @@ export default function App({ user, services, isAdmin = false }: AppProps) {
   // METAS: si cambia de área, sus tareas heredan la nueva; al eliminarla, sus tareas se quedan sin meta
   const handleSaveGoal = (goal: Goal) => {
     const previous = goals.find((g) => g.id === goal.id);
-    const retagged = previous && previous.area !== goal.area ? tasks.filter((t) => t.goalId === goal.id) : [];
+    const retagged =
+      previous && previous.area !== goal.area ? tasks.filter((t) => t.goalId === goal.id).map((t) => t.id) : [];
     saveGoal(db, uid, goal, retagged).catch(reportError('guardar la meta'));
     showToast(previous ? 'Meta guardada.' : 'Meta creada. Vincúlale tareas desde el formulario de cada tarea.');
   };
@@ -403,7 +404,7 @@ export default function App({ user, services, isAdmin = false }: AppProps) {
       db,
       uid,
       goal.id,
-      tasks.filter((t) => t.goalId === goal.id)
+      tasks.filter((t) => t.goalId === goal.id).map((t) => t.id)
     ).catch(reportError('eliminar la meta'));
     showToast('Meta eliminada. Sus tareas siguen en tus listas.');
   };
