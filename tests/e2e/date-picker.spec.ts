@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test';
-import { signInWithGoogle } from './helpers';
+import { openSection, signInWithGoogle } from './helpers';
 
 const fullDay = new Intl.DateTimeFormat('es-ES', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
 const longDay = new Intl.DateTimeFormat('es-ES', { weekday: 'long', day: 'numeric', month: 'long' });
@@ -93,8 +93,7 @@ test('the calendar stays inside the screen on a phone', async ({ page }) => {
   await page.setViewportSize({ width: 375, height: 740 });
   await page.goto('/');
   await signInWithGoogle(page);
-  await page.getByRole('button', { name: 'Menú' }).click();
-  await page.getByRole('button', { name: 'Listas Duales' }).click();
+  await openSection(page, 'Listas Duales');
   await page.getByRole('button', { name: 'Capturar Primera Acción' }).click();
   await page.getByLabel('Repetir').selectOption('MONTHLY');
 
