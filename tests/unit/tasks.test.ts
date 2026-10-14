@@ -79,14 +79,23 @@ describe('formatTaskDates and validateTaskDates', () => {
   it('formats a deadline and an interval', () => {
     assert.equal(formatTaskDates(task()), null);
     assert.match(formatTaskDates(task({ dueDate: '2026-10-15', dueTime: '15:00' }))!, /^Vence: 15 oct 2026, 15:00$/);
-    assert.match(formatTaskDates(task({ startDate: '2026-10-12', dueDate: '2026-10-15' }))!, /12 oct 2026 → 15 oct 2026/);
+    assert.match(
+      formatTaskDates(task({ startDate: '2026-10-12', dueDate: '2026-10-15' }))!,
+      /12 oct 2026 → 15 oct 2026/
+    );
   });
 
   it('requires a due date for an interval and a start that is not after it', () => {
     assert.equal(validateTaskDates({ dueDate: '2026-10-15' }), null);
     assert.match(validateTaskDates({ startDate: '2026-10-12' })!, /fecha límite/);
     assert.match(validateTaskDates({ startDate: '2026-10-16', dueDate: '2026-10-15' })!, /posterior/);
-    assert.equal(validateTaskDates({ startDate: '2026-10-15', startTime: '09:00', dueDate: '2026-10-15', dueTime: '10:00' }), null);
-    assert.match(validateTaskDates({ startDate: '2026-10-15', startTime: '11:00', dueDate: '2026-10-15', dueTime: '10:00' })!, /posterior/);
+    assert.equal(
+      validateTaskDates({ startDate: '2026-10-15', startTime: '09:00', dueDate: '2026-10-15', dueTime: '10:00' }),
+      null
+    );
+    assert.match(
+      validateTaskDates({ startDate: '2026-10-15', startTime: '11:00', dueDate: '2026-10-15', dueTime: '10:00' })!,
+      /posterior/
+    );
   });
 });

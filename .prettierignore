@@ -1,0 +1,9 @@
+# Generado o de terceros
+dist
+functions/lib
+node_modules
+test-results
+playwright-report
+package-lock.json
+pnpm-lock.yaml
+*.log

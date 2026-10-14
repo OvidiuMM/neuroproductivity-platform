@@ -62,14 +62,16 @@ const matchesDeadline = (task: TaskItem, filter: DeadlineFilter, now: Date) => {
 
 const matchesFilters = (task: TaskItem, filters: ListFilters, now: Date) =>
   (filters.priority === 'ALL' || effectivePriority(task, now) === filters.priority) &&
-  (filters.maxEstimate === 'ALL' || (task.estimateMinutes !== undefined && task.estimateMinutes <= filters.maxEstimate)) &&
+  (filters.maxEstimate === 'ALL' ||
+    (task.estimateMinutes !== undefined && task.estimateMinutes <= filters.maxEstimate)) &&
   (filters.status === 'ALL' || task.status === filters.status) &&
   (filters.category === 'ALL' || task.wheelCategory === filters.category) &&
   matchesDeadline(task, filters.deadline, now);
 
 const byPriorityDesc = (a: TaskItem, b: TaskItem, now: Date) =>
   PRIORITY_LEVELS.indexOf(effectivePriority(b, now)) - PRIORITY_LEVELS.indexOf(effectivePriority(a, now));
-const byDueAsc = (a: TaskItem, b: TaskItem) => (dueMoment(a)?.getTime() ?? Infinity) - (dueMoment(b)?.getTime() ?? Infinity);
+const byDueAsc = (a: TaskItem, b: TaskItem) =>
+  (dueMoment(a)?.getTime() ?? Infinity) - (dueMoment(b)?.getTime() ?? Infinity);
 const byUpdatedDesc = (a: TaskItem, b: TaskItem) => b.updatedAt.localeCompare(a.updatedAt);
 const byEstimateAsc = (a: TaskItem, b: TaskItem) => (a.estimateMinutes ?? Infinity) - (b.estimateMinutes ?? Infinity);
 // Las tareas sin área van al final (un carácter centinela no sirve: localeCompare no lo ordena el último)
@@ -93,14 +95,17 @@ export const arrangeTasks = (tasks: TaskItem[], prefs: ListPrefs, now = new Date
 // Preferencias guardadas en este dispositivo; los valores desconocidos vuelven a los de por defecto
 export const parseListPrefs = (raw: string | null): ListPrefs => {
   try {
-    const stored = raw ? JSON.parse(raw) : {};
+    const stored = (raw ? JSON.parse(raw) : {}) as { sortBy?: unknown; filters?: Record<string, unknown> };
     const filterValue = <K extends keyof ListFilters>(key: K): ListFilters[K] => {
       const value = stored.filters?.[key];
-      return FILTER_OPTIONS[key].includes(value) ? value : DEFAULT_LIST_PREFS.filters[key];
+      const options: readonly unknown[] = FILTER_OPTIONS[key];
+      return options.includes(value) ? (value as ListFilters[K]) : DEFAULT_LIST_PREFS.filters[key];
     };
     return {
-      sortBy: typeof stored.sortBy === 'string' && Object.prototype.hasOwnProperty.call(COMPARATORS, stored.sortBy)
-        ? stored.sortBy : DEFAULT_LIST_PREFS.sortBy,
+      sortBy:
+        typeof stored.sortBy === 'string' && Object.prototype.hasOwnProperty.call(COMPARATORS, stored.sortBy)
+          ? (stored.sortBy as ListPrefs['sortBy'])
+          : DEFAULT_LIST_PREFS.sortBy,
       filters: {
         priority: filterValue('priority'),
         maxEstimate: filterValue('maxEstimate'),

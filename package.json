@@ -11,12 +11,17 @@
     "emulators": "VITE_USE_FIREBASE_EMULATORS=true vite build && npm --prefix functions run build && firebase emulators:start --only hosting,functions,auth,firestore --project demo-neuroproductivity",
     "deploy": "firebase deploy --only hosting,functions,firestore",
     "clean": "rm -rf dist functions/lib",
-    "lint": "tsc --noEmit",
+    "typecheck": "tsc --noEmit",
+    "lint": "tools/eslint/node_modules/.bin/eslint --config tools/eslint/eslint.config.js --max-warnings 0 .",
+    "lint:fix": "npm run lint -- --fix",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
     "test:unit": "tsx --test tests/unit/*.test.ts",
     "test:integration": "tsx --test tests/integration/*.test.ts",
     "test:rules": "firebase emulators:exec --only firestore --project demo-neuroproductivity \"tsx --test tests/rules/*.test.ts\"",
     "test:e2e": "playwright test",
-    "test": "npm run test:unit && npm run test:integration && npm run test:rules && npm run test:e2e"
+    "test": "npm run test:unit && npm run test:integration && npm run test:rules && npm run test:e2e",
+    "prepare": "simple-git-hooks"
   },
   "dependencies": {
     "@google/genai": "^2.4.0",
@@ -40,8 +45,22 @@
     "autoprefixer": "^10.4.21",
     "esbuild": "^0.28.2",
     "firebase-tools": "15.33.0",
+    "lint-staged": "16.4.0",
+    "prettier": "3.9.10",
+    "prettier-plugin-tailwindcss": "0.8.1",
+    "simple-git-hooks": "2.14.0",
     "tailwindcss": "^4.3.3",
     "tsx": "^4.23.15",
     "typescript": "^7.0.2"
+  },
+  "simple-git-hooks": {
+    "pre-commit": "npx lint-staged"
+  },
+  "lint-staged": {
+    "*.{ts,tsx}": [
+      "prettier --write",
+      "tools/eslint/node_modules/.bin/eslint --config tools/eslint/eslint.config.js --max-warnings 0 --fix"
+    ],
+    "*.{js,mjs,cjs,json,md,css,html,yml,yaml}": "prettier --write"
   }
 }

@@ -85,7 +85,11 @@ describe('firestore.rules', () => {
   });
 
   it('does not let a person create or change their data until their access is approved', async () => {
-    for (const [uid, status] of [['carla', 'pending'], ['dani', 'rejected'], ['eva', 'revoked']]) {
+    for (const [uid, status] of [
+      ['carla', 'pending'],
+      ['dani', 'rejected'],
+      ['eva', 'revoked']
+    ]) {
       await grantAccess(uid, status);
     }
     await env.withSecurityRulesDisabled(async (ctx) => {
@@ -96,7 +100,9 @@ describe('firestore.rules', () => {
       await assertFails(setDoc(doc(person, `users/${uid}`), { name: uid }));
       await assertFails(setDoc(doc(person, `users/${uid}/tasks/task-2`), task));
     }
-    await assertFails(updateDoc(doc(env.authenticatedContext('eva').firestore(), 'users/eva/tasks/task-1'), { completed: true }));
+    await assertFails(
+      updateDoc(doc(env.authenticatedContext('eva').firestore(), 'users/eva/tasks/task-1'), { completed: true })
+    );
   });
 
   it('still lets a person without approved access download and delete their own data', async () => {
@@ -117,7 +123,10 @@ describe('firestore.rules', () => {
 
   it('lets each person read only their own access request, and the admin read all of them', async () => {
     await env.withSecurityRulesDisabled(async (ctx) => {
-      await setDoc(doc(ctx.firestore(), 'admins/admin'), { email: 'admin@example.com', since: '2026-10-11T10:00:00.000Z' });
+      await setDoc(doc(ctx.firestore(), 'admins/admin'), {
+        email: 'admin@example.com',
+        since: '2026-10-11T10:00:00.000Z'
+      });
     });
     const ana = env.authenticatedContext('ana').firestore();
     const admin = env.authenticatedContext('admin', { email: 'admin@example.com' }).firestore();
@@ -132,7 +141,10 @@ describe('firestore.rules', () => {
 
   it('ignores an admin marker whose email is not the reader’s (e.g. after changing the admin account)', async () => {
     await env.withSecurityRulesDisabled(async (ctx) => {
-      await setDoc(doc(ctx.firestore(), 'admins/former'), { email: 'antes@example.com', since: '2026-10-01T10:00:00.000Z' });
+      await setDoc(doc(ctx.firestore(), 'admins/former'), {
+        email: 'antes@example.com',
+        since: '2026-10-01T10:00:00.000Z'
+      });
     });
     const former = env.authenticatedContext('former', { email: 'otra@example.com' }).firestore();
     await assertFails(getDocs(collection(former, 'access')));
@@ -142,7 +154,10 @@ describe('firestore.rules', () => {
 
   it('never lets a client write access requests or the admin list, not even the admin', async () => {
     await env.withSecurityRulesDisabled(async (ctx) => {
-      await setDoc(doc(ctx.firestore(), 'admins/admin'), { email: 'admin@example.com', since: '2026-10-11T10:00:00.000Z' });
+      await setDoc(doc(ctx.firestore(), 'admins/admin'), {
+        email: 'admin@example.com',
+        since: '2026-10-11T10:00:00.000Z'
+      });
     });
     const carla = env.authenticatedContext('carla').firestore();
     const admin = env.authenticatedContext('admin', { email: 'admin@example.com' }).firestore();

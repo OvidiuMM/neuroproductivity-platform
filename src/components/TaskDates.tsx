@@ -16,13 +16,13 @@ export const TaskDates: React.FC<{ task: TaskItem; now?: Date }> = ({ task, now 
   return (
     <>
       <span className={`inline-flex items-center gap-1 font-semibold ${color}`}>
-        <CalendarClock className="w-3 h-3" />
+        <CalendarClock className="h-3 w-3" />
         {text}
         {(state === 'overdue' || state === 'soon') && <span className="sr-only">({DEADLINE_LABEL[state]})</span>}
       </span>
       {task.recurrence && (
         <span className="inline-flex items-center gap-1 font-semibold text-indigo-600">
-          <Repeat className="w-3 h-3" aria-hidden="true" />
+          <Repeat className="h-3 w-3" aria-hidden="true" />
           <span className="sr-only">Se repite:</span>
           {describeRecurrence(task.recurrence, task.dueDate)}
         </span>

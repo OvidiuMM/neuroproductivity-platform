@@ -1,4 +1,4 @@
-import { RefObject, useEffect, useRef } from 'react';
+import { RefObject, useEffect, useLayoutEffect, useRef } from 'react';
 
 const FOCUSABLE =
   'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
@@ -15,9 +15,11 @@ export const useModalFocus = (
 ) => {
   // onClose suele ser una función nueva en cada render; con una ref el efecto no se repite por ello
   const onCloseRef = useRef(onClose);
-  onCloseRef.current = onClose;
   const returnFocusRef = useRef(returnFocusTo);
-  returnFocusRef.current = returnFocusTo;
+  useLayoutEffect(() => {
+    onCloseRef.current = onClose;
+    returnFocusRef.current = returnFocusTo;
+  });
 
   useEffect(() => {
     const container = containerRef.current;

@@ -32,8 +32,7 @@ test('adds tasks from the button at the end of the list and colors titles by due
       probe.remove();
       return color;
     }, className);
-  const titleColor = (name: string) =>
-    page.getByRole('heading', { name }).evaluate((el) => getComputedStyle(el).color);
+  const titleColor = (name: string) => page.getByRole('heading', { name }).evaluate((el) => getComputedStyle(el).color);
 
   expect(await titleColor(overdue)).toBe(await colorOfClass('text-red-600'));
   expect(await titleColor(soon)).toBe(await colorOfClass('text-violet-600'));
@@ -109,7 +108,7 @@ test('adds a task with a due date to Google, Outlook or an .ics calendar file', 
   await menu.getByRole('menuitem', { name: /Descargar \.ics/ }).click();
   const download = await downloadPromise;
   expect(download.suggestedFilename()).toMatch(/\.ics$/);
-  const ics = readFileSync((await download.path())!, 'utf8');
+  const ics = readFileSync(await download.path(), 'utf8');
   expect(ics).toContain('BEGIN:VEVENT');
   expect(ics).toContain(`SUMMARY:${title}`);
 });
@@ -123,7 +122,9 @@ test('disables the calendar button for tasks without a due date', async ({ page 
   await page.getByRole('button', { name: 'Capturar Primera Acción' }).click();
   await fillAndSaveTask(page, { title });
 
-  await expect(page.getByRole('button', { name: `Añadir «${title}» al calendario (necesita fecha límite)` })).toBeDisabled();
+  await expect(
+    page.getByRole('button', { name: `Añadir «${title}» al calendario (necesita fecha límite)` })
+  ).toBeDisabled();
 });
 
 test('updates deadline colors while the page stays open', async ({ page }) => {

@@ -22,7 +22,11 @@ export const EmailVerificationScreen: React.FC<EmailVerificationScreenProps> = (
     try {
       if (kind === 'check') {
         if (await refreshVerification(user)) onVerified();
-        else setMessage({ kind: 'error', text: 'Tu email aún no consta como confirmado. Abre el enlace del correo y vuelve a intentarlo.' });
+        else
+          setMessage({
+            kind: 'error',
+            text: 'Tu email aún no consta como confirmado. Abre el enlace del correo y vuelve a intentarlo.'
+          });
       } else {
         await resendVerification(user);
         setMessage({ kind: 'info', text: `Te hemos enviado otro enlace a ${user.email}.` });
@@ -37,8 +41,8 @@ export const EmailVerificationScreen: React.FC<EmailVerificationScreenProps> = (
   return (
     <AccessibleScreen>
       {(openAccessibility) => (
-        <main className="min-h-screen bg-slate-50 flex items-center justify-center p-4 antialiased">
-          <div className="w-full max-w-md bg-white rounded-3xl border border-slate-200 shadow-xl p-8 space-y-6">
+        <main className="flex min-h-screen items-center justify-center bg-slate-50 p-4 antialiased">
+          <div className="w-full max-w-md space-y-6 rounded-3xl border border-slate-200 bg-white p-8 shadow-xl">
             <div className="flex items-center gap-3">
               <BrandMark size={44} />
               <div>
@@ -48,13 +52,13 @@ export const EmailVerificationScreen: React.FC<EmailVerificationScreenProps> = (
             </div>
 
             <div className="space-y-2">
-              <h1 className="text-lg font-bold text-slate-900 flex items-center gap-2">
-                <MailCheck className="w-5 h-5 text-indigo-600" aria-hidden="true" />
+              <h1 className="flex items-center gap-2 text-lg font-bold text-slate-900">
+                <MailCheck className="h-5 w-5 text-indigo-600" aria-hidden="true" />
                 Confirma tu email
               </h1>
-              <p className="text-sm text-slate-700 leading-relaxed">
-                Te hemos enviado un enlace a <strong>{user.email}</strong>. Ábrelo para confirmar tu dirección y después pulsa «Ya lo he confirmado».
-                Revisa también el correo no deseado.
+              <p className="text-sm leading-relaxed text-slate-700">
+                Te hemos enviado un enlace a <strong>{user.email}</strong>. Ábrelo para confirmar tu dirección y después
+                pulsa «Ya lo he confirmado». Revisa también el correo no deseado.
               </p>
             </div>
 
@@ -62,8 +66,10 @@ export const EmailVerificationScreen: React.FC<EmailVerificationScreenProps> = (
               {message && (
                 <p
                   role={message.kind === 'error' ? 'alert' : undefined}
-                  className={`text-xs rounded-xl p-3 border ${
-                    message.kind === 'error' ? 'text-red-700 bg-red-50 border-red-200' : 'text-emerald-800 bg-emerald-50 border-emerald-200'
+                  className={`rounded-xl border p-3 text-xs ${
+                    message.kind === 'error'
+                      ? 'border-red-200 bg-red-50 text-red-700'
+                      : 'border-emerald-200 bg-emerald-50 text-emerald-800'
                   }`}
                 >
                   {message.text}
@@ -76,26 +82,26 @@ export const EmailVerificationScreen: React.FC<EmailVerificationScreenProps> = (
                 type="button"
                 disabled={busy !== null}
                 onClick={() => run('check')}
-                className="w-full py-3 px-4 bg-slate-900 hover:bg-slate-800 disabled:opacity-60 text-white rounded-2xl text-sm font-bold flex items-center justify-center gap-2"
+                className="flex w-full items-center justify-center gap-2 rounded-2xl bg-slate-900 px-4 py-3 text-sm font-bold text-white hover:bg-slate-800 disabled:opacity-60"
               >
-                <RefreshCw className="w-4 h-4" aria-hidden="true" />
+                <RefreshCw className="h-4 w-4" aria-hidden="true" />
                 {busy === 'check' ? 'Comprobando…' : 'Ya lo he confirmado'}
               </button>
               <button
                 type="button"
                 disabled={busy !== null}
                 onClick={() => run('resend')}
-                className="w-full py-2.5 px-4 border border-slate-300 hover:bg-slate-50 disabled:opacity-60 text-slate-700 rounded-2xl text-sm font-semibold flex items-center justify-center gap-2"
+                className="flex w-full items-center justify-center gap-2 rounded-2xl border border-slate-300 px-4 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-60"
               >
-                <Send className="w-4 h-4" aria-hidden="true" />
+                <Send className="h-4 w-4" aria-hidden="true" />
                 {busy === 'resend' ? 'Enviando…' : 'Reenviar el email'}
               </button>
               <button
                 type="button"
                 onClick={onSignOut}
-                className="w-full py-2 px-4 border border-slate-200 hover:bg-slate-50 text-slate-700 rounded-2xl text-xs font-semibold flex items-center justify-center gap-2"
+                className="flex w-full items-center justify-center gap-2 rounded-2xl border border-slate-200 px-4 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50"
               >
-                <LogOut className="w-3.5 h-3.5" aria-hidden="true" />
+                <LogOut className="h-3.5 w-3.5" aria-hidden="true" />
                 Cerrar sesión
               </button>
             </div>

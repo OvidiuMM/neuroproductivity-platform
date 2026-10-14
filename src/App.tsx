@@ -3,9 +3,19 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useCallback, useState, useEffect, useRef } from 'react';
 import type { User } from 'firebase/auth';
-import { AppTab, ListContext, TaskItem, TaskStatus, WheelCategory, WheelOfLifeLog, MeetingGuard, EmailDraft, UserProfile } from './types';
+import {
+  AppTab,
+  ListContext,
+  TaskItem,
+  TaskStatus,
+  WheelCategory,
+  WheelOfLifeLog,
+  MeetingGuard,
+  EmailDraft,
+  UserProfile
+} from './types';
 import { formatTaskDates, isArchived, withStatus } from './services/tasks';
 import { nextRecurringTask } from './services/recurrence';
 import { forceSync, signOutAndClearCache, type FirebaseServices } from './services/firebase';
@@ -113,12 +123,17 @@ export default function App({ user, services, isAdmin = false }: AppProps) {
   // ACCESOS (solo administración): solicitudes en vivo para la pestaña y su contador de pendientes
   const [accessRequests, setAccessRequests] = useState<AccessRequest[]>([]);
   const [accessError, setAccessError] = useState<string | null>(null);
-  useEffect(() => {
+  // Al dejar de ser administración se vacían las solicitudes y se sale de su pestaña
+  const [wasAdmin, setWasAdmin] = useState(isAdmin);
+  if (wasAdmin !== isAdmin) {
+    setWasAdmin(isAdmin);
     if (!isAdmin) {
       setAccessRequests([]);
       setActiveTab((tab) => (tab === 'access' ? 'tasks' : tab));
-      return;
     }
+  }
+  useEffect(() => {
+    if (!isAdmin) return;
     return subscribeToAccessRequests(db, setAccessRequests, (e) => {
       console.error('Error loading access requests:', e);
       setAccessError('No se pudieron cargar las solicitudes de acceso.');
@@ -150,19 +165,25 @@ export default function App({ user, services, isAdmin = false }: AppProps) {
   // Toast / Banner de notificación
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
-  const showToast = (msg: string) => {
+  const showToast = useCallback((msg: string) => {
     setToastMessage(msg);
     setTimeout(() => setToastMessage(null), 4000);
-  };
+  }, []);
 
-  const reportError = (action: string) => (e: unknown) => {
-    console.error(`Error al ${action}:`, e);
-    showToast(`No se pudo ${action}. Revisa tu conexión e inténtalo de nuevo.`);
-  };
+  const reportError = useCallback(
+    (action: string) => (e: unknown) => {
+      console.error(`Error al ${action}:`, e);
+      showToast(`No se pudo ${action}. Revisa tu conexión e inténtalo de nuevo.`);
+    },
+    [showToast]
+  );
 
   // SINCRONIZACIÓN: verde solo si las cuatro colecciones están confirmadas por el servidor y sin escrituras pendientes
   const [syncByCollection, setSyncByCollection] = useState<Record<UserCollection, SnapshotInfo>>(
-    () => Object.fromEntries(USER_COLLECTIONS.map((name) => [name, { fromServer: false, hasPendingWrites: false }])) as Record<UserCollection, SnapshotInfo>
+    () =>
+      Object.fromEntries(
+        USER_COLLECTIONS.map((name) => [name, { fromServer: false, hasPendingWrites: false }])
+      ) as Record<UserCollection, SnapshotInfo>
   );
   const [isOnline, setIsOnline] = useState(() => navigator.onLine);
   const [isSyncing, setIsSyncing] = useState(false);
@@ -187,10 +208,10 @@ export default function App({ user, services, isAdmin = false }: AppProps) {
   const syncStatus: SyncStatus = isSyncing
     ? 'syncing'
     : !isOnline
-    ? 'offline'
-    : Object.values(syncByCollection).every((s) => s.fromServer && !s.hasPendingWrites)
-    ? 'synced'
-    : 'pending';
+      ? 'offline'
+      : Object.values(syncByCollection).every((s) => s.fromServer && !s.hasPendingWrites)
+        ? 'synced'
+        : 'pending';
 
   const handleForceSync = async () => {
     setIsSyncing(true);
@@ -212,10 +233,16 @@ export default function App({ user, services, isAdmin = false }: AppProps) {
   useEffect(() => {
     const onError = reportError('cargar tus datos');
     const unsubscribers = [
-      subscribeToCollection(db, uid, 'tasks', (items, info) => {
-        setTasks(items);
-        trackSync('tasks', info);
-      }, onError),
+      subscribeToCollection(
+        db,
+        uid,
+        'tasks',
+        (items, info) => {
+          setTasks(items);
+          trackSync('tasks', info);
+        },
+        onError
+      ),
       subscribeToCollection(
         db,
         uid,
@@ -233,17 +260,29 @@ export default function App({ user, services, isAdmin = false }: AppProps) {
         },
         onError
       ),
-      subscribeToCollection(db, uid, 'meetings', (items, info) => {
-        setMeetings(items);
-        trackSync('meetings', info);
-      }, onError),
-      subscribeToCollection(db, uid, 'emails', (items, info) => {
-        setEmails(items);
-        trackSync('emails', info);
-      }, onError)
+      subscribeToCollection(
+        db,
+        uid,
+        'meetings',
+        (items, info) => {
+          setMeetings(items);
+          trackSync('meetings', info);
+        },
+        onError
+      ),
+      subscribeToCollection(
+        db,
+        uid,
+        'emails',
+        (items, info) => {
+          setEmails(items);
+          trackSync('emails', info);
+        },
+        onError
+      )
     ];
     return () => unsubscribers.forEach((unsubscribe) => unsubscribe());
-  }, [db, uid]);
+  }, [db, uid, reportError]);
 
   // Las escrituras se reflejan al instante (caché local) y se sincronizan con el servidor en segundo plano
   const openNewTask = (options?: { someday?: boolean }) => {
@@ -330,7 +369,9 @@ export default function App({ user, services, isAdmin = false }: AppProps) {
   };
 
   const handleSendEmail = (emailData: Omit<EmailDraft, 'id'>) => {
-    saveEmail(db, uid, { ...emailData, id: `email-${Date.now()}`, userId: uid }).catch(reportError('guardar el correo'));
+    saveEmail(db, uid, { ...emailData, id: `email-${Date.now()}`, userId: uid }).catch(
+      reportError('guardar el correo')
+    );
     showToast('Mensaje despachado con protocolo de redacción inversa validado.');
   };
 
@@ -354,7 +395,13 @@ export default function App({ user, services, isAdmin = false }: AppProps) {
   const isImportOpen = localProfiles.length > 0 && !isImportPostponed;
   // La pantalla de bienvenida no cuenta: es decorativa, se quita sola y deja pasar los clics mientras se desvanece
   const isDialogOpen =
-    isTaskModalOpen || isArchiveOpen || isMeetingModalOpen || isEmailModalOpen || isAccountMenuOpen || isAccessibilityOpen || isImportOpen;
+    isTaskModalOpen ||
+    isArchiveOpen ||
+    isMeetingModalOpen ||
+    isEmailModalOpen ||
+    isAccountMenuOpen ||
+    isAccessibilityOpen ||
+    isImportOpen;
 
   // Conteo de tareas por contexto
   const archivedTasks = tasks.filter(isArchived);
@@ -377,172 +424,170 @@ export default function App({ user, services, isAdmin = false }: AppProps) {
     : '0.0';
 
   return (
-    <div className="min-h-screen bg-slate-50 text-slate-900 font-sans flex flex-col antialiased selection:bg-indigo-500 selection:text-white">
-      
-
+    <div className="flex min-h-screen flex-col bg-slate-50 font-sans text-slate-900 antialiased selection:bg-indigo-500 selection:text-white">
       {/* Con un diálogo abierto, el resto de la página queda inerte: ni el teclado ni los lectores de pantalla llegan */}
       <div className="contents" inert={isDialogOpen}>
-      <a
-        href="#main-content"
-        className="sr-only focus:not-sr-only focus:fixed focus:top-2 focus:left-2 focus:z-[60] focus:px-4 focus:py-2 focus:rounded-lg focus:bg-slate-900 focus:text-white focus:text-sm focus:font-semibold"
-      >
-        Saltar al contenido
-      </a>
-      {/* Barra de Navegación Superior con Contrato de 3 Zonas */}
-      <Navbar
-        activeTab={activeTab}
-        setActiveTab={navigate}
-        activeContext={activeContext}
-        setActiveContext={setActiveContext}
-        activeUser={profile}
-        onOpenAccount={() => setIsAccountMenuOpen(true)}
-        taskCounts={{ work: workCount, personal: personalCount }}
-        syncStatus={syncStatus}
-        onForceSync={handleForceSync}
-        isAdmin={isAdmin}
-        pendingAccessCount={pendingAccessCount}
-      />
-
-      {/* NUEVA TAREA: debajo de la cabecera, en todas las secciones */}
-      <div className="max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 pt-4 flex justify-end">
-        <button
-          type="button"
-          onClick={() => openNewTask()}
-          className="w-full sm:w-auto h-10 px-4 text-sm font-bold text-white bg-slate-900 hover:bg-slate-800 rounded-xl shadow-sm transition-colors inline-flex items-center justify-center gap-2"
+        <a
+          href="#main-content"
+          className="sr-only focus:not-sr-only focus:fixed focus:top-2 focus:left-2 focus:z-[60] focus:rounded-lg focus:bg-slate-900 focus:px-4 focus:py-2 focus:text-sm focus:font-semibold focus:text-white"
         >
-          <Plus className="w-4 h-4" aria-hidden="true" />
-          Nueva tarea
-        </button>
-      </div>
+          Saltar al contenido
+        </a>
+        {/* Barra de Navegación Superior con Contrato de 3 Zonas */}
+        <Navbar
+          activeTab={activeTab}
+          setActiveTab={navigate}
+          activeContext={activeContext}
+          setActiveContext={setActiveContext}
+          activeUser={profile}
+          onOpenAccount={() => setIsAccountMenuOpen(true)}
+          taskCounts={{ work: workCount, personal: personalCount }}
+          syncStatus={syncStatus}
+          onForceSync={handleForceSync}
+          isAdmin={isAdmin}
+          pendingAccessCount={pendingAccessCount}
+        />
 
-      {/* CONTENIDO PRINCIPAL */}
-      <main id="main-content" tabIndex={-1} className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 pt-4 pb-8 space-y-6 focus:outline-none">
-
-        {/* INICIO: foco de la lista activa, estadísticas y recomendaciones */}
-        {activeTab === 'home' && (
-          <HomeView
-            tasks={tasks}
-            activeContext={activeContext}
-            accountName={profile.name}
-            top10Count={top10Count}
-            wheelLogs={wheelLogs}
-            wheelAverage={wheelAverage}
-            meetings={meetings}
-            now={now}
-            onOpenAccount={() => setIsAccountMenuOpen(true)}
-            onNavigate={navigate}
-          />
-        )}
-
-        {/* PESTAÑA 1: LISTAS DUALES (GESTOR DUAL CON JERARQUÍA VISUAL TOP 10) */}
-        {activeTab === 'tasks' && (
-          <TaskList
-            tasks={tasks}
-            activeContext={activeContext}
-            prefs={listPrefs}
-            onPrefsChange={setListPrefs}
-            archivedCount={archivedTasks.length}
-            onChangeStatus={handleChangeStatus}
-            onDeleteTask={handleDeleteTask}
-            onEditTask={(task) => {
-              setEditingTask(task);
-              setIsTaskModalOpen(true);
-            }}
-            onOpenNewTask={openNewTask}
-            onOpenArchive={() => setIsArchiveOpen(true)}
-          />
-        )}
-
-        {/* AGENDA: tareas con fecha de las dos listas, repeticiones previstas y reuniones */}
-        {activeTab === 'agenda' && (
-          <AgendaView
-            tasks={tasks}
-            meetings={meetings}
-            onEditTask={(task) => {
-              setEditingTask(task);
-              setIsTaskModalOpen(true);
-            }}
-          />
-        )}
-
-        {/* PESTAÑA 2: RUEDA DE LA VIDA (MÓDULO 1) */}
-        {activeTab === 'wheel' && (
-          // Se remonta cuando llegan los datos confirmados por el servidor para partir de la última evaluación
-          <WheelOfLife
-            key={wheelSynced ? 'synced' : 'cache'}
-            logs={wheelLogs}
-            showFirstStep={wheelSynced && wheelLogs.length === 0}
-            onAppendSnapshot={handleAppendWheelSnapshot}
-            onOpenHelp={() => navigate('help')}
-          />
-        )}
-
-        {/* PESTAÑA 3: BLINDAJE BERMUDAS (MÓDULO 5) */}
-        {activeTab === 'bermudas' && (
-          <BermudasShield
-            meetings={meetings}
-            emails={emails}
-            onOpenNewMeeting={() => setIsMeetingModalOpen(true)}
-            onOpenNewEmail={() => setIsEmailModalOpen(true)}
-          />
-        )}
-
-        {/* PESTAÑA 4: CÓMO FUNCIONA LA APP */}
-        {activeTab === 'help' && <HowItWorks onNavigate={navigate} />}
-
-        {activeTab === 'access' && isAdmin && (
-          <AccessAdminView requests={accessRequests} currentUid={uid} error={accessError} onDecide={handleDecideAccess} />
-        )}
-
-      </main>
-
-      {/* FOOTER DISCRETO Y EDITORIAL */}
-      <footer className="border-t border-slate-200 bg-white py-6 mt-12 text-xs text-slate-500">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between gap-3">
-          <div className="flex flex-wrap items-center justify-center gap-2">
-            <span className="font-bold text-slate-700">CLAR v{__APP_VERSION__}</span>
-            <span className="text-slate-300">·</span>
-            <p className="text-slate-500">
-              Gestión del tiempo y neuroproductividad.
-            </p>
-          </div>
-          <div className="flex flex-wrap items-center justify-center gap-3 text-slate-600">
-            <button
-              onClick={() => setShowSplash(true)}
-              className="text-[11px] text-indigo-600 hover:text-indigo-800 font-semibold px-2 py-0.5 rounded bg-indigo-50 border border-indigo-200 transition-colors"
-            >
-              📱 Ver Pantalla de Inicio Móvil
-            </button>
-            <span className="text-slate-300">·</span>
-            <button
-              onClick={() => navigate('help')}
-              className="text-[11px] text-indigo-600 hover:text-indigo-800 font-semibold"
-            >
-              Guía de uso
-            </button>
-          </div>
+        {/* NUEVA TAREA: debajo de la cabecera, en todas las secciones */}
+        <div className="mx-auto flex w-full max-w-7xl justify-end px-4 pt-4 sm:px-6 lg:px-8">
+          <button
+            type="button"
+            onClick={() => openNewTask()}
+            className="inline-flex h-10 w-full items-center justify-center gap-2 rounded-xl bg-slate-900 px-4 text-sm font-bold text-white shadow-sm transition-colors hover:bg-slate-800 sm:w-auto"
+          >
+            <Plus className="h-4 w-4" aria-hidden="true" />
+            Nueva tarea
+          </button>
         </div>
-      </footer>
+
+        {/* CONTENIDO PRINCIPAL */}
+        <main
+          id="main-content"
+          tabIndex={-1}
+          className="mx-auto w-full max-w-7xl flex-1 space-y-6 px-4 pt-4 pb-8 focus:outline-none sm:px-6 lg:px-8"
+        >
+          {/* INICIO: foco de la lista activa, estadísticas y recomendaciones */}
+          {activeTab === 'home' && (
+            <HomeView
+              tasks={tasks}
+              activeContext={activeContext}
+              accountName={profile.name}
+              top10Count={top10Count}
+              wheelLogs={wheelLogs}
+              wheelAverage={wheelAverage}
+              meetings={meetings}
+              now={now}
+              onOpenAccount={() => setIsAccountMenuOpen(true)}
+              onNavigate={navigate}
+            />
+          )}
+
+          {/* PESTAÑA 1: LISTAS DUALES (GESTOR DUAL CON JERARQUÍA VISUAL TOP 10) */}
+          {activeTab === 'tasks' && (
+            <TaskList
+              tasks={tasks}
+              activeContext={activeContext}
+              prefs={listPrefs}
+              onPrefsChange={setListPrefs}
+              archivedCount={archivedTasks.length}
+              onChangeStatus={handleChangeStatus}
+              onDeleteTask={handleDeleteTask}
+              onEditTask={(task) => {
+                setEditingTask(task);
+                setIsTaskModalOpen(true);
+              }}
+              onOpenNewTask={openNewTask}
+              onOpenArchive={() => setIsArchiveOpen(true)}
+            />
+          )}
+
+          {/* AGENDA: tareas con fecha de las dos listas, repeticiones previstas y reuniones */}
+          {activeTab === 'agenda' && (
+            <AgendaView
+              tasks={tasks}
+              meetings={meetings}
+              onEditTask={(task) => {
+                setEditingTask(task);
+                setIsTaskModalOpen(true);
+              }}
+            />
+          )}
+
+          {/* PESTAÑA 2: RUEDA DE LA VIDA (MÓDULO 1) */}
+          {activeTab === 'wheel' && (
+            // Se remonta cuando llegan los datos confirmados por el servidor para partir de la última evaluación
+            <WheelOfLife
+              key={wheelSynced ? 'synced' : 'cache'}
+              logs={wheelLogs}
+              showFirstStep={wheelSynced && wheelLogs.length === 0}
+              onAppendSnapshot={handleAppendWheelSnapshot}
+              onOpenHelp={() => navigate('help')}
+            />
+          )}
+
+          {/* PESTAÑA 3: BLINDAJE BERMUDAS (MÓDULO 5) */}
+          {activeTab === 'bermudas' && (
+            <BermudasShield
+              meetings={meetings}
+              emails={emails}
+              onOpenNewMeeting={() => setIsMeetingModalOpen(true)}
+              onOpenNewEmail={() => setIsEmailModalOpen(true)}
+            />
+          )}
+
+          {/* PESTAÑA 4: CÓMO FUNCIONA LA APP */}
+          {activeTab === 'help' && <HowItWorks onNavigate={navigate} />}
+
+          {activeTab === 'access' && isAdmin && (
+            <AccessAdminView
+              requests={accessRequests}
+              currentUid={uid}
+              error={accessError}
+              onDecide={handleDecideAccess}
+            />
+          )}
+        </main>
+
+        {/* FOOTER DISCRETO Y EDITORIAL */}
+        <footer className="mt-12 border-t border-slate-200 bg-white py-6 text-xs text-slate-500">
+          <div className="mx-auto flex max-w-7xl flex-col items-center justify-between gap-3 px-4 sm:flex-row sm:px-6 lg:px-8">
+            <div className="flex flex-wrap items-center justify-center gap-2">
+              <span className="font-bold text-slate-700">CLAR v{__APP_VERSION__}</span>
+              <span className="text-slate-300">·</span>
+              <p className="text-slate-500">Gestión del tiempo y neuroproductividad.</p>
+            </div>
+            <div className="flex flex-wrap items-center justify-center gap-3 text-slate-600">
+              <button
+                onClick={() => setShowSplash(true)}
+                className="rounded border border-indigo-200 bg-indigo-50 px-2 py-0.5 text-[11px] font-semibold text-indigo-600 transition-colors hover:text-indigo-800"
+              >
+                📱 Ver Pantalla de Inicio Móvil
+              </button>
+              <span className="text-slate-300">·</span>
+              <button
+                onClick={() => navigate('help')}
+                className="text-[11px] font-semibold text-indigo-600 hover:text-indigo-800"
+              >
+                Guía de uso
+              </button>
+            </div>
+          </div>
+        </footer>
       </div>
 
       {/* BANNER TOAST DE NOTIFICACIÓN: región viva siempre presente para que los lectores de pantalla lo anuncien */}
       <div role="status" aria-live="polite">
         {toastMessage && (
-          <div className="fixed bottom-6 right-6 z-50 bg-slate-900 text-white text-xs px-4 py-3 rounded-2xl shadow-xl flex items-center gap-2.5 animate-in slide-in-from-bottom-3 duration-200">
-            <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" aria-hidden="true" />
+          <div className="animate-in slide-in-from-bottom-3 fixed right-6 bottom-6 z-50 flex items-center gap-2.5 rounded-2xl bg-slate-900 px-4 py-3 text-xs text-white shadow-xl duration-200">
+            <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-400" aria-hidden="true" />
             <span className="font-semibold">{toastMessage}</span>
           </div>
         )}
       </div>
 
-
       {/* PANTALLA DE INICIO MÓVIL (SPLASH SCREEN) */}
       {showSplash && (
-        <SplashScreen
-          version={__APP_VERSION__}
-          autoDismissMs={1600}
-          onFinish={() => setShowSplash(false)}
-        />
+        <SplashScreen version={__APP_VERSION__} autoDismissMs={1600} onFinish={() => setShowSplash(false)} />
       )}
 
       {/* MODAL 1: CAPTURA DE TAREA CON ANALIZADOR SINTÁCTICO Y TF-IDF */}
@@ -575,11 +620,7 @@ export default function App({ user, services, isAdmin = false }: AppProps) {
       />
 
       {/* MODAL 3: CORREO CON REDACCIÓN INVERSA Y ALERTA NO-SCROLL */}
-      <EmailModal
-        isOpen={isEmailModalOpen}
-        onClose={() => setIsEmailModalOpen(false)}
-        onSendEmail={handleSendEmail}
-      />
+      <EmailModal isOpen={isEmailModalOpen} onClose={() => setIsEmailModalOpen(false)} onSendEmail={handleSendEmail} />
 
       {/* MODAL 4: CUENTA (CERRAR SESIÓN, DESCARGAR DATOS, ELIMINAR CUENTA) */}
       <AccountMenu
@@ -614,7 +655,6 @@ export default function App({ user, services, isAdmin = false }: AppProps) {
           onLater={() => setIsImportPostponed(true)}
         />
       )}
-
     </div>
   );
 }
