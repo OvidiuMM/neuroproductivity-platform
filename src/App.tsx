@@ -16,7 +16,7 @@ import {
   EmailDraft,
   UserProfile
 } from './types';
-import { formatTaskDates, isArchived, withStatus } from './services/tasks';
+import { formatTaskDates, isArchived, isUnchanged, withStatus } from './services/tasks';
 import { nextRecurringTask } from './services/recurrence';
 import { forceSync, signOutAndClearCache, type FirebaseServices } from './services/firebase';
 import {
@@ -324,23 +324,35 @@ export default function App({ user, services, isAdmin = false }: AppProps) {
   };
 
   // "Hecha" archiva la tarea; cualquier otro estado la devuelve a su lista
+  // Últimas tareas recibidas, también las cambiadas en otros dispositivos: «Deshacer» comprueba con ellas que no
+  // ha cambiado nada desde que se escribió
+  const latestTasks = useRef(tasks);
+  useEffect(() => {
+    latestTasks.current = tasks;
+  }, [tasks]);
+
   const handleChangeStatus = (task: TaskItem, status: TaskStatus) => {
     if (status === task.status) return;
     // Tarea recurrente marcada como Hecha: se crea la siguiente repetición (una sola vez por tarea)
     const next = status === 'DONE' && !task.nextOccurrenceId ? nextRecurringTask(task) : null;
     const updated = withStatus(task, status);
-    // Deshacer devuelve la tarea tal como estaba (y quita la repetición que se acaba de crear)
-    const restore = (save: () => Promise<void>) => () => {
+    // Deshacer devuelve la tarea tal como estaba (y quita la repetición que se acaba de crear), pero solo si lo
+    // escrito sigue igual: si entretanto se cambió aquí o en otro dispositivo, se avisa en vez de pisarlo.
+    // Se comprueba con los datos en vivo y no con una transacción, que sin conexión no funcionaría.
+    const restore = (written: TaskItem[], save: () => Promise<void>) => () => {
+      if (!isUnchanged(written, latestTasks.current)) {
+        showToast('No se puede deshacer: la tarea ha cambiado entretanto.');
+        return;
+      }
       save().catch(reportError('deshacer el cambio'));
       showToast('Tarea recuperada.');
     };
     if (next) {
-      completeRecurringTask(db, uid, { ...updated, nextOccurrenceId: next.id }, next).catch(
-        reportError('guardar la tarea y su siguiente repetición')
-      );
+      const done = { ...updated, nextOccurrenceId: next.id };
+      completeRecurringTask(db, uid, done, next).catch(reportError('guardar la tarea y su siguiente repetición'));
       showToast(
         `Tarea hecha y archivada. Siguiente repetición: ${formatTaskDates(next)?.replace('Vence: ', '')}.`,
-        restore(() => undoCompleteRecurringTask(db, uid, task, next.id))
+        restore([done, next], () => undoCompleteRecurringTask(db, uid, task, next.id))
       );
       return;
     }
@@ -348,7 +360,7 @@ export default function App({ user, services, isAdmin = false }: AppProps) {
     if (status === 'DONE') {
       showToast(
         'Tarea hecha y archivada. La encontrarás en «Archivadas».',
-        restore(() => saveTask(db, uid, task))
+        restore([updated], () => saveTask(db, uid, task))
       );
     } else if (isArchived(task)) {
       showToast('Tarea reactivada: vuelve a su lista.');
