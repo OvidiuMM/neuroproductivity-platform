@@ -59,7 +59,7 @@ import {
   type OnboardingOutcome,
   type OnboardingRecord
 } from './services/onboarding';
-import { applyGoalAreas } from './services/goals';
+import { applyGoalAreas, latestScores } from './services/goals';
 import type { SyncStatus } from './components/SyncIndicator';
 import { TaskList } from './components/TaskList';
 import { TaskModal, type TaskFormData } from './components/TaskModal';
@@ -110,6 +110,7 @@ const WheelOfLife = retryableLazy(() => import('./components/WheelOfLife').then(
 const BermudasShield = retryableLazy(() => import('./components/BermudasShield').then((m) => m.BermudasShield));
 const HowItWorks = retryableLazy(() => import('./components/HowItWorks').then((m) => m.HowItWorks));
 const AdminView = retryableLazy(() => import('./components/AdminView').then((m) => m.AdminView));
+const GoalsView = retryableLazy(() => import('./components/GoalsView').then((m) => m.GoalsView));
 const GoalModal = retryableLazy(() => import('./components/GoalModal').then((m) => m.GoalModal));
 const WelcomeDialog = retryableLazy(() => import('./components/WelcomeDialog').then((m) => m.WelcomeDialog));
 const ProductTour = retryableLazy(() => import('./components/ProductTour').then((m) => m.ProductTour));
@@ -143,7 +144,8 @@ export default function App({ user, services, isAdmin = false }: AppProps) {
   // Las tareas vinculadas a una meta tienen el área de la meta
   const tasks = useMemo(() => applyGoalAreas(storedTasks, goals), [storedTasks, goals]);
   // Editor de metas: abierto con la meta que se edita, o vacío para crear una
-  const [goalEditor, setGoalEditor] = useState<{ goal?: Goal } | null>(null);
+  // Meta que se edita, o una nueva (con su área ya elegida si se crea desde un área de «Metas»)
+  const [goalEditor, setGoalEditor] = useState<{ goal?: Goal; area?: WheelCategory } | null>(null);
 
   // Datos de la versión sin cuentas que siguen en este navegador, pendientes de importar
   const [localProfiles, setLocalProfiles] = useState<LocalProfileSummary[]>(() => getLocalProfiles());
@@ -260,6 +262,7 @@ export default function App({ user, services, isAdmin = false }: AppProps) {
   const [isTaskModalOpen, setIsTaskModalOpen] = useState(false);
   const [editingTask, setEditingTask] = useState<TaskItem | null>(null);
   const [newTaskIsSomeday, setNewTaskIsSomeday] = useState(false);
+  const [newTaskGoalId, setNewTaskGoalId] = useState<string | undefined>();
   const [isArchiveOpen, setIsArchiveOpen] = useState(false);
   const [isMeetingModalOpen, setIsMeetingModalOpen] = useState(false);
   const [isEmailModalOpen, setIsEmailModalOpen] = useState(false);
@@ -400,9 +403,10 @@ export default function App({ user, services, isAdmin = false }: AppProps) {
   }, [db, uid, reportError]);
 
   // Las escrituras se reflejan al instante (caché local) y se sincronizan con el servidor en segundo plano
-  const openNewTask = (options?: { someday?: boolean }) => {
+  const openNewTask = (options?: { someday?: boolean; goalId?: string }) => {
     setEditingTask(null);
     setNewTaskIsSomeday(Boolean(options?.someday));
+    setNewTaskGoalId(options?.goalId);
     setIsTaskModalOpen(true);
   };
 
@@ -470,7 +474,7 @@ export default function App({ user, services, isAdmin = false }: AppProps) {
   const handleSaveGoal = (goal: Goal) => {
     const previous = goals.find((g) => g.id === goal.id);
     saveGoal(db, uid, goal).catch(reportError('guardar la meta'));
-    showToast(previous ? 'Meta guardada.' : 'Meta creada. Vincúlale tareas desde el formulario de cada tarea.');
+    showToast(previous ? 'Meta guardada.' : 'Meta creada. Añádele tareas en «Metas».');
   };
   const handleSetGoalStatus = (goal: Goal, status: GoalStatus) => {
     saveGoal(db, uid, { ...goal, status, updatedAt: new Date().toISOString() }).catch(reportError('guardar la meta'));
@@ -748,10 +752,27 @@ export default function App({ user, services, isAdmin = false }: AppProps) {
                 onAppendSnapshot={handleAppendWheelSnapshot}
                 onOpenHelp={() => navigate('help')}
                 goals={goals}
+                onOpenGoals={() => navigate('goals')}
+              />
+            </DeferredSection>
+          )}
+
+          {/* METAS: de las áreas de la Rueda a las tareas, empezando por las áreas más bajas */}
+          {activeTab === 'goals' && (
+            <DeferredSection retry={GoalsView.retry}>
+              <GoalsView
+                goals={goals}
                 tasks={tasks}
-                onNewGoal={() => setGoalEditor({})}
+                scores={wheelSynced || wheelLogs.length > 0 ? latestScores(wheelLogs) : undefined}
+                onNewGoal={(area) => setGoalEditor({ area })}
                 onEditGoal={(goal) => setGoalEditor({ goal })}
                 onSetGoalStatus={handleSetGoalStatus}
+                onAddTask={(goal) => openNewTask({ goalId: goal.id })}
+                onEditTask={(task) => {
+                  setEditingTask(task);
+                  setIsTaskModalOpen(true);
+                }}
+                onOpenWheel={() => navigate('wheel')}
               />
             </DeferredSection>
           )}
@@ -883,6 +904,7 @@ export default function App({ user, services, isAdmin = false }: AppProps) {
         onSaveTask={handleSaveTask}
         initialContext={activeContext}
         initialSomeday={newTaskIsSomeday}
+        initialGoalId={newTaskGoalId}
         editingTask={editingTask}
         goals={goals}
       />
@@ -961,6 +983,7 @@ export default function App({ user, services, isAdmin = false }: AppProps) {
         <DeferredDialog retry={GoalModal.retry} onCancel={() => setGoalEditor(null)}>
           <GoalModal
             goal={goalEditor.goal}
+            initialArea={goalEditor.area}
             onSave={handleSaveGoal}
             onDelete={handleDeleteGoal}
             onClose={() => setGoalEditor(null)}

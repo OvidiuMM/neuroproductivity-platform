@@ -38,7 +38,7 @@ test('a dialog that is still downloading can be cancelled, and one that failed c
   test.slow(); // Recarga la página entera
   await page.goto('/');
   await signInWithGoogle(page);
-  await openSection(page, 'Rueda de la Vida');
+  await openSection(page, 'Metas');
 
   // Descarga lenta: se ve una ventana provisional que se puede cancelar
   let release = () => {};
@@ -47,7 +47,7 @@ test('a dialog that is still downloading can be cancelled, and one that failed c
     await held;
     await route.continue();
   });
-  await page.getByRole('button', { name: 'Nueva meta' }).click();
+  await page.getByRole('button', { name: 'Nueva meta', exact: true }).click();
   const pending = page.getByRole('dialog', { name: 'Cargando…' });
   await expect(pending).toBeVisible();
   await expect(pending.getByRole('button', { name: 'Cancelar' })).toBeFocused();
@@ -55,7 +55,7 @@ test('a dialog that is still downloading can be cancelled, and one that failed c
   await expect(page.getByRole('dialog')).toHaveCount(0);
   // Cuando termina la descarga no se abre sola; la próxima vez se abre al momento
   release();
-  await page.getByRole('button', { name: 'Nueva meta' }).click();
+  await page.getByRole('button', { name: 'Nueva meta', exact: true }).click();
   await expect(page.getByRole('dialog', { name: 'Nueva meta' })).toBeVisible();
   await page.keyboard.press('Escape');
 

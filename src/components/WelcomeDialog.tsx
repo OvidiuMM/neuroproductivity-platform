@@ -21,7 +21,7 @@ const ROUTINE = [
   { title: 'Evalúa tu Rueda', text: 'Puntúa cada área del 0 al 10. Te lleva dos minutos.' },
   {
     title: 'Convierte una meta en acciones',
-    text: 'Elige el área que más quieres mejorar, ponle una meta y apunta la primera acción física: «Llamar…», «Enviar…».'
+    text: 'En «Metas», elige el área que más quieres mejorar, ponle una meta y añádele la primera acción física: «Llamar…», «Enviar…».'
   },
   {
     title: 'Protege tu tiempo',

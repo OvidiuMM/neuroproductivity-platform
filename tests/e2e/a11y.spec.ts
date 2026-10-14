@@ -1,6 +1,13 @@
 import AxeBuilder from '@axe-core/playwright';
 import { expect, test, type Page } from '@playwright/test';
-import { ADMIN_EMAIL, fillAndSaveTask, localDateFromToday, signInWithGoogle, uniqueEmail } from './helpers';
+import {
+  ADMIN_EMAIL,
+  fillAndSaveTask,
+  localDateFromToday,
+  openSection,
+  signInWithGoogle,
+  uniqueEmail
+} from './helpers';
 
 // Esperas que pasan por una Cloud Function del emulador: con la suite en paralelo su arranque puede tardar
 const SERVER_CALL = { timeout: 15_000 };
@@ -176,18 +183,25 @@ test('phone section bar, «Más» sheet and floating new task button', async ({ 
   await expectNoViolations(page, 'hoja «Más» (administración)');
 });
 
-test('goals: dialog, panel in the Wheel and card in Inicio', async ({ page }) => {
+test('goals: dialog, the Metas section and the card in Inicio', async ({ page }) => {
   await page.goto('/');
   await signInWithGoogle(page);
-  await page.getByRole('button', { name: 'Rueda de la Vida' }).click();
-  await page.getByRole('button', { name: 'Nueva meta' }).click();
+  await openSection(page, 'Rueda de la Vida');
+  await page.getByRole('slider', { name: 'Puntuación de Familia' }).fill('3');
+  await page.getByRole('button', { name: 'Guardar la evaluación' }).click();
+  await page.getByRole('button', { name: 'Ir a Metas' }).click();
+  await expect(page.getByRole('region', { name: 'Necesitan atención' })).toBeVisible();
+  await expectNoViolations(page, 'metas con áreas que necesitan atención');
+  await page.getByRole('button', { name: 'Nueva meta', exact: true }).click();
   await expectNoViolations(page, 'nueva meta');
   const editor = page.getByRole('dialog', { name: 'Nueva meta' });
   await editor.getByLabel('Meta').fill('Ahorrar para la entrada del piso');
   await editor.getByLabel('Área de la Rueda').selectOption('Finanzas');
   await editor.getByRole('button', { name: 'Crear la meta' }).click();
-  await expect(page.getByRole('list', { name: 'Metas activas' })).toBeVisible();
-  await expectNoViolations(page, 'rueda con metas');
+  await expect(page.getByRole('list', { name: 'Metas de Finanzas' })).toBeVisible();
+  await expectNoViolations(page, 'metas con una meta');
+  await openSection(page, 'Rueda de la Vida');
+  await expectNoViolations(page, 'rueda con el acceso a metas');
   await page.getByRole('button', { name: 'Inicio', exact: true }).click();
   await expectNoViolations(page, 'inicio con metas');
 });

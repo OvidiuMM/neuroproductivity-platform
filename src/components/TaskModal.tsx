@@ -69,6 +69,8 @@ interface TaskModalProps {
   initialContext: ListContext;
   // Al abrir desde "Opciones Futuras" la tarea nueva se marca como "Quizá"
   initialSomeday?: boolean;
+  // Al abrir desde una meta («Añadir tarea»), la tarea nueva ya está vinculada a ella
+  initialGoalId?: string;
   editingTask?: TaskItem | null;
   // Metas a las que se puede vincular la tarea (el área de la Rueda se hereda de la meta)
   goals: Goal[];
@@ -90,6 +92,7 @@ export const TaskModal: React.FC<TaskModalProps> = ({
   onSaveTask,
   initialContext,
   initialSomeday = false,
+  initialGoalId,
   editingTask,
   goals
 }) => {
@@ -174,7 +177,7 @@ export const TaskModal: React.FC<TaskModalProps> = ({
     } else {
       setShowMore(initialSomeday);
       setTitle('');
-      setGoalId('');
+      setGoalId(initialGoalId ?? '');
       setDescription('');
       setListContext(initialContext);
       setPriority('MEDIUM');
@@ -196,7 +199,7 @@ export const TaskModal: React.FC<TaskModalProps> = ({
       setTouched({});
       setOverrideSyntaxWarning(false);
     }
-  }, [isOpen, editingTask, initialContext, initialSomeday]);
+  }, [isOpen, editingTask, initialContext, initialSomeday, initialGoalId]);
 
   // Disparador del Motor NLP TF-IDF (Módulo 3) en evento onBlur o cuando hay texto suficiente
   const triggerNLPInference = () => {
