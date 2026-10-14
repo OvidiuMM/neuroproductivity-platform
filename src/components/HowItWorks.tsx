@@ -14,6 +14,9 @@ import {
 
 interface HowItWorksProps {
   onNavigate: (tab: AppTab) => void;
+  // Volver a ver el recorrido guiado o la bienvenida
+  onStartTour: () => void;
+  onShowWelcome: () => void;
 }
 
 const SCREENS: { tab: AppTab; title: string; icon: React.ReactNode; points: string[] }[] = [
@@ -73,7 +76,7 @@ const SCREENS: { tab: AppTab; title: string; icon: React.ReactNode; points: stri
   }
 ];
 
-export const HowItWorks: React.FC<HowItWorksProps> = ({ onNavigate }) => {
+export const HowItWorks: React.FC<HowItWorksProps> = ({ onNavigate, onStartTour, onShowWelcome }) => {
   return (
     <div className="space-y-6">
       <div className="space-y-2 rounded-2xl border border-slate-200 bg-white p-6 shadow-xs">
@@ -85,6 +88,32 @@ export const HowItWorks: React.FC<HowItWorksProps> = ({ onNavigate }) => {
           CLAR sigue tres pasos: primero decides qué áreas de tu vida quieres mejorar, luego conviertes esa intención en
           acciones concretas y, por último, proteges el tiempo que necesitas para hacerlas.
         </p>
+      </div>
+
+      {/* RECORRIDO Y BIENVENIDA: se pueden repetir cuando se quiera */}
+      <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-indigo-200 bg-indigo-50/60 p-5">
+        <div>
+          <h3 className="text-sm font-bold text-slate-900">Guía rápida</h3>
+          <p className="text-xs text-slate-700">
+            Un recorrido de un minuto por lo esencial, o la introducción al método.
+          </p>
+        </div>
+        <div className="flex flex-wrap gap-2">
+          <button
+            type="button"
+            onClick={onStartTour}
+            className="inline-flex min-h-11 items-center rounded-xl bg-slate-900 px-4 text-sm font-bold text-white hover:bg-slate-800"
+          >
+            Repetir el recorrido
+          </button>
+          <button
+            type="button"
+            onClick={onShowWelcome}
+            className="inline-flex min-h-11 items-center rounded-xl border border-slate-300 bg-white px-4 text-sm font-semibold text-slate-800 hover:bg-slate-50"
+          >
+            Ver la introducción
+          </button>
+        </div>
       </div>
 
       {/* PRIMEROS PASOS */}
