@@ -96,6 +96,26 @@ test('archives a task when marked done and reactivates it from the archive', asy
   await expect(card.getByText('En progreso', { exact: true })).toBeVisible();
 });
 
+test('changing the status from «⋯» with the keyboard leaves the focus on that button', async ({ page }) => {
+  await page.goto('/');
+  await signInWithGoogle(page);
+  await page.getByRole('button', { name: 'Listas Duales' }).click();
+
+  const title = `Llamar a la academia ${unique()}`;
+  await page.getByRole('button', { name: 'Capturar Primera Acción' }).click();
+  await fillAndSaveTask(page, { title });
+  const actions = page.getByRole('button', { name: `Acciones de «${title}»` });
+  await actions.focus();
+  await page.keyboard.press('Enter');
+  await page.keyboard.press('Tab');
+  await page.keyboard.press('Tab');
+  const status = page.getByLabel(`Estado de «${title}»`);
+  await expect(status).toBeFocused();
+  await status.selectOption('IN_PROGRESS');
+  await expect(status).toBeHidden();
+  await expect(actions).toBeFocused();
+});
+
 test('a deleted task can be brought back with «Deshacer»', async ({ page }) => {
   await page.goto('/');
   await signInWithGoogle(page);

@@ -37,6 +37,10 @@ export const withStatus = (task: TaskItem, status: TaskStatus, now = new Date())
   };
 };
 
+// Si las tareas siguen tal como se escribieron (nadie las ha tocado desde entonces, aquí o en otro dispositivo)
+export const isUnchanged = (written: TaskItem[], current: TaskItem[]) =>
+  written.every((w) => current.some((t) => t.id === w.id && t.updatedAt === w.updatedAt && t.status === w.status));
+
 // FECHAS: cadenas locales (YYYY-MM-DD y HH:mm) interpretadas en la zona horaria del dispositivo
 export const toLocalDate = (date: string, time?: string) => {
   const [y, m, d] = date.split('-').map(Number);
