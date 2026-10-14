@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test';
-import { fillAndSaveTask, localDateFromToday, signInWithGoogle } from './helpers';
+import { fillAndSaveTask, localDateFromToday, showMoreOptions, signInWithGoogle } from './helpers';
 
 const longDay = new Intl.DateTimeFormat('es-ES', { weekday: 'long', day: 'numeric', month: 'long' });
 const dayLabel = (days: number) => {
@@ -26,6 +26,7 @@ test('agenda shows dated tasks of both lists, projected repetitions, and opens a
     .click();
   await page.getByRole('button', { name: 'Nueva Tarea' }).click();
   // Semanal desde dentro de dos días, sin fin
+  await showMoreOptions(page);
   await page.getByLabel('Repetir').selectOption('WEEKLY');
   await page.getByLabel('Fecha de inicio', { exact: true }).fill(localDateFromToday(2));
   await fillAndSaveTask(page, { title: personal });
@@ -91,6 +92,7 @@ test('a repeated task with a start and a due date shows only its days, from the 
   await page.getByRole('button', { name: 'Listas Duales' }).click();
   const title = `Revisar el correo de clientes ${Date.now().toString(36)}`;
   await page.getByRole('button', { name: 'Capturar Primera Acción' }).click();
+  await showMoreOptions(page);
   await page.getByLabel('Repetir').selectOption('WEEKLY');
   // Lunes, miércoles y viernes durante tres semanas desde el lunes de la semana que viene
   const today = new Date();
