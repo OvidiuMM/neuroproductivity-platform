@@ -482,13 +482,14 @@ export const TaskModal: React.FC<TaskModalProps> = ({
                       : 'border-slate-300 focus:ring-indigo-400'
                 }`}
               />
-              {syntaxResult.isValid && (
-                <div className="absolute top-3 right-3 flex items-center gap-1 text-xs font-semibold text-emerald-700">
-                  <Check className="h-4 w-4" />
-                  <span className="text-[11px]">Verbo físico: {syntaxResult.detectedVerb}</span>
-                </div>
-              )}
             </div>
+            {/* Debajo del campo y no encima: con títulos largos o texto ampliado taparía lo escrito */}
+            {syntaxResult.isValid && (
+              <p className="mt-1 flex items-center gap-1 text-[11px] font-semibold text-emerald-700">
+                <Check className="h-3.5 w-3.5" aria-hidden="true" />
+                Verbo físico: {syntaxResult.detectedVerb}
+              </p>
+            )}
 
             {/* Error por longitud o vacío */}
             {touched.title && isTitleEmpty && (
