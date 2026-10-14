@@ -1,7 +1,14 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import type { Goal, TaskItem } from '../../src/types';
-import { activeGoalsByArea, goalProgress, sortGoals, suggestGoal, validateGoal } from '../../src/services/goals';
+import {
+  activeGoalsByArea,
+  applyGoalAreas,
+  goalProgress,
+  sortGoals,
+  suggestGoal,
+  validateGoal
+} from '../../src/services/goals';
 
 const goal = (overrides: Partial<Goal>): Goal => ({
   id: 'g1',
@@ -94,4 +101,20 @@ test('active goals come first, by target date, then achieved and archived', () =
     sortGoals(goals).map((g) => g.id),
     ['sooner', 'later', 'no-date', 'achieved', 'archived']
   );
+});
+
+test('a linked task takes its goal’s area when read, and a link to a missing goal is ignored', () => {
+  const goals = [goal({ id: 'g1', area: 'Ocio' })];
+  const tasks = [
+    task({ id: 'linked', goalId: 'g1', wheelCategory: 'Salud' }),
+    task({ id: 'dangling', goalId: 'deleted', wheelCategory: 'Finanzas' }),
+    task({ id: 'free', wheelCategory: 'Familia' })
+  ];
+  const result = applyGoalAreas(tasks, goals);
+  assert.deepEqual(
+    result.map((t) => t.wheelCategory),
+    ['Ocio', 'Finanzas', 'Familia']
+  );
+  // Las que no cambian son las mismas (no se copian)
+  assert.equal(result[2], tasks[2]);
 });
