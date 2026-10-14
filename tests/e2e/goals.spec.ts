@@ -54,6 +54,8 @@ test('Metas orders the areas by score, flags weak ones without goals, and a task
   await expect(editor).toBeHidden();
   await expect(attention.getByRole('button')).toHaveText(['Ponle una meta a Ocio (5/10)']);
   const finances = page.getByRole('region', { name: 'Finanzas 3/10' });
+  // El botón que abrió la ventana ya no está: el foco vuelve al «Nueva meta» del área, junto a la meta creada
+  await expect(finances.getByRole('button', { name: 'Nueva meta en Finanzas' })).toBeFocused();
   await expect(finances.getByRole('heading', { name: goalTitle })).toBeVisible();
   await expect(finances).toContainText('Aún no tiene tareas vinculadas.');
 
