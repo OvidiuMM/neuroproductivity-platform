@@ -7,6 +7,13 @@ export const TASK_STATUSES: { value: TaskStatus; label: string; className: strin
   { value: 'DONE', label: 'Hecha', className: 'bg-emerald-50 text-emerald-700 border-emerald-200' }
 ];
 
+export const PRIORITY_LABEL: Record<TaskPriority, string> = {
+  CRITICAL: 'Crítica',
+  HIGH: 'Alta',
+  MEDIUM: 'Media',
+  LOW: 'Baja'
+};
+
 export const statusLabel = (status: TaskStatus) => TASK_STATUSES.find((s) => s.value === status)?.label ?? status;
 
 // Las tareas guardadas antes de la 0.6.0 tienen `completed` en lugar de `status`

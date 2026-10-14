@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test';
-import { fillAndSaveTask, localDateFromToday, signInWithGoogle } from './helpers';
+import { completeTask, fillAndSaveTask, localDateFromToday, signInWithGoogle } from './helpers';
 
 test('Inicio shows the focus block, task statistics and recommendations for the active list', async ({ page }) => {
   await page.goto('/');
@@ -12,7 +12,7 @@ test('Inicio shows the focus block, task statistics and recommendations for the 
   await fillAndSaveTask(page, { title: overdue, dueDate: localDateFromToday(-1) });
   await page.getByRole('button', { name: 'Nueva tarea', exact: true }).click();
   await fillAndSaveTask(page, { title: onTime, dueDate: localDateFromToday(1), estimateMinutes: 60 });
-  await page.getByLabel(`Estado de «${onTime}»`).selectOption('DONE');
+  await completeTask(page, onTime);
 
   // El bloque de foco ya no está en las demás secciones
   await expect(page.getByRole('heading', { name: 'Foco de Concentración Profesional' })).toHaveCount(0);
