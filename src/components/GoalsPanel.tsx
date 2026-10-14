@@ -102,7 +102,7 @@ const GoalRow: React.FC<{
       <button
         type="button"
         onClick={() => onSetStatus('ARCHIVED')}
-        className="text-[11px] font-semibold text-slate-500 hover:text-slate-800"
+        className="-ml-2 min-h-11 rounded-lg px-2 text-xs font-semibold text-slate-600 hover:bg-slate-100 hover:text-slate-800"
       >
         Archivar
       </button>
