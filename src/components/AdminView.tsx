@@ -10,6 +10,8 @@ interface AdminViewProps {
   currentUid: string;
   accessError: string | null;
   onDecide: (uid: string, status: DecisionStatus) => Promise<void>;
+  approvalRequired: boolean | null;
+  onSetApprovalRequired: (approvalRequired: boolean) => Promise<void>;
   tickets: FeedbackTicket[];
   feedbackError: string | null;
   onSetFeedbackStatus: (ticket: FeedbackTicket, status: FeedbackStatus) => Promise<void>;
@@ -24,6 +26,8 @@ export const AdminView: React.FC<AdminViewProps> = ({
   currentUid,
   accessError,
   onDecide,
+  approvalRequired,
+  onSetApprovalRequired,
   tickets,
   feedbackError,
   onSetFeedbackStatus,
@@ -68,7 +72,14 @@ export const AdminView: React.FC<AdminViewProps> = ({
       </div>
 
       {panel === 'requests' ? (
-        <AccessAdminView requests={requests} currentUid={currentUid} error={accessError} onDecide={onDecide} />
+        <AccessAdminView
+          requests={requests}
+          currentUid={currentUid}
+          error={accessError}
+          onDecide={onDecide}
+          approvalRequired={approvalRequired}
+          onSetApprovalRequired={onSetApprovalRequired}
+        />
       ) : (
         <FeedbackAdminView
           tickets={tickets}

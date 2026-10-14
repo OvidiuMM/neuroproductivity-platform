@@ -8,6 +8,7 @@ import {
   isCurrentAdminMarker,
   normalizeMessage,
   REQUEST_COOLDOWN_MS,
+  decideOnSync,
   type AccessRecord
 } from '../src/accessLogic';
 
@@ -75,9 +76,68 @@ describe('aprobación de accesos', () => {
     const request = buildEmail('new-request', record({ message: 'Soy del equipo' }), 'https://app.example.com');
     assert.match(request.text, /Ana Prueba \(ana@example\.com\) quiere acceder/);
     assert.match(request.text, /Mensaje:\nSoy del equipo/);
-    assert.match(request.text, /«Accesos»: https:\/\/app\.example\.com/);
+    assert.match(request.text, /«Solicitudes»: https:\/\/app\.example\.com/);
     const approved = buildEmail('approved', record(), 'https://app.example.com');
     assert.equal(approved.subject, 'Ya tienes acceso a CLAR');
     assert.match(approved.text, /^Hola Ana Prueba:/);
+  });
+});
+
+describe('lista negra y aprobación libre', () => {
+  it('se puede bloquear desde cualquier estado y desbloquear retirando o aprobando', () => {
+    for (const from of ['pending', 'approved', 'rejected', 'revoked'] as const) {
+      assert.equal(canDecide(from, 'blocked'), true, from);
+    }
+    assert.equal(canDecide('blocked', 'blocked'), false);
+    assert.equal(canDecide('blocked', 'revoked'), true);
+    assert.equal(canDecide('blocked', 'approved'), true);
+    assert.equal(canDecide('blocked', 'rejected'), false);
+  });
+
+  it('una cuenta bloqueada no puede volver a pedir acceso', () => {
+    assert.deepEqual(decideRequest(record({ status: 'blocked', decidedAt: '2020-01-01T00:00:00.000Z' }), new Date()), {
+      action: 'keep',
+      status: 'blocked'
+    });
+  });
+
+  it('al entrar: un email en la lista negra bloquea la cuenta, en cualquier modo', () => {
+    for (const approvalRequired of [true, false]) {
+      assert.equal(
+        decideOnSync({ current: undefined, approvalRequired, emailBlocked: true, emailVerified: true }),
+        'block'
+      );
+      assert.equal(
+        decideOnSync({ current: 'approved', approvalRequired, emailBlocked: true, emailVerified: true }),
+        'block'
+      );
+      assert.equal(
+        decideOnSync({ current: 'blocked', approvalRequired, emailBlocked: true, emailVerified: true }),
+        'keep'
+      );
+    }
+  });
+
+  it('con la aprobación libre entran solas las cuentas nuevas o pendientes con el email confirmado', () => {
+    const open = { approvalRequired: false, emailBlocked: false, emailVerified: true };
+    assert.equal(decideOnSync({ ...open, current: undefined }), 'approve');
+    assert.equal(decideOnSync({ ...open, current: 'pending' }), 'approve');
+    // Las decisiones de la administración se respetan
+    assert.equal(decideOnSync({ ...open, current: 'rejected' }), 'keep');
+    assert.equal(decideOnSync({ ...open, current: 'revoked' }), 'keep');
+    assert.equal(decideOnSync({ ...open, current: 'blocked' }), 'keep');
+    // Sin el email confirmado, no
+    assert.equal(decideOnSync({ ...open, current: undefined, emailVerified: false }), 'keep');
+  });
+
+  it('con la aprobación obligatoria no se aprueba a nadie al entrar', () => {
+    assert.equal(
+      decideOnSync({ current: undefined, approvalRequired: true, emailBlocked: false, emailVerified: true }),
+      'keep'
+    );
+    assert.equal(
+      decideOnSync({ current: 'pending', approvalRequired: true, emailBlocked: false, emailVerified: true }),
+      'keep'
+    );
   });
 });

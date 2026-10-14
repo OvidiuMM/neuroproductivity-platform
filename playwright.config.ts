@@ -12,7 +12,16 @@ export default defineConfig({
   projects: [
     {
       name: 'chromium',
-      use: { ...devices['Desktop Chrome'] }
+      use: { ...devices['Desktop Chrome'] },
+      testIgnore: /global-settings\.spec\.ts/
+    },
+    // Pruebas que cambian la configuración global (p. ej. desactivar la aprobación de cuentas): van después de todas
+    // las demás, para no cambiarles las reglas a mitad
+    {
+      name: 'global-settings',
+      use: { ...devices['Desktop Chrome'] },
+      testMatch: /global-settings\.spec\.ts/,
+      dependencies: ['chromium']
     }
   ],
   // npm run dev arranca los emuladores de Auth y Firestore (proyecto demo) y la app conectada a ellos
