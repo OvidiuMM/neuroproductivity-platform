@@ -7,7 +7,8 @@ interface FeedbackAdminViewProps {
   // Abiertos (nuevos y leídos), en vivo
   tickets: FeedbackTicket[];
   error: string | null;
-  onSetStatus: (ticket: FeedbackTicket, status: FeedbackStatus) => Promise<void>;
+  // Devuelve si se guardó
+  onSetStatus: (ticket: FeedbackTicket, status: FeedbackStatus) => Promise<boolean>;
   // Cerrados, por páginas y bajo demanda
   loadClosed: (cursor: ClosedFeedbackPage['cursor']) => Promise<ClosedFeedbackPage>;
 }
@@ -19,6 +20,13 @@ const STATUS_CLASS: Record<FeedbackStatus, string> = {
   new: 'border-orange-200 bg-orange-50 text-orange-800',
   read: 'border-slate-200 bg-slate-100 text-slate-700',
   closed: 'border-emerald-200 bg-emerald-50 text-emerald-800'
+};
+
+// Une listas de mensajes sin repetir ninguno (el primero que aparece manda): un mensaje cerrado aquí puede volver a
+// llegar en una página posterior
+const mergeById = (first: FeedbackTicket[], second: FeedbackTicket[]) => {
+  const seen = new Set(first.map((t) => t.id));
+  return [...first, ...second.filter((t) => !seen.has(t.id))];
 };
 
 // Mensajes de contacto: los nuevos y leídos a la vista, los cerrados aparte. Se responde por email.
@@ -36,7 +44,7 @@ export const FeedbackAdminView: React.FC<FeedbackAdminViewProps> = ({ tickets, e
     setClosedError(null);
     try {
       const page = await loadClosed(closedPage?.cursor ?? null);
-      setClosed((current) => [...(current ?? []), ...page.tickets]);
+      setClosed((current) => mergeById(current ?? [], page.tickets));
       setClosedPage(page);
     } catch (e) {
       console.error('Error loading closed feedback:', e);
@@ -49,9 +57,9 @@ export const FeedbackAdminView: React.FC<FeedbackAdminViewProps> = ({ tickets, e
   const setStatus = async (ticket: FeedbackTicket, status: FeedbackStatus) => {
     setBusyId(ticket.id);
     try {
-      await onSetStatus(ticket, status);
-      // La lista de cerrados ya cargada se ajusta aquí (los abiertos llegan en vivo)
-      if (status === 'closed') setClosed((current) => current && [{ ...ticket, status }, ...current]);
+      // La lista de cerrados ya cargada se ajusta aquí (los abiertos llegan en vivo), solo si se guardó
+      if (!(await onSetStatus(ticket, status))) return;
+      if (status === 'closed') setClosed((current) => current && mergeById([{ ...ticket, status }], current));
       else setClosed((current) => current && current.filter((t) => t.id !== ticket.id));
     } finally {
       setBusyId(null);
