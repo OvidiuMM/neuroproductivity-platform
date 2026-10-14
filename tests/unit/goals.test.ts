@@ -1,10 +1,13 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import type { Goal, TaskItem } from '../../src/types';
+import type { Goal, TaskItem, WheelOfLifeLog } from '../../src/types';
 import {
   activeGoalsByArea,
   applyGoalAreas,
+  areasWithGoals,
   goalProgress,
+  latestScores,
+  pendingGoalTasks,
   sortGoals,
   suggestGoal,
   validateGoal
@@ -117,4 +120,78 @@ test('a linked task takes its goal’s area when read, and a link to a missing g
   );
   // Las que no cambian son las mismas (no se copian)
   assert.equal(result[2], tasks[2]);
+});
+
+const scores = (values: Partial<WheelOfLifeLog['scores']>): WheelOfLifeLog['scores'] => ({
+  Salud: 7,
+  'Carrera Profesional': 7,
+  Finanzas: 7,
+  Familia: 7,
+  Ocio: 7,
+  Relaciones: 7,
+  Espiritualidad: 7,
+  ...values
+});
+
+test('the latest Wheel evaluation gives the scores, or none before the first one', () => {
+  const log = (id: string, timestamp: string, values: Partial<WheelOfLifeLog['scores']>): WheelOfLifeLog => ({
+    id,
+    userId: 'u',
+    timestamp,
+    scores: scores(values)
+  });
+  assert.equal(latestScores([]), null);
+  const logs = [
+    log('b', '2026-03-01T00:00:00.000Z', { Salud: 2 }),
+    log('c', '2026-02-01T00:00:00.000Z', { Salud: 9 }),
+    log('a', '2026-01-01T00:00:00.000Z', { Salud: 5 })
+  ];
+  assert.equal(latestScores(logs)?.Salud, 2);
+});
+
+test('areas come lowest score first, with their active goals, and 5 or less needs attention', () => {
+  const goals = [
+    goal({ id: 'run', area: 'Salud', title: 'Correr' }),
+    goal({ id: 'save', area: 'Finanzas', title: 'Ahorrar' }),
+    goal({ id: 'old', area: 'Finanzas', title: 'Viejo', status: 'ARCHIVED' })
+  ];
+  const areas = areasWithGoals(goals, scores({ Finanzas: 3, Ocio: 5, Salud: 6, Familia: 3 }));
+  assert.deepEqual(
+    areas.map((a) => a.area),
+    // Empates en el orden de la Rueda: Finanzas antes que Familia
+    ['Finanzas', 'Familia', 'Ocio', 'Salud', 'Carrera Profesional', 'Relaciones', 'Espiritualidad']
+  );
+  assert.deepEqual(
+    areas.slice(0, 4).map((a) => [a.area, a.score, a.weak, a.goals.map((g) => g.id)]),
+    [
+      ['Finanzas', 3, true, ['save']],
+      ['Familia', 3, true, []],
+      ['Ocio', 5, true, []],
+      ['Salud', 6, false, ['run']]
+    ]
+  );
+});
+
+test('without an evaluation, areas keep the Wheel order and none is marked as needing attention', () => {
+  const areas = areasWithGoals([goal({ area: 'Ocio' })], null);
+  assert.deepEqual(
+    areas.map((a) => a.area),
+    ['Salud', 'Carrera Profesional', 'Finanzas', 'Familia', 'Ocio', 'Relaciones', 'Espiritualidad']
+  );
+  assert.ok(areas.every((a) => a.score === undefined && !a.weak));
+  assert.equal(areas[4].goals.length, 1);
+});
+
+test('a goal lists the tasks still to do, those with the nearest due date first', () => {
+  const tasks = [
+    task({ id: 'done', goalId: 'g1', status: 'DONE', dueDate: '2026-01-01' }),
+    task({ id: 'later', goalId: 'g1', title: 'B', dueDate: '2026-05-01' }),
+    task({ id: 'undated', goalId: 'g1', title: 'A' }),
+    task({ id: 'soon', goalId: 'g1', title: 'C', dueDate: '2026-04-01', status: 'BLOCKED' }),
+    task({ id: 'other', goalId: 'g2' })
+  ];
+  assert.deepEqual(
+    pendingGoalTasks({ id: 'g1' }, tasks).map((t) => t.id),
+    ['soon', 'later', 'undated']
+  );
 });

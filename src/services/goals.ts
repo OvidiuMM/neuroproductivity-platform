@@ -1,4 +1,5 @@
-import type { Goal, TaskItem, WheelCategory } from '../types';
+import type { Goal, TaskItem, WheelCategory, WheelOfLifeLog } from '../types';
+import { WHEEL_CATEGORIES } from './wheel';
 
 export const GOAL_TITLE_MAX = 100;
 export const GOAL_WHY_MAX = 280;
@@ -9,6 +10,12 @@ export const goalProgress = (goal: Pick<Goal, 'id'>, tasks: TaskItem[]) => {
   return { done: linked.filter((t) => t.status === 'DONE').length, total: linked.length };
 };
 
+// Tareas de una meta que quedan por hacer: primero las que tienen fecha límite, de la más próxima a la más lejana
+export const pendingGoalTasks = (goal: Pick<Goal, 'id'>, tasks: TaskItem[]) =>
+  tasks
+    .filter((t) => t.goalId === goal.id && t.status !== 'DONE')
+    .sort((a, b) => (a.dueDate ?? '9999').localeCompare(b.dueDate ?? '9999') || a.title.localeCompare(b.title, 'es'));
+
 // El área de una tarea vinculada es la de su meta: se resuelve al leer, así cambiar el área de una meta no tiene que
 // reescribir sus tareas (ni puede dejar alguna atrás). Un vínculo a una meta que ya no existe se ignora.
 export const applyGoalAreas = (tasks: TaskItem[], goals: Goal[]) => {
@@ -17,6 +24,40 @@ export const applyGoalAreas = (tasks: TaskItem[], goals: Goal[]) => {
     const area = task.goalId ? areaOf.get(task.goalId) : undefined;
     return area && area !== task.wheelCategory ? { ...task, wheelCategory: area } : task;
   });
+};
+
+// Puntuación de cada área en la última evaluación de la Rueda, o null si aún no hay ninguna
+export const latestScores = (logs: WheelOfLifeLog[]): Partial<Record<WheelCategory, number>> | null =>
+  logs.reduce<WheelOfLifeLog | null>(
+    (latest, log) => (!latest || log.timestamp > latest.timestamp ? log : latest),
+    null
+  )?.scores ?? null;
+
+// Un área necesita atención con 5 o menos en la última evaluación
+export const WEAK_AREA_SCORE = 5;
+
+export interface AreaGoals {
+  area: WheelCategory;
+  score?: number; // en la última evaluación; sin evaluar, no hay
+  goals: Goal[]; // las activas
+  weak: boolean;
+}
+
+// Áreas con sus metas activas, primero las de menor puntuación (las que más atención necesitan); en empate o sin
+// evaluación, en el orden de la Rueda
+export const areasWithGoals = (goals: Goal[], scores: Partial<Record<WheelCategory, number>> | null): AreaGoals[] => {
+  const active = sortGoals(goals).filter((g) => g.status === 'ACTIVE');
+  return WHEEL_CATEGORIES.map((area) => {
+    const score = scores?.[area];
+    return {
+      area,
+      score,
+      goals: active.filter((g) => g.area === area),
+      weak: score !== undefined && score <= WEAK_AREA_SCORE
+    };
+  }).sort(
+    (a, b) => (a.score ?? 0) - (b.score ?? 0) || WHEEL_CATEGORIES.indexOf(a.area) - WHEEL_CATEGORIES.indexOf(b.area)
+  );
 };
 
 // Metas activas por área de la Rueda
