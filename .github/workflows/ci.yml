@@ -130,6 +130,8 @@ jobs:
           ANDROID_SHA256_FINGERPRINT: ${{ vars.ANDROID_SHA256_FINGERPRINT }}
           ADMIN_EMAIL: ${{ secrets.ADMIN_EMAIL }}
           GMAIL_USER: ${{ secrets.GMAIL_USER }}
+          # Opcional: dirección pública de la app en los emails (p. ej. https://clar.life)
+          APP_URL: ${{ vars.APP_URL }}
         run: |
           for name in ANDROID_PACKAGE_NAME ANDROID_SHA256_FINGERPRINT ADMIN_EMAIL GMAIL_USER; do
             if [ -z "${!name}" ]; then
@@ -137,8 +139,8 @@ jobs:
               exit 1
             fi
           done
-          printf 'ANDROID_PACKAGE_NAME=%s\nANDROID_SHA256_FINGERPRINT=%s\nADMIN_EMAIL=%s\nGMAIL_USER=%s\n' \
-            "$ANDROID_PACKAGE_NAME" "$ANDROID_SHA256_FINGERPRINT" "$ADMIN_EMAIL" "$GMAIL_USER" > functions/.env
+          printf 'ANDROID_PACKAGE_NAME=%s\nANDROID_SHA256_FINGERPRINT=%s\nADMIN_EMAIL=%s\nGMAIL_USER=%s\nAPP_URL=%s\n' \
+            "$ANDROID_PACKAGE_NAME" "$ANDROID_SHA256_FINGERPRINT" "$ADMIN_EMAIL" "$GMAIL_USER" "$APP_URL" > functions/.env
 
       # Los predeploy de firebase.json compilan la SPA y la función antes de subirlas.
       # firebase-tools sale de devDependencies (versión fijada en package.json).

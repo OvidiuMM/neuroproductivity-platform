@@ -1,7 +1,7 @@
 # CLAR — Plataforma de Gestión del Tiempo y Neurociencia Aplicada
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
-[![Version](https://img.shields.io/badge/Version-0.9.0-indigo.svg)](#)
+[![Version](https://img.shields.io/badge/Version-0.9.1-indigo.svg)](#)
 [![React](https://img.shields.io/badge/React-19.0-61dafb.svg?logo=react&logoColor=black)](https://react.dev/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-7.x-3178c6.svg?logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
 [![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-4.x-38bdf8.svg?logo=tailwindcss&logoColor=white)](https://tailwindcss.com/)
@@ -212,6 +212,20 @@ npm run emulators
 
 # Despliegue: compila la SPA y la función antes de subirlas y publica las reglas de Firestore
 npm run deploy
+```
+
+#### Dominio propio (clar.life)
+
+La app se publica también en `https://clar.life`. Servida desde ese dominio, el inicio de sesión usa el mismo dominio (`authDomain`, en `src/services/authDomain.ts`), así el navegador no bloquea la ventana de Google por ser de otro sitio. Configuración, una sola vez:
+
+1. **Firebase Hosting** → «Añadir dominio personalizado»: `clar.life`, y `www.clar.life` redirigido a `clar.life`. Hosting da los registros DNS (TXT para verificar y A para servir) que hay que añadir en el proveedor del dominio. El certificado HTTPS llega solo, en unas horas.
+2. **Authentication** → Configuración → Dominios autorizados: `clar.life` y `www.clar.life`.
+3. **Google Cloud** → APIs y servicios → Credenciales → el cliente OAuth web que usa Firebase: origen `https://clar.life` y URI de redirección `https://clar.life/__/auth/handler`.
+4. Opcional: en **Authentication** → Plantillas, la URL de acción de los emails (verificación y contraseña) `https://clar.life/__/auth/action`.
+5. Cuando el dominio funcione, los enlaces de los emails de la administración y de acceso pueden apuntar a él con la variable `APP_URL` (sin ella, usan la dirección de Firebase Hosting). El siguiente despliegue la aplica:
+
+```bash
+gh variable set APP_URL --body "https://clar.life"
 ```
 
 #### Despliegue automático desde GitHub Actions

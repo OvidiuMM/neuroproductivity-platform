@@ -15,6 +15,7 @@ import {
   type Firestore
 } from 'firebase/firestore';
 import { connectFunctionsEmulator, getFunctions, type Functions } from 'firebase/functions';
+import { withAuthDomain } from './authDomain';
 
 // En desarrollo y en los tests e2e la app habla con los emuladores de Auth, Firestore y Functions (proyecto demo)
 export const usingEmulators = import.meta.env.VITE_USE_FIREBASE_EMULATORS === 'true';
@@ -39,7 +40,7 @@ const loadConfig = async (): Promise<FirebaseOptions> => {
   if (usingEmulators) return EMULATOR_CONFIG;
   const res = await fetch('/__/firebase/init.json');
   if (!res.ok) throw new Error(`No se pudo cargar la configuración de Firebase (${res.status})`);
-  return (await res.json()) as FirebaseOptions;
+  return withAuthDomain((await res.json()) as FirebaseOptions, window.location.hostname);
 };
 
 let services: Promise<FirebaseServices> | null = null;
