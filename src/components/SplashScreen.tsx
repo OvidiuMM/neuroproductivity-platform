@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { BRAND_NAME, BRAND_TAGLINE, BrandMark } from './BrandMark';
 
 interface SplashScreenProps {
@@ -15,6 +15,12 @@ export const SplashScreen: React.FC<SplashScreenProps> = ({
   const [isVisible, setIsVisible] = useState(true);
   const [isFadingOut, setIsFadingOut] = useState(false);
   const [progress, setProgress] = useState(0);
+  // onFinish suele ser una función nueva en cada render: con una ref, el temporizador no se reinicia por ello (si
+  // la app se renderiza a menudo al arrancar, la pantalla no llegaría a quitarse)
+  const onFinishRef = useRef(onFinish);
+  useLayoutEffect(() => {
+    onFinishRef.current = onFinish;
+  });
 
   useEffect(() => {
     // Progreso suave de la barra de carga
@@ -33,7 +39,7 @@ export const SplashScreen: React.FC<SplashScreenProps> = ({
       setIsFadingOut(true);
       setTimeout(() => {
         setIsVisible(false);
-        if (onFinish) onFinish();
+        onFinishRef.current?.();
       }, 350);
     }, autoDismissMs);
 
@@ -41,7 +47,7 @@ export const SplashScreen: React.FC<SplashScreenProps> = ({
       clearInterval(interval);
       clearTimeout(timer);
     };
-  }, [autoDismissMs, onFinish]);
+  }, [autoDismissMs]);
 
   if (!isVisible) return null;
 

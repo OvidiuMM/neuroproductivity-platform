@@ -48,3 +48,39 @@ test('Escape skips the welcome and it is not shown again', async ({ page }) => {
   await expect(page.getByRole('button', { name: 'Nueva tarea', exact: true })).toBeVisible();
   await expect(page.getByRole('dialog')).toHaveCount(0);
 });
+
+test('with data from the version without accounts, the import comes first and the welcome after it', async ({
+  page
+}) => {
+  await page.goto('/');
+  await page.evaluate(() => {
+    const created = '2026-10-01T09:00:00.000Z';
+    localStorage.setItem(
+      'neuro_tasks_v1',
+      JSON.stringify([
+        {
+          id: 'task-local-welcome',
+          userId: 'user-ana',
+          listContext: 'WORK',
+          title: 'Llamar al taller',
+          description: '',
+          priority: 'HIGH',
+          createdAt: created,
+          updatedAt: created,
+          observations: [],
+          isSomeday: false,
+          completed: false
+        }
+      ])
+    );
+  });
+  await signInWithGoogle(page, undefined, undefined, { onboarded: false });
+
+  // Una sola ventana a la vez: primero la importación
+  const importDialog = page.getByRole('dialog', { name: 'Importar datos de este navegador' });
+  await expect(importDialog).toBeVisible();
+  await expect(page.getByRole('dialog')).toHaveCount(1);
+  await importDialog.getByRole('button', { name: 'Más tarde' }).last().click();
+  await expect(page.getByRole('heading', { name: 'Te damos la bienvenida a CLAR' })).toBeVisible();
+  await expect(page.getByRole('dialog')).toHaveCount(1);
+});

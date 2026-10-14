@@ -111,6 +111,14 @@ export const ProductTour: React.FC<ProductTourProps> = ({ steps, onFinish }) => 
     return () => cancelAnimationFrame(frame);
   }, [measure]);
 
+  // Tamaño de la ventana: si cambia (p. ej. solo de alto), el globo se recoloca aunque el elemento no se mueva
+  const [viewport, setViewport] = useState({ width: window.innerWidth, height: window.innerHeight });
+  useEffect(() => {
+    const onResize = () => setViewport({ width: window.innerWidth, height: window.innerHeight });
+    window.addEventListener('resize', onResize);
+    return () => window.removeEventListener('resize', onResize);
+  }, []);
+
   // Globo debajo del elemento si cabe; si no, encima; y siempre dentro de la pantalla
   useLayoutEffect(() => {
     const el = bubbleRef.current;
@@ -119,17 +127,17 @@ export const ProductTour: React.FC<ProductTourProps> = ({ steps, onFinish }) => 
     const below = hole.top + hole.height + GAP;
     const above = hole.top - GAP - h;
     const top =
-      below + h <= window.innerHeight - MARGIN
+      below + h <= viewport.height - MARGIN
         ? below
         : above >= MARGIN
           ? above
-          : Math.max(MARGIN, window.innerHeight - h - MARGIN);
+          : Math.max(MARGIN, viewport.height - h - MARGIN);
     const left = Math.min(
       Math.max(hole.left + hole.width / 2 - w / 2, MARGIN),
-      Math.max(MARGIN, window.innerWidth - w - MARGIN)
+      Math.max(MARGIN, viewport.width - w - MARGIN)
     );
     setBubble({ top, left });
-  }, [hole, index]);
+  }, [hole, index, viewport]);
 
   // Flechas: siguiente y anterior (Escape ya lo atiende useModalFocus)
   useEffect(() => {
