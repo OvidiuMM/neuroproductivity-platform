@@ -77,6 +77,27 @@ describe('firestore.rules', () => {
     await assertSucceeds(deleteDoc(ref));
   });
 
+  it('lets the profile hold only the account data and whether the welcome was seen', async () => {
+    const ana = env.authenticatedContext('ana').firestore();
+    const profile = { name: 'Ana', email: 'ana@example.com', photoUrl: '', createdAt: '', lastLoginAt: '' };
+
+    await assertSucceeds(setDoc(doc(ana, 'users/ana'), profile));
+    await assertSucceeds(
+      setDoc(
+        doc(ana, 'users/ana'),
+        {
+          hasSeenOnboarding: true,
+          onboardingVersion: 1,
+          onboardingSeenAt: '2026-10-14T09:30:00.000Z',
+          onboardingOutcome: 'completed'
+        },
+        { merge: true }
+      )
+    );
+    await assertFails(updateDoc(doc(ana, 'users/ana'), { isAdmin: true }));
+    await assertFails(setDoc(doc(env.authenticatedContext('bruno').firestore(), 'users/bruno'), { role: 'admin' }));
+  });
+
   it('keeps goals private to their owner, who can create, change and delete them', async () => {
     const goal = { id: 'goal-1', title: 'Correr una media maratón', area: 'Salud', status: 'ACTIVE' };
     const ana = env.authenticatedContext('ana').firestore();

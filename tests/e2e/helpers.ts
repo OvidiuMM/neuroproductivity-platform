@@ -1,4 +1,5 @@
 import { expect, type Page } from '@playwright/test';
+import { ONBOARDING_VERSION } from '../../src/services/onboarding';
 
 // Cada test usa una cuenta nueva en el emulador de Auth para no compartir datos
 export const uniqueEmail = () => `e2e-${Date.now()}-${Math.random().toString(36).slice(2, 8)}@example.com`;
@@ -7,18 +8,19 @@ export const EMULATOR_PROJECT = 'demo-neuroproductivity';
 // Cuenta que hace de administración en los emuladores (DEMO_ADMIN_EMAIL en functions/src/accessLogic.ts)
 export const ADMIN_EMAIL = 'admin@example.com';
 
-// Aprueba el acceso de una cuenta escribiendo access/{uid} en el emulador como lo haría la Cloud Function.
-// "Bearer owner" es la credencial de administración de los emuladores y salta las reglas.
-export const approveAccess = async (email: string) => {
-  const headers = { Authorization: 'Bearer owner', 'Content-Type': 'application/json' };
-  // La cuenta aparece en el emulador de Auth al terminar el inicio de sesión: se reintenta hasta encontrarla
+// "Bearer owner" es la credencial de administración de los emuladores y salta las reglas
+const OWNER_HEADERS = { Authorization: 'Bearer owner', 'Content-Type': 'application/json' };
+const text = (value: string) => ({ stringValue: value });
+
+// uid de una cuenta del emulador de Auth. Aparece al terminar el inicio de sesión: se reintenta hasta encontrarla
+export const uidOf = async (email: string) => {
   let uid: string | undefined;
   await expect
     .poll(
       async () => {
         const lookup = await fetch(
           `http://127.0.0.1:9399/identitytoolkit.googleapis.com/v1/projects/${EMULATOR_PROJECT}/accounts:lookup`,
-          { method: 'POST', headers, body: JSON.stringify({ email: [email] }) }
+          { method: 'POST', headers: OWNER_HEADERS, body: JSON.stringify({ email: [email] }) }
         );
         uid = ((await lookup.json()) as { users?: { localId: string }[] }).users?.[0]?.localId;
         return uid;
@@ -26,27 +28,56 @@ export const approveAccess = async (email: string) => {
       { message: `cuenta ${email} en el emulador de Auth` }
     )
     .toBeTruthy();
-  const text = (value: string) => ({ stringValue: value });
-  const now = new Date().toISOString();
+  return uid!;
+};
+
+// Escribe campos de un documento en el emulador de Firestore (solo esos: el resto del documento se conserva)
+const patchDocument = async (path: string, fields: Record<string, unknown>) => {
+  const mask = Object.keys(fields)
+    .map((field) => `updateMask.fieldPaths=${field}`)
+    .join('&');
   const res = await fetch(
-    `http://127.0.0.1:8281/v1/projects/${EMULATOR_PROJECT}/databases/(default)/documents/access/${uid}`,
-    {
-      method: 'PATCH',
-      headers,
-      body: JSON.stringify({
-        fields: {
-          status: text('approved'),
-          email: text(email),
-          name: text(''),
-          photoUrl: text(''),
-          message: text(''),
-          requestedAt: text(now),
-          decidedAt: text(now)
-        }
-      })
-    }
+    `http://127.0.0.1:8281/v1/projects/${EMULATOR_PROJECT}/databases/(default)/documents/${path}?${mask}`,
+    { method: 'PATCH', headers: OWNER_HEADERS, body: JSON.stringify({ fields }) }
   );
   expect(res.ok, await res.text()).toBe(true);
+};
+
+// Campos de un documento del emulador de Firestore, como texto, número o booleano (null si no existe)
+export const readDocument = async (path: string) => {
+  const res = await fetch(
+    `http://127.0.0.1:8281/v1/projects/${EMULATOR_PROJECT}/databases/(default)/documents/${path}`,
+    {
+      headers: OWNER_HEADERS
+    }
+  );
+  if (res.status === 404) return null;
+  const { fields } = (await res.json()) as { fields: Record<string, Record<string, unknown>> };
+  return Object.fromEntries(Object.entries(fields).map(([key, value]) => [key, Object.values(value)[0]]));
+};
+
+// Da por vista la bienvenida, como si la cuenta ya la hubiera pasado: casi todas las pruebas no la necesitan
+export const markOnboarded = async (email: string) => {
+  await patchDocument(`users/${await uidOf(email)}`, {
+    hasSeenOnboarding: { booleanValue: true },
+    onboardingVersion: { integerValue: String(ONBOARDING_VERSION) }
+  });
+};
+
+// Aprueba el acceso de una cuenta escribiendo access/{uid} en el emulador como lo haría la Cloud Function.
+// Por defecto también da por vista la bienvenida (antes de aprobar, para que la app ya lo sepa al abrirse).
+export const approveAccess = async (email: string, { onboarded = true }: { onboarded?: boolean } = {}) => {
+  if (onboarded) await markOnboarded(email);
+  const now = new Date().toISOString();
+  await patchDocument(`access/${await uidOf(email)}`, {
+    status: text('approved'),
+    email: text(email),
+    name: text(''),
+    photoUrl: text(''),
+    message: text(''),
+    requestedAt: text(now),
+    decidedAt: text(now)
+  });
 };
 
 // Inicio de sesión con Google a través de la ventana emergente del emulador de Auth. Por defecto aprueba
@@ -55,7 +86,7 @@ export const signInWithGoogle = async (
   page: Page,
   email = uniqueEmail(),
   name = 'Persona de Prueba',
-  { approve = true }: { approve?: boolean } = {}
+  { approve = true, onboarded = true }: { approve?: boolean; onboarded?: boolean } = {}
 ) => {
   const popupPromise = page.waitForEvent('popup');
   await page.getByRole('button', { name: 'Continuar con Google' }).click();
@@ -70,8 +101,10 @@ export const signInWithGoogle = async (
   await popup.locator('#display-name-input').fill(name);
   await popup.locator('#sign-in').click();
   if (approve) {
-    await approveAccess(email);
+    await approveAccess(email, { onboarded });
     await expect(page.getByRole('button', { name: 'Nueva tarea' })).toBeVisible();
+  } else if (onboarded) {
+    await markOnboarded(email);
   }
   return email;
 };

@@ -284,6 +284,7 @@ export const TaskList: React.FC<TaskListProps> = ({
           (isPhone ? (
             <button
               id={FILTERS_BUTTON_ID}
+              data-tour="filters"
               type="button"
               onClick={() => setIsFilterSheetOpen(true)}
               aria-haspopup="dialog"
@@ -306,6 +307,7 @@ export const TaskList: React.FC<TaskListProps> = ({
               <button
                 type="button"
                 onClick={() => setShowFilters((open) => !open)}
+                data-tour="filters"
                 aria-expanded={showFilters}
                 aria-controls="list-filters"
                 className={`flex items-center gap-1.5 rounded-lg border px-2.5 py-1.5 text-xs font-semibold ${
@@ -410,7 +412,7 @@ export const TaskList: React.FC<TaskListProps> = ({
       {viewMode === 'active' && (
         <div className="space-y-6">
           {/* ZONA 1: TOP 10 OPERATIVO (ALTA ELEVACIÓN, PESO 700, CONTRASTE ELEVADO) */}
-          <div className="space-y-3">
+          <div className="space-y-3" data-tour="top10">
             <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1 px-1">
               <div className="flex items-center gap-2">
                 <span className="h-2.5 w-2.5 animate-pulse rounded-full bg-indigo-600" />
