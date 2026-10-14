@@ -74,3 +74,20 @@ test('on a phone the tour points at the floating button and at «Más»', async 
   await page.getByRole('button', { name: 'Salir del recorrido' }).click();
   await expect(page.getByRole('dialog')).toHaveCount(0);
 });
+
+test('the bubble stays on screen when only the window height changes', async ({ page }) => {
+  await page.setViewportSize({ width: 1280, height: 800 });
+  await page.goto('/');
+  await signInWithGoogle(page);
+  await startFromHelp(page);
+  const bubble = page.getByRole('dialog', { name: 'Captura una tarea' });
+  await expect(bubble).toBeVisible();
+
+  await page.setViewportSize({ width: 1280, height: 320 });
+  await expect
+    .poll(async () => {
+      const box = (await bubble.boundingBox())!;
+      return box.y >= 0 && box.y + box.height <= 320;
+    })
+    .toBe(true);
+});
