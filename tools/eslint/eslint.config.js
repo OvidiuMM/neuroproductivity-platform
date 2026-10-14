@@ -9,9 +9,11 @@ import reactHooks from 'eslint-plugin-react-hooks';
 import reactRefresh from 'eslint-plugin-react-refresh';
 import { defineConfig } from 'eslint/config';
 import globals from 'globals';
+import { fileURLToPath } from 'node:url';
 import tseslint from 'typescript-eslint';
 
-const root = new URL('../..', import.meta.url).pathname;
+// Ruta del sistema de archivos (con espacios o en Windows, `URL.pathname` no lo es)
+const root = fileURLToPath(new URL('../..', import.meta.url));
 
 export default defineConfig(
   {
