@@ -5,6 +5,7 @@ import {
   Compass,
   LayoutDashboard,
   ShieldCheck,
+  Target,
   UserCheck,
   type LucideIcon
 } from 'lucide-react';
@@ -26,6 +27,7 @@ export const SECTIONS: Section[] = [
   { tab: 'tasks', label: 'Listas', short: 'Listas', icon: Briefcase },
   { tab: 'agenda', label: 'Agenda', short: 'Agenda', icon: CalendarDays },
   { tab: 'wheel', label: 'Rueda de la Vida', short: 'Rueda', icon: Compass },
+  { tab: 'goals', label: 'Metas', short: 'Metas', icon: Target },
   { tab: 'bermudas', label: 'Tiempo protegido', short: 'Bermudas', icon: ShieldCheck },
   { tab: 'help', label: 'Ayuda', short: 'Ayuda', icon: BookOpen, iconOnly: true }
 ];
@@ -42,8 +44,8 @@ const ACCESS_SECTION: Section = {
 export const sectionsFor = (isAdmin: boolean) =>
   isAdmin ? [...SECTIONS.slice(0, -1), ACCESS_SECTION, ...SECTIONS.slice(-1)] : SECTIONS;
 
-// En el móvil estas van en la barra inferior; las demás, en «Más»
-export const PRIMARY_TABS: readonly AppTab[] = ['home', 'tasks', 'agenda', 'wheel'];
+// En el móvil estas van en la barra inferior; las demás (la Rueda incluida), en «Más»
+export const PRIMARY_TABS: readonly AppTab[] = ['home', 'tasks', 'agenda', 'goals'];
 
 // Nombre accesible con lo pendiente en administración: solicitudes y mensajes nuevos (el globo es solo visual)
 export const sectionLabel = ({ tab, label }: Section, pendingAccessCount: number) =>

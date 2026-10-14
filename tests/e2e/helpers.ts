@@ -221,7 +221,7 @@ export const callFunction = (name: string, idToken: string, data: unknown) =>
 
 // Abre una sección. En tableta y escritorio están en la cabecera; en el móvil (< 768 px), en la barra inferior las
 // cuatro primeras y las demás en la hoja «Más»
-const BOTTOM_BAR_SECTIONS = ['Inicio', 'Listas', 'Agenda', 'Rueda de la Vida'];
+const BOTTOM_BAR_SECTIONS = ['Inicio', 'Listas', 'Agenda', 'Metas'];
 export const openSection = async (page: Page, name: string) => {
   const isPhone = (page.viewportSize()?.width ?? 1280) < 768;
   if (isPhone && !BOTTOM_BAR_SECTIONS.includes(name))

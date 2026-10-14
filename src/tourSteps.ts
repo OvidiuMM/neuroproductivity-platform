@@ -35,9 +35,15 @@ export const TOUR_STEPS: TourStep[] = [
   },
   {
     id: 'wheel',
-    target: '[data-tour="nav-wheel"]',
-    title: 'Rueda y metas',
-    body: 'Evalúa cada área de tu vida y ponle metas. Vincula tareas a una meta y verás cómo avanza.'
+    target: '[data-tour="nav-wheel"], [data-tour="nav-more"]',
+    title: 'Rueda de la Vida',
+    body: 'Puntúa del 0 al 10 cada área de tu vida. Es el punto de partida: muestra qué áreas necesitan atención.'
+  },
+  {
+    id: 'goals',
+    target: '[data-tour="nav-goals"]',
+    title: 'Metas',
+    body: 'Lo que quieres conseguir en cada área, empezando por las más bajas. Añade tareas a cada meta y verás cómo avanza.'
   },
   {
     id: 'home',

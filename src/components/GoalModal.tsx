@@ -9,6 +9,8 @@ import { DateField } from './DateField';
 interface GoalModalProps {
   // Meta que se edita, o ninguna para crear una
   goal?: Goal;
+  // Al crearla desde un área de «Metas», esa área ya elegida
+  initialArea?: WheelCategory;
   onSave: (goal: Goal) => void;
   onDelete: (goal: Goal) => void;
   onClose: () => void;
@@ -19,9 +21,9 @@ const inputClass =
 const labelClass = 'mb-1.5 block text-xs font-bold tracking-wider text-slate-600 uppercase';
 
 // Crear o editar una meta: nombre, área de la Rueda, para qué y fecha objetivo. Se monta al abrirse.
-export const GoalModal: React.FC<GoalModalProps> = ({ goal, onSave, onDelete, onClose }) => {
+export const GoalModal: React.FC<GoalModalProps> = ({ goal, initialArea, onSave, onDelete, onClose }) => {
   const [title, setTitle] = useState(goal?.title ?? '');
-  const [area, setArea] = useState<WheelCategory | ''>(goal?.area ?? '');
+  const [area, setArea] = useState<WheelCategory | ''>(goal?.area ?? initialArea ?? '');
   const [why, setWhy] = useState(goal?.why ?? '');
   const [targetDate, setTargetDate] = useState(goal?.targetDate ?? '');
   const [submitted, setSubmitted] = useState(false);

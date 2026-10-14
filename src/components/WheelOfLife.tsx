@@ -1,9 +1,8 @@
 import React, { useState } from 'react';
-import { Goal, GoalStatus, TaskItem, WheelOfLifeLog, WheelCategory } from '../types';
+import { Goal, WheelOfLifeLog, WheelCategory } from '../types';
 import { activeGoalsByArea } from '../services/goals';
 import { WHEEL_CATEGORIES } from '../services/wheel';
-import { GoalsPanel } from './GoalsPanel';
-import { Compass, History, Save, Check, TrendingUp, Flag, BookOpen } from 'lucide-react';
+import { Compass, History, Save, Check, TrendingUp, Flag, BookOpen, Target, ArrowRight } from 'lucide-react';
 
 interface WheelOfLifeProps {
   logs: WheelOfLifeLog[];
@@ -11,12 +10,9 @@ interface WheelOfLifeProps {
   showFirstStep: boolean;
   onAppendSnapshot: (scores: Record<WheelCategory, number>, label?: string) => void;
   onOpenHelp: () => void;
-  // Metas de cada área (áreas → metas → tareas) y las tareas, para su progreso
+  // Metas activas de cada área (áreas → metas → tareas); se gestionan en «Metas»
   goals: Goal[];
-  tasks: TaskItem[];
-  onNewGoal: () => void;
-  onEditGoal: (goal: Goal) => void;
-  onSetGoalStatus: (goal: Goal, status: GoalStatus) => void;
+  onOpenGoals: () => void;
 }
 
 // Margen del viewBox alrededor del círculo para que quepan las etiquetas de las áreas
@@ -31,10 +27,7 @@ export const WheelOfLife: React.FC<WheelOfLifeProps> = ({
   onAppendSnapshot,
   onOpenHelp,
   goals,
-  tasks,
-  onNewGoal,
-  onEditGoal,
-  onSetGoalStatus
+  onOpenGoals
 }) => {
   const goalsByArea = activeGoalsByArea(goals);
   // Sin evaluaciones guardadas (primer arranque) todas las áreas empiezan en 0
@@ -395,14 +388,32 @@ export const WheelOfLife: React.FC<WheelOfLifeProps> = ({
         </div>
       </div>
 
-      {/* METAS: áreas → metas → tareas */}
-      <GoalsPanel
-        goals={goals}
-        tasks={tasks}
-        onNewGoal={onNewGoal}
-        onEditGoal={onEditGoal}
-        onSetStatus={onSetGoalStatus}
-      />
+      {/* METAS: el siguiente paso, en su propia sección (áreas → metas → tareas) */}
+      <section
+        aria-labelledby="wheel-goals-title"
+        className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-slate-200 bg-white p-5 shadow-xs"
+      >
+        <div>
+          <h3
+            id="wheel-goals-title"
+            className="flex items-center gap-2 text-xs font-bold tracking-wider text-slate-700 uppercase"
+          >
+            <Target className="h-4 w-4 text-indigo-600" aria-hidden="true" />
+            Metas
+          </h3>
+          <p className="mt-1 text-xs text-slate-600">
+            El siguiente paso: ponles metas a las áreas que más quieres mejorar y añádeles tareas.
+          </p>
+        </div>
+        <button
+          type="button"
+          onClick={onOpenGoals}
+          className="inline-flex min-h-11 items-center gap-2 rounded-xl bg-slate-900 px-4 text-sm font-bold text-white hover:bg-slate-800"
+        >
+          Ir a Metas
+          <ArrowRight className="h-4 w-4" aria-hidden="true" />
+        </button>
+      </section>
     </div>
   );
 };

@@ -9,7 +9,8 @@ import {
   Database,
   Link2,
   CalendarDays,
-  LayoutDashboard
+  LayoutDashboard,
+  Target
 } from 'lucide-react';
 
 interface HowItWorksProps {
@@ -38,7 +39,20 @@ const SCREENS: { tab: AppTab; title: string; icon: React.ReactNode; points: stri
     points: [
       'Puntúa de 0 a 10 tu satisfacción en 7 áreas: Salud, Carrera Profesional, Finanzas, Familia, Ocio, Relaciones y Espiritualidad.',
       'Cada vez que pulsas «Guardar la evaluación» se guarda una evaluación nueva; las anteriores nunca se modifican.',
-      'Activa la comparativa histórica para superponer una evaluación anterior y ver qué áreas han mejorado.'
+      'Activa la comparativa histórica para superponer una evaluación anterior y ver qué áreas han mejorado.',
+      'Las áreas más bajas son las mejores candidatas para una meta: en «Metas» aparecen las primeras.'
+    ]
+  },
+  {
+    tab: 'goals',
+    title: 'Metas',
+    icon: <Target className="h-5 w-5 text-indigo-600" />,
+    points: [
+      'Una meta es lo que quieres conseguir en un área de tu Rueda, por ejemplo «Correr una media maratón» en Salud. Puede llevar un para qué y una fecha objetivo.',
+      'Las áreas aparecen de la puntuación más baja a la más alta, según tu última evaluación. Las que tienen 5 o menos y aún no tienen metas salen en «Necesitan atención».',
+      'Cada meta muestra su progreso (tareas hechas sobre el total) y las tareas que le quedan. Pulsa una para editarla.',
+      '«Añadir tarea» crea una tarea ya vinculada a la meta. También puedes vincularla desde el formulario de la tarea; la tarea toma el área de su meta.',
+      'Cuando la consigas, márcala como lograda; si deja de interesarte, archívala. Las logradas y archivadas quedan plegadas al final.'
     ]
   },
   {
@@ -87,8 +101,8 @@ export const HowItWorks: React.FC<HowItWorksProps> = ({ onNavigate, onStartTour,
           Ayuda
         </h2>
         <p className="max-w-3xl text-sm leading-relaxed text-slate-600">
-          CLAR sigue tres pasos: primero decides qué áreas de tu vida quieres mejorar, luego conviertes esa intención en
-          acciones concretas y, por último, proteges el tiempo que necesitas para hacerlas.
+          CLAR sigue cuatro pasos: decides qué áreas de tu vida quieres mejorar, les pones metas, conviertes cada meta
+          en acciones concretas y proteges el tiempo que necesitas para hacerlas.
         </p>
       </div>
 
@@ -128,10 +142,11 @@ export const HowItWorks: React.FC<HowItWorksProps> = ({ onNavigate, onStartTour,
       {/* PRIMEROS PASOS */}
       <div className="space-y-4 rounded-2xl border border-slate-200 bg-white p-6 shadow-xs">
         <h3 className="text-xs font-bold tracking-wider text-slate-700 uppercase">Primeros pasos</h3>
-        <ol className="grid grid-cols-1 gap-3 md:grid-cols-3">
+        <ol className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-4">
           {[
             ['Evalúa tu Rueda de la Vida', 'Es tu punto de partida y muestra qué áreas necesitan atención.'],
-            ['Crea tus primeras tareas', 'Acciones físicas concretas en la lista Profesional o Personal.'],
+            ['Ponle una meta a un área', 'En «Metas», empieza por las áreas más bajas.'],
+            ['Añade tareas a tus metas', 'Acciones físicas concretas en la lista Profesional o Personal.'],
             ['Protege tu agenda', 'Reserva las mañanas y redacta los correos en el orden correcto.']
           ].map(([title, text], i) => (
             <li key={title} className="flex gap-3 rounded-xl border border-slate-200 bg-slate-50 p-4">
