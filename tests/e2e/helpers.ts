@@ -238,8 +238,7 @@ export const openTaskActions = (page: Page, title: string) =>
   page.getByRole('button', { name: `Acciones de «${title}»`, exact: true }).click();
 
 // Cuenta con email y contraseña ya confirmada, creada directamente en el emulador de Auth, con su token
-export const createVerifiedAccount = async (password = 'clave-segura-1') => {
-  const email = uniqueEmail();
+export const createVerifiedAccount = async (password = 'clave-segura-1', email = uniqueEmail()) => {
   const auth = 'http://127.0.0.1:9399/identitytoolkit.googleapis.com/v1';
   const json = { 'Content-Type': 'application/json' };
   const signUp = await fetch(`${auth}/accounts:signUp?key=demo-api-key`, {

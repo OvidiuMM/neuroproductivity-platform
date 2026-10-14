@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Check, UserX, X } from 'lucide-react';
+import { Ban, Check, UserX, X } from 'lucide-react';
 import type { AccessRequest, DecisionStatus } from '../services/access';
 
 interface AccessAdminViewProps {
@@ -7,6 +7,9 @@ interface AccessAdminViewProps {
   currentUid: string;
   error: string | null;
   onDecide: (uid: string, status: DecisionStatus) => Promise<void>;
+  // Aprobación de cuentas obligatoria (null mientras se carga) y cómo cambiarla
+  approvalRequired: boolean | null;
+  onSetApprovalRequired: (approvalRequired: boolean) => Promise<void>;
 }
 
 const dateFormat = new Intl.DateTimeFormat('es-ES', {
@@ -35,21 +38,41 @@ const GROUPS: { id: string; title: string; matches: (r: AccessRequest) => boolea
     title: 'Rechazadas o retiradas',
     matches: (r) => r.status === 'rejected' || r.status === 'revoked',
     empty: 'Ninguna.'
+  },
+  {
+    id: 'access-blocked',
+    title: 'Bloqueadas',
+    matches: (r) => r.status === 'blocked',
+    empty: 'Ninguna. Una cuenta bloqueada no puede entrar ni volver con otra cuenta del mismo email.'
   }
 ];
+
+const BLOCK = {
+  status: 'blocked' as const,
+  label: 'Bloquear',
+  icon: Ban,
+  style: 'border border-slate-300 text-slate-700 hover:bg-slate-50'
+};
+const APPROVE = {
+  status: 'approved' as const,
+  label: 'Aprobar',
+  icon: Check,
+  style: 'bg-emerald-700 hover:bg-emerald-800 text-white'
+};
 
 const ACTIONS: Record<
   AccessRequest['status'],
   { status: DecisionStatus; label: string; icon: typeof Check; style: string }[]
 > = {
   pending: [
-    { status: 'approved', label: 'Aprobar', icon: Check, style: 'bg-emerald-700 hover:bg-emerald-800 text-white' },
+    APPROVE,
     {
       status: 'rejected',
       label: 'Rechazar',
       icon: X,
       style: 'border border-slate-300 text-slate-700 hover:bg-slate-50'
-    }
+    },
+    BLOCK
   ],
   approved: [
     {
@@ -57,13 +80,18 @@ const ACTIONS: Record<
       label: 'Retirar acceso',
       icon: UserX,
       style: 'border border-red-300 text-red-700 hover:bg-red-50'
+    },
+    BLOCK
+  ],
+  rejected: [APPROVE, BLOCK],
+  revoked: [APPROVE, BLOCK],
+  blocked: [
+    {
+      status: 'revoked',
+      label: 'Desbloquear',
+      icon: UserX,
+      style: 'border border-slate-300 text-slate-700 hover:bg-slate-50'
     }
-  ],
-  rejected: [
-    { status: 'approved', label: 'Aprobar', icon: Check, style: 'bg-emerald-700 hover:bg-emerald-800 text-white' }
-  ],
-  revoked: [
-    { status: 'approved', label: 'Aprobar', icon: Check, style: 'bg-emerald-700 hover:bg-emerald-800 text-white' }
   ]
 };
 
@@ -71,12 +99,33 @@ const STATUS_LABEL: Record<AccessRequest['status'], string> = {
   pending: 'Pendiente',
   approved: 'Con acceso',
   rejected: 'Rechazada',
-  revoked: 'Retirada'
+  revoked: 'Retirada',
+  blocked: 'Bloqueada'
 };
 
 // Solo para la administración: decide quién puede usar la app
-export const AccessAdminView: React.FC<AccessAdminViewProps> = ({ requests, currentUid, error, onDecide }) => {
+export const AccessAdminView: React.FC<AccessAdminViewProps> = ({
+  requests,
+  currentUid,
+  error,
+  onDecide,
+  approvalRequired,
+  onSetApprovalRequired
+}) => {
   const [busyUid, setBusyUid] = useState<string | null>(null);
+  // Pasar a aprobación libre aprueba también las pendientes: se confirma antes
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  const [modeBusy, setModeBusy] = useState(false);
+  const pendingCount = requests.filter((r) => r.status === 'pending').length;
+  const setMode = async (required: boolean) => {
+    setModeBusy(true);
+    try {
+      await onSetApprovalRequired(required);
+      setConfirmOpen(false);
+    } finally {
+      setModeBusy(false);
+    }
+  };
 
   const decide = async (uid: string, status: DecisionStatus) => {
     setBusyUid(uid);
@@ -93,6 +142,72 @@ export const AccessAdminView: React.FC<AccessAdminViewProps> = ({ requests, curr
         Aprueba quién puede usar la app. Cada solicitud nueva te llega también por email, y la persona recibe otro
         cuando la apruebas.
       </p>
+
+      <section
+        aria-labelledby="access-mode-title"
+        className="space-y-3 rounded-2xl border border-slate-200 bg-white p-5 shadow-xs"
+      >
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div className="min-w-0 space-y-0.5">
+            <h3 id="access-mode-title" className="text-sm font-bold text-slate-900">
+              Aprobación obligatoria
+            </h3>
+            <p id="access-mode-description" className="text-xs text-slate-600">
+              {approvalRequired === false
+                ? 'Desactivada: las cuentas nuevas entran solas, salvo las bloqueadas.'
+                : 'Activada: cada cuenta nueva espera a que la apruebes.'}
+            </p>
+          </div>
+          <button
+            type="button"
+            role="switch"
+            aria-checked={approvalRequired !== false}
+            aria-labelledby="access-mode-title"
+            aria-describedby="access-mode-description"
+            disabled={approvalRequired === null || modeBusy}
+            onClick={() => (approvalRequired === false ? setMode(true) : setConfirmOpen(true))}
+            className={`relative inline-flex h-8 w-14 shrink-0 items-center rounded-full transition-colors disabled:opacity-60 ${
+              approvalRequired !== false ? 'bg-emerald-600' : 'bg-slate-300'
+            }`}
+          >
+            <span
+              aria-hidden="true"
+              className={`inline-block h-6 w-6 rounded-full bg-white shadow transition-transform ${
+                approvalRequired !== false ? 'translate-x-7' : 'translate-x-1'
+              }`}
+            />
+          </button>
+        </div>
+        {confirmOpen && (
+          <div
+            role="alert"
+            className="space-y-2 rounded-xl border border-amber-200 bg-amber-50 p-3 text-xs text-amber-900"
+          >
+            <p>
+              Sin aprobación obligatoria, cualquier cuenta con el email confirmado entra sola.
+              {pendingCount > 0 &&
+                ` También se aprobarán ${pendingCount === 1 ? 'la solicitud pendiente' : `las ${pendingCount} solicitudes pendientes`}.`}
+            </p>
+            <div className="flex flex-wrap gap-2">
+              <button
+                type="button"
+                disabled={modeBusy}
+                onClick={() => setMode(false)}
+                className="min-h-11 rounded-xl bg-slate-900 px-4 font-bold text-white hover:bg-slate-800 disabled:opacity-60"
+              >
+                Desactivar la aprobación
+              </button>
+              <button
+                type="button"
+                onClick={() => setConfirmOpen(false)}
+                className="min-h-11 rounded-xl px-3 font-semibold text-amber-900 hover:bg-amber-100"
+              >
+                Cancelar
+              </button>
+            </div>
+          </div>
+        )}
+      </section>
 
       {error && (
         <p role="alert" className="rounded-xl border border-red-200 bg-red-50 p-3 text-xs text-red-700">
