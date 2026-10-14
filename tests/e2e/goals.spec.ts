@@ -38,7 +38,7 @@ test('areas → goals → tasks: a goal is created in the Wheel, tasks link to i
   await fillAndSaveTask(page, { title: taskTitle });
 
   // La tarjeta muestra la meta, y la meta su progreso
-  await page.getByRole('button', { name: 'Listas Duales' }).click();
+  await page.getByRole('button', { name: 'Listas', exact: true }).click();
   const card = page.getByRole('listitem').filter({ has: page.getByRole('heading', { name: taskTitle }) });
   await expect(card).toContainText(goalTitle);
   await completeTask(page, taskTitle);
@@ -59,7 +59,7 @@ test('areas → goals → tasks: a goal is created in the Wheel, tasks link to i
   await expect(page.getByRole('list', { name: 'Metas logradas y archivadas' })).toContainText('Lograda');
 
   // Cambiar el área de la meta mueve sus tareas a la nueva; eliminarla las deja sin meta, con esa área
-  await page.getByRole('button', { name: 'Listas Duales' }).click();
+  await page.getByRole('button', { name: 'Listas', exact: true }).click();
   await page.getByRole('button', { name: /Archivadas/ }).click();
   const archive = page.getByRole('dialog', { name: 'Tareas archivadas' });
   await archive.getByLabel(`Estado de «${taskTitle}»`).selectOption('PENDING');
@@ -79,7 +79,7 @@ test('areas → goals → tasks: a goal is created in the Wheel, tasks link to i
   await confirm.click();
   await expect(page.getByRole('heading', { name: goalTitle })).toHaveCount(0);
 
-  await page.getByRole('button', { name: 'Listas Duales' }).click();
+  await page.getByRole('button', { name: 'Listas', exact: true }).click();
   await expect(card).not.toContainText(goalTitle);
   await expect(card).toContainText('Ocio');
 });

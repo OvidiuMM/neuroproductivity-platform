@@ -1,4 +1,4 @@
-// Analizador Sintáctico de la Acción Inmediata Siguiente (Módulo 4)
+// Analizador Sintáctico de la Tarea (Módulo 4)
 // Mitiga la postergación sistemática originada por la ambigüedad en la corteza prefrontal
 
 const PHYSICAL_ACTION_VERBS = [
@@ -113,7 +113,7 @@ const AMORPHOUS_PROJECT_PATTERNS = [
   { match: /^(tesis|proyecto|informe)$/i, suggestion: 'Escribir el primer borrador de la introducción metodológica' },
   { match: /^(vacaciones|viaje)$/i, suggestion: 'Buscar vuelos y comparar 3 opciones de alojamiento' },
   { match: /^(casa|mudanza)$/i, suggestion: 'Embalar cajas de la habitación o contactar empresa de fletes' },
-  { match: /^(web|sitio web)$/i, suggestion: 'Diseñar wireframe de la pantalla principal en Figma' }
+  { match: /^(web|sitio web)$/i, suggestion: 'Dibujar un boceto de la pantalla principal' }
 ];
 
 export interface SyntaxAnalysisResult {
@@ -142,8 +142,8 @@ export function analyzeImmediateActionSyntax(title: string): SyntaxAnalysisResul
       return {
         isValid: false,
         detectedVerb: null,
-        warning: `"${trimmed}" representa un proyecto abstracto o etiqueta amorfa, no una acción física indivisible.`,
-        assistantQuestion: '¿Cuál es el primer paso físico e indivisible? Convierte la meta en una acción motora.',
+        warning: `«${trimmed}» parece un proyecto, no una acción concreta.`,
+        assistantQuestion: '¿Cuál es el primer paso? Conviértelo en algo que puedas hacer ya.',
         suggestion: item.suggestion
       };
     }
@@ -178,9 +178,9 @@ export function analyzeImmediateActionSyntax(title: string): SyntaxAnalysisResul
     return {
       isValid: false,
       detectedVerb: null,
-      warning: 'Carencia de verbo transitivo de acción física motora.',
+      warning: 'Falta un verbo de acción.',
       assistantQuestion:
-        '¿Cuál es el primer paso físico e indivisible? Inicia con un verbo de acción (ej. "Llamar a...", "Redactar...", "Comprar...").',
+        '¿Cuál es el primer paso? Empieza por un verbo de acción (p. ej. «Llamar a…», «Redactar…», «Comprar…»).',
       suggestion: `Llamar o redactar respecto a ${trimmed.toLowerCase()}`
     };
   }

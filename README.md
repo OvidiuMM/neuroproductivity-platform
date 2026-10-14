@@ -1,7 +1,7 @@
 # CLAR — Plataforma de Gestión del Tiempo y Neurociencia Aplicada
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
-[![Version](https://img.shields.io/badge/Version-0.8.0-indigo.svg)](#)
+[![Version](https://img.shields.io/badge/Version-0.9.0-indigo.svg)](#)
 [![React](https://img.shields.io/badge/React-19.0-61dafb.svg?logo=react&logoColor=black)](https://react.dev/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-7.x-3178c6.svg?logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
 [![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-4.x-38bdf8.svg?logo=tailwindcss&logoColor=white)](https://tailwindcss.com/)
@@ -82,6 +82,14 @@ El sistema rechaza las restricciones coercitivas (como las rotaciones atencional
 - **Auditoría y Bloqueo de Reuniones Matutinas:** Bloqueo heurístico inquebrantable de reuniones convocadas antes de las 12:00 h (franja biológica de máxima demanda cognitiva y concentración profunda), sugiriendo su reubicación hacia las 13:00 h (hora valle).
 - **Triple Validación Obligatoria:** Toda reunión exige hora de inicio y fin inamovibles (`end_time > start_time`), orden del día cerrado no vacío y un moderador nominal responsable.
 - **Redacción Inversa de Correo Electrónico:** Secuencia contra-intuitiva donde los adjuntos y el cuerpo del mensaje deben redactarse primero, manteniendo bloqueado el campo de **Destinatarios** hasta que el contenido esté validado. Alerta en tiempo real si el texto supera la dimensión estándar libre de scroll (_no-scroll_).
+
+### 6. Metas, bienvenida, recorrido y contacto (0.9)
+
+- **Metas:** objetivos concretos dentro de un área de la Rueda (`users/{uid}/goals`). Las tareas se vinculan con `goalId` y toman el área de su meta al leerse; el progreso de cada meta son sus tareas hechas sobre el total.
+- **Navegación móvil:** barra inferior (Inicio, Listas, Agenda, Rueda y «Más»), botón flotante «Nueva tarea» y hojas inferiores para «Más» y para ordenar y filtrar.
+- **Tareas:** completar de un toque con «Deshacer» (comprobado en una transacción), menú «⋯» y formulario en dos niveles.
+- **Bienvenida y recorrido guiado:** se muestran una vez por cuenta (`hasSeenOnboarding` en el perfil, con copia local) y se repiten desde Ayuda.
+- **Contacto:** «Escríbenos» envía el mensaje a la Cloud Function `submitFeedback` (email confirmado, 5 por hora), que lo guarda en `feedback_tickets` y avisa por email. La administración lo lee en «Administración» → «Mensajes».
 
 ---
 

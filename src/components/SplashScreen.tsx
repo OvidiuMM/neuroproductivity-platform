@@ -92,9 +92,6 @@ export const SplashScreen: React.FC<SplashScreenProps> = ({
         <div className="space-y-1.5">
           <h1 className="text-3xl font-extrabold tracking-[0.3em] text-white">{BRAND_NAME}</h1>
           <p className="text-xs font-medium tracking-wide text-indigo-300">{BRAND_TAGLINE}</p>
-          <p className="mx-auto max-w-xs pt-1 text-[11px] leading-relaxed text-slate-400">
-            Andamiaje neurocognitivo para la corteza prefrontal y mitigación del estrés
-          </p>
         </div>
 
         {/* Barra de progreso de arranque */}
@@ -106,7 +103,7 @@ export const SplashScreen: React.FC<SplashScreenProps> = ({
             />
           </div>
           <div className="flex items-center justify-between font-mono text-[10px] text-slate-500">
-            <span>Iniciando estado offline</span>
+            <span>Preparando tus datos…</span>
             <span>{Math.min(100, progress)}%</span>
           </div>
         </div>

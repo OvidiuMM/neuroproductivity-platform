@@ -11,12 +11,12 @@ const dayLabel = (days: number) => {
 test('agenda shows dated tasks of both lists, projected repetitions, and opens a task to edit it', async ({ page }) => {
   await page.goto('/');
   await signInWithGoogle(page);
-  await page.getByRole('button', { name: 'Listas Duales' }).click();
+  await page.getByRole('button', { name: 'Listas', exact: true }).click();
 
   const work = `Llamar al cliente ${Date.now().toString(36)}`;
   const personal = `Reservar la clase de yoga ${Date.now().toString(36)}`;
 
-  await page.getByRole('button', { name: 'Capturar Primera Acción' }).click();
+  await page.getByRole('button', { name: 'Añadir la primera tarea' }).click();
   await fillAndSaveTask(page, { title: work, dueDate: localDateFromToday(1), dueTime: '10:00' });
 
   // Con la lista Personal activa, el formulario se abre ya en esa lista
@@ -63,15 +63,15 @@ test('agenda shows dated tasks of both lists, projected repetitions, and opens a
   await page.getByRole('button', { name: 'Hoy' }).click();
   await page.getByRole('button', { name: 'Por días' }).click();
   await tomorrow.getByRole('button', { name: new RegExp(work) }).click();
-  await expect(page.getByRole('heading', { name: 'Editar Acción Operativa' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Editar la tarea' })).toBeVisible();
 });
 
 test('in the by-days view an overdue task is listed once, under «Vencidas»', async ({ page }) => {
   await page.goto('/');
   await signInWithGoogle(page);
-  await page.getByRole('button', { name: 'Listas Duales' }).click();
+  await page.getByRole('button', { name: 'Listas', exact: true }).click();
   const title = `Pagar la factura ${Date.now().toString(36)}`;
-  await page.getByRole('button', { name: 'Capturar Primera Acción' }).click();
+  await page.getByRole('button', { name: 'Añadir la primera tarea' }).click();
   await fillAndSaveTask(page, { title, dueDate: localDateFromToday(-1) });
 
   await page.getByRole('button', { name: 'Agenda', exact: true }).click();
@@ -89,9 +89,9 @@ test('a repeated task with a start and a due date shows only its days, from the 
 }) => {
   await page.goto('/');
   await signInWithGoogle(page);
-  await page.getByRole('button', { name: 'Listas Duales' }).click();
+  await page.getByRole('button', { name: 'Listas', exact: true }).click();
   const title = `Revisar el correo de clientes ${Date.now().toString(36)}`;
-  await page.getByRole('button', { name: 'Capturar Primera Acción' }).click();
+  await page.getByRole('button', { name: 'Añadir la primera tarea' }).click();
   await showMoreOptions(page);
   await page.getByLabel('Repetir').selectOption('WEEKLY');
   // Lunes, miércoles y viernes durante tres semanas desde el lunes de la semana que viene

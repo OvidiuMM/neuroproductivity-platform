@@ -392,11 +392,9 @@ export const TaskModal: React.FC<TaskModalProps> = ({
           <div>
             <h2 id="task-modal-title" className="flex items-center gap-2 text-base font-bold text-slate-900">
               <ListPlus className="h-5 w-5 text-indigo-600" />
-              {editingTask ? 'Editar Acción Operativa' : 'Captura de Nueva Acción Inmediata'}
+              {editingTask ? 'Editar la tarea' : 'Nueva tarea'}
             </h2>
-            <p className="mt-0.5 text-xs text-slate-500">
-              Filtro sintáctico prefrontal y enlace cognitivo con la Rueda de la Vida
-            </p>
+            <p className="mt-0.5 text-xs text-slate-500">Empieza por un verbo: así sabrás exactamente qué hacer.</p>
           </div>
           <button
             onClick={onClose}
@@ -414,7 +412,7 @@ export const TaskModal: React.FC<TaskModalProps> = ({
               id="task-context-label"
               className="mb-1.5 block text-xs font-bold tracking-wider text-slate-600 uppercase"
             >
-              Contexto Excluyente <span className="text-red-500">*</span>
+              Lista <span className="text-red-500">*</span>
             </p>
             <div role="group" aria-labelledby="task-context-label" className="grid grid-cols-2 gap-3">
               <button
@@ -427,7 +425,7 @@ export const TaskModal: React.FC<TaskModalProps> = ({
                 }`}
               >
                 <span className="h-2 w-2 rounded-full bg-indigo-600" />
-                Esfera Profesional (Trabajo)
+                Profesional
               </button>
               <button
                 type="button"
@@ -439,7 +437,7 @@ export const TaskModal: React.FC<TaskModalProps> = ({
                 }`}
               >
                 <span className="h-2 w-2 rounded-full bg-emerald-600" />
-                Esfera Personal (Vida)
+                Personal
               </button>
             </div>
           </div>
@@ -448,7 +446,7 @@ export const TaskModal: React.FC<TaskModalProps> = ({
           <div>
             <div className="mb-1.5 flex items-center justify-between">
               <label htmlFor="task-title" className="text-xs font-bold tracking-wider text-slate-600 uppercase">
-                Acción Inmediata Siguiente <span className="text-red-500">*</span>
+                Tarea <span className="text-red-500">*</span>
               </label>
               <span
                 className={`font-mono text-[11px] ${title.length > 100 ? 'font-bold text-red-600' : 'text-slate-500'}`}
@@ -495,7 +493,7 @@ export const TaskModal: React.FC<TaskModalProps> = ({
             {/* Error por longitud o vacío */}
             {touched.title && isTitleEmpty && (
               <p className="mt-1 flex items-center gap-1 text-xs text-red-600">
-                <AlertTriangle className="h-3.5 w-3.5" /> El nombre de la acción inmediata es obligatorio.
+                <AlertTriangle className="h-3.5 w-3.5" /> Escribe la tarea.
               </p>
             )}
             {isTitleTooLong && (
@@ -516,7 +514,7 @@ export const TaskModal: React.FC<TaskModalProps> = ({
                     </p>
                     <p className="text-amber-800">
                       {syntaxResult.assistantQuestion ||
-                        '¿Cuál es el primer paso físico e indivisible? Convierte la meta en una acción concreta.'}
+                        '¿Cuál es el primer paso? Conviértelo en algo que puedas hacer ya.'}
                     </p>
                     {syntaxResult.suggestion && (
                       <div className="flex items-center gap-2 pt-1">
@@ -631,7 +629,7 @@ export const TaskModal: React.FC<TaskModalProps> = ({
               htmlFor="task-priority"
               className="mb-1.5 block text-xs font-bold tracking-wider text-slate-600 uppercase"
             >
-              Nivel de Prioridad <span className="text-red-500">*</span>
+              Prioridad <span className="text-red-500">*</span>
             </label>
             <select
               id="task-priority"
@@ -639,10 +637,10 @@ export const TaskModal: React.FC<TaskModalProps> = ({
               onChange={(e) => setPriority(e.target.value as TaskPriority)}
               className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm font-semibold focus:ring-2 focus:ring-indigo-400 focus:outline-none"
             >
-              <option value="CRITICAL">🔥 Crítica (Impacto Prefrontal Máximo)</option>
-              <option value="HIGH">⚡ Alta (Ejecución Prioritaria)</option>
-              <option value="MEDIUM">⚖️ Media (Operatividad Regular)</option>
-              <option value="LOW">🌱 Baja (Baja Demanda Cognitiva)</option>
+              <option value="CRITICAL">🔥 Crítica</option>
+              <option value="HIGH">⚡ Alta</option>
+              <option value="MEDIUM">⚖️ Media</option>
+              <option value="LOW">🌱 Baja</option>
             </select>
             <p className="mt-1 text-[11px] text-slate-500">
               Con la fecha límite a más de una semana, cuenta un nivel por debajo.
@@ -677,10 +675,9 @@ export const TaskModal: React.FC<TaskModalProps> = ({
                     htmlFor="task-description"
                     className="text-xs font-bold tracking-wider text-slate-600 uppercase"
                   >
-                    Desglose Operativo{' '}
+                    Descripción{' '}
                     <span className="font-normal tracking-normal text-slate-500 normal-case">(opcional)</span>
                   </label>
-                  <span className="text-[11px] text-slate-500">Captura onBlur dispara inferencia NLP TF-IDF</span>
                 </div>
                 <textarea
                   id="task-description"
@@ -701,7 +698,7 @@ export const TaskModal: React.FC<TaskModalProps> = ({
                 {/* INSIGNIA INTERACTIVA DE PROPUESTA NLP TF-IDF (Módulo 3) */}
                 {nlpLoading && (
                   <p className="mt-1 flex animate-pulse items-center gap-1 text-[11px] text-indigo-600">
-                    <Sparkles className="h-3.5 w-3.5" /> Vectorizando texto y calculando similitud de cosenos...
+                    <Sparkles className="h-3.5 w-3.5" /> Buscando el área de tu Rueda…
                   </p>
                 )}
 
@@ -710,7 +707,7 @@ export const TaskModal: React.FC<TaskModalProps> = ({
                     <div className="flex items-center gap-2 text-indigo-950">
                       <Sparkles className="h-4 w-4 text-indigo-600" />
                       <div>
-                        <span className="font-semibold">Sugerencia NLP TF-IDF:</span>{' '}
+                        <span className="font-semibold">Sugerencia:</span>{' '}
                         <span>
                           ¿Vincular a <strong>{nlpResult.category}</strong>?
                         </span>
@@ -725,7 +722,7 @@ export const TaskModal: React.FC<TaskModalProps> = ({
                       className="flex items-center gap-1 rounded-lg bg-indigo-600 px-2.5 py-1 text-xs font-bold text-white transition-colors hover:bg-indigo-700"
                     >
                       <Check className="h-3 w-3" />
-                      <span>Validar Vínculo</span>
+                      <span>Usar esta área</span>
                     </button>
                   </div>
                 )}
@@ -762,7 +759,7 @@ export const TaskModal: React.FC<TaskModalProps> = ({
                     htmlFor="task-category"
                     className="mb-1.5 block text-xs font-bold tracking-wider text-slate-600 uppercase"
                   >
-                    Enlace Estratégico (Rueda de la Vida)
+                    Área de la Rueda
                   </label>
                   <select
                     id="task-category"
@@ -774,7 +771,7 @@ export const TaskModal: React.FC<TaskModalProps> = ({
                     }}
                     className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-400 focus:outline-none"
                   >
-                    <option value="">(Sin vinculación específica)</option>
+                    <option value="">(Sin área)</option>
                     {WHEEL_CATEGORIES_LIST.map((cat) => (
                       <option key={cat} value={cat}>
                         {cat}
@@ -783,8 +780,8 @@ export const TaskModal: React.FC<TaskModalProps> = ({
                   </select>
                   {wheelCategory && (
                     <p className="mt-1 text-[11px] text-slate-500">
-                      Enlace: <strong>{wheelCategory}</strong> (
-                      {linkedBy === 'AUTO_TFIDF' ? 'Inferencia TF-IDF' : 'Manual'})
+                      Área: <strong>{wheelCategory}</strong> (
+                      {linkedBy === 'AUTO_TFIDF' ? 'sugerida' : 'elegida por ti'})
                     </p>
                   )}
                 </div>
@@ -966,12 +963,9 @@ export const TaskModal: React.FC<TaskModalProps> = ({
                     className="mt-0.5 h-4 w-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
                   />
                   <div>
-                    <span className="block text-xs font-bold text-slate-800">
-                      Catalogar como "Quizá" / "Algún día" (Sumidero Cognitivo)
-                    </span>
+                    <span className="block text-xs font-bold text-slate-800">Guardar para algún día</span>
                     <span className="mt-0.5 block text-[11px] leading-relaxed text-slate-500">
-                      Externaliza deseos o iniciativas latentes sin urgencia operativa. Desaparece del Top 10 diario
-                      para liberar ancho de banda mental, pero permanece indexado en "Opciones Futuras".
+                      No entrará en tu Top 10; la encontrarás en «Algún día».
                     </span>
                   </div>
                 </label>
@@ -983,7 +977,7 @@ export const TaskModal: React.FC<TaskModalProps> = ({
                   htmlFor="task-note"
                   className="mb-1.5 block text-xs font-bold tracking-wider text-slate-600 uppercase"
                 >
-                  Observaciones y Metadatos (JSONB)
+                  Notas
                 </label>
                 <div className="mb-2 flex gap-2">
                   <input
@@ -991,7 +985,7 @@ export const TaskModal: React.FC<TaskModalProps> = ({
                     type="text"
                     value={newObsText}
                     onChange={(e) => setNewObsText(e.target.value)}
-                    placeholder="Añadir nota, enlace o sub-requisito..."
+                    placeholder="Añade una nota o un enlace…"
                     className="min-w-0 flex-1 rounded-xl border border-slate-300 px-3 py-1.5 text-xs focus:ring-2 focus:ring-indigo-400 focus:outline-none"
                     onKeyDown={(e) => {
                       if (e.key === 'Enter') {
@@ -1042,7 +1036,7 @@ export const TaskModal: React.FC<TaskModalProps> = ({
 
           {/* CHECKLIST DE VALIDACIÓN EN TIEMPO REAL ANTES DE ENVIAR */}
           <div className="space-y-1 rounded-xl border border-slate-200 bg-slate-50 p-3 text-xs">
-            <span className="mb-1 block font-bold text-slate-700">Verificación de Requisitos de Entrada:</span>
+            <span className="mb-1 block font-bold text-slate-700">Antes de guardar:</span>
             <div className="grid grid-cols-2 gap-2 text-[11px]">
               <div className="flex items-center gap-1.5">
                 {!isTitleEmpty && !isTitleTooLong ? (
@@ -1050,7 +1044,7 @@ export const TaskModal: React.FC<TaskModalProps> = ({
                 ) : (
                   <span className="inline-block h-3.5 w-3.5 rounded-full border border-slate-300" />
                 )}
-                <span className={!isTitleEmpty ? 'text-slate-700' : 'text-slate-500'}>Título ≤ 100 caracteres</span>
+                <span className={!isTitleEmpty ? 'text-slate-700' : 'text-slate-500'}>Hasta 100 caracteres</span>
               </div>
 
               <div className="flex items-center gap-1.5">
@@ -1060,7 +1054,7 @@ export const TaskModal: React.FC<TaskModalProps> = ({
                   <span className="inline-block h-3.5 w-3.5 rounded-full border border-slate-300" />
                 )}
                 <span className={syntaxResult.isValid ? 'text-slate-700' : 'text-slate-500'}>
-                  Verbo de acción física motora
+                  Empieza por un verbo de acción
                 </span>
               </div>
             </div>
@@ -1085,7 +1079,7 @@ export const TaskModal: React.FC<TaskModalProps> = ({
               }`}
             >
               <Check className="h-4 w-4" />
-              <span>{editingTask ? 'Actualizar Acción' : 'Guardar Acción Operativa'}</span>
+              <span>{editingTask ? 'Guardar los cambios' : 'Guardar la tarea'}</span>
             </button>
           </div>
         </form>

@@ -26,10 +26,10 @@ test('a task repeated on the second Monday of every month creates its next occur
 
   await page.goto('/');
   await signInWithGoogle(page);
-  await page.getByRole('button', { name: 'Listas Duales' }).click();
+  await page.getByRole('button', { name: 'Listas', exact: true }).click();
 
   const title = `Preparar el informe mensual ${Date.now().toString(36)}`;
-  await page.getByRole('button', { name: 'Capturar Primera Acción' }).click();
+  await page.getByRole('button', { name: 'Añadir la primera tarea' }).click();
   // Al repetir, «Inicio» es desde cuándo se repite y ancla la regla (el 2.º lunes)
   await showMoreOptions(page);
   await page.getByLabel('Repetir').selectOption('MONTHLY');
@@ -81,8 +81,8 @@ test('a task repeated on the second Monday of every month creates its next occur
 test('turning repetition off keeps the first repetition as the due date, without an interval', async ({ page }) => {
   await page.goto('/');
   await signInWithGoogle(page);
-  await page.getByRole('button', { name: 'Listas Duales' }).click();
-  await page.getByRole('button', { name: 'Capturar Primera Acción' }).click();
+  await page.getByRole('button', { name: 'Listas', exact: true }).click();
+  await page.getByRole('button', { name: 'Añadir la primera tarea' }).click();
   await showMoreOptions(page);
   await page.getByLabel('Repetir').selectOption('WEEKLY');
   const start = new Date();
@@ -104,12 +104,12 @@ test('turning repetition off keeps the first repetition as the due date, without
 test('editing a repetition that fell on a shorter month keeps the series day', async ({ page }) => {
   await page.goto('/');
   await signInWithGoogle(page);
-  await page.getByRole('button', { name: 'Listas Duales' }).click();
+  await page.getByRole('button', { name: 'Listas', exact: true }).click();
   // Cada mes el día 31, desde el 31 de enero del año que viene: la de febrero cae en su último día (28 o 29)
   const year = new Date().getFullYear() + 1;
   const endOfFebruary = new Date(year, 2, 0);
   const title = `Pagar el alquiler ${Date.now().toString(36)}`;
-  await page.getByRole('button', { name: 'Capturar Primera Acción' }).click();
+  await page.getByRole('button', { name: 'Añadir la primera tarea' }).click();
   await showMoreOptions(page);
   await page.getByLabel('Repetir').selectOption('MONTHLY');
   await page.getByLabel('Fecha de inicio', { exact: true }).fill(`${year}-01-31`);
@@ -123,8 +123,8 @@ test('editing a repetition that fell on a shorter month keeps the series day', a
   await openTaskActions(page, title);
   await page.getByRole('button', { name: `Editar «${title}»` }).click();
   await expect(page.getByRole('radio', { name: 'El día 31' })).toBeChecked();
-  await page.getByRole('button', { name: 'Actualizar Acción' }).click();
-  await expect(page.getByRole('button', { name: 'Actualizar Acción' })).toBeHidden();
+  await page.getByRole('button', { name: 'Guardar los cambios' }).click();
+  await expect(page.getByRole('button', { name: 'Guardar los cambios' })).toBeHidden();
   await completeTask(page, title);
   await expect(
     page.getByText(dateFormat.format(new Date(year, 2, 31)).replace(/ \d{4}$/, ''), { exact: false }).first()

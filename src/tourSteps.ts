@@ -1,7 +1,7 @@
 import type { TourStep } from './components/ProductTour';
 
 // Pasos del recorrido guiado. Los elementos llevan `data-tour`; en el móvil algunos están en otro sitio (botón
-// flotante, barra inferior, «Más») y el recorrido resalta el que se ve. Empieza en «Listas Duales».
+// flotante, barra inferior, «Más») y el recorrido resalta el que se ve. Empieza en «Listas».
 export const TOUR_STEPS: TourStep[] = [
   {
     id: 'new-task',

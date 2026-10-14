@@ -51,13 +51,13 @@ test('offers to import data saved by the version without accounts, then clears i
   await dialog.getByRole('button', { name: 'Importar a mi cuenta' }).click();
   await expect(dialog).toBeHidden();
 
-  await page.getByRole('button', { name: 'Listas Duales' }).click();
+  await page.getByRole('button', { name: 'Listas', exact: true }).click();
   await expect(page.getByText('Llamar al taller para pedir presupuesto', { exact: true })).toBeVisible();
   expect(await page.evaluate(() => localStorage.getItem('neuro_tasks_v1'))).toBeNull();
 
   // Tras recargar no se vuelve a ofrecer la importación y la tarea sigue en la cuenta
   await page.reload();
-  await page.getByRole('button', { name: 'Listas Duales' }).click();
+  await page.getByRole('button', { name: 'Listas', exact: true }).click();
   await expect(page.getByText('Llamar al taller para pedir presupuesto', { exact: true })).toBeVisible();
   await expect(dialog).toHaveCount(0);
 });

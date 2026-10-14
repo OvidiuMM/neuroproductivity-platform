@@ -34,10 +34,10 @@ const DEADLINE_FILTERS: { value: DeadlineFilter; label: string }[] = [
   { value: 'NO_DATE', label: 'Sin fecha límite' }
 ];
 const SORT_OPTIONS: { value: SortBy; label: string }[] = [
-  { value: 'priority', label: 'Prioridad efectiva (Crítica → Baja)' },
+  { value: 'priority', label: 'Prioridad (de crítica a baja)' },
   { value: 'deadline', label: 'Fecha límite (más próxima primero)' },
   { value: 'estimate', label: 'Estimación (más cortas primero)' },
-  { value: 'date', label: 'Última Modificación (Descendente)' },
+  { value: 'date', label: 'Cambiadas hace menos' },
   { value: 'category', label: 'Categoría de la Rueda de la Vida' }
 ];
 const FILTERS_BUTTON_ID = 'list-filters-button';
@@ -54,7 +54,7 @@ interface TaskListProps {
   tasks: TaskItem[];
   goals: Goal[];
   activeContext: ListContext;
-  // Orden y filtros del Top 10: los guarda App, que también los usa para el resumen «Top 10 Foco»
+  // Orden y filtros del Top 10: los guarda App, que también los usa para el resumen «Top 10»
   prefs: ListPrefs;
   onPrefsChange: (update: (prefs: ListPrefs) => ListPrefs) => void;
   archivedCount: number;
@@ -110,7 +110,7 @@ export const TaskList: React.FC<TaskListProps> = ({
     {
       key: 'priority',
       id: 'filter-priority',
-      label: 'Prioridad (efectiva)',
+      label: 'Prioridad',
       value: prefs.filters.priority,
       options: [
         { value: 'ALL', label: 'Todas' },
@@ -246,7 +246,7 @@ export const TaskList: React.FC<TaskListProps> = ({
             }`}
           >
             <Layers className="h-3.5 w-3.5" />
-            <span>Top 10 Operativo & Flujo Activo</span>
+            <span>Activas</span>
             <span className="py-0.2 rounded-full bg-slate-700 px-2 font-mono text-[10px] text-white">
               {activeTasks.length}
             </span>
@@ -261,7 +261,7 @@ export const TaskList: React.FC<TaskListProps> = ({
             }`}
           >
             <Archive className="h-3.5 w-3.5" />
-            <span>Opciones Futuras (Quizá)</span>
+            <span>Algún día</span>
             <span className="py-0.2 rounded-full bg-slate-200 px-2 font-mono text-[10px] text-slate-800">
               {somedayTasks.length}
             </span>
@@ -416,13 +416,8 @@ export const TaskList: React.FC<TaskListProps> = ({
             <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1 px-1">
               <div className="flex items-center gap-2">
                 <span className="h-2.5 w-2.5 animate-pulse rounded-full bg-indigo-600" />
-                <h3 className="text-xs font-bold tracking-wider text-slate-900 uppercase">
-                  Top 10 Operativo (Foco de Atención Prefrontal)
-                </h3>
+                <h3 className="text-xs font-bold tracking-wider text-slate-900 uppercase">Tu Top 10</h3>
               </div>
-              <span className="text-[11px] text-slate-500">
-                Leyes de Gestalt: Elevación z-index, sombras paralelas y tipografía ampliada
-              </span>
             </div>
 
             {top10Tasks.length === 0 && activeTasks.length > 0 ? (
@@ -441,12 +436,12 @@ export const TaskList: React.FC<TaskListProps> = ({
               </div>
             ) : top10Tasks.length === 0 ? (
               <div className="space-y-3 rounded-2xl border border-slate-200 bg-white p-8 text-center text-slate-500">
-                <p className="text-sm font-semibold">No hay acciones operativas activas en esta lista.</p>
+                <p className="text-sm font-semibold">No hay tareas en esta lista.</p>
                 <button
                   onClick={() => onOpenNewTask()}
                   className="inline-flex items-center gap-2 rounded-xl bg-slate-900 px-4 py-2 text-xs font-bold text-white"
                 >
-                  <Plus className="h-4 w-4" /> Capturar Primera Acción
+                  <Plus className="h-4 w-4" /> Añadir la primera tarea
                 </button>
               </div>
             ) : (
@@ -471,11 +466,8 @@ export const TaskList: React.FC<TaskListProps> = ({
             <div className="space-y-3 border-t border-slate-200 pt-4">
               <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1 px-1">
                 <h3 className="text-xs font-bold tracking-wider text-slate-500 uppercase">
-                  Inventario Secundario (Posición 11 en adelante · Campo Periférico)
+                  El resto de tareas (de la 11 en adelante)
                 </h3>
-                <span className="text-[11px] text-slate-500">
-                  Tratamiento visual plano y desaturado para mitigar fatiga ocular
-                </span>
               </div>
 
               <ol aria-label="Posición 11 en adelante" className="space-y-1.5">
@@ -502,17 +494,16 @@ export const TaskList: React.FC<TaskListProps> = ({
       {viewMode === 'someday' && (
         <div className="space-y-4">
           <div className="space-y-1 rounded-2xl border border-indigo-200 bg-indigo-50/60 p-4 text-xs text-indigo-950">
-            <p className="font-bold">Sumidero Cognitivo: Externalización de Deseos e Ideas Latentes</p>
+            <p className="font-bold">Para algún día</p>
             <p className="text-[11px] leading-relaxed text-indigo-800">
-              Las tareas catalogadas con la condición "Quizá" son deliberadamente excluidas del algoritmo de ordenación
-              diaria y del Top 10 operativo. Permanecen indexadas aquí para revisiones periódicas, eliminando el estrés
-              por miedo a perder información valiosa sin contaminar la memoria de trabajo prefrontal.
+              Lo que quieres hacer algún día, sin prisa. No entra en tu Top 10, pero queda aquí para que lo revises
+              cuando quieras.
             </p>
           </div>
 
           {somedayTasks.length === 0 ? (
             <div className="rounded-2xl border border-slate-200 bg-white p-8 text-center text-slate-500">
-              <p className="text-xs font-semibold">No hay proyectos latentes en este sumidero.</p>
+              <p className="text-xs font-semibold">No tienes nada guardado para algún día.</p>
             </div>
           ) : (
             <ul aria-label="Quizá" className="space-y-2.5">

@@ -66,11 +66,9 @@ test('dialogs take the focus and give it back when they close', async ({ page })
   // El formulario de tarea recibe el foco (su primer control); Escape lo cierra y el foco vuelve al botón que lo abrió
   const newTask = page.getByRole('button', { name: 'Nueva Tarea' });
   await newTask.click();
-  await expect(
-    page.getByRole('dialog', { name: /Captura de Nueva Acción/ }).getByRole('button', { name: 'Cerrar' })
-  ).toBeFocused();
+  await expect(page.getByRole('dialog', { name: 'Nueva tarea' }).getByRole('button', { name: 'Cerrar' })).toBeFocused();
   await page.keyboard.press('Escape');
-  await expect(page.getByRole('dialog', { name: /Captura de Nueva Acción/ })).toBeHidden();
+  await expect(page.getByRole('dialog', { name: 'Nueva tarea' })).toBeHidden();
   await expect(newTask).toBeFocused();
 
   // Del menú de la cuenta al panel de accesibilidad: al cerrar el panel, el foco vuelve al botón de la cuenta
@@ -107,7 +105,7 @@ test('very large text does not overflow on phones, tablets or desktops', async (
   await signInWithGoogle(page);
   for (const width of [375, 768, 1280]) {
     await page.setViewportSize({ width, height: 900 });
-    for (const section of ['Listas Duales', 'Agenda']) {
+    for (const section of ['Listas', 'Agenda']) {
       await openSection(page, section);
       await expectNoHorizontalOverflow(page, `${section} a ${width}px con texto muy grande`);
     }
