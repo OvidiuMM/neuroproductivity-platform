@@ -1,6 +1,7 @@
 import {
   collection,
   deleteDoc,
+  deleteField,
   doc,
   getDocs,
   onSnapshot,
@@ -88,22 +89,28 @@ export const undoCompleteRecurringTask = (db: Firestore, uid: string, original: 
 export const deleteTask = (db: Firestore, uid: string, taskId: string) =>
   deleteDoc(doc(userCollection(db, uid, 'tasks'), taskId));
 
-// Meta y, si cambia de área, sus tareas con el área nueva (heredan el área de la meta), en un mismo lote
-export const saveGoal = (db: Firestore, uid: string, goal: Goal, retagged: TaskItem[] = []) => {
+// Meta y, si cambia de área, sus tareas con el área nueva (heredan el área de la meta), en un mismo lote. En las
+// tareas solo se tocan el área y la fecha de modificación: lo demás pudo cambiar en otro dispositivo, y la fecha nueva
+// hace que un «Deshacer» pendiente sobre ellas detecte el cambio
+export const saveGoal = (db: Firestore, uid: string, goal: Goal, retaggedTaskIds: string[] = []) => {
   const batch = writeBatch(db);
   batch.set(doc(userCollection(db, uid, 'goals'), goal.id), { ...goal, userId: uid });
-  for (const task of retagged) {
-    batch.set(doc(userCollection(db, uid, 'tasks'), task.id), { ...task, wheelCategory: goal.area, userId: uid });
+  for (const taskId of retaggedTaskIds) {
+    batch.update(doc(userCollection(db, uid, 'tasks'), taskId), {
+      wheelCategory: goal.area,
+      updatedAt: goal.updatedAt
+    });
   }
   return batch.commit();
 };
 
-// Al eliminar una meta, sus tareas se quedan, sin meta (conservan el área)
-export const deleteGoal = (db: Firestore, uid: string, goalId: string, linked: TaskItem[]) => {
+// Al eliminar una meta, sus tareas se quedan, sin meta (conservan el área); en ellas solo se quita el vínculo
+export const deleteGoal = (db: Firestore, uid: string, goalId: string, linkedTaskIds: string[]) => {
   const batch = writeBatch(db);
   batch.delete(doc(userCollection(db, uid, 'goals'), goalId));
-  for (const { goalId: _goalId, ...task } of linked) {
-    batch.set(doc(userCollection(db, uid, 'tasks'), task.id), { ...task, userId: uid });
+  const updatedAt = new Date().toISOString();
+  for (const taskId of linkedTaskIds) {
+    batch.update(doc(userCollection(db, uid, 'tasks'), taskId), { goalId: deleteField(), updatedAt });
   }
   return batch.commit();
 };
