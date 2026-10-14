@@ -7,6 +7,7 @@ import {
   isAdminToken,
   isCurrentAdminMarker,
   normalizeMessage,
+  publicAppUrl,
   REQUEST_COOLDOWN_MS,
   decideOnSync,
   type AccessRecord
@@ -139,5 +140,18 @@ describe('lista negra y aprobación libre', () => {
       decideOnSync({ current: 'pending', approvalRequired: true, emailBlocked: false, emailVerified: true }),
       'keep'
     );
+  });
+});
+
+describe('publicAppUrl', () => {
+  it('uses the configured https address, without a trailing slash', () => {
+    assert.equal(publicAppUrl('https://clar.life/', 'my-project'), 'https://clar.life');
+    assert.equal(publicAppUrl('  https://clar.life  ', 'my-project'), 'https://clar.life');
+  });
+
+  it('falls back to the Firebase Hosting address when unset or not https', () => {
+    assert.equal(publicAppUrl('', 'my-project'), 'https://my-project.web.app');
+    assert.equal(publicAppUrl('http://clar.life', 'my-project'), 'https://my-project.web.app');
+    assert.equal(publicAppUrl('clar.life', 'my-project'), 'https://my-project.web.app');
   });
 });

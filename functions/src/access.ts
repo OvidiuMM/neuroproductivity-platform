@@ -16,6 +16,7 @@ import {
   normalizeEmail,
   normalizeMessage,
   profileOf,
+  publicAppUrl,
   type AccessEmail,
   type AccessRecord,
   type DecisionStatus
@@ -30,6 +31,8 @@ const adminEmailParam = defineString('ADMIN_EMAIL', {
 });
 const gmailUser = defineString('GMAIL_USER', { default: '', description: 'Cuenta de Gmail que envía los avisos' });
 const gmailAppPassword = defineSecret('GMAIL_APP_PASSWORD');
+// Dirección pública de la app en los emails (p. ej. https://clar.life); sin ella, la de Firebase Hosting
+const appUrlParam = defineString('APP_URL', { default: '', description: 'Dirección pública de la app' });
 const isEmulator = process.env.FUNCTIONS_EMULATOR === 'true';
 // En los emuladores no se envían correos; sin el secreto enlazado, el emulador no intenta leerlo de Secret Manager
 // (cada intento bloquea la llamada varios segundos)
@@ -39,7 +42,7 @@ const db = adminDb;
 
 const isDemoProject = () => (process.env.GCLOUD_PROJECT ?? '').startsWith('demo-');
 export const adminEmail = () => (isDemoProject() ? DEMO_ADMIN_EMAIL : adminEmailParam.value());
-export const appUrl = () => `https://${process.env.GCLOUD_PROJECT}.web.app`;
+export const appUrl = () => publicAppUrl(appUrlParam.value(), process.env.GCLOUD_PROJECT ?? '');
 
 // Avisos por email (Gmail con contraseña de aplicación). En los emuladores no se envía nada. Un fallo del
 // correo no deshace la solicitud, la decisión ni el mensaje: queda en los logs, sin datos personales (ni el uid).
