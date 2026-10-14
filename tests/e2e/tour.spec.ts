@@ -49,11 +49,11 @@ test('the guided tour walks through the essentials with the keyboard and can be 
   await expect(page.getByRole('dialog')).toHaveCount(0);
   // Repetido desde la ayuda, no lleva a la Rueda (eso es solo la primera vez): sigue en las listas
   await expect(page.getByText('Primer paso: evalúa tu Rueda de la Vida')).toHaveCount(0);
-  await expect(page.getByRole('button', { name: 'Listas Duales' })).toHaveAttribute('aria-current', 'page');
+  await expect(page.getByRole('button', { name: 'Listas', exact: true })).toHaveAttribute('aria-current', 'page');
 
   // Mientras dura, el resto de la página no responde; al terminar, sí
   await page.getByRole('button', { name: 'Nueva tarea', exact: true }).click();
-  await expect(page.getByRole('dialog', { name: 'Captura de Nueva Acción Inmediata' })).toBeVisible();
+  await expect(page.getByRole('dialog', { name: 'Nueva tarea' })).toBeVisible();
 });
 
 test('on a phone the tour points at the floating button and at «Más»', async ({ page }) => {

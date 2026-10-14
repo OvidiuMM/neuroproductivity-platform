@@ -86,14 +86,10 @@ export const HomeView: React.FC<HomeViewProps> = ({
           <div className="max-w-2xl space-y-2">
             <div className="flex flex-wrap items-center gap-2 text-xs font-semibold text-indigo-700">
               <Brain className="h-4 w-4" aria-hidden="true" />
-              <span>Andamiaje Digital para la Corteza Prefrontal</span>
-              <span className="text-slate-300" aria-hidden="true">
-                ·
-              </span>
               <span className="text-slate-600">
-                Contexto Activo:{' '}
+                Lista:{' '}
                 <strong className={activeContext === 'WORK' ? 'text-indigo-600' : 'text-emerald-700'}>
-                  {activeContext === 'WORK' ? 'Esfera Profesional' : 'Esfera Personal'}
+                  {activeContext === 'WORK' ? 'Profesional' : 'Personal'}
                 </strong>
               </span>
               <span className="text-slate-300" aria-hidden="true">
@@ -110,22 +106,20 @@ export const HomeView: React.FC<HomeViewProps> = ({
               </button>
             </div>
             <h1 className="text-2xl leading-tight font-extrabold tracking-tight text-slate-900 sm:text-3xl">
-              {activeContext === 'WORK' ? 'Foco de Concentración Profesional' : 'Equilibrio de Esfera Personal & Vital'}
+              {activeContext === 'WORK' ? 'Tu foco profesional' : 'Tu foco personal'}
             </h1>
             <p className="text-xs leading-relaxed text-slate-600 sm:text-sm">
-              Gestión neurocientífica sin listas pasivas ni "Tareas Muro" coercitivas. La Jerarquía Visual Gestalt
-              destaca tu <strong>Top 10 operativo</strong>, mientras el analizador sintáctico y el motor TF-IDF alinean
-              cada acción con tu Rueda de la Vida.
+              Lo más importante de tu lista, cómo vas y qué te conviene hacer ahora.
             </p>
           </div>
 
           <div className="grid min-w-0 shrink-0 grid-cols-3 gap-2 sm:gap-3">
             {[
-              { label: 'Top 10 Foco', value: `${top10Count}/10`, hint: 'Máx. prioridad', hintClass: 'text-indigo-600' },
+              { label: 'Top 10', value: `${top10Count}/10`, hint: 'tareas prioritarias', hintClass: 'text-indigo-600' },
               {
-                label: 'Índice Rueda',
+                label: 'Rueda de la Vida',
                 value: `${wheelAverage}/10`,
-                hint: `${wheelLogs.length} capturas`,
+                hint: `${wheelLogs.length} ${wheelLogs.length === 1 ? 'evaluación' : 'evaluaciones'}`,
                 hintClass: 'text-emerald-700'
               },
               {

@@ -378,7 +378,7 @@ export default function App({ user, services, isAdmin = false }: AppProps) {
     if (editingTask) {
       const current = tasks.find((t) => t.id === editingTask.id) ?? editingTask;
       saveTask(db, uid, { ...current, ...taskData, updatedAt: now }).catch(reportError('guardar la tarea'));
-      showToast('Acción operativa actualizada con validación sintáctica exitosa.');
+      showToast('Tarea guardada.');
       setEditingTask(null);
     } else {
       const newTask: TaskItem = {
@@ -390,11 +390,7 @@ export default function App({ user, services, isAdmin = false }: AppProps) {
         status: 'PENDING'
       };
       saveTask(db, uid, newTask).catch(reportError('guardar la tarea'));
-      showToast(
-        taskData.isSomeday
-          ? 'Tarea archivada en el Sumidero Cognitivo ("Opciones Futuras").'
-          : 'Acción física agregada e incorporada al algoritmo de Jerarquía Visual.'
-      );
+      showToast(taskData.isSomeday ? 'Tarea guardada en «Algún día».' : 'Tarea añadida.');
     }
   };
 
@@ -458,7 +454,7 @@ export default function App({ user, services, isAdmin = false }: AppProps) {
     const deleted = tasks.find((t) => t.id === id);
     deleteTask(db, uid, id).catch(reportError('eliminar la tarea'));
     showToast(
-      'Acción eliminada del inventario.',
+      'Tarea eliminada.',
       deleted && undo(() => restoreDeletedTask(db, uid, { ...deleted, updatedAt: new Date().toISOString() }))
     );
   };
@@ -475,7 +471,7 @@ export default function App({ user, services, isAdmin = false }: AppProps) {
       scores: { ...scores }
     };
     appendWheelLog(db, uid, log).catch(reportError('guardar la evaluación'));
-    showToast('Nuevo snapshot append-only consolidado con marca de tiempo UTC.');
+    showToast('Evaluación guardada.');
   };
 
   const handleSaveMeeting = (meetingData: Omit<MeetingGuard, 'id' | 'createdAt'>) => {
@@ -486,14 +482,14 @@ export default function App({ user, services, isAdmin = false }: AppProps) {
       createdAt: new Date().toISOString()
     };
     saveMeeting(db, uid, meeting).catch(reportError('guardar la reunión'));
-    showToast('Reunión blindada registrada exitosamente (fuera de la franja matutina).');
+    showToast('Reunión guardada.');
   };
 
   const handleSendEmail = (emailData: Omit<EmailDraft, 'id'>) => {
     saveEmail(db, uid, { ...emailData, id: `email-${Date.now()}`, userId: uid }).catch(
       reportError('guardar el correo')
     );
-    showToast('Mensaje despachado con protocolo de redacción inversa validado.');
+    showToast('Correo guardado.');
   };
 
   // CUENTA
@@ -595,7 +591,7 @@ export default function App({ user, services, isAdmin = false }: AppProps) {
   // Conteo de tareas por contexto
   const archivedTasks = tasks.filter(isArchived);
   const workCount = tasks.filter((t) => t.listContext === 'WORK' && !t.isSomeday && !isArchived(t)).length;
-  // «Top 10 Foco» cuenta lo mismo que muestra la lista: tareas activas del contexto tras aplicar los filtros
+  // «Top 10» cuenta lo mismo que muestra la lista: tareas activas del contexto tras aplicar los filtros
   const top10Count = Math.min(
     10,
     arrangeTasks(
@@ -765,16 +761,9 @@ export default function App({ user, services, isAdmin = false }: AppProps) {
             <div className="flex flex-wrap items-center justify-center gap-2">
               <span className="font-bold text-slate-700">CLAR v{__APP_VERSION__}</span>
               <span className="text-slate-300">·</span>
-              <p className="text-slate-500">Gestión del tiempo y neuroproductividad.</p>
+              <p className="text-slate-500">Decide qué hacer ahora, con claridad.</p>
             </div>
             <div className="flex flex-wrap items-center justify-center gap-3 text-slate-600">
-              <button
-                onClick={() => setShowSplash(true)}
-                className="rounded border border-indigo-200 bg-indigo-50 px-2 py-0.5 text-[11px] font-semibold text-indigo-600 transition-colors hover:text-indigo-800"
-              >
-                📱 Ver Pantalla de Inicio Móvil
-              </button>
-              <span className="text-slate-300">·</span>
               <button
                 onClick={() => navigate('help')}
                 className="text-[11px] font-semibold text-indigo-600 hover:text-indigo-800"

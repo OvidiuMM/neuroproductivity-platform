@@ -25,7 +25,7 @@ const ROUTINE = [
   },
   {
     title: 'Protege tu tiempo',
-    text: 'Cada día, el Top 10 te dice qué toca. El Blindaje Bermudas protege tus mañanas de reuniones y correos.'
+    text: 'Cada día, el Top 10 te dice qué toca. En «Tiempo protegido» guardas tus mañanas de reuniones y correos.'
   }
 ];
 

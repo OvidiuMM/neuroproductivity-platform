@@ -4,21 +4,21 @@ import { completeTask, fillAndSaveTask, localDateFromToday, signInWithGoogle } f
 test('Inicio shows the focus block, task statistics and recommendations for the active list', async ({ page }) => {
   await page.goto('/');
   await signInWithGoogle(page);
-  await page.getByRole('button', { name: 'Listas Duales', exact: true }).click();
+  await page.getByRole('button', { name: 'Listas', exact: true }).click();
 
   const overdue = `Pagar la factura del seguro ${Date.now().toString(36)}`;
   const onTime = `Enviar el presupuesto ${Date.now().toString(36)}`;
-  await page.getByRole('button', { name: 'Capturar Primera Acción' }).click();
+  await page.getByRole('button', { name: 'Añadir la primera tarea' }).click();
   await fillAndSaveTask(page, { title: overdue, dueDate: localDateFromToday(-1) });
   await page.getByRole('button', { name: 'Nueva tarea', exact: true }).click();
   await fillAndSaveTask(page, { title: onTime, dueDate: localDateFromToday(1), estimateMinutes: 60 });
   await completeTask(page, onTime);
 
   // El bloque de foco ya no está en las demás secciones
-  await expect(page.getByRole('heading', { name: 'Foco de Concentración Profesional' })).toHaveCount(0);
+  await expect(page.getByRole('heading', { name: 'Tu foco profesional' })).toHaveCount(0);
 
   await page.getByRole('button', { name: 'Inicio', exact: true }).click();
-  await expect(page.getByRole('heading', { name: 'Foco de Concentración Profesional' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Tu foco profesional' })).toBeVisible();
 
   const done = page.getByRole('region', { name: 'Tareas hechas' });
   await expect(done.getByText('Hoy').locator('..')).toContainText('1');
@@ -41,6 +41,6 @@ test('Inicio shows the focus block, task statistics and recommendations for the 
     .locator('header')
     .getByRole('button', { name: /^Personal/ })
     .click();
-  await expect(page.getByRole('heading', { name: 'Equilibrio de Esfera Personal & Vital' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Tu foco personal' })).toBeVisible();
   await expect(page.getByRole('region', { name: 'Tareas hechas' }).getByText('Hoy').locator('..')).toContainText('0');
 });

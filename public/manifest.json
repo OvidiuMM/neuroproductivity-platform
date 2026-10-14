@@ -1,8 +1,8 @@
 {
   "name": "CLAR",
   "short_name": "CLAR",
-  "version": "0.8.0",
-  "description": "Gestión del tiempo y neuroproductividad",
+  "version": "0.9.0",
+  "description": "Decide qué hacer ahora, con claridad",
   "lang": "es",
   "start_url": "/",
   "display": "standalone",

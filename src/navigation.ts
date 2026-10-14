@@ -23,10 +23,10 @@ export interface Section {
 
 export const SECTIONS: Section[] = [
   { tab: 'home', label: 'Inicio', short: 'Inicio', icon: LayoutDashboard },
-  { tab: 'tasks', label: 'Listas Duales', short: 'Listas', icon: Briefcase },
+  { tab: 'tasks', label: 'Listas', short: 'Listas', icon: Briefcase },
   { tab: 'agenda', label: 'Agenda', short: 'Agenda', icon: CalendarDays },
   { tab: 'wheel', label: 'Rueda de la Vida', short: 'Rueda', icon: Compass },
-  { tab: 'bermudas', label: 'Blindaje Bermudas', short: 'Bermudas', icon: ShieldCheck },
+  { tab: 'bermudas', label: 'Tiempo protegido', short: 'Bermudas', icon: ShieldCheck },
   { tab: 'help', label: 'Ayuda', short: 'Ayuda', icon: BookOpen, iconOnly: true }
 ];
 

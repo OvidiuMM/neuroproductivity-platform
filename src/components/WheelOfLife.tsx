@@ -116,9 +116,9 @@ export const WheelOfLife: React.FC<WheelOfLifeProps> = ({
           <div className="flex-1 space-y-1">
             <h3 className="text-sm font-bold text-indigo-950">Primer paso: evalúa tu Rueda de la Vida</h3>
             <p className="text-xs leading-relaxed text-indigo-900">
-              Puntúa de 0 a 10 tu satisfacción actual en cada área y pulsa <strong>Consolidar Estado</strong>. Será tu
-              punto de partida: las tareas que crees se vincularán a estas áreas y podrás comparar tu progreso en cada
-              nueva evaluación.
+              Puntúa de 0 a 10 tu satisfacción actual en cada área y pulsa <strong>Guardar la evaluación</strong>. Será
+              tu punto de partida: las tareas que crees se vincularán a estas áreas y podrás comparar tu progreso en
+              cada nueva evaluación.
             </p>
           </div>
           <button
@@ -137,12 +137,11 @@ export const WheelOfLife: React.FC<WheelOfLifeProps> = ({
         <div>
           <h2 className="flex items-center gap-2 text-xl font-bold text-slate-900">
             <Compass className="h-6 w-6 text-indigo-600" />
-            Rueda de la Vida & Trazabilidad Temporal Inmutable
+            Rueda de la Vida
           </h2>
           <p className="mt-1 max-w-2xl text-xs leading-relaxed text-slate-500">
-            Módulo 1: Evaluación holística de la satisfacción autopercibida (escala 0 a 10). Cada modificación genera
-            una captura inmutable <em>append-only</em> para trazar correlaciones con el esfuerzo diario de
-            neuroplasticidad.
+            Puntúa del 0 al 10 cuánto te satisface cada área de tu vida. Cada evaluación queda guardada para que veas
+            cómo cambias.
           </p>
         </div>
 
@@ -156,7 +155,7 @@ export const WheelOfLife: React.FC<WheelOfLifeProps> = ({
               className="h-4 w-4 rounded border-slate-300 text-indigo-600"
             />
             <History className="h-4 w-4 text-indigo-600" />
-            <span>Comparativa Histórica (Superposición)</span>
+            <span>Comparar con una evaluación anterior</span>
           </label>
         </div>
       </div>
@@ -259,12 +258,12 @@ export const WheelOfLife: React.FC<WheelOfLifeProps> = ({
           <div className="mt-4 flex items-center gap-6 border-t border-slate-100 pt-4 text-xs">
             <div className="flex items-center gap-2">
               <span className="inline-block h-3 w-3 rounded-full bg-indigo-600" />
-              <span className="font-semibold text-slate-800">Estado Actual (Vigente)</span>
+              <span className="font-semibold text-slate-800">Ahora</span>
             </div>
             {showHistoryOverlay && historicalLog && (
               <div className="flex items-center gap-2">
                 <span className="inline-block h-3 w-3 rounded-full border border-dashed border-amber-700 bg-amber-500" />
-                <span className="text-slate-600">{historicalLog.label || 'Histórico previo'}</span>
+                <span className="text-slate-600">{historicalLog.label || 'Antes'}</span>
               </div>
             )}
           </div>
@@ -275,10 +274,8 @@ export const WheelOfLife: React.FC<WheelOfLifeProps> = ({
           {/* Panel de Sliders / Manipulación Directa (0 al 10) */}
           <div className="space-y-3.5 rounded-2xl border border-slate-200 bg-white p-5 shadow-xs">
             <div className="flex items-center justify-between border-b border-slate-100 pb-2">
-              <h3 className="text-xs font-bold tracking-wider text-slate-700 uppercase">
-                Puntuaciones por Segmento Vital
-              </h3>
-              <span className="text-[11px] text-slate-500">Escala ordinal 0-10</span>
+              <h3 className="text-xs font-bold tracking-wider text-slate-700 uppercase">Puntuación por área</h3>
+              <span className="text-[11px] text-slate-500">Del 0 al 10</span>
             </div>
 
             <div className="max-h-[300px] space-y-3 overflow-y-auto pr-2">
@@ -328,7 +325,7 @@ export const WheelOfLife: React.FC<WheelOfLifeProps> = ({
                 htmlFor="wheel-snapshot-note"
                 className="block text-xs font-bold tracking-wider text-slate-600 uppercase"
               >
-                Consolidar Snapshot Histórico (Append-Only)
+                Guardar esta evaluación
               </label>
               <div className="flex gap-2">
                 <input
@@ -336,7 +333,7 @@ export const WheelOfLife: React.FC<WheelOfLifeProps> = ({
                   type="text"
                   value={snapshotLabel}
                   onChange={(e) => setSnapshotLabel(e.target.value)}
-                  placeholder="Etiqueta opcional (ej. Cierre Q4 o Retiro)..."
+                  placeholder="Nombre opcional (p. ej. «Fin de trimestre»)"
                   className="min-w-0 flex-1 rounded-xl border border-slate-300 px-3 py-1.5 text-xs focus:ring-2 focus:ring-indigo-400 focus:outline-none"
                 />
                 <button
@@ -345,14 +342,14 @@ export const WheelOfLife: React.FC<WheelOfLifeProps> = ({
                   className="flex items-center gap-1.5 rounded-xl bg-slate-900 px-4 py-2 text-xs font-bold whitespace-nowrap text-white shadow-xs transition-colors hover:bg-slate-800"
                 >
                   <Save className="h-3.5 w-3.5" />
-                  <span>Consolidar Estado</span>
+                  <span>Guardar la evaluación</span>
                 </button>
               </div>
 
               {savedSuccess && (
                 <div className="animate-in fade-in flex items-center gap-1.5 rounded-xl border border-emerald-200 bg-emerald-50 p-2 text-xs text-emerald-800">
                   <Check className="h-4 w-4 text-emerald-600" />
-                  <span>Nuevo snapshot inmutable creado con marca de tiempo UTC. Historial preservado.</span>
+                  <span>Evaluación guardada.</span>
                 </div>
               )}
             </div>
@@ -362,7 +359,7 @@ export const WheelOfLife: React.FC<WheelOfLifeProps> = ({
           <div className="space-y-3 rounded-2xl border border-slate-200 bg-white p-5 shadow-xs">
             <h3 className="flex items-center gap-1.5 text-xs font-bold tracking-wider text-slate-700 uppercase">
               <TrendingUp className="h-4 w-4 text-indigo-600" />
-              <span>Línea Temporal de Neuroplasticidad ({logs.length} snapshots)</span>
+              <span>Tus evaluaciones ({logs.length})</span>
             </h3>
 
             <div className="max-h-48 space-y-2 overflow-y-auto pr-1">
@@ -377,7 +374,7 @@ export const WheelOfLife: React.FC<WheelOfLifeProps> = ({
                   }`}
                 >
                   <div>
-                    <span className="block truncate">{log.label || `Captura ${idx + 1}`}</span>
+                    <span className="block truncate">{log.label || `Evaluación ${idx + 1}`}</span>
                     <span className="font-mono text-[10px] text-slate-500">
                       {new Date(log.timestamp).toLocaleDateString('es-ES', {
                         year: 'numeric',
