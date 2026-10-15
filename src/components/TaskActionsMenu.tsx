@@ -9,6 +9,8 @@ interface TaskActionsMenuProps {
   onEdit: () => void;
   onChangeStatus: (status: TaskStatus) => void;
   onDelete: () => void;
+  // Espera a otra tarea que sigue abierta
+  blocked?: boolean;
 }
 
 // Alto aproximado del panel: si no cabe debajo del botón (p. ej. sobre la barra inferior del móvil), se abre arriba
@@ -30,7 +32,13 @@ const linkClass = 'flex min-h-10 w-full items-center px-3 text-left text-xs text
 
 // Acciones de una tarea en un solo botón «⋯»: editar, cambiar el estado, añadir al calendario y eliminar.
 // Es un panel desplegable (no un menú ARIA): se recorre con Tab y se cierra con Escape o tocando fuera.
-export const TaskActionsMenu: React.FC<TaskActionsMenuProps> = ({ task, onEdit, onChangeStatus, onDelete }) => {
+export const TaskActionsMenu: React.FC<TaskActionsMenuProps> = ({
+  task,
+  onEdit,
+  onChangeStatus,
+  onDelete,
+  blocked = false
+}) => {
   const [isOpen, setIsOpen] = useState(false);
   const [openUp, setOpenUp] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -107,6 +115,7 @@ export const TaskActionsMenu: React.FC<TaskActionsMenuProps> = ({ task, onEdit, 
             <TaskStatusSelect
               status={task.status}
               taskTitle={task.title}
+              blocked={blocked}
               onChange={(status) => act(() => onChangeStatus(status))()}
             />
           </div>

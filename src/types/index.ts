@@ -44,6 +44,7 @@ export interface TaskItem {
   recurrence?: Recurrence; // tarea recurrente (requiere fecha límite)
   nextOccurrenceId?: string; // id de la repetición creada al completarla (evita duplicarla si se reactiva)
   goalId?: string; // meta a la que contribuye; el área de la Rueda se hereda de la meta
+  dependsOn?: string; // tarea a la que espera: hasta que esté hecha o cancelada, esta queda bloqueada
   alarmTime?: string; // HH:mm: aviso antes del plazo (en las 24 h anteriores, o la víspera si no tiene hora)
 }
 
