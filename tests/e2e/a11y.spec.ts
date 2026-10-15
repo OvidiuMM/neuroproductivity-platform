@@ -2,6 +2,8 @@ import AxeBuilder from '@axe-core/playwright';
 import { expect, test, type Page } from '@playwright/test';
 import {
   ADMIN_EMAIL,
+  callFunction,
+  createVerifiedAccount,
   fillAndSaveTask,
   localDateFromToday,
   openSection,
@@ -300,4 +302,24 @@ test('e-mail drafts: the list and the editor with attachments', async ({ page })
   await page.keyboard.press('Escape');
   await expect(page.getByRole('region', { name: 'Borradores (1)' })).toBeVisible();
   await expectNoViolations(page, 'tiempo protegido con borradores');
+});
+
+test('admin messages: the reply form and a sent reply', async ({ page }) => {
+  const { idToken } = await createVerifiedAccount();
+  const subject = `Duda sobre las metas ${Date.now().toString(36)}`;
+  const sent = await callFunction('submitFeedback', idToken, { type: 'general', subject, description: 'Una duda.' });
+  expect(sent.status).toBe(200);
+  await page.goto('/');
+  await signInWithGoogle(page, ADMIN_EMAIL);
+  await page.getByRole('button', { name: /^Administración/ }).click();
+  await page.getByRole('button', { name: /^Mensajes/ }).click();
+  const item = page.getByRole('listitem', { name: `${subject} (Nuevo)` });
+  await item.getByRole('button', { name: `Responder: ${subject}` }).click();
+  await item.getByRole('textbox', { name: /^Respuesta para / }).fill('Se crean en la sección Metas.');
+  await expectNoViolations(page, 'responder un mensaje');
+  await item.getByRole('button', { name: 'Enviar respuesta' }).click();
+  await expect(
+    page.getByRole('listitem', { name: `${subject} (Leído)` }).getByRole('list', { name: /^Respuestas a / })
+  ).toBeVisible(SERVER_CALL);
+  await expectNoViolations(page, 'mensaje respondido');
 });

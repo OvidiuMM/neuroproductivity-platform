@@ -190,6 +190,10 @@ describe('firestore.rules', () => {
     await assertSucceeds(updateDoc(doc(admin, 'feedback_tickets/t1'), { status: 'read', updatedAt: 'now' }));
     await assertFails(updateDoc(doc(admin, 'feedback_tickets/t1'), { status: 'spam' }));
     await assertFails(updateDoc(doc(admin, 'feedback_tickets/t1'), { description: 'otra' }));
+    // Las respuestas solo las guarda la Cloud Function, después de enviarlas por email
+    await assertFails(
+      updateDoc(doc(admin, 'feedback_tickets/t1'), { replies: [{ message: 'hola', sentAt: 'now' }], updatedAt: 'now' })
+    );
     await assertFails(deleteDoc(doc(admin, 'feedback_tickets/t1')));
     // Quien escribe no puede leerlos ni crearlos directamente (pasa por la Cloud Function)
     await assertFails(getDoc(doc(ana, 'feedback_tickets/t1')));

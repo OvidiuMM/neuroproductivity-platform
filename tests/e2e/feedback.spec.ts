@@ -11,9 +11,10 @@ import {
 // Esperas que pasan por una Cloud Function del emulador
 const SERVER_CALL = { timeout: 15_000 };
 
-test('a person writes from the help with the technical details and the admin reads, answers and closes it', async ({
+test('a person writes from the help with the technical details and the admin replies from CLAR and closes it', async ({
   browser
 }) => {
+  test.slow(); // Dos sesiones y varias llamadas a funciones
   const page = await browser.newPage();
   await page.goto('/');
   const email = await signInWithGoogle(page);
@@ -53,12 +54,31 @@ test('a person writes from the help with the technical details and the admin rea
   const item = admin.getByRole('listitem', { name: `${subject} (Nuevo)` });
   await expect(item).toContainText('Al abrir la agenda se queda en blanco.');
   await expect(item).toContainText(/Chrome \d+/);
-  await expect(item.getByRole('link', { name: 'Responder por email' })).toHaveAttribute(
+  // También se puede responder desde el programa de correo
+  await expect(item.getByRole('link', { name: `Responder desde mi correo: ${subject}` })).toHaveAttribute(
     'href',
     `mailto:${email}?subject=${encodeURIComponent(`Re: ${subject}`)}`
   );
-  await item.getByRole('button', { name: `Marcar como leído: ${subject}` }).click();
+
+  // Responder desde CLAR: se envía por email y queda en el mensaje, que pasa a leído
+  await item.getByRole('button', { name: `Responder: ${subject}` }).click();
+  const answer = item.getByRole('textbox', { name: /^Respuesta para / });
+  await expect(answer).toBeFocused();
+  await expect(item.getByRole('button', { name: 'Enviar respuesta' })).toBeDisabled();
+  await answer.fill('Gracias por avisar. Ya está arreglado: recarga la página.');
+  await item.getByRole('button', { name: 'Enviar respuesta' }).click();
   const read = admin.getByRole('listitem', { name: `${subject} (Leído)` });
+  await expect(read.getByRole('list', { name: `Respuestas a «${subject}»` })).toContainText(
+    'Gracias por avisar. Ya está arreglado: recarga la página.',
+    SERVER_CALL
+  );
+  await expect(read.getByRole('status')).toHaveText('Respuesta enviada.');
+  await expect(read.getByRole('button', { name: `Responder: ${subject}` })).toBeFocused();
+  const [replied] = (await listDocuments('feedback_tickets')).filter((t) => t.subject === subject);
+  expect(replied.status).toBe('read');
+  // listDocuments solo descodifica el primer nivel: la respuesta va dentro de la lista tal como la guarda Firestore
+  expect(JSON.stringify(replied.replies)).toContain('Gracias por avisar. Ya está arreglado: recarga la página.');
+
   await read.getByRole('button', { name: `Cerrar: ${subject}` }).click();
   await expect(admin.getByRole('listitem', { name: new RegExp(subject) })).toHaveCount(0);
 
@@ -95,6 +115,10 @@ test('the server asks for a confirmed email, allows five messages an hour and fo
 
   // Con email confirmado: cinco por hora, y el sexto se rechaza
   const { uid, idToken } = await createVerifiedAccount();
+  // Responder mensajes es solo para la administración
+  expect((await callFunction('replyToFeedback', idToken, { ticketId: 'cualquiera', message: 'Hola' })).status).toBe(
+    403
+  );
   for (let i = 0; i < 5; i++) expect((await callFunction('submitFeedback', idToken, message)).status).toBe(200);
   const sixth = await callFunction('submitFeedback', idToken, message);
   expect(sixth.status).toBe(429);
@@ -110,4 +134,46 @@ test('the server asks for a confirmed email, allows five messages an hour and fo
   expect((await callFunction('forgetAccess', idToken, {})).status).toBe(200);
   expect((await listDocuments('feedback_tickets')).filter((t) => t.uid === uid)).toHaveLength(0);
   expect((await callFunction('submitFeedback', idToken, message)).status).toBe(429);
+});
+
+test('a reply that finishes while another is being written does not close it', async ({ page }) => {
+  test.slow(); // Varias llamadas a funciones
+  const { idToken } = await createVerifiedAccount();
+  const stamp = Date.now().toString(36);
+  const [first, second] = [`Primera duda ${stamp}`, `Segunda duda ${stamp}`];
+  for (const subject of [first, second]) {
+    expect(
+      (await callFunction('submitFeedback', idToken, { type: 'general', subject, description: 'Una duda.' })).status
+    ).toBe(200);
+  }
+  await page.goto('/');
+  await signInWithGoogle(page, ADMIN_EMAIL);
+  await page.getByRole('button', { name: /^Administración/ }).click();
+  await page.getByRole('button', { name: /^Mensajes/ }).click();
+
+  // La primera respuesta se queda enviándose…
+  let release = () => {};
+  const held = new Promise<void>((resolve) => (release = resolve));
+  await page.route('**/replyToFeedback', async (route) => {
+    await held;
+    await route.continue();
+  });
+  const firstItem = page.getByRole('listitem', { name: `${first} (Nuevo)` });
+  await firstItem.getByRole('button', { name: `Responder: ${first}` }).click();
+  await firstItem.getByRole('textbox', { name: /^Respuesta para / }).fill('Respuesta a la primera.');
+  await firstItem.getByRole('button', { name: 'Enviar respuesta' }).click();
+  await expect(firstItem.getByRole('button', { name: 'Enviando…' })).toBeVisible();
+
+  // …mientras se escribe la segunda
+  const secondItem = page.getByRole('listitem', { name: `${second} (Nuevo)` });
+  await secondItem.getByRole('button', { name: `Responder: ${second}` }).click();
+  const secondAnswer = secondItem.getByRole('textbox', { name: /^Respuesta para / });
+  await secondAnswer.fill('Respuesta a la segunda, a medias');
+  release();
+
+  await expect(
+    page.getByRole('listitem', { name: `${first} (Leído)` }).getByRole('list', { name: /^Respuestas a / })
+  ).toContainText('Respuesta a la primera.', SERVER_CALL);
+  await expect(secondAnswer).toHaveValue('Respuesta a la segunda, a medias');
+  await expect(secondAnswer).toBeFocused();
 });

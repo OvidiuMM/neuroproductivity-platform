@@ -29,6 +29,14 @@ export interface FeedbackInput {
   context?: FeedbackContext;
 }
 
+// Respuesta de la administración, enviada por email a quien escribió. El id lo pone la app y se repite en los
+// reintentos: así una respuesta nunca sale dos veces.
+export interface FeedbackReply {
+  id: string;
+  message: string;
+  sentAt: string;
+}
+
 export interface FeedbackTicket extends FeedbackInput {
   uid: string;
   email: string;
@@ -36,7 +44,12 @@ export interface FeedbackTicket extends FeedbackInput {
   status: FeedbackStatus;
   createdAt: string;
   updatedAt: string;
+  replies?: FeedbackReply[];
+  // Respuestas que se están enviando (id → cuándo empezó); se borran al guardarlas o si el envío falla
+  pendingReplies?: Record<string, string>;
 }
+
+export const REPLY_MAX_LENGTH = 5000;
 
 // Texto sin caracteres de control (los saltos de línea solo donde se permiten), recortado y con su límite
 // eslint-disable-next-line no-control-regex -- justo lo que se busca: caracteres de control
@@ -74,6 +87,25 @@ export const parseFeedback = (data: unknown): FeedbackInput | null => {
   if (!type || !subject || !description) return null;
   const context = parseContext(d.context);
   return context ? { type, subject, description, context } : { type, subject, description };
+};
+
+// Respuesta válida de la administración, o null: el id de un mensaje y un texto no vacío
+export const parseReply = (data: unknown): { ticketId: string; replyId: string; message: string } | null => {
+  if (!data || typeof data !== 'object') return null;
+  const d = data as Record<string, unknown>;
+  const ticketId = typeof d.ticketId === 'string' && /^[A-Za-z0-9_-]{1,128}$/.test(d.ticketId) ? d.ticketId : '';
+  const replyId = typeof d.replyId === 'string' && /^[A-Za-z0-9]{8,64}$/.test(d.replyId) ? d.replyId : '';
+  const message = cleanText(d.message, REPLY_MAX_LENGTH);
+  return ticketId && replyId && message ? { ticketId, replyId, message } : null;
+};
+
+// Antes de enviar una respuesta: ya enviada y guardada (se devuelve sin reenviarla), a medias (empezó a enviarse y no
+// se sabe si salió: no se reenvía) o nueva
+export type ReplyState = { kind: 'sent'; reply: FeedbackReply } | { kind: 'uncertain' } | { kind: 'new' };
+export const replyState = (ticket: Pick<FeedbackTicket, 'replies' | 'pendingReplies'>, replyId: string): ReplyState => {
+  const sent = ticket.replies?.find((r) => r.id === replyId);
+  if (sent) return { kind: 'sent', reply: sent };
+  return ticket.pendingReplies?.[replyId] ? { kind: 'uncertain' } : { kind: 'new' };
 };
 
 // Envíos de la última hora (los anteriores ya no cuentan para el límite)
@@ -114,5 +146,24 @@ export const buildFeedbackEmail = (ticket: FeedbackTicket, appUrl: string) => ({
       : []),
     '',
     `Responde a este correo para contestar, o míralo en «Administración» → «Mensajes»: ${appUrl}`
+  ].join('\n')
+});
+
+// Respuesta a quien escribió, en texto plano y con su mensaje citado. Si contesta, le llega a la administración.
+export const buildReplyEmail = (ticket: FeedbackTicket, message: string, adminEmail: string) => ({
+  subject: `Re: [CLAR] ${ticket.subject}`,
+  replyTo: adminEmail,
+  text: [
+    ticket.name ? `Hola, ${ticket.name}:` : 'Hola:',
+    '',
+    message,
+    '',
+    '—',
+    'Equipo de CLAR',
+    '',
+    `Tu mensaje (${TYPE_LABEL[ticket.type]}):`,
+    `> ${ticket.subject}`,
+    '>',
+    ...ticket.description.split(/\r?\n/).map((line) => (line ? `> ${line}` : '>'))
   ].join('\n')
 });
