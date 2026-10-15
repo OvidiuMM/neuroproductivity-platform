@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 import { computeStats, recommendationsFor } from '../../src/services/stats.ts';
-import type { TaskItem, WheelOfLifeLog } from '../../src/types';
+import type { Goal, TaskItem, WheelOfLifeLog } from '../../src/types';
 
 const now = new Date(2026, 9, 14, 12, 0); // miércoles 14 oct 2026, 12:00
 const at = (day: number, hour = 10) => new Date(2026, 9, day, hour, 0).toISOString();
@@ -174,5 +174,51 @@ describe('recommendationsFor', () => {
   it('says nothing when everything is on track', () => {
     const tasks = [done('a', 14, { dueDate: '2026-10-15' }), task('b', { dueDate: '2026-10-30' })];
     assert.deepEqual(recommendationsFor(computeStats(tasks, now), tasks, [wheel(10)], now), []);
+  });
+});
+
+describe('the goal recommendation', () => {
+  const now = new Date(2026, 9, 15, 10, 0);
+  const log = (scores: Partial<Record<string, number>>) => ({
+    id: 'w1',
+    userId: 'u',
+    timestamp: new Date(2026, 9, 10).toISOString(),
+    scores: {
+      Salud: 7,
+      'Carrera Profesional': 7,
+      Finanzas: 7,
+      Familia: 7,
+      Ocio: 7,
+      Relaciones: 7,
+      Espiritualidad: 7,
+      ...scores
+    } as WheelOfLifeLog['scores']
+  });
+  const goal = (area: Goal['area']): Goal => ({
+    id: `g-${area}`,
+    userId: 'u',
+    title: 'Ahorrar',
+    area,
+    status: 'ACTIVE',
+    createdAt: now.toISOString(),
+    updatedAt: now.toISOString()
+  });
+  const recs = (logs: WheelOfLifeLog[], goals: Goal[]) =>
+    recommendationsFor(computeStats([], now), [], logs, now, goals).map((r) => r.id);
+
+  it('points to Metas when the lowest area needs attention and has no goal', () => {
+    const [first] = recommendationsFor(computeStats([], now), [], [log({ Finanzas: 3 })], now, []);
+    assert.equal(first.id, 'goal');
+    assert.equal(
+      first.text,
+      '«Finanzas» tiene 3/10 en tu última evaluación y aún no tiene metas. Ponle una meta concreta y añádele la primera tarea.'
+    );
+    assert.deepEqual(first.action, { label: 'Ir a Metas', tab: 'goals' });
+  });
+
+  it('is not shown once that area has a goal, when it scores above 5 or without an evaluation', () => {
+    assert.ok(!recs([log({ Finanzas: 3 })], [goal('Finanzas')]).includes('goal'));
+    assert.ok(!recs([log({ Finanzas: 6 })], []).includes('goal'));
+    assert.ok(!recs([], []).includes('goal'));
   });
 });

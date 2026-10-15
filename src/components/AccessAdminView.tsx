@@ -184,7 +184,8 @@ export const AccessAdminView: React.FC<AccessAdminViewProps> = ({
             className="space-y-2 rounded-xl border border-amber-200 bg-amber-50 p-3 text-xs text-amber-900"
           >
             <p>
-              Sin aprobación obligatoria, cualquier cuenta con el email confirmado entra sola.
+              Sin aprobación obligatoria, las cuentas nuevas o pendientes con el email confirmado entran solas; las
+              rechazadas, retiradas y bloqueadas, no.
               {pendingCount > 0 &&
                 ` También se aprobarán ${pendingCount === 1 ? 'la solicitud pendiente' : `las ${pendingCount} solicitudes pendientes`}.`}
             </p>
