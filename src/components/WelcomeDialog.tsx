@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { ArrowDown, ArrowRight, CalendarDays, Compass, ListChecks, Target } from 'lucide-react';
+import { ArrowDown, ArrowRight, CalendarDays, Compass, ListChecks, ShieldCheck, Target } from 'lucide-react';
 import { useModalFocus } from '../hooks/useModalFocus';
 import type { OnboardingOutcome } from '../services/onboarding';
 import { BRAND_NAME, BrandMark } from './BrandMark';
@@ -9,12 +9,13 @@ interface WelcomeDialogProps {
   onFinish: (outcome: OnboardingOutcome) => void;
 }
 
-// El método de un vistazo: de lo que te importa (áreas) a lo que haces hoy (Top 10 y Agenda)
+// El método de un vistazo: de lo que te importa (áreas) a lo que haces hoy (Top 10 y Agenda), con el tiempo protegido
 const MODEL = [
   { icon: Compass, title: 'Áreas de vida', text: 'Tu Rueda: salud, trabajo, finanzas, familia…' },
-  { icon: Target, title: 'Metas', text: 'Lo que quieres conseguir en cada área.' },
-  { icon: ListChecks, title: 'Tareas', text: 'Acciones físicas concretas, en Profesional o Personal.' },
-  { icon: CalendarDays, title: 'Top 10 y Agenda', text: 'Qué hacer hoy y cuándo.' }
+  { icon: Target, title: 'Metas', text: 'Lo que quieres conseguir en cada área, empezando por las más bajas.' },
+  { icon: ListChecks, title: 'Tareas', text: 'Acciones físicas concretas para cada meta, en Profesional o Personal.' },
+  { icon: CalendarDays, title: 'Top 10 y Agenda', text: 'Qué hacer hoy y cuándo, con alarmas antes del plazo.' },
+  { icon: ShieldCheck, title: 'Tiempo protegido', text: 'Mañanas sin reuniones y correos escritos en orden.' }
 ];
 
 const ROUTINE = [
@@ -25,7 +26,7 @@ const ROUTINE = [
   },
   {
     title: 'Protege tu tiempo',
-    text: 'Cada día, el Top 10 te dice qué toca. En «Tiempo protegido» guardas tus mañanas de reuniones y correos.'
+    text: 'Cada día, el Top 10 te dice qué toca. En «Tiempo protegido» reservas las mañanas sin reuniones y escribes los correos en orden.'
   }
 ];
 
@@ -88,7 +89,7 @@ export const WelcomeDialog: React.FC<WelcomeDialogProps> = ({ onFinish }) => {
               <ul className="list-disc space-y-1.5 pl-5">
                 <li>Sacas las tareas de tu cabeza y las conviertes en acciones claras.</li>
                 <li>Cada día ves solo lo importante: tu Top 10.</li>
-                <li>Cuidas todas las áreas de tu vida, no solo el trabajo.</li>
+                <li>Cuidas todas las áreas de tu vida, no solo el trabajo, con metas concretas.</li>
               </ul>
             </div>
           )}

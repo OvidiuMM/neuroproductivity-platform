@@ -5,6 +5,7 @@ import { app } from './app';
 // cors: true mantiene el acceso desde clientes móviles (Android Capacitor / TWA / WebView).
 export const api = onRequest({ region: 'europe-west1', cors: true, maxInstances: 10 }, app);
 
-// Aprobación de accesos: solicitud, decisión de la administración y avisos por email
+// Aprobación de accesos (solicitud, decisión de la administración y avisos por email) y mensajes de contacto, con sus
+// respuestas
 export { forgetAccess, requestAccess, revokeSessions, setAccess, setAccessMode, syncAccess } from './access';
 export { replyToFeedback, submitFeedback } from './feedback';

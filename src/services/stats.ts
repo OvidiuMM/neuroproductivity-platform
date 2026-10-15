@@ -1,4 +1,5 @@
-import { AppTab, TaskItem, WheelCategory, WheelOfLifeLog } from '../types';
+import { AppTab, Goal, TaskItem, WheelCategory, WheelOfLifeLog } from '../types';
+import { areasWithGoals, latestScores } from './goals';
 import { startOfWeek } from './agenda';
 import { toDateString } from './recurrence';
 import { dueMoment, isArchived } from './tasks';
@@ -118,12 +119,13 @@ export interface Recommendation {
   action?: { label: string; tab: AppTab };
 }
 
-// Recomendaciones sencillas a partir de las estadísticas (como mucho tres, de más a menos urgente)
+// Recomendaciones sencillas a partir de las estadísticas y las metas (como mucho tres, de más a menos urgente)
 export const recommendationsFor = (
   stats: TaskStats,
   tasks: TaskItem[],
   wheelLogs: WheelOfLifeLog[],
-  now = new Date()
+  now = new Date(),
+  goals: Goal[] = []
 ): Recommendation[] => {
   const list: Recommendation[] = [];
   if (stats.overdue > 0) {
@@ -142,7 +144,7 @@ export const recommendationsFor = (
   if (stats.dueThisWeek >= 5) {
     list.push({
       id: 'busy-week',
-      text: `Esta semana vencen ${stats.dueThisWeek} tareas. Revisa si alguna puede esperar o pasar a «Quizá».`,
+      text: `Esta semana vencen ${stats.dueThisWeek} tareas. Revisa si alguna puede esperar o pasar a «Algún día».`,
       action: { label: 'Ver las listas', tab: 'tasks' }
     });
   }
@@ -159,13 +161,22 @@ export const recommendationsFor = (
       action: { label: 'Ver las listas', tab: 'tasks' }
     });
   }
+  // El área más baja de la última evaluación, si necesita atención y aún no tiene metas
+  const [weakest] = areasWithGoals(goals, latestScores(wheelLogs));
+  if (weakest?.weak && weakest.goals.length === 0) {
+    list.push({
+      id: 'goal',
+      text: `«${weakest.area}» tiene ${weakest.score}/10 en tu última evaluación y aún no tiene metas. Ponle una meta concreta y añádele la primera tarea.`,
+      action: { label: 'Ir a Metas', tab: 'goals' }
+    });
+  }
   const lastWheel = wheelLogs[wheelLogs.length - 1];
   if (!lastWheel || now.getTime() - new Date(lastWheel.timestamp).getTime() > RECENT_DAYS * DAY_MS) {
     list.push({
       id: 'wheel',
       text: lastWheel
-        ? 'Hace más de un mes que no evalúas tu Rueda de la Vida. Revisarla ayuda a elegir en qué centrarte.'
-        : 'Aún no has evaluado tu Rueda de la Vida. Es el punto de partida para elegir en qué centrarte.',
+        ? 'Hace más de un mes que no evalúas tu Rueda de la Vida. Revisarla ayuda a elegir en qué centrarte y qué metas ponerte.'
+        : 'Aún no has evaluado tu Rueda de la Vida. Es el punto de partida para elegir tus metas.',
       action: { label: 'Ir a la Rueda', tab: 'wheel' }
     });
   }
