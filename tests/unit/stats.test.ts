@@ -34,6 +34,16 @@ describe('computeStats', () => {
     assert.equal(stats.doneThisMonth, 5);
   });
 
+  it('cancelled tasks count neither as done nor as open', () => {
+    const stats = computeStats(
+      [done('a', 14), task('cancelled', { status: 'CANCELLED', doneAt: at(14), dueDate: '2026-10-10' }), task('open')],
+      now
+    );
+    assert.equal(stats.doneToday, 1);
+    assert.equal(stats.open, 1);
+    assert.equal(stats.overdue, 0);
+  });
+
   it('lists the last 14 days, today last', () => {
     const stats = computeStats([done('a', 14), done('b', 14), done('c', 1)], now);
     assert.equal(stats.daily.length, 14);

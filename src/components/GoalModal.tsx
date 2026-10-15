@@ -1,10 +1,12 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Target, Trash2, X } from 'lucide-react';
 import { useModalFocus } from '../hooks/useModalFocus';
+import { useDiscardGuard } from '../hooks/useDiscardGuard';
 import { Goal, WheelCategory } from '../types';
 import { GOAL_TITLE_MAX, GOAL_WHY_MAX, validateGoal } from '../services/goals';
 import { WHEEL_CATEGORIES } from '../services/wheel';
 import { DateField } from './DateField';
+import { DiscardChangesPrompt } from './DiscardChangesPrompt';
 
 interface GoalModalProps {
   // Meta que se edita, o ninguna para crear una
@@ -34,8 +36,13 @@ export const GoalModal: React.FC<GoalModalProps> = ({ goal, initialArea, onSave,
     if (confirmDelete) confirmRef.current?.focus();
   }, [confirmDelete]);
 
+  // Cambios sin guardar: frente a como se abrió (la ventana se monta al abrirse)
+  const snapshot = JSON.stringify([title, area, why, targetDate]);
+  const [openedSnapshot] = useState(snapshot);
+  const guard = useDiscardGuard(snapshot !== openedSnapshot, onClose);
+
   const dialogRef = useRef<HTMLDivElement>(null);
-  useModalFocus(true, dialogRef, onClose);
+  useModalFocus(true, dialogRef, guard.requestClose);
 
   const error = validateGoal({ title, area: area || undefined, why, targetDate: targetDate || undefined });
 
@@ -67,14 +74,17 @@ export const GoalModal: React.FC<GoalModalProps> = ({ goal, initialArea, onSave,
         aria-labelledby="goal-modal-title"
         className="animate-in fade-in zoom-in-95 my-auto w-full max-w-lg overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl duration-200"
       >
-        <div className="flex items-center justify-between border-b border-slate-100 bg-slate-50/70 px-6 py-4">
+        <div
+          inert={guard.confirming}
+          className="flex items-center justify-between border-b border-slate-100 bg-slate-50/70 px-6 py-4"
+        >
           <h2 id="goal-modal-title" className="flex items-center gap-2 text-base font-bold text-slate-900">
             <Target className="h-5 w-5 text-indigo-600" aria-hidden="true" />
             {goal ? 'Editar la meta' : 'Nueva meta'}
           </h2>
           <button
             type="button"
-            onClick={onClose}
+            onClick={guard.requestClose}
             aria-label="Cerrar"
             className="rounded-lg p-1.5 text-slate-500 transition-colors hover:bg-slate-200/60 hover:text-slate-600"
           >
@@ -83,7 +93,7 @@ export const GoalModal: React.FC<GoalModalProps> = ({ goal, initialArea, onSave,
         </div>
 
         {/* Con la validación del navegador: una fecha imposible (p. ej. 31/02) bloquea el envío con su mensaje */}
-        <form onSubmit={handleSubmit} className="space-y-4 p-6">
+        <form onSubmit={handleSubmit} inert={guard.confirming} className="space-y-4 p-6">
           <p className="text-xs leading-relaxed text-slate-600">
             Una meta concreta dentro de un área de tu Rueda. Vincúlale tareas para ver cómo avanza.
           </p>
@@ -192,7 +202,7 @@ export const GoalModal: React.FC<GoalModalProps> = ({ goal, initialArea, onSave,
             <div className="flex items-center gap-2">
               <button
                 type="button"
-                onClick={onClose}
+                onClick={guard.requestClose}
                 className="rounded-xl px-4 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-100 hover:text-slate-900"
               >
                 Cancelar
@@ -206,6 +216,18 @@ export const GoalModal: React.FC<GoalModalProps> = ({ goal, initialArea, onSave,
             </div>
           </div>
         </form>
+
+        {guard.confirming && (
+          <DiscardChangesPrompt
+            text={
+              goal
+                ? 'Has cambiado esta meta y no has guardado los cambios.'
+                : 'Has empezado una meta nueva y no la has guardado.'
+            }
+            onKeepEditing={guard.keepEditing}
+            onDiscard={guard.discard}
+          />
+        )}
       </div>
     </div>
   );

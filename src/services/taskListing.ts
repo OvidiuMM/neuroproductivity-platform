@@ -1,5 +1,13 @@
 import { TaskItem, TaskPriority, TaskStatus, WheelCategory } from '../types';
-import { PRIORITY_LEVELS, TASK_STATUSES, WEEK_MS, dueMoment, effectivePriority } from './tasks';
+import {
+  PRIORITY_LEVELS,
+  TASK_STATUSES,
+  WEEK_MS,
+  dueMoment,
+  effectivePriority,
+  isArchivedStatus,
+  type ArchivedStatus
+} from './tasks';
 
 // ESTIMACIÓN: duración estimada de la tarea, en minutos
 export const ESTIMATE_OPTIONS: { value: number; label: string }[] = [
@@ -23,7 +31,7 @@ export type DeadlineFilter = 'ALL' | 'OVERDUE' | 'NEXT_7_DAYS' | 'WITH_DATE' | '
 export interface ListFilters {
   priority: TaskPriority | 'ALL'; // prioridad efectiva
   maxEstimate: number | 'ALL'; // con filtro, las tareas sin estimación no aparecen
-  status: Exclude<TaskStatus, 'DONE'> | 'ALL';
+  status: Exclude<TaskStatus, ArchivedStatus> | 'ALL';
   deadline: DeadlineFilter;
   category: WheelCategory | 'ALL';
 }
@@ -41,7 +49,12 @@ export const DEFAULT_LIST_PREFS: ListPrefs = {
 const FILTER_OPTIONS: { [K in keyof ListFilters]: readonly ListFilters[K][] } = {
   priority: ['ALL', ...PRIORITY_LEVELS],
   maxEstimate: ['ALL', ...ESTIMATE_OPTIONS.map((option) => option.value)],
-  status: ['ALL', ...TASK_STATUSES.map((option) => option.value).filter((status) => status !== 'DONE')],
+  status: [
+    'ALL',
+    ...TASK_STATUSES.map((option) => option.value).filter(
+      (status): status is Exclude<TaskStatus, ArchivedStatus> => !isArchivedStatus(status)
+    )
+  ],
   deadline: ['ALL', 'OVERDUE', 'NEXT_7_DAYS', 'WITH_DATE', 'NO_DATE'],
   category: ['ALL', 'Salud', 'Carrera Profesional', 'Finanzas', 'Familia', 'Ocio', 'Relaciones', 'Espiritualidad']
 };

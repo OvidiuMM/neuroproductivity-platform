@@ -4,6 +4,7 @@ import { TaskItem, TaskStatus } from '../types';
 import { useModalFocus } from '../hooks/useModalFocus';
 import { TaskStatusSelect } from './TaskStatusSelect';
 import { TaskDates } from './TaskDates';
+import { isCancelled } from '../services/tasks';
 
 interface ArchivedTasksModalProps {
   isOpen: boolean;
@@ -59,8 +60,8 @@ export const ArchivedTasksModal: React.FC<ArchivedTasksModalProps> = ({
 
         <div className="space-y-4 p-6">
           <p className="text-xs text-slate-600">
-            Las tareas marcadas como <strong>Hecha</strong> se guardan aquí. Cambia su estado para devolverlas a su
-            lista.
+            Las tareas marcadas como <strong>Hecha</strong> o <strong>Cancelada</strong> se guardan aquí. Cambia su
+            estado para devolverlas a su lista.
           </p>
 
           <label className="relative block">
@@ -93,7 +94,11 @@ export const ArchivedTasksModal: React.FC<ArchivedTasksModalProps> = ({
                     <span className="block text-xs font-bold break-words text-slate-900">{task.title}</span>
                     <span className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[11px] text-slate-500">
                       <span>{task.listContext === 'WORK' ? 'Profesional' : 'Personal'}</span>
-                      {task.doneAt && <span>· Hecha el {doneFormat.format(new Date(task.doneAt))}</span>}
+                      {task.doneAt && (
+                        <span>
+                          · {isCancelled(task) ? 'Cancelada' : 'Hecha'} el {doneFormat.format(new Date(task.doneAt))}
+                        </span>
+                      )}
                       <TaskDates task={task} />
                     </span>
                   </div>

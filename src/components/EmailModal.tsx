@@ -1,5 +1,6 @@
 import React, { useRef, useState } from 'react';
 import { useModalFocus } from '../hooks/useModalFocus';
+import { useUnsavedChangesWarning } from '../hooks/useDiscardGuard';
 import { EmailDraft, EmailStatus } from '../types';
 import {
   X,
@@ -101,6 +102,8 @@ export const EmailModal: React.FC<EmailModalProps> = ({ email, onClose, onSave }
   // Cerrar (X, «Cerrar» o Escape) nunca pierde lo escrito: con cambios sin guardar, se guarda como borrador. Uno nuevo
   // y vacío no se guarda; uno que ya existía, sí, aunque se haya vaciado (si no, al abrirlo volvería lo borrado).
   const canSaveDraft = email ? isDirty : hasContent;
+  // Cerrar la pestaña no pasa por aquí: el navegador pide confirmación
+  useUnsavedChangesWarning(isDirty && canSaveDraft);
   const close = () => {
     if (isDirty && canSaveDraft) onSave(build('draft'), 'auto');
     onClose();
