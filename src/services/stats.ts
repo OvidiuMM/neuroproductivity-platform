@@ -1,8 +1,9 @@
-import { AppTab, Goal, TaskItem, WheelCategory, WheelOfLifeLog } from '../types';
+import { AppTab, Goal, TaskItem, WheelArea, WheelCategory, WheelOfLifeLog } from '../types';
 import { areasWithGoals, latestScores } from './goals';
 import { startOfWeek } from './agenda';
 import { toDateString } from './recurrence';
 import { dueMoment, isArchived, isDone } from './tasks';
+import { DEFAULT_AREAS, areaLabel } from './wheel';
 
 // Estadísticas de la pantalla de Inicio, a partir de las tareas de una lista (las hechas guardan doneAt)
 
@@ -126,7 +127,8 @@ export const recommendationsFor = (
   tasks: TaskItem[],
   wheelLogs: WheelOfLifeLog[],
   now = new Date(),
-  goals: Goal[] = []
+  goals: Goal[] = [],
+  areas: WheelArea[] = DEFAULT_AREAS
 ): Recommendation[] => {
   const list: Recommendation[] = [];
   if (stats.overdue > 0) {
@@ -163,11 +165,11 @@ export const recommendationsFor = (
     });
   }
   // El área más baja de la última evaluación, si necesita atención y aún no tiene metas
-  const [weakest] = areasWithGoals(goals, latestScores(wheelLogs));
+  const [weakest] = areasWithGoals(goals, latestScores(wheelLogs), areas);
   if (weakest?.weak && weakest.goals.length === 0) {
     list.push({
       id: 'goal',
-      text: `«${weakest.area}» tiene ${weakest.score}/10 en tu última evaluación y aún no tiene metas. Ponle una meta concreta y añádele la primera tarea.`,
+      text: `«${areaLabel(areas, weakest.area)}» tiene ${weakest.score}/10 en tu última evaluación y aún no tiene metas. Ponle una meta concreta y añádele la primera tarea.`,
       action: { label: 'Ir a Metas', tab: 'goals' }
     });
   }

@@ -9,17 +9,18 @@ import {
 import { httpsCallable } from 'firebase/functions';
 import { forgetAccess } from './access';
 import { signOutAndClearCache, type FirebaseServices } from './firebase';
-import { deleteAllUserData, exportUserData } from './repository';
+import { deleteAllUserData, exportUserData, readWheelAreas } from './repository';
 import { downloadJson } from './download';
 
 // Descarga y borrado de la cuenta. Funcionan también sin acceso aprobado (las reglas dejan leer y borrar
 // los propios datos siempre), así una cuenta pendiente o retirada puede llevarse o eliminar lo suyo.
 
 export const downloadAccountData = async ({ db }: FirebaseServices, user: User) => {
-  const data = await exportUserData(db, user.uid);
+  const [data, wheelAreas] = await Promise.all([exportUserData(db, user.uid), readWheelAreas(db, user.uid)]);
   downloadJson(`clar-${new Date().toISOString().slice(0, 10)}.json`, {
     exportedAt: new Date().toISOString(),
     account: { name: user.displayName, email: user.email },
+    ...(wheelAreas ? { wheelAreas } : {}),
     ...data
   });
 };

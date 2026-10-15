@@ -7,8 +7,17 @@ export type TaskPriority = 'CRITICAL' | 'HIGH' | 'MEDIUM' | 'LOW';
 // Estado manual de la tarea; DONE (hecha) y CANCELLED (cancelada) la archivan: sale de las listas y del Top 10
 export type TaskStatus = 'PENDING' | 'BLOCKED' | 'IN_PROGRESS' | 'DONE' | 'CANCELLED';
 
-export type WheelCategory =
+// Áreas de la Rueda de la Vida. Las 7 de partida usan su nombre original como identificador (así lo guardado no
+// cambia nunca); cada cuenta puede renombrarlas, ocultarlas y añadir las suyas (con identificador propio)
+export type DefaultWheelCategory =
   'Salud' | 'Carrera Profesional' | 'Finanzas' | 'Familia' | 'Ocio' | 'Relaciones' | 'Espiritualidad';
+export type WheelCategory = string;
+
+export interface WheelArea {
+  id: WheelCategory;
+  label: string; // el nombre que se muestra, hasta 30
+  hidden?: boolean; // oculta: fuera de la Rueda y de las listas para elegir, con su historial, metas y tareas
+}
 
 export interface TaskObservation {
   id: string;

@@ -59,12 +59,23 @@ test('a task is exported with all its fields and the names of what it relates to
   );
   assert.equal(data.task, tasks[1]);
   assert.deepEqual(data.related, {
-    goal: { id: 'g1', title: 'Tener la casa a punto', area: 'Familia', status: 'ACTIVE' },
+    area: null,
+    goal: { id: 'g1', title: 'Tener la casa a punto', area: 'Familia', areaLabel: 'Familia', status: 'ACTIVE' },
     project: { id: 'p1', title: 'Reformar la cocina', endDate: '2026-10-20', status: 'ACTIVE' },
     waitsFor: { id: 'presupuesto', title: 'presupuesto', status: 'DONE' },
     waitedBy: [{ id: 'montar', title: 'montar', status: 'PENDING' }]
   });
-  assert.deepEqual(taskExport(tasks[4], context).related, { goal: null, project: null, waitsFor: null, waitedBy: [] });
+  assert.deepEqual(taskExport(tasks[4], context).related, {
+    area: null,
+    goal: null,
+    project: null,
+    waitsFor: null,
+    waitedBy: []
+  });
+  // Con el área renombrada, su nombre de ahora
+  const renamed = { ...context, areas: [{ id: 'Familia', label: 'Casa' }] };
+  assert.equal(taskExport({ ...tasks[3], wheelCategory: 'Familia' }, renamed).related.area?.label, 'Casa');
+  assert.equal(goalExport(goal, renamed).areaLabel, 'Casa');
 });
 
 test('a goal is exported with its progress, its projects and all its tasks, those of its projects too', () => {

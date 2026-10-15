@@ -159,7 +159,7 @@ describe('recommendationsFor', () => {
     id: `w${day}`,
     userId: 'uid',
     timestamp: at(day),
-    scores: {} as WheelOfLifeLog['scores']
+    scores: {}
   });
 
   it('starts with the oldest overdue task and suggests evaluating the wheel when it is old', () => {

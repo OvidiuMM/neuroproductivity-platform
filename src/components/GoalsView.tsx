@@ -18,6 +18,7 @@ import { Goal, GoalStatus, Project, TaskItem, WheelCategory } from '../types';
 import { WEAK_AREA_SCORE, areasWithGoals, pendingGoalTasks, sortGoals } from '../services/goals';
 import { formatDay, statusLabel } from '../services/tasks';
 import { GoalProgress } from './GoalProgress';
+import { useAreas } from '../hooks/useAreas';
 import { projectProgress, projectsOfGoal, sortProjects } from '../services/projects';
 
 interface GoalsViewProps {
@@ -66,6 +67,7 @@ const GoalCard: React.FC<{
   onDownload
 }) => {
   const active = goal.status === 'ACTIVE';
+  const { label: areaName } = useAreas();
   const pending = active ? pendingGoalTasks(goal, tasks) : [];
   // Sus proyectos activos, con su avance
   const goalProjects = sortProjects(projectsOfGoal(goal.id, projects)).filter((p) => p.status === 'ACTIVE');
@@ -77,7 +79,7 @@ const GoalCard: React.FC<{
             {goal.title}
           </h4>
           <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] text-slate-600">
-            {!active && <span className="font-semibold text-indigo-700">{goal.area}</span>}
+            {!active && <span className="font-semibold text-indigo-700">{areaName(goal.area)}</span>}
             {goal.targetDate && (
               <span className="inline-flex items-center gap-1">
                 <CalendarClock className="h-3 w-3" aria-hidden="true" />
@@ -236,7 +238,8 @@ export const GoalsView: React.FC<GoalsViewProps> = ({
     areaButtons.current[area]?.focus({ preventScroll: true });
     onNewGoal(area);
   };
-  const areas = areasWithGoals(goals, scores ?? null);
+  const { areas: wheelAreas, label: areaName } = useAreas();
+  const areas = areasWithGoals(goals, scores ?? null, wheelAreas);
   const needAttention = areas.filter((a) => a.weak && a.goals.length === 0);
   const closed = sortGoals(goals).filter((g) => g.status !== 'ACTIVE');
   const card = (goal: Goal) => (
@@ -312,7 +315,7 @@ export const GoalsView: React.FC<GoalsViewProps> = ({
                   className="inline-flex min-h-11 items-center gap-1.5 rounded-xl border border-amber-300 bg-white px-3 text-xs font-semibold text-amber-950 hover:bg-amber-100"
                 >
                   <Plus className="h-3.5 w-3.5" aria-hidden="true" />
-                  Ponle una meta a {area} ({score}/10)
+                  Ponle una meta a {areaName(area)} ({score}/10)
                 </button>
               </li>
             ))}
@@ -331,7 +334,7 @@ export const GoalsView: React.FC<GoalsViewProps> = ({
             <div className="flex flex-wrap items-center justify-between gap-x-2">
               <div className="flex flex-wrap items-baseline gap-x-2">
                 <h3 id={`goals-area-${index}`} className="text-sm font-bold text-slate-900">
-                  {area}
+                  {areaName(area)}
                   {score !== undefined && (
                     <span className={`ml-2 text-xs font-semibold ${weak ? 'text-amber-800' : 'text-slate-500'}`}>
                       {' '}
@@ -347,7 +350,7 @@ export const GoalsView: React.FC<GoalsViewProps> = ({
                   areaButtons.current[area] = button;
                 }}
                 onClick={() => onNewGoal(area)}
-                aria-label={`Nueva meta en ${area}`}
+                aria-label={`Nueva meta en ${areaName(area)}`}
                 className={linkButton}
               >
                 <Plus className="h-4 w-4" aria-hidden="true" />
@@ -355,7 +358,7 @@ export const GoalsView: React.FC<GoalsViewProps> = ({
               </button>
             </div>
             {areaGoals.length > 0 && (
-              <ul aria-label={`Metas de ${area}`} className="grid gap-3 lg:grid-cols-2">
+              <ul aria-label={`Metas de ${areaName(area)}`} className="grid gap-3 lg:grid-cols-2">
                 {areaGoals.map(card)}
               </ul>
             )}

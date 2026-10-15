@@ -77,7 +77,7 @@ describe('firestore.rules', () => {
     await assertSucceeds(deleteDoc(ref));
   });
 
-  it('lets the profile hold only the account data and whether the welcome was seen', async () => {
+  it('lets the profile hold only the account data, whether the welcome was seen and the Wheel areas', async () => {
     const ana = env.authenticatedContext('ana').firestore();
     const profile = { name: 'Ana', email: 'ana@example.com', photoUrl: '', createdAt: '', lastLoginAt: '' };
 
@@ -93,6 +93,10 @@ describe('firestore.rules', () => {
         },
         { merge: true }
       )
+    );
+    // Sus áreas de la Rueda (nombres propios, ocultas y añadidas)
+    await assertSucceeds(
+      setDoc(doc(ana, 'users/ana'), { wheelAreas: [{ id: 'Salud', label: 'Cuerpo' }] }, { merge: true })
     );
     await assertFails(updateDoc(doc(ana, 'users/ana'), { isAdmin: true }));
     await assertFails(setDoc(doc(env.authenticatedContext('bruno').firestore(), 'users/bruno'), { role: 'admin' }));

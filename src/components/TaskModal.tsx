@@ -65,7 +65,8 @@ import { DiscardChangesPrompt } from './DiscardChangesPrompt';
 import { TimeField } from './TimeField';
 import { alarmUnavailableReason, describeAlarm } from '../services/alarms';
 import { suggestGoal } from '../services/goals';
-import { WHEEL_CATEGORIES } from '../services/wheel';
+import { areasInUse } from '../services/wheel';
+import { useAreas } from '../hooks/useAreas';
 
 export type TaskFormData = Omit<TaskItem, 'id' | 'createdAt' | 'updatedAt' | 'status' | 'doneAt'>;
 
@@ -88,16 +89,6 @@ interface TaskModalProps {
   // Proyectos a los que puede pertenecer (la meta se hereda del proyecto)
   projects: Project[];
 }
-
-const WHEEL_CATEGORIES_LIST: WheelCategory[] = [
-  'Salud',
-  'Carrera Profesional',
-  'Finanzas',
-  'Familia',
-  'Ocio',
-  'Relaciones',
-  'Espiritualidad'
-];
 
 // Valores del formulario: los que escribe o elige la persona (lo demás es estado de la interfaz)
 interface FormValues {
@@ -202,6 +193,8 @@ export const TaskModal: React.FC<TaskModalProps> = ({
   projects
 }) => {
   const [title, setTitle] = useState('');
+  // Áreas de la Rueda de la cuenta (con su nombre y las que se pueden elegir)
+  const { areas: wheelAreas, label: areaName, selectable: selectableAreas } = useAreas();
   const [projectId, setProjectId] = useState('');
   const [goalId, setGoalId] = useState('');
   const [dependsOn, setDependsOn] = useState('');
@@ -346,7 +339,7 @@ export const TaskModal: React.FC<TaskModalProps> = ({
     setTimeout(() => {
       // Si entretanto se guardó o se reinició el formulario, el resultado ya no corresponde a esta tarea
       if (request !== nlpRequest.current) return;
-      const res = inferWheelCategory(title, description);
+      const res = inferWheelCategory(title, description, wheelAreas);
       setNlpResult(res);
       setNlpLoading(false);
       // Si la confianza es alta y aún no hay categoría manual seleccionada, sugerir
@@ -757,8 +750,11 @@ export const TaskModal: React.FC<TaskModalProps> = ({
               >
                 <option value="">(Sin meta)</option>
                 {goalId && !goal && <option value={goalId}>(Meta no disponible ahora)</option>}
-                {WHEEL_CATEGORIES.filter((area) => goalOptions.some((g) => g.area === area)).map((area) => (
-                  <optgroup key={area} label={area}>
+                {areasInUse(
+                  wheelAreas,
+                  goalOptions.map((g) => g.area)
+                ).map((area) => (
+                  <optgroup key={area} label={areaName(area)}>
                     {goalOptions
                       .filter((g) => g.area === area)
                       .map((g) => (
@@ -776,7 +772,9 @@ export const TaskModal: React.FC<TaskModalProps> = ({
                 </p>
               ) : (
                 goal && (
-                  <p className="mt-1 text-[11px] text-slate-500">Área de la Rueda: {goal.area} (la de la meta).</p>
+                  <p className="mt-1 text-[11px] text-slate-500">
+                    Área de la Rueda: {areaName(goal.area)} (la de la meta).
+                  </p>
                 )
               )}
               {suggestedGoal && !project && (
@@ -960,7 +958,7 @@ export const TaskModal: React.FC<TaskModalProps> = ({
                       <div>
                         <span className="font-semibold">Sugerencia:</span>{' '}
                         <span>
-                          ¿Vincular a <strong>{nlpResult.category}</strong>?
+                          ¿Vincular a <strong>{areaName(nlpResult.category)}</strong>?
                         </span>
                         <span className="ml-1.5 font-mono text-[11px] text-indigo-600">
                           ({Math.round(nlpResult.confidenceScore * 100)}% de confianza)
@@ -1017,15 +1015,15 @@ export const TaskModal: React.FC<TaskModalProps> = ({
                     value={(goal ? goal.area : wheelCategory) || ''}
                     disabled={Boolean(goal)}
                     onChange={(e) => {
-                      setWheelCategory((e.target.value as WheelCategory) || undefined);
+                      setWheelCategory(e.target.value || undefined);
                       setLinkedBy('MANUAL');
                     }}
                     className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-400 focus:outline-none"
                   >
                     <option value="">(Sin área)</option>
-                    {WHEEL_CATEGORIES_LIST.map((cat) => (
-                      <option key={cat} value={cat}>
-                        {cat}
+                    {selectableAreas(goal ? goal.area : wheelCategory).map(({ id, label: name }) => (
+                      <option key={id} value={id}>
+                        {name}
                       </option>
                     ))}
                   </select>
@@ -1036,7 +1034,7 @@ export const TaskModal: React.FC<TaskModalProps> = ({
                   ) : (
                     wheelCategory && (
                       <p className="mt-1 text-[11px] text-slate-500">
-                        Área: <strong>{wheelCategory}</strong> (
+                        Área: <strong>{areaName(wheelCategory)}</strong> (
                         {linkedBy === 'AUTO_TFIDF' ? 'sugerida' : 'elegida por ti'})
                       </p>
                     )
