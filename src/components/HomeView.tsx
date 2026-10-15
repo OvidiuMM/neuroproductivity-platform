@@ -71,7 +71,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
   const at = new Date(Math.max(now.getTime(), Date.now()));
   const stats = computeStats(contextTasks, at);
   const activeGoals = sortGoals(goals).filter((g) => g.status === 'ACTIVE');
-  const recommendations = recommendationsFor(stats, contextTasks, wheelLogs, at);
+  const recommendations = recommendationsFor(stats, contextTasks, wheelLogs, at, goals);
   const maxDaily = Math.max(1, ...stats.daily.map((d) => d.count));
   const datedDone = stats.onTime + stats.late;
   const maxArea = Math.max(1, ...stats.byArea.map((a) => a.count));
@@ -247,7 +247,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
         >
           {stats.byArea.length === 0 ? (
             <p className="text-xs text-slate-600">
-              Vincula tus tareas a un área de la Rueda para ver en qué inviertes el esfuerzo.
+              Vincula tus tareas a una meta (o a un área de la Rueda) para ver en qué inviertes el esfuerzo.
             </p>
           ) : (
             <ul className="space-y-2">
@@ -278,7 +278,8 @@ export const HomeView: React.FC<HomeViewProps> = ({
           {activeGoals.length === 0 ? (
             <div className="flex flex-wrap items-center justify-between gap-3">
               <p className="text-xs text-slate-600">
-                Aún no tienes metas. Ponle una meta concreta al área de tu Rueda que más quieres mejorar.
+                Aún no tienes metas. Ponle una meta concreta al área de tu Rueda que más quieres mejorar; en «Metas»
+                verás primero las más bajas.
               </p>
               <button
                 type="button"

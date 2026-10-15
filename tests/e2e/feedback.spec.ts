@@ -151,29 +151,107 @@ test('a reply that finishes while another is being written does not close it', a
   await page.getByRole('button', { name: /^Administración/ }).click();
   await page.getByRole('button', { name: /^Mensajes/ }).click();
 
-  // La primera respuesta se queda enviándose…
-  let release = () => {};
-  const held = new Promise<void>((resolve) => (release = resolve));
+  // Las respuestas se quedan enviándose hasta que se sueltan
+  let held = Promise.resolve();
+  const hold = () => {
+    let release = () => {};
+    held = new Promise<void>((resolve) => (release = resolve));
+    return () => release();
+  };
   await page.route('**/replyToFeedback', async (route) => {
     await held;
     await route.continue();
   });
-  const firstItem = page.getByRole('listitem', { name: `${first} (Nuevo)` });
-  await firstItem.getByRole('button', { name: `Responder: ${first}` }).click();
-  await firstItem.getByRole('textbox', { name: /^Respuesta para / }).fill('Respuesta a la primera.');
-  await firstItem.getByRole('button', { name: 'Enviar respuesta' }).click();
-  await expect(firstItem.getByRole('button', { name: 'Enviando…' })).toBeVisible();
+  const item = (subject: string, status: string) => page.getByRole('listitem', { name: `${subject} (${status})` });
+  const answerIn = (subject: string, status: string) =>
+    item(subject, status).getByRole('textbox', { name: /^Respuesta para / });
 
-  // …mientras se escribe la segunda
-  const secondItem = page.getByRole('listitem', { name: `${second} (Nuevo)` });
-  await secondItem.getByRole('button', { name: `Responder: ${second}` }).click();
-  const secondAnswer = secondItem.getByRole('textbox', { name: /^Respuesta para / });
-  await secondAnswer.fill('Respuesta a la segunda, a medias');
+  // La primera se queda enviándose, y su texto ya no cambia…
+  let release = hold();
+  await item(first, 'Nuevo')
+    .getByRole('button', { name: `Responder: ${first}` })
+    .click();
+  await answerIn(first, 'Nuevo').fill('Respuesta a la primera.');
+  await item(first, 'Nuevo').getByRole('button', { name: 'Enviar respuesta' }).click();
+  await expect(item(first, 'Nuevo').getByRole('button', { name: 'Enviando…' })).toBeVisible();
+  await expect(answerIn(first, 'Nuevo')).not.toBeEditable();
+
+  // …mientras se escribe la segunda: al terminar, no la cierra
+  await item(second, 'Nuevo')
+    .getByRole('button', { name: `Responder: ${second}` })
+    .click();
+  await answerIn(second, 'Nuevo').fill('Respuesta a la segunda.');
   release();
+  await expect(item(first, 'Leído').getByRole('list', { name: /^Respuestas a / })).toContainText(
+    'Respuesta a la primera.',
+    SERVER_CALL
+  );
+  await expect(answerIn(second, 'Nuevo')).toHaveValue('Respuesta a la segunda.');
+  await expect(answerIn(second, 'Nuevo')).toBeFocused();
 
-  await expect(
-    page.getByRole('listitem', { name: `${first} (Leído)` }).getByRole('list', { name: /^Respuestas a / })
-  ).toContainText('Respuesta a la primera.', SERVER_CALL);
-  await expect(secondAnswer).toHaveValue('Respuesta a la segunda, a medias');
-  await expect(secondAnswer).toBeFocused();
+  // Tampoco cierra otra respuesta al mismo mensaje: se envía la segunda, se abre la primera y se vuelve a la segunda
+  release = hold();
+  await item(second, 'Nuevo').getByRole('button', { name: 'Enviar respuesta' }).click();
+  await expect(item(second, 'Nuevo').getByRole('button', { name: 'Enviando…' })).toBeVisible();
+  await item(first, 'Leído')
+    .getByRole('button', { name: `Responder: ${first}` })
+    .click();
+  await item(second, 'Nuevo')
+    .getByRole('button', { name: `Responder: ${second}` })
+    .click();
+  await answerIn(second, 'Nuevo').fill('Y otra cosa más.');
+  release();
+  await expect(item(second, 'Leído').getByRole('list', { name: /^Respuestas a / })).toContainText(
+    'Respuesta a la segunda.',
+    SERVER_CALL
+  );
+  await expect(answerIn(second, 'Leído')).toHaveValue('Y otra cosa más.');
+  await expect(answerIn(second, 'Leído')).toBeFocused();
+});
+
+test('a reply whose confirmation was lost is not sent again, and edited text is not lost', async ({ page }) => {
+  test.slow(); // Varias llamadas a funciones
+  const { idToken } = await createVerifiedAccount();
+  const subject = `Duda sin confirmar ${Date.now().toString(36)}`;
+  expect(
+    (await callFunction('submitFeedback', idToken, { type: 'general', subject, description: 'Una duda.' })).status
+  ).toBe(200);
+  await page.goto('/');
+  await signInWithGoogle(page, ADMIN_EMAIL);
+  await page.getByRole('button', { name: /^Administración/ }).click();
+  await page.getByRole('button', { name: /^Mensajes/ }).click();
+
+  // La primera vez la respuesta sale y se guarda, pero la confirmación no llega a la app
+  let lost = true;
+  await page.route('**/replyToFeedback', async (route) => {
+    if (!lost) return route.continue();
+    lost = false;
+    await route.fetch();
+    await route.abort('failed');
+  });
+  const ticket = page.getByRole('listitem', { name: new RegExp(`^${subject} \\(`) });
+  const answer = ticket.getByRole('textbox', { name: /^Respuesta para / });
+  await ticket.getByRole('button', { name: `Responder: ${subject}` }).click();
+  await answer.fill('Primera versión.');
+  await ticket.getByRole('button', { name: 'Enviar respuesta' }).click();
+  await expect(ticket.getByRole('alert')).toContainText('No se pudo enviar la respuesta', SERVER_CALL);
+
+  // Se cambia el texto y se reintenta: no se reenvía la anterior ni se pierde el texto nuevo
+  await answer.fill('Segunda versión, corregida.');
+  await ticket.getByRole('button', { name: 'Enviar respuesta' }).click();
+  await expect(ticket.getByRole('alert')).toContainText('Tu respuesta anterior sí se envió', SERVER_CALL);
+  await expect(ticket.getByRole('list', { name: /^Respuestas a / })).toContainText('Primera versión.');
+  await expect(answer).toHaveValue('Segunda versión, corregida.');
+
+  // Enviarlo entonces es otra respuesta
+  await ticket.getByRole('button', { name: 'Enviar respuesta' }).click();
+  await expect(ticket.getByRole('status')).toHaveText('Respuesta enviada.', SERVER_CALL);
+  await expect(ticket.getByRole('list', { name: /^Respuestas a / }).getByRole('listitem')).toHaveText([
+    /Primera versión\.$/,
+    /Segunda versión, corregida\.$/
+  ]);
+  const [stored] = (await listDocuments('feedback_tickets')).filter((t) => t.subject === subject);
+  const replies = JSON.stringify(stored.replies);
+  expect(replies.split('Primera versión.').length - 1).toBe(1);
+  expect(replies).toContain('Segunda versión, corregida.');
 });

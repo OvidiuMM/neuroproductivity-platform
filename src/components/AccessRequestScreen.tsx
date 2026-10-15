@@ -37,7 +37,7 @@ const COPY: Record<AccessRequestScreenProps['status'], { title: string; text: st
   },
   blocked: {
     title: 'Cuenta bloqueada',
-    text: 'Esta cuenta no puede usar CLAR. Si crees que es un error, escríbenos.'
+    text: 'Esta cuenta no puede usar CLAR. Si crees que es un error, escríbenos: te responderemos por email.'
   },
   unknown: {
     title: 'No se pudo comprobar tu acceso',

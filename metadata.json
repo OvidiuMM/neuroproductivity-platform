@@ -1,6 +1,6 @@
 {
-  "name": "NeuroProductividad",
-  "description": "Plataforma web de gestión del tiempo y neuroproductividad con validación estricta de requisitos, Rueda de la Vida, Jerarquía Visual y Blindaje del Triángulo de las Bermudas.",
+  "name": "CLAR",
+  "description": "CLAR: decide qué hacer ahora, con claridad. Rueda de la Vida, metas por área, listas profesional y personal con Top 10, agenda con alarmas y tiempo protegido.",
   "requestFramePermissions": [],
   "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
 }

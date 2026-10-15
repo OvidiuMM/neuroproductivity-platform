@@ -100,7 +100,8 @@ export const BermudasShield: React.FC<BermudasShieldProps> = ({
         </h2>
         <p className="max-w-3xl text-xs leading-relaxed text-slate-600">
           Las tres grandes fugas de tiempo, el «triángulo de las Bermudas»: <strong>reuniones mal planteadas</strong>,{' '}
-          <strong>correo reactivo</strong> y <strong>mensajes sin orden</strong>.
+          <strong>correo reactivo</strong> y <strong>mensajes sin orden</strong>. Aquí tienes herramientas para las dos
+          primeras.
         </p>
       </div>
 
@@ -130,8 +131,7 @@ export const BermudasShield: React.FC<BermudasShieldProps> = ({
           <div className="flex items-start gap-2 rounded-xl border border-amber-200 bg-amber-50/70 p-3 text-xs text-amber-900">
             <Clock className="mt-0.5 h-4 w-4 shrink-0 text-amber-600" />
             <p className="text-[11px] leading-relaxed">
-              <strong>Mañanas libres:</strong> entre las 8:00 y las 12:00 no se ponen reuniones; es cuando mejor te
-              concentras.
+              <strong>Mañanas libres:</strong> antes de las 12:00 no se ponen reuniones; es cuando mejor te concentras.
             </p>
           </div>
 
@@ -208,7 +208,8 @@ export const BermudasShield: React.FC<BermudasShieldProps> = ({
             <Mail className="mt-0.5 h-4 w-4 shrink-0 text-indigo-600" />
             <p className="text-[11px] leading-relaxed">
               <strong>Al revés de lo habitual:</strong> el destinatario va al final, cuando el correo está listo, para
-              no enviarlo antes de tiempo.
+              no enviarlo antes de tiempo. CLAR no lo envía: lo guarda (también a medias, como borrador) y «Abrir en mi
+              correo» lo pasa a tu programa de correo.
             </p>
           </div>
 
