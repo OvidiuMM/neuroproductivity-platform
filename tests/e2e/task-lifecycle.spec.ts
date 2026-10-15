@@ -140,12 +140,30 @@ test('changing the status from «⋯» with the keyboard leaves the focus on tha
   await actions.focus();
   await page.keyboard.press('Enter');
   await page.keyboard.press('Tab');
-  await page.keyboard.press('Tab');
   const status = page.getByLabel(`Estado de «${title}»`);
   await expect(status).toBeFocused();
   await status.selectOption('IN_PROGRESS');
   await expect(status).toBeHidden();
   await expect(actions).toBeFocused();
+});
+
+test('the title and the pencil open the task editor', async ({ page }) => {
+  await page.goto('/');
+  await signInWithGoogle(page);
+  await page.getByRole('button', { name: 'Listas', exact: true }).click();
+  const title = `Revisar el presupuesto ${unique()}`;
+  await page.getByRole('button', { name: 'Añadir la primera tarea' }).click();
+  await fillAndSaveTask(page, { title });
+  const editor = page.getByRole('dialog', { name: 'Editar la tarea' });
+
+  await page.getByRole('heading', { name: title }).getByRole('button', { name: title }).click();
+  await expect(editor).toBeVisible();
+  await expect(editor.getByPlaceholder('ej. Llamar al proveedor para acordar el plazo de entrega')).toHaveValue(title);
+  await page.keyboard.press('Escape');
+  await expect(editor).toBeHidden();
+
+  await page.getByRole('button', { name: `Editar «${title}»` }).click();
+  await expect(editor).toBeVisible();
 });
 
 test('a deleted task can be brought back with «Deshacer»', async ({ page }) => {

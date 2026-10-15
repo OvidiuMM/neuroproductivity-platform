@@ -1,5 +1,5 @@
 import React from 'react';
-import { ArrowDown, Bell, Check, Flame, Lock, Scale, Sparkles, Sprout, Target, Timer, Zap } from 'lucide-react';
+import { ArrowDown, Bell, Check, Flame, Lock, Pencil, Scale, Sparkles, Sprout, Target, Timer, Zap } from 'lucide-react';
 import { Goal, TaskItem, TaskPriority, TaskStatus } from '../types';
 import {
   DEADLINE_TITLE_CLASS,
@@ -99,6 +99,10 @@ const StatusBadge: React.FC<{ status: TaskStatus }> = ({ status }) => {
   );
 };
 
+// Título como botón: se ve como texto y abre la edición
+const titleButton =
+  'cursor-pointer text-left [overflow-wrap:anywhere] hover:underline focus-visible:underline decoration-slate-400 underline-offset-2';
+
 const CARD_CLASS: Record<Variant, string> = {
   top: 'rounded-2xl border border-slate-200 bg-white shadow-sm shadow-slate-900/5 transition-shadow hover:shadow-md',
   peripheral: 'rounded-xl border border-slate-100 bg-slate-50/60 transition-colors hover:bg-white',
@@ -156,13 +160,20 @@ export const TaskCard: React.FC<TaskCardProps> = ({
             ) : (
               <span className="mt-0.5 w-5 shrink-0 text-right font-mono text-[10px] text-slate-500">{position}.</span>
             ))}
+          {/* El título abre la edición */}
           {variant === 'peripheral' ? (
-            <p className={`min-w-0 truncate text-sm ${titleColor('text-slate-700')}`}>{task.title}</p>
+            <p className={`min-w-0 text-sm ${titleColor('text-slate-700')}`}>
+              <button type="button" onClick={() => onEdit(task)} className={`${titleButton} block max-w-full truncate`}>
+                {task.title}
+              </button>
+            </p>
           ) : (
             <h4
               className={`min-w-0 text-sm leading-snug break-words ${isTop ? 'font-bold sm:text-base' : 'font-semibold'} ${titleColor('text-slate-900')}`}
             >
-              {task.title}
+              <button type="button" onClick={() => onEdit(task)} className={titleButton}>
+                {task.title}
+              </button>
             </h4>
           )}
         </div>
@@ -201,9 +212,17 @@ export const TaskCard: React.FC<TaskCardProps> = ({
         </div>
       </div>
 
+      <button
+        type="button"
+        onClick={() => onEdit(task)}
+        aria-label={`Editar «${task.title}»`}
+        title="Editar"
+        className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl text-slate-500 hover:bg-slate-100 hover:text-slate-800"
+      >
+        <Pencil className="h-4 w-4" aria-hidden="true" />
+      </button>
       <TaskActionsMenu
         task={task}
-        onEdit={() => onEdit(task)}
         onChangeStatus={(status) => onChangeStatus(task, status)}
         onDelete={() => onDelete(task)}
         blocked={Boolean(blocker)}
