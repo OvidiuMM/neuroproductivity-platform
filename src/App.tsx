@@ -131,7 +131,9 @@ const REPLY_ERRORS: Record<string, string> = {
   'functions/invalid-argument': 'Escribe la respuesta.',
   'functions/not-found': 'El mensaje ya no existe: quizá se eliminó la cuenta que lo envió.',
   'functions/unavailable': 'No se pudo enviar la respuesta. Inténtalo de nuevo.',
-  'functions/failed-precondition': 'El envío de correos no está configurado.'
+  'functions/failed-precondition': 'El envío de correos no está configurado.',
+  'functions/aborted':
+    'Esta respuesta ya se estaba enviando y no se sabe si salió: para no duplicarla, no se reenvía. Cancela y escribe otra si hace falta.'
 };
 
 export default function App({ user, services, isAdmin = false }: AppProps) {
@@ -262,9 +264,13 @@ export default function App({ user, services, isAdmin = false }: AppProps) {
   };
 
   // RESPONDER A UN MENSAJE: la función lo envía por email y, si sale, lo guarda
-  const handleReplyFeedback = async (ticket: FeedbackTicket, message: string): Promise<ReplyResult> => {
+  const handleReplyFeedback = async (
+    ticket: FeedbackTicket,
+    replyId: string,
+    message: string
+  ): Promise<ReplyResult> => {
     try {
-      return { reply: await replyToFeedback(services.functions, ticket.id, message) };
+      return { reply: await replyToFeedback(services.functions, ticket.id, replyId, message) };
     } catch (e) {
       console.error('Error replying to feedback:', e);
       return {
