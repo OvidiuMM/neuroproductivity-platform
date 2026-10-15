@@ -286,3 +286,18 @@ test('task alarm: the field in the form and the alert', async ({ page }) => {
   await expect(page.getByRole('region', { name: `Alarma: ${title}` })).toBeVisible();
   await expectNoViolations(page, 'aviso de alarma');
 });
+
+test('e-mail drafts: the list and the editor with attachments', async ({ page }) => {
+  await page.goto('/');
+  await signInWithGoogle(page);
+  await openSection(page, 'Tiempo protegido');
+  await page.getByRole('button', { name: 'Escribir un correo' }).click();
+  const chooser = page.waitForEvent('filechooser');
+  await page.getByRole('button', { name: 'Elegir archivos' }).click();
+  await (await chooser).setFiles({ name: 'acta.pdf', mimeType: 'application/pdf', buffer: Buffer.alloc(2048) });
+  await page.getByLabel(/^Paso 3: Asunto/).fill('Acta de la reunión');
+  await expectNoViolations(page, 'correo con adjuntos');
+  await page.keyboard.press('Escape');
+  await expect(page.getByRole('region', { name: 'Borradores (1)' })).toBeVisible();
+  await expectNoViolations(page, 'tiempo protegido con borradores');
+});
