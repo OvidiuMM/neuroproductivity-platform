@@ -33,6 +33,7 @@ test('phones use a bottom section bar, a «Más» sheet and a floating «Nueva t
   const sheet = page.getByRole('dialog', { name: 'Más' });
   await expect(sheet.getByRole('navigation').getByRole('button')).toHaveText([
     'Rueda de la Vida',
+    'Proyectos',
     'Tiempo protegido',
     'Ayuda'
   ]);

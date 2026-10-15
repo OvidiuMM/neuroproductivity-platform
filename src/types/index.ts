@@ -1,6 +1,6 @@
 export type ListContext = 'WORK' | 'PERSONAL';
 
-export type AppTab = 'home' | 'tasks' | 'agenda' | 'wheel' | 'goals' | 'bermudas' | 'help' | 'access';
+export type AppTab = 'home' | 'tasks' | 'agenda' | 'wheel' | 'goals' | 'projects' | 'bermudas' | 'help' | 'access';
 
 export type TaskPriority = 'CRITICAL' | 'HIGH' | 'MEDIUM' | 'LOW';
 
@@ -45,6 +45,7 @@ export interface TaskItem {
   nextOccurrenceId?: string; // id de la repetición creada al completarla (evita duplicarla si se reactiva)
   goalId?: string; // meta a la que contribuye; el área de la Rueda se hereda de la meta
   dependsOn?: string; // tarea a la que espera: hasta que esté hecha o cancelada, esta queda bloqueada
+  projectId?: string; // proyecto al que pertenece; la meta (y el área) se heredan del proyecto
   alarmTime?: string; // HH:mm: aviso antes del plazo (en las 24 h anteriores, o la víspera si no tiene hora)
 }
 
@@ -59,6 +60,21 @@ export interface Goal {
   why?: string; // el «para qué», hasta 280
   targetDate?: string; // YYYY-MM-DD
   status: GoalStatus;
+  createdAt: string; // ISO / UTC
+  updatedAt: string;
+}
+
+// Proyecto: un conjunto de tareas con fecha de fin, dentro de una meta (metas → proyectos → tareas)
+export type ProjectStatus = 'ACTIVE' | 'FINISHED' | 'ARCHIVED';
+
+export interface Project {
+  id: string;
+  userId: string;
+  title: string; // 1–100
+  goalId: string; // meta a la que pertenece (obligatoria)
+  endDate: string; // YYYY-MM-DD
+  description?: string; // hasta 280
+  status: ProjectStatus;
   createdAt: string; // ISO / UTC
   updatedAt: string;
 }

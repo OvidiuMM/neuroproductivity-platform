@@ -3,6 +3,7 @@ import { useModalFocus } from '../hooks/useModalFocus';
 import { useDiscardGuard } from '../hooks/useDiscardGuard';
 import {
   Goal,
+  Project,
   TaskItem,
   ListContext,
   TaskPriority,
@@ -76,11 +77,15 @@ interface TaskModalProps {
   initialSomeday?: boolean;
   // Al abrir desde una meta («Añadir tarea»), la tarea nueva ya está vinculada a ella
   initialGoalId?: string;
+  // Al abrir desde un proyecto, la tarea nueva ya pertenece a él (y a su meta)
+  initialProjectId?: string;
   editingTask?: TaskItem | null;
   // Metas a las que se puede vincular la tarea (el área de la Rueda se hereda de la meta)
   goals: Goal[];
   // Todas las tareas: de cuál puede depender esta y cuáles esperan a ella
   tasks: TaskItem[];
+  // Proyectos a los que puede pertenecer (la meta se hereda del proyecto)
+  projects: Project[];
 }
 
 const WHEEL_CATEGORIES_LIST: WheelCategory[] = [
@@ -96,6 +101,7 @@ const WHEEL_CATEGORIES_LIST: WheelCategory[] = [
 // Valores del formulario: los que escribe o elige la persona (lo demás es estado de la interfaz)
 interface FormValues {
   title: string;
+  projectId: string;
   goalId: string;
   dependsOn: string;
   description: string;
@@ -125,11 +131,13 @@ const formFor = (
   editingTask: TaskItem | null | undefined,
   initialContext: ListContext,
   initialSomeday: boolean,
-  initialGoalId: string | undefined
+  initialGoalId: string | undefined,
+  initialProjectId: string | undefined
 ): FormValues =>
   editingTask
     ? {
         title: editingTask.title,
+        projectId: editingTask.projectId ?? '',
         goalId: editingTask.goalId ?? '',
         dependsOn: editingTask.dependsOn ?? '',
         description: editingTask.description,
@@ -155,6 +163,7 @@ const formFor = (
       }
     : {
         title: '',
+        projectId: initialProjectId ?? '',
         goalId: initialGoalId ?? '',
         dependsOn: '',
         description: '',
@@ -185,11 +194,14 @@ export const TaskModal: React.FC<TaskModalProps> = ({
   initialContext,
   initialSomeday = false,
   initialGoalId,
+  initialProjectId,
   editingTask,
   goals,
-  tasks
+  tasks,
+  projects
 }) => {
   const [title, setTitle] = useState('');
+  const [projectId, setProjectId] = useState('');
   const [goalId, setGoalId] = useState('');
   const [dependsOn, setDependsOn] = useState('');
   const [description, setDescription] = useState('');
@@ -233,10 +245,10 @@ export const TaskModal: React.FC<TaskModalProps> = ({
 
   // Formulario tal como se abre (vacío o con la tarea): con él se sabe si hay cambios sin guardar
   const initialForm = useMemo(
-    () => formFor(editingTask, initialContext, initialSomeday, initialGoalId),
+    () => formFor(editingTask, initialContext, initialSomeday, initialGoalId, initialProjectId),
     // isOpen: cada vez que se abre, el formulario vuelve a empezar
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [isOpen, editingTask, initialContext, initialSomeday, initialGoalId]
+    [isOpen, editingTask, initialContext, initialSomeday, initialGoalId, initialProjectId]
   );
 
   // Inicializar o limpiar al abrir modal
@@ -246,6 +258,7 @@ export const TaskModal: React.FC<TaskModalProps> = ({
     setNlpLoading(false);
     const form = initialForm;
     setTitle(form.title);
+    setProjectId(form.projectId);
     setGoalId(form.goalId);
     setDependsOn(form.dependsOn);
     setDescription(form.description);
@@ -292,6 +305,7 @@ export const TaskModal: React.FC<TaskModalProps> = ({
   // CAMBIOS SIN GUARDAR: lo que hay en el formulario frente a como se abrió
   const currentForm: FormValues = {
     title,
+    projectId,
     goalId,
     dependsOn,
     description,
@@ -381,6 +395,16 @@ export const TaskModal: React.FC<TaskModalProps> = ({
       setLinkedBy('MANUAL');
       setNlpResult(null);
     }
+  };
+
+  // PROYECTO: el elegido y los que se pueden elegir (activos, y el ya elegido aunque esté terminado o archivado). En
+  // un proyecto, la meta es la suya
+  const project = projects.find((p) => p.id === projectId);
+  const projectOptions = projects.filter((p) => p.status === 'ACTIVE' || p.id === projectId);
+  const chooseProject = (id: string) => {
+    setProjectId(id);
+    const chosen = projects.find((p) => p.id === id);
+    if (chosen) chooseGoal(chosen.goalId);
   };
 
   // Reglas de Validación de Entrada (Estricto cumplimiento de especificaciones)
@@ -485,8 +509,10 @@ export const TaskModal: React.FC<TaskModalProps> = ({
       description: description.trim(),
       priority,
       isSomeday,
-      // El vínculo se conserva aunque la meta aún no haya llegado (las metas y las tareas cargan por separado)
-      goalId: goalId || undefined,
+      // El vínculo se conserva aunque la meta aún no haya llegado (las metas y las tareas cargan por separado). En un
+      // proyecto, la meta es la del proyecto
+      projectId: projectId || undefined,
+      goalId: (project ? project.goalId : goalId) || undefined,
       // Si la tarea a la que esperaba ya no existe, deja de esperar
       dependsOn: (dependsOn && tasks.some((t) => t.id === dependsOn) && dependsOn) || undefined,
       alarmTime: (!alarmBlocked && alarmTime) || undefined,
@@ -673,6 +699,33 @@ export const TaskModal: React.FC<TaskModalProps> = ({
             )}
           </div>
 
+          {/* PROYECTO: al que pertenece la tarea (solo si hay proyectos); fija la meta */}
+          {projectOptions.length > 0 && (
+            <div>
+              <label
+                htmlFor="task-project"
+                className="mb-1.5 block text-xs font-bold tracking-wider text-slate-600 uppercase"
+              >
+                Proyecto <span className="font-normal tracking-normal text-slate-500 normal-case">(opcional)</span>
+              </label>
+              <select
+                id="task-project"
+                value={projectId}
+                onChange={(e) => chooseProject(e.target.value)}
+                className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-400 focus:outline-none"
+              >
+                <option value="">(Sin proyecto)</option>
+                {projectId && !project && <option value={projectId}>(Proyecto no disponible ahora)</option>}
+                {projectOptions.map((p) => (
+                  <option key={p.id} value={p.id}>
+                    {p.title}
+                    {p.status === 'FINISHED' ? ' (terminado)' : p.status === 'ARCHIVED' ? ' (archivado)' : ''}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
+
           {/* META: a qué meta contribuye la tarea (solo si hay metas) */}
           {goalOptions.length > 0 ? (
             <div>
@@ -685,6 +738,7 @@ export const TaskModal: React.FC<TaskModalProps> = ({
               <select
                 id="task-goal"
                 value={goalId}
+                disabled={Boolean(project)}
                 onChange={(e) => chooseGoal(e.target.value)}
                 className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-400 focus:outline-none"
               >
@@ -703,10 +757,16 @@ export const TaskModal: React.FC<TaskModalProps> = ({
                   </optgroup>
                 ))}
               </select>
-              {goal && (
-                <p className="mt-1 text-[11px] text-slate-500">Área de la Rueda: {goal.area} (la de la meta).</p>
+              {project ? (
+                <p className="mt-1 text-[11px] text-slate-500">
+                  La del proyecto «{project.title}»: para cambiarla, cambia el proyecto o quítalo.
+                </p>
+              ) : (
+                goal && (
+                  <p className="mt-1 text-[11px] text-slate-500">Área de la Rueda: {goal.area} (la de la meta).</p>
+                )
               )}
-              {suggestedGoal && (
+              {suggestedGoal && !project && (
                 <button
                   type="button"
                   onClick={() => chooseGoal(suggestedGoal.id)}

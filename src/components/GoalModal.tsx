@@ -15,6 +15,8 @@ interface GoalModalProps {
   initialArea?: WheelCategory;
   onSave: (goal: Goal) => void;
   onDelete: (goal: Goal) => void;
+  // Proyectos de la meta: mientras tenga alguno, no se puede eliminar
+  projectCount?: number;
   onClose: () => void;
 }
 
@@ -23,7 +25,14 @@ const inputClass =
 const labelClass = 'mb-1.5 block text-xs font-bold tracking-wider text-slate-600 uppercase';
 
 // Crear o editar una meta: nombre, área de la Rueda, para qué y fecha objetivo. Se monta al abrirse.
-export const GoalModal: React.FC<GoalModalProps> = ({ goal, initialArea, onSave, onDelete, onClose }) => {
+export const GoalModal: React.FC<GoalModalProps> = ({
+  goal,
+  initialArea,
+  onSave,
+  onDelete,
+  projectCount = 0,
+  onClose
+}) => {
   const [title, setTitle] = useState(goal?.title ?? '');
   const [area, setArea] = useState<WheelCategory | ''>(goal?.area ?? initialArea ?? '');
   const [why, setWhy] = useState(goal?.why ?? '');
@@ -162,7 +171,12 @@ export const GoalModal: React.FC<GoalModalProps> = ({ goal, initialArea, onSave,
           )}
 
           <div className="flex flex-wrap items-center justify-between gap-3 border-t border-slate-100 pt-4">
-            {goal ? (
+            {goal && projectCount > 0 ? (
+              <p className="max-w-xs text-[11px] text-slate-600">
+                Tiene {projectCount === 1 ? 'un proyecto' : `${projectCount} proyectos`}: para eliminarla, elimínalos o
+                pásalos a otra meta antes.
+              </p>
+            ) : goal ? (
               confirmDelete ? (
                 <div className="flex flex-wrap items-center gap-2 text-xs text-slate-700">
                   <span id="goal-delete-note">Sus tareas se quedan, sin meta.</span>
