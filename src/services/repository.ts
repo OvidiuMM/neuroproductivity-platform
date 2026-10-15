@@ -39,7 +39,7 @@ const SORTERS = {
   tasks: (a: TaskItem, b: TaskItem) => byDateDesc(a.createdAt, b.createdAt),
   wheelLogs: (a: WheelOfLifeLog, b: WheelOfLifeLog) => a.timestamp.localeCompare(b.timestamp),
   meetings: (a: MeetingGuard, b: MeetingGuard) => byDateDesc(a.createdAt, b.createdAt),
-  emails: (a: EmailDraft, b: EmailDraft) => byDateDesc(a.sentAt, b.sentAt),
+  emails: (a: EmailDraft, b: EmailDraft) => byDateDesc(a.updatedAt ?? a.sentAt, b.updatedAt ?? b.sentAt),
   goals: (a: Goal, b: Goal) => byDateDesc(a.createdAt, b.createdAt)
 };
 
@@ -159,6 +159,9 @@ export const saveMeeting = (db: Firestore, uid: string, meeting: MeetingGuard) =
 
 export const saveEmail = (db: Firestore, uid: string, email: EmailDraft) =>
   setDoc(doc(userCollection(db, uid, 'emails'), email.id), { ...email, userId: uid });
+
+export const deleteEmail = (db: Firestore, uid: string, emailId: string) =>
+  deleteDoc(doc(userCollection(db, uid, 'emails'), emailId));
 
 export const saveUserProfile = (db: Firestore, user: User) =>
   setDoc(

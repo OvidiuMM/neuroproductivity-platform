@@ -35,6 +35,7 @@ import {
   markOnboardingSeen,
   importUserData,
   saveEmail,
+  deleteEmail,
   saveMeeting,
   saveTask,
   subscribeToCollection,
@@ -69,7 +70,8 @@ import { TaskList } from './components/TaskList';
 import { TaskModal, type TaskFormData } from './components/TaskModal';
 import { ArchivedTasksModal } from './components/ArchivedTasksModal';
 import { MeetingModal } from './components/MeetingModal';
-import { EmailModal } from './components/EmailModal';
+import { EmailModal, type EmailSaveKind } from './components/EmailModal';
+import { isDraft } from './services/email';
 import { SplashScreen } from './components/SplashScreen';
 import { AccountMenu } from './components/AccountMenu';
 import { ImportLocalDataModal } from './components/ImportLocalDataModal';
@@ -269,7 +271,8 @@ export default function App({ user, services, isAdmin = false }: AppProps) {
   const [newTaskGoalId, setNewTaskGoalId] = useState<string | undefined>();
   const [isArchiveOpen, setIsArchiveOpen] = useState(false);
   const [isMeetingModalOpen, setIsMeetingModalOpen] = useState(false);
-  const [isEmailModalOpen, setIsEmailModalOpen] = useState(false);
+  // Correo que se está escribiendo: uno nuevo, un borrador que se continúa o uno guardado que se abre
+  const [emailEditor, setEmailEditor] = useState<{ email?: EmailDraft } | null>(null);
 
   // Toast / Banner de notificación
   // Con `undo`, el aviso ofrece «Deshacer» y dura un poco más
@@ -526,11 +529,23 @@ export default function App({ user, services, isAdmin = false }: AppProps) {
     showToast('Reunión guardada.');
   };
 
-  const handleSendEmail = (emailData: Omit<EmailDraft, 'id'>) => {
-    saveEmail(db, uid, { ...emailData, id: `email-${Date.now()}`, userId: uid }).catch(
-      reportError('guardar el correo')
+  const handleSaveEmail = (email: EmailDraft, kind: EmailSaveKind) => {
+    saveEmail(db, uid, { ...email, userId: uid }).catch(reportError('guardar el correo'));
+    showToast(
+      kind === 'saved'
+        ? 'Correo guardado.'
+        : kind === 'draft'
+          ? 'Borrador guardado. Lo tienes en «Borradores».'
+          : 'Lo que escribiste se guardó como borrador.'
     );
-    showToast('Correo guardado.');
+  };
+  const handleDeleteEmail = (email: EmailDraft) => {
+    deleteEmail(db, uid, email.id).catch(reportError('eliminar el correo'));
+    showToast(isDraft(email) ? 'Borrador eliminado.' : 'Correo eliminado.', () => {
+      saveEmail(db, uid, email)
+        .then(() => showToast('Correo recuperado.'))
+        .catch(reportError('recuperar el correo'));
+    });
   };
 
   // CUENTA
@@ -624,7 +639,7 @@ export default function App({ user, services, isAdmin = false }: AppProps) {
     isTaskModalOpen ||
     isArchiveOpen ||
     isMeetingModalOpen ||
-    isEmailModalOpen ||
+    emailEditor !== null ||
     isAccountMenuOpen ||
     isAccessibilityOpen ||
     isImportOpen;
@@ -806,7 +821,9 @@ export default function App({ user, services, isAdmin = false }: AppProps) {
                 meetings={meetings}
                 emails={emails}
                 onOpenNewMeeting={() => setIsMeetingModalOpen(true)}
-                onOpenNewEmail={() => setIsEmailModalOpen(true)}
+                onOpenNewEmail={() => setEmailEditor({})}
+                onOpenEmail={(email) => setEmailEditor({ email })}
+                onDeleteEmail={handleDeleteEmail}
               />
             </DeferredSection>
           )}
@@ -956,7 +973,9 @@ export default function App({ user, services, isAdmin = false }: AppProps) {
       />
 
       {/* MODAL 3: CORREO CON REDACCIÓN INVERSA Y ALERTA NO-SCROLL */}
-      <EmailModal isOpen={isEmailModalOpen} onClose={() => setIsEmailModalOpen(false)} onSendEmail={handleSendEmail} />
+      {emailEditor && (
+        <EmailModal email={emailEditor.email} onClose={() => setEmailEditor(null)} onSave={handleSaveEmail} />
+      )}
 
       {/* MODAL 4: CUENTA (CERRAR SESIÓN, DESCARGAR DATOS, ELIMINAR CUENTA) */}
       <AccountMenu

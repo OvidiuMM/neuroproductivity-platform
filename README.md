@@ -98,6 +98,12 @@ El sistema rechaza las restricciones coercitivas (como las rotaciones atencional
 - **Avisa con la app abierta** (`useTaskAlarms`): un aviso dentro de CLAR con «Ver tarea» y, con permiso, una notificación del sistema (sin service worker; en Android y en Safari del iPhone sin instalar, solo el aviso dentro de la app). Las alarmas que pasaron con la app cerrada avisan al abrirla si la tarea aún no ha vencido. Cada alarma avisa una sola vez, también con varias pestañas (`localStorage` y Web Locks).
 - **Calendario:** el archivo .ics incluye la alarma (`VALARM`).
 
+### 8. Borradores de correo (0.9.2)
+
+- **Borradores:** un correo de «Tiempo protegido» se puede guardar sin terminar (`status: 'draft'`) con «Guardar borrador» o, solo, al cerrar el editor con cambios. «Borradores» y «Guardados» se abren para continuar o editar (se guarda sobre el mismo documento) y se eliminan con «Deshacer».
+- **Adjuntos:** «Elegir archivos» abre el selector del sistema; se guardan solo el nombre y el tamaño, como lista de lo que adjuntar al enviarlo.
+- **Abrir en mi correo:** enlace `mailto:` con los destinatarios válidos, el asunto y el texto. CLAR no envía correos.
+
 ---
 
 ## 🛠️ Stack Tecnológico
