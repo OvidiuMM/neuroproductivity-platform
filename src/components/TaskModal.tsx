@@ -13,7 +13,8 @@ import {
 } from '../types';
 import { analyzeImmediateActionSyntax, SyntaxAnalysisResult } from '../services/syntaxAnalyzer';
 import { inferWheelCategory, NLPSuggestionResult } from '../services/nlpEngine';
-import { formatTaskDates, toLocalDate, validateTaskDates } from '../services/tasks';
+import { formatTaskDates, isCancelled, toLocalDate, validateTaskDates } from '../services/tasks';
+import { dependencyCandidates, dependentsOf } from '../services/dependencies';
 import { ESTIMATE_OPTIONS } from '../services/taskListing';
 import {
   buildRecurrence,
@@ -78,6 +79,8 @@ interface TaskModalProps {
   editingTask?: TaskItem | null;
   // Metas a las que se puede vincular la tarea (el área de la Rueda se hereda de la meta)
   goals: Goal[];
+  // Todas las tareas: de cuál puede depender esta y cuáles esperan a ella
+  tasks: TaskItem[];
 }
 
 const WHEEL_CATEGORIES_LIST: WheelCategory[] = [
@@ -94,6 +97,7 @@ const WHEEL_CATEGORIES_LIST: WheelCategory[] = [
 interface FormValues {
   title: string;
   goalId: string;
+  dependsOn: string;
   description: string;
   listContext: ListContext;
   priority: TaskPriority;
@@ -127,6 +131,7 @@ const formFor = (
     ? {
         title: editingTask.title,
         goalId: editingTask.goalId ?? '',
+        dependsOn: editingTask.dependsOn ?? '',
         description: editingTask.description,
         listContext: editingTask.listContext,
         priority: editingTask.priority,
@@ -151,6 +156,7 @@ const formFor = (
     : {
         title: '',
         goalId: initialGoalId ?? '',
+        dependsOn: '',
         description: '',
         listContext: initialContext,
         priority: 'MEDIUM',
@@ -180,10 +186,12 @@ export const TaskModal: React.FC<TaskModalProps> = ({
   initialSomeday = false,
   initialGoalId,
   editingTask,
-  goals
+  goals,
+  tasks
 }) => {
   const [title, setTitle] = useState('');
   const [goalId, setGoalId] = useState('');
+  const [dependsOn, setDependsOn] = useState('');
   const [description, setDescription] = useState('');
   // Identificador de la última inferencia NLP: invalida resultados que llegan tras cerrar o reiniciar el formulario
   const nlpRequest = useRef(0);
@@ -239,6 +247,7 @@ export const TaskModal: React.FC<TaskModalProps> = ({
     const form = initialForm;
     setTitle(form.title);
     setGoalId(form.goalId);
+    setDependsOn(form.dependsOn);
     setDescription(form.description);
     setListContext(form.listContext);
     setPriority(form.priority);
@@ -267,6 +276,7 @@ export const TaskModal: React.FC<TaskModalProps> = ({
           editingTask.startDate ||
           editingTask.recurrence ||
           editingTask.isSomeday ||
+          editingTask.dependsOn ||
           editingTask.observations?.length
         )
       );
@@ -283,6 +293,7 @@ export const TaskModal: React.FC<TaskModalProps> = ({
   const currentForm: FormValues = {
     title,
     goalId,
+    dependsOn,
     description,
     listContext,
     priority,
@@ -356,6 +367,10 @@ export const TaskModal: React.FC<TaskModalProps> = ({
   // METAS: la elegida, las que se pueden elegir (activas, y la ya vinculada aunque esté lograda o archivada) y la
   // sugerida por las palabras del título mientras no haya ninguna elegida
   const goal = goals.find((g) => g.id === goalId);
+  // DEPENDENCIA: tareas a las que puede esperar (sin ciclos), la elegida y las que esperan a esta
+  const dependencyOptions = useMemo(() => dependencyCandidates(editingTask?.id, tasks), [editingTask, tasks]);
+  const waitingFor = tasks.find((t) => t.id === dependsOn);
+  const waitingForThis = editingTask ? dependentsOf(editingTask, tasks) : [];
   const goalOptions = goals.filter((g) => g.status === 'ACTIVE' || g.id === goalId);
   const suggestedGoal = useMemo(() => (goalId ? null : suggestGoal(title, goals)), [goalId, title, goals]);
   const chooseGoal = (id: string) => {
@@ -472,6 +487,8 @@ export const TaskModal: React.FC<TaskModalProps> = ({
       isSomeday,
       // El vínculo se conserva aunque la meta aún no haya llegado (las metas y las tareas cargan por separado)
       goalId: goalId || undefined,
+      // Si la tarea a la que esperaba ya no existe, deja de esperar
+      dependsOn: (dependsOn && tasks.some((t) => t.id === dependsOn) && dependsOn) || undefined,
       alarmTime: (!alarmBlocked && alarmTime) || undefined,
       wheelCategory: goal ? goal.area : wheelCategory,
       wheelCategoryConfidence,
@@ -817,7 +834,7 @@ export const TaskModal: React.FC<TaskModalProps> = ({
               <span>
                 Más opciones
                 <span className="ml-2 font-normal tracking-normal text-slate-500 normal-case">
-                  descripción, estimación, área, inicio, repetición, «Algún día» y notas
+                  descripción, estimación, área, dependencia, inicio, repetición, «Algún día» y notas
                 </span>
               </span>
               <ChevronDown
@@ -949,6 +966,55 @@ export const TaskModal: React.FC<TaskModalProps> = ({
                     )
                   )}
                 </div>
+              </div>
+
+              {/* DEPENDENCIA: la tarea a la que espera esta (una sola); mientras siga abierta, esta queda bloqueada */}
+              <div>
+                <label
+                  htmlFor="task-depends-on"
+                  className="mb-1.5 block text-xs font-bold tracking-wider text-slate-600 uppercase"
+                >
+                  Empieza después de{' '}
+                  <span className="font-normal tracking-normal text-slate-500 normal-case">(opcional)</span>
+                </label>
+                <select
+                  id="task-depends-on"
+                  value={dependsOn}
+                  onChange={(e) => setDependsOn(e.target.value)}
+                  aria-describedby="task-depends-on-help"
+                  className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-400 focus:outline-none"
+                >
+                  <option value="">(No espera a ninguna tarea)</option>
+                  {dependsOn && !dependencyOptions.some((t) => t.id === dependsOn) && (
+                    <option value={dependsOn}>
+                      {waitingFor
+                        ? `${waitingFor.title} (${isCancelled(waitingFor) ? 'cancelada' : 'hecha'})`
+                        : '(Tarea eliminada)'}
+                    </option>
+                  )}
+                  {(['WORK', 'PERSONAL'] as const)
+                    .filter((list) => dependencyOptions.some((t) => t.listContext === list))
+                    .map((list) => (
+                      <optgroup key={list} label={list === 'WORK' ? 'Profesional' : 'Personal'}>
+                        {dependencyOptions
+                          .filter((t) => t.listContext === list)
+                          .map((t) => (
+                            <option key={t.id} value={t.id}>
+                              {t.title}
+                            </option>
+                          ))}
+                      </optgroup>
+                    ))}
+                </select>
+                <p id="task-depends-on-help" className="mt-1 text-[11px] leading-relaxed text-slate-500">
+                  Mientras esa tarea no esté hecha o cancelada, esta queda bloqueada: no entra en el Top 10 ni se puede
+                  marcar como hecha o en progreso. Varias tareas pueden esperar a la misma.
+                </p>
+                {waitingForThis.length > 0 && (
+                  <p className="mt-1 text-[11px] text-slate-600">
+                    Esperan a esta tarea: {waitingForThis.map((t) => `«${t.title}»`).join(', ')}.
+                  </p>
+                )}
               </div>
 
               {/* FECHAS OPCIONALES: plazo (solo fecha límite) o intervalo (inicio + fecha límite), con hora opcional */}

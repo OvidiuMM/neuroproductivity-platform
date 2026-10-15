@@ -1,5 +1,5 @@
 import React from 'react';
-import { ArrowDown, Bell, Check, Flame, Scale, Sparkles, Sprout, Target, Timer, Zap } from 'lucide-react';
+import { ArrowDown, Bell, Check, Flame, Lock, Scale, Sparkles, Sprout, Target, Timer, Zap } from 'lucide-react';
 import { Goal, TaskItem, TaskPriority, TaskStatus } from '../types';
 import {
   DEADLINE_TITLE_CLASS,
@@ -21,6 +21,8 @@ interface TaskCardProps {
   task: TaskItem;
   // Meta a la que contribuye (sustituye al área, que es la de la meta)
   goal?: Goal;
+  // Tarea abierta a la que espera: hasta que termine, esta no se puede completar
+  blocker?: TaskItem;
   now: Date;
   variant: Variant;
   // Posición en la lista activa (1 a 10 en el Top 10; 11 en adelante en el resto)
@@ -105,6 +107,7 @@ const CARD_CLASS: Record<Variant, string> = {
 export const TaskCard: React.FC<TaskCardProps> = ({
   task,
   goal,
+  blocker,
   now,
   variant,
   position,
@@ -118,20 +121,27 @@ export const TaskCard: React.FC<TaskCardProps> = ({
 
   return (
     <li className={`flex items-start gap-1 p-1 sm:gap-2 sm:p-1.5 ${CARD_CLASS[variant]}`}>
-      <button
-        type="button"
-        onClick={() => onChangeStatus(task, 'DONE')}
-        aria-label={`Marcar «${task.title}» como hecha`}
-        title="Marcar como hecha"
-        className="group flex h-11 w-11 shrink-0 items-center justify-center rounded-full"
-      >
-        <span className="flex h-6 w-6 items-center justify-center rounded-full border-2 border-slate-300 transition-colors group-hover:border-emerald-500 group-hover:bg-emerald-50 group-focus-visible:border-emerald-500 group-active:bg-emerald-100">
-          <Check
-            className="h-3.5 w-3.5 text-emerald-600 opacity-0 transition-opacity group-hover:opacity-100 group-focus-visible:opacity-100"
-            aria-hidden="true"
-          />
+      {blocker ? (
+        // Bloqueada: en lugar del círculo para completarla, un candado (lo explica la etiqueta de la tarjeta)
+        <span className="flex h-11 w-11 shrink-0 items-center justify-center" title="Bloqueada" aria-hidden="true">
+          <Lock className="h-4 w-4 text-amber-700" />
         </span>
-      </button>
+      ) : (
+        <button
+          type="button"
+          onClick={() => onChangeStatus(task, 'DONE')}
+          aria-label={`Marcar «${task.title}» como hecha`}
+          title="Marcar como hecha"
+          className="group flex h-11 w-11 shrink-0 items-center justify-center rounded-full"
+        >
+          <span className="flex h-6 w-6 items-center justify-center rounded-full border-2 border-slate-300 transition-colors group-hover:border-emerald-500 group-hover:bg-emerald-50 group-focus-visible:border-emerald-500 group-active:bg-emerald-100">
+            <Check
+              className="h-3.5 w-3.5 text-emerald-600 opacity-0 transition-opacity group-hover:opacity-100 group-focus-visible:opacity-100"
+              aria-hidden="true"
+            />
+          </span>
+        </button>
+      )}
 
       <div className="min-w-0 flex-1 space-y-1 py-2.5">
         <div className="flex items-start gap-2">
@@ -177,7 +187,14 @@ export const TaskCard: React.FC<TaskCardProps> = ({
               </span>
             )
           )}
-          <StatusBadge status={task.status} />
+          {blocker ? (
+            <span className="inline-flex items-center gap-1 font-semibold text-amber-800">
+              <Lock className="h-3 w-3" aria-hidden="true" />
+              Bloqueada: espera a «{blocker.title}»
+            </span>
+          ) : (
+            <StatusBadge status={task.status} />
+          )}
         </div>
       </div>
 
@@ -186,6 +203,7 @@ export const TaskCard: React.FC<TaskCardProps> = ({
         onEdit={() => onEdit(task)}
         onChangeStatus={(status) => onChangeStatus(task, status)}
         onDelete={() => onDelete(task)}
+        blocked={Boolean(blocker)}
       />
     </li>
   );

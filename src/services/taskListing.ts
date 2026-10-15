@@ -105,6 +105,13 @@ const COMPARATORS: Record<SortBy, (a: TaskItem, b: TaskItem, now: Date) => numbe
 export const arrangeTasks = (tasks: TaskItem[], prefs: ListPrefs, now = new Date()) =>
   tasks.filter((t) => matchesFilters(t, prefs.filters, now)).sort((a, b) => COMPARATORS[prefs.sortBy](a, b, now));
 
+// El Top 10 son las diez primeras tareas que se pueden hacer ya: las bloqueadas por otra van con el resto
+export const splitTop10 = (arranged: TaskItem[], isBlocked: (task: TaskItem) => boolean) => {
+  const top = arranged.filter((task) => !isBlocked(task)).slice(0, 10);
+  const inTop = new Set(top);
+  return { top, rest: arranged.filter((task) => !inTop.has(task)) };
+};
+
 // Preferencias guardadas en este dispositivo; los valores desconocidos vuelven a los de por defecto
 export const parseListPrefs = (raw: string | null): ListPrefs => {
   try {
