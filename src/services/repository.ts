@@ -163,6 +163,17 @@ export const saveEmail = (db: Firestore, uid: string, email: EmailDraft) =>
 export const deleteEmail = (db: Firestore, uid: string, emailId: string) =>
   deleteDoc(doc(userCollection(db, uid, 'emails'), emailId));
 
+// Recuperar un correo eliminado, solo si nadie lo ha vuelto a guardar entretanto (p. ej. desde otra pestaña)
+export const restoreDeletedEmail = async (db: Firestore, uid: string, email: EmailDraft) => {
+  await whenSynced(db);
+  const ref = doc(userCollection(db, uid, 'emails'), email.id);
+  return runTransaction(db, async (tx) => {
+    if ((await tx.get(ref)).exists()) return false;
+    tx.set(ref, { ...email, userId: uid });
+    return true;
+  });
+};
+
 export const saveUserProfile = (db: Firestore, user: User) =>
   setDoc(
     doc(db, 'users', user.uid),
