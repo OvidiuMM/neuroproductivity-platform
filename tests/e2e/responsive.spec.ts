@@ -29,6 +29,25 @@ for (const width of [360, 375, 768, 1280]) {
   });
 }
 
+// Con el texto ampliado (panel de accesibilidad) la cabecera del móvil también cabe en una línea: la versión va al pie
+for (const textSize of ['large', 'xlarge']) {
+  test(`on a 360px phone with ${textSize} text the header stays on one line`, async ({ page }) => {
+    await page.setViewportSize({ width: 360, height: 800 });
+    await page.addInitScript(
+      (size) => localStorage.setItem('neuro_a11y_v1', JSON.stringify({ textSize: size })),
+      textSize
+    );
+    await page.goto('/');
+    await signInWithGoogle(page);
+    const header = page.locator('header');
+    const brand = (await header.getByText('CLAR', { exact: true }).boundingBox())!;
+    const lists = (await page.getByRole('group', { name: 'Lista activa' }).boundingBox())!;
+    expect(Math.abs(lists.y + lists.height / 2 - (brand.y + brand.height / 2))).toBeLessThan(12);
+    await expect(header.getByText(/^v\d+\.\d+\.\d+$/)).toBeHidden();
+    await expectNoHorizontalOverflow(page, `cabecera con texto ${textSize}`);
+  });
+}
+
 test('on desktop the name and version stay before the first section', async ({ page }) => {
   await page.setViewportSize({ width: 1280, height: 900 });
   await page.goto('/');
