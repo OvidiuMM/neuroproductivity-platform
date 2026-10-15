@@ -141,10 +141,11 @@ jobs:
               exit 1
             fi
           done
-          printf 'ANDROID_PACKAGE_NAME=%s\nANDROID_SHA256_FINGERPRINT=%s\nADMIN_EMAIL=%s\nSMTP_USER=%s\nAPP_URL=%s\n' \
-            "$ANDROID_PACKAGE_NAME" "$ANDROID_SHA256_FINGERPRINT" "$ADMIN_EMAIL" "$SMTP_USER" "$APP_URL" > functions/.env
-          # Sin SMTP_HOST, la función usa su valor por defecto (smtp.ionos.es)
-          if [ -n "$SMTP_HOST" ]; then printf 'SMTP_HOST=%s\n' "$SMTP_HOST" >> functions/.env; fi
+          # Todos los parámetros van en el archivo: en modo no interactivo, el CLI no usa los valores por defecto del
+          # código y falla si falta alguno. Sin la variable SMTP_HOST, el servidor de IONOS.
+          printf 'ANDROID_PACKAGE_NAME=%s\nANDROID_SHA256_FINGERPRINT=%s\nADMIN_EMAIL=%s\nSMTP_USER=%s\nSMTP_HOST=%s\nAPP_URL=%s\n' \
+            "$ANDROID_PACKAGE_NAME" "$ANDROID_SHA256_FINGERPRINT" "$ADMIN_EMAIL" "$SMTP_USER" "${SMTP_HOST:-smtp.ionos.es}" "$APP_URL" \
+            > functions/.env
 
       # Los predeploy de firebase.json compilan la SPA y la función antes de subirlas.
       # firebase-tools sale de devDependencies (versión fijada en package.json).
