@@ -14,7 +14,7 @@ import {
 import { analyzeImmediateActionSyntax, SyntaxAnalysisResult } from '../services/syntaxAnalyzer';
 import { inferWheelCategory, NLPSuggestionResult } from '../services/nlpEngine';
 import { formatTaskDates, isCancelled, toLocalDate, validateTaskDates } from '../services/tasks';
-import { dependencyCandidates, dependentsOf } from '../services/dependencies';
+import { createsCycle, dependencyCandidates, dependentsOf, tasksById } from '../services/dependencies';
 import { ESTIMATE_OPTIONS } from '../services/taskListing';
 import {
   buildRecurrence,
@@ -375,6 +375,12 @@ export const TaskModal: React.FC<TaskModalProps> = ({
   // DEPENDENCIA: tareas a las que puede esperar (sin ciclos), la elegida y las que esperan a esta
   const dependencyOptions = useMemo(() => dependencyCandidates(editingTask?.id, tasks), [editingTask, tasks]);
   const waitingFor = tasks.find((t) => t.id === dependsOn);
+  // Se revisa con las tareas de ahora: si entretanto la elegida pasó a esperar a esta (en otra pestaña o dispositivo),
+  // guardarla dejaría las dos bloqueadas para siempre
+  const dependencyError =
+    dependsOn && createsCycle(editingTask?.id, dependsOn, tasksById(tasks))
+      ? 'Esa tarea ya espera a esta (directa o indirectamente): elige otra o ninguna.'
+      : null;
   const waitingForThis = editingTask ? dependentsOf(editingTask, tasks) : [];
   const goalOptions = goals.filter((g) => g.status === 'ACTIVE' || g.id === goalId);
   const suggestedGoal = useMemo(() => (goalId ? null : suggestGoal(title, goals)), [goalId, title, goals]);
@@ -472,6 +478,7 @@ export const TaskModal: React.FC<TaskModalProps> = ({
     !isSyntaxInvalid &&
     !datesError &&
     !recurrenceError &&
+    !dependencyError &&
     Boolean(listContext) &&
     Boolean(priority);
 
@@ -993,9 +1000,11 @@ export const TaskModal: React.FC<TaskModalProps> = ({
                   <option value="">(No espera a ninguna tarea)</option>
                   {dependsOn && !dependencyOptions.some((t) => t.id === dependsOn) && (
                     <option value={dependsOn}>
-                      {waitingFor
-                        ? `${waitingFor.title} (${isCancelled(waitingFor) ? 'cancelada' : 'hecha'})`
-                        : '(Tarea eliminada)'}
+                      {!waitingFor
+                        ? '(Tarea eliminada)'
+                        : dependencyError
+                          ? `${waitingFor.title} (espera a esta tarea)`
+                          : `${waitingFor.title} (${isCancelled(waitingFor) ? 'cancelada' : 'hecha'})`}
                     </option>
                   )}
                   {(['WORK', 'PERSONAL'] as const)
@@ -1016,6 +1025,12 @@ export const TaskModal: React.FC<TaskModalProps> = ({
                   Mientras esa tarea no esté hecha o cancelada, esta queda bloqueada: no entra en el Top 10 ni se puede
                   marcar como hecha o en progreso. Varias tareas pueden esperar a la misma.
                 </p>
+                {dependencyError && (
+                  <p role="alert" className="mt-1 flex items-center gap-1 text-xs font-medium text-red-600">
+                    <AlertTriangle className="h-3.5 w-3.5 shrink-0" />
+                    {dependencyError}
+                  </p>
+                )}
                 {waitingForThis.length > 0 && (
                   <p className="mt-1 text-[11px] text-slate-600">
                     Esperan a esta tarea: {waitingForThis.map((t) => `«${t.title}»`).join(', ')}.
@@ -1264,10 +1279,10 @@ export const TaskModal: React.FC<TaskModalProps> = ({
           </div>
 
           {/* Con «Más opciones» plegado, sus errores se ven igualmente */}
-          {!showMore && (datesError || recurrenceError) && (
+          {!showMore && (datesError || recurrenceError || dependencyError) && (
             <p role="alert" className="flex items-center gap-1 text-xs font-medium text-red-600">
               <AlertTriangle className="h-3.5 w-3.5" />
-              {datesError ?? recurrenceError} (en «Más opciones»)
+              {datesError ?? recurrenceError ?? dependencyError} (en «Más opciones»)
             </p>
           )}
 
