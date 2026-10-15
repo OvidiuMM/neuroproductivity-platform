@@ -8,6 +8,7 @@ import {
   isArchivedStatus,
   type ArchivedStatus
 } from './tasks';
+import { isAreaId } from './wheel';
 
 // ESTIMACIÓN: duración estimada de la tarea, en minutos
 export const ESTIMATE_OPTIONS: { value: number; label: string }[] = [
@@ -33,7 +34,7 @@ export interface ListFilters {
   maxEstimate: number | 'ALL'; // con filtro, las tareas sin estimación no aparecen
   status: Exclude<TaskStatus, ArchivedStatus> | 'ALL';
   deadline: DeadlineFilter;
-  category: WheelCategory | 'ALL';
+  category: WheelCategory; // 'ALL' o el identificador de un área
 }
 
 export interface ListPrefs {
@@ -56,7 +57,8 @@ const FILTER_OPTIONS: { [K in keyof ListFilters]: readonly ListFilters[K][] } = 
     )
   ],
   deadline: ['ALL', 'OVERDUE', 'NEXT_7_DAYS', 'WITH_DATE', 'NO_DATE'],
-  category: ['ALL', 'Salud', 'Carrera Profesional', 'Finanzas', 'Familia', 'Ocio', 'Relaciones', 'Espiritualidad']
+  // Las áreas son de cada cuenta: vale cualquier identificador de área (ver parseListPrefs)
+  category: ['ALL']
 };
 
 export const countActiveFilters = (filters: ListFilters) =>
@@ -87,23 +89,27 @@ const byDueAsc = (a: TaskItem, b: TaskItem) =>
   (dueMoment(a)?.getTime() ?? Infinity) - (dueMoment(b)?.getTime() ?? Infinity);
 const byUpdatedDesc = (a: TaskItem, b: TaskItem) => b.updatedAt.localeCompare(a.updatedAt);
 const byEstimateAsc = (a: TaskItem, b: TaskItem) => (a.estimateMinutes ?? Infinity) - (b.estimateMinutes ?? Infinity);
-// Las tareas sin área van al final (un carácter centinela no sirve: localeCompare no lo ordena el último)
-const byCategoryAsc = (a: TaskItem, b: TaskItem) => {
-  if (a.wheelCategory && b.wheelCategory) return a.wheelCategory.localeCompare(b.wheelCategory, 'es');
+// Por el nombre del área (cada cuenta los puede cambiar); las tareas sin área van al final (un carácter centinela no
+// sirve: localeCompare no lo ordena el último)
+type AreaName = (id: string) => string;
+const byCategoryAsc = (a: TaskItem, b: TaskItem, name: AreaName) => {
+  if (a.wheelCategory && b.wheelCategory) return name(a.wheelCategory).localeCompare(name(b.wheelCategory), 'es');
   return (a.wheelCategory ? 0 : 1) - (b.wheelCategory ? 0 : 1);
 };
 
 // Cada criterio desempata con los siguientes; lo que no tiene fecha o estimación va al final
-const COMPARATORS: Record<SortBy, (a: TaskItem, b: TaskItem, now: Date) => number> = {
+const COMPARATORS: Record<SortBy, (a: TaskItem, b: TaskItem, now: Date, name: AreaName) => number> = {
   priority: (a, b, now) => byPriorityDesc(a, b, now) || byDueAsc(a, b) || byUpdatedDesc(a, b),
   deadline: (a, b, now) => byDueAsc(a, b) || byPriorityDesc(a, b, now) || byUpdatedDesc(a, b),
   estimate: (a, b, now) => byEstimateAsc(a, b) || byPriorityDesc(a, b, now) || byDueAsc(a, b),
   date: (a, b) => byUpdatedDesc(a, b),
-  category: (a, b, now) => byCategoryAsc(a, b) || byPriorityDesc(a, b, now)
+  category: (a, b, now, name) => byCategoryAsc(a, b, name) || byPriorityDesc(a, b, now)
 };
 
-export const arrangeTasks = (tasks: TaskItem[], prefs: ListPrefs, now = new Date()) =>
-  tasks.filter((t) => matchesFilters(t, prefs.filters, now)).sort((a, b) => COMPARATORS[prefs.sortBy](a, b, now));
+export const arrangeTasks = (tasks: TaskItem[], prefs: ListPrefs, now = new Date(), areaName: AreaName = (id) => id) =>
+  tasks
+    .filter((t) => matchesFilters(t, prefs.filters, now))
+    .sort((a, b) => COMPARATORS[prefs.sortBy](a, b, now, areaName));
 
 // El Top 10 son las diez primeras tareas que se pueden hacer ya: las bloqueadas por otra van con el resto
 export const splitTop10 = (arranged: TaskItem[], isBlocked: (task: TaskItem) => boolean) => {
@@ -118,6 +124,7 @@ export const parseListPrefs = (raw: string | null): ListPrefs => {
     const stored = (raw ? JSON.parse(raw) : {}) as { sortBy?: unknown; filters?: Record<string, unknown> };
     const filterValue = <K extends keyof ListFilters>(key: K): ListFilters[K] => {
       const value = stored.filters?.[key];
+      if (key === 'category' && isAreaId(value)) return value as ListFilters[K];
       const options: readonly unknown[] = FILTER_OPTIONS[key];
       return options.includes(value) ? (value as ListFilters[K]) : DEFAULT_LIST_PREFS.filters[key];
     };

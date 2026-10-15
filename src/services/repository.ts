@@ -3,6 +3,7 @@ import {
   deleteDoc,
   deleteField,
   doc,
+  getDoc,
   getDocs,
   onSnapshot,
   query,
@@ -14,7 +15,7 @@ import {
   type Firestore
 } from 'firebase/firestore';
 import type { User } from 'firebase/auth';
-import { EmailDraft, Goal, MeetingGuard, Project, TaskItem, WheelOfLifeLog } from '../types';
+import { EmailDraft, Goal, MeetingGuard, Project, TaskItem, WheelArea, WheelOfLifeLog } from '../types';
 import { isUnchanged, normalizeTask } from './tasks';
 import { onboardingRecord, type OnboardingOutcome, type OnboardingRecord } from './onboarding';
 
@@ -219,18 +220,28 @@ export const saveUserProfile = (db: Firestore, user: User) =>
 
 // Perfil (users/{uid}) en vivo: por ahora solo interesa si ya vio la bienvenida. `fromServer` dice si el dato ya
 // está confirmado por el servidor (al principio puede venir solo de la caché, o no existir aún)
+// Lo que la app lee del perfil: si ya vio la bienvenida y sus áreas de la Rueda (sin validar: ver resolveAreas)
+export type ProfileRecord = OnboardingRecord & { wheelAreas?: unknown };
+
 export const subscribeToProfile = (
   db: Firestore,
   uid: string,
-  onData: (profile: OnboardingRecord | null, fromServer: boolean) => void,
+  onData: (profile: ProfileRecord | null, fromServer: boolean) => void,
   onError: (error: Error) => void
 ) =>
   onSnapshot(
     doc(db, 'users', uid),
     { includeMetadataChanges: true },
-    (snapshot) => onData((snapshot.data() as OnboardingRecord | undefined) ?? null, !snapshot.metadata.fromCache),
+    (snapshot) => onData((snapshot.data() as ProfileRecord | undefined) ?? null, !snapshot.metadata.fromCache),
     onError
   );
+
+// Las áreas de la Rueda de la cuenta, en su orden (con las ocultas): se guardan enteras
+export const saveWheelAreas = (db: Firestore, uid: string, areas: WheelArea[]) =>
+  setDoc(doc(db, 'users', uid), { wheelAreas: areas }, { merge: true });
+
+export const readWheelAreas = async (db: Firestore, uid: string) =>
+  ((await getDoc(doc(db, 'users', uid))).data() as ProfileRecord | undefined)?.wheelAreas;
 
 export const markOnboardingSeen = (db: Firestore, uid: string, outcome: OnboardingOutcome) =>
   setDoc(doc(db, 'users', uid), onboardingRecord(outcome), { merge: true });

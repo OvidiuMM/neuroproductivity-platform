@@ -13,6 +13,7 @@ import { formatEstimate } from '../services/taskListing';
 import { alarmMoment, describeAlarm } from '../services/alarms';
 import { TaskDates } from './TaskDates';
 import { TaskActionsMenu } from './TaskActionsMenu';
+import { useAreas } from '../hooks/useAreas';
 
 // top: Top 10 (elevada, con descripción) · peripheral: posición 11 en adelante (plana) · someday: «Quizá»
 type Variant = 'top' | 'peripheral' | 'someday';
@@ -122,6 +123,7 @@ export const TaskCard: React.FC<TaskCardProps> = ({
   onDelete,
   onDownload
 }) => {
+  const { label: areaName } = useAreas();
   // El color de plazo sustituye al color base: con las dos clases, el orden del CSS decidiría cuál gana
   const titleColor = (base: string) => DEADLINE_TITLE_CLASS[getDeadlineState(task, now)] || base;
   const isTop = variant === 'top';
@@ -197,7 +199,7 @@ export const TaskCard: React.FC<TaskCardProps> = ({
             task.wheelCategory && (
               <span className="inline-flex items-center gap-1 font-semibold text-indigo-700">
                 <Sparkles className="h-3 w-3 text-indigo-500" aria-hidden="true" />
-                {task.wheelCategory}
+                {areaName(task.wheelCategory)}
               </span>
             )
           )}

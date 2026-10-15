@@ -4,7 +4,8 @@ import { useModalFocus } from '../hooks/useModalFocus';
 import { useDiscardGuard } from '../hooks/useDiscardGuard';
 import { Goal, Project } from '../types';
 import { PROJECT_DESCRIPTION_MAX, PROJECT_TITLE_MAX, validateProject } from '../services/projects';
-import { WHEEL_CATEGORIES } from '../services/wheel';
+import { areasInUse } from '../services/wheel';
+import { useAreas } from '../hooks/useAreas';
 import { DateField } from './DateField';
 import { DiscardChangesPrompt } from './DiscardChangesPrompt';
 
@@ -55,6 +56,7 @@ export const ProjectModal: React.FC<ProjectModalProps> = ({
 
   // Metas que se pueden elegir: las activas, y la ya elegida aunque esté lograda o archivada
   const goalOptions = goals.filter((g) => g.status === 'ACTIVE' || g.id === goalId);
+  const { areas, label } = useAreas();
   const error = validateProject({ title, goalId, endDate, description });
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -137,8 +139,11 @@ export const ProjectModal: React.FC<ProjectModalProps> = ({
             >
               <option value="">Elige una meta…</option>
               {goalId && !goals.some((g) => g.id === goalId) && <option value={goalId}>(Meta no disponible)</option>}
-              {WHEEL_CATEGORIES.filter((area) => goalOptions.some((g) => g.area === area)).map((area) => (
-                <optgroup key={area} label={area}>
+              {areasInUse(
+                areas,
+                goalOptions.map((g) => g.area)
+              ).map((area) => (
+                <optgroup key={area} label={label(area)}>
                   {goalOptions
                     .filter((g) => g.area === area)
                     .map((g) => (
