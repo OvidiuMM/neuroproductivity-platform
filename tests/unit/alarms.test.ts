@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import type { TaskItem } from '../../src/types';
 import {
+  alarmLateNote,
   alarmMoment,
   alarmUnavailableReason,
   describeAlarm,
@@ -125,4 +126,14 @@ test('an alert from another tab waits for its task, for a few minutes at most', 
   const after = matchPendingAlerts(before.rest, [alarm], now.getTime());
   assert.deepEqual(after.matched, [alarm]);
   assert.deepEqual([...after.rest.keys()], ['otra@2030-06-15T07:00:00.000Z']);
+});
+
+test('an alert that comes late says when the alarm was; on time it says nothing', () => {
+  const at = new Date(2030, 5, 15, 11, 0);
+  assert.equal(alarmLateNote(at, new Date(2030, 5, 15, 11, 1)), null);
+  assert.equal(alarmLateNote(at, new Date(2030, 5, 15, 23, 0)), 'Era a las 11:00: CLAR no estaba abierta a esa hora.');
+  assert.equal(
+    alarmLateNote(at, new Date(2030, 5, 16, 8, 0)),
+    'Era el 15 jun a las 11:00: CLAR no estaba abierta a esa hora.'
+  );
 });

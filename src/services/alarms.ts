@@ -55,6 +55,16 @@ const dayFormat = new Intl.DateTimeFormat('es-ES', { day: 'numeric', month: 'sho
 const pad = (n: number) => String(n).padStart(2, '0');
 export const formatClock = (date: Date) => `${pad(date.getHours())}:${pad(date.getMinutes())}`;
 
+// Un aviso que llega más de dos minutos tarde (CLAR estaba cerrada o el equipo dormido a esa hora) dice cuándo era:
+// «Era a las 11:00» o, si fue otro día, «Era el 15 oct a las 11:00». A tiempo, null.
+export const LATE_ALERT_MS = 2 * 60_000;
+export const alarmLateNote = (at: Date, raisedAt: Date) => {
+  if (raisedAt.getTime() - at.getTime() <= LATE_ALERT_MS) return null;
+  return toDateString(at) === toDateString(raisedAt)
+    ? `Era a las ${formatClock(at)}: CLAR no estaba abierta a esa hora.`
+    : `Era el ${dayFormat.format(at)} a las ${formatClock(at)}: CLAR no estaba abierta a esa hora.`;
+};
+
 // Cuándo sonará, para el formulario: «Sonará el 15 oct a las 10:57» o «Sonará la víspera, el 14 oct, a las 20:00»
 export const describeAlarm = (task: AlarmFields) => {
   const at = alarmMoment(task);

@@ -3,6 +3,7 @@ import { useModalFocus } from '../hooks/useModalFocus';
 import { MeetingGuard } from '../types';
 import { X, Calendar, Clock, ShieldAlert, CheckCircle2, AlertTriangle, Plus, Trash2, Check } from 'lucide-react';
 import { DateField } from './DateField';
+import { TimeField } from './TimeField';
 
 interface MeetingModalProps {
   isOpen: boolean;
@@ -183,11 +184,12 @@ export const MeetingModal: React.FC<MeetingModalProps> = ({ isOpen, onClose, onS
                 Inicio <span className="text-red-500">*</span>
               </label>
               <div className="relative">
-                <input
+                <TimeField
                   id="meeting-start"
-                  type="time"
+                  label="Inicio"
+                  hasVisibleLabel
                   value={startTime}
-                  onChange={(e) => setStartTime(e.target.value)}
+                  onChange={setStartTime}
                   className={`w-full rounded-xl border px-3 py-2 text-xs focus:ring-2 focus:outline-none ${
                     isMorningMeeting
                       ? 'border-red-400 bg-red-50/30 text-red-900 focus:ring-red-400'
@@ -204,11 +206,12 @@ export const MeetingModal: React.FC<MeetingModalProps> = ({ isOpen, onClose, onS
               >
                 Hora de fin <span className="text-red-500">*</span>
               </label>
-              <input
+              <TimeField
                 id="meeting-end"
-                type="time"
+                label="Hora de fin"
+                hasVisibleLabel
                 value={endTime}
-                onChange={(e) => setEndTime(e.target.value)}
+                onChange={setEndTime}
                 className={`w-full rounded-xl border px-3 py-2 text-xs focus:ring-2 focus:outline-none ${
                   !isTimeOrderValid
                     ? 'border-red-400 bg-red-50/30 text-red-900 focus:ring-red-400'
