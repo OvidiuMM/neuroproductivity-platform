@@ -3,6 +3,7 @@ import { LogOut, MailCheck, RefreshCw, Send } from 'lucide-react';
 import type { User } from 'firebase/auth';
 import { describeAuthError, refreshVerification, resendVerification } from '../services/auth';
 import { AccessibilityTrigger, AccessibleScreen } from './AccessibilityPanel';
+import { LegalLinks } from './LegalLinks';
 import { BRAND_NAME, BrandMark } from './BrandMark';
 
 interface EmailVerificationScreenProps {
@@ -106,8 +107,9 @@ export const EmailVerificationScreen: React.FC<EmailVerificationScreenProps> = (
               </button>
             </div>
 
-            <div className="text-center">
+            <div className="space-y-2 text-center">
               <AccessibilityTrigger onClick={openAccessibility} />
+              <LegalLinks />
             </div>
           </div>
         </main>
