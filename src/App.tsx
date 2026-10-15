@@ -81,6 +81,7 @@ import { EmailModal, type EmailSaveKind } from './components/EmailModal';
 import { isDraft } from './services/email';
 import { SplashScreen } from './components/SplashScreen';
 import { AccountMenu } from './components/AccountMenu';
+import { LegalLinks } from './components/LegalLinks';
 import { ImportLocalDataModal } from './components/ImportLocalDataModal';
 import { HomeView } from './components/HomeView';
 import {
@@ -1015,6 +1016,7 @@ export default function App({ user, services, isAdmin = false }: AppProps) {
               >
                 Ver la ayuda
               </button>
+              <LegalLinks newTab />
             </div>
           </div>
         </footer>
