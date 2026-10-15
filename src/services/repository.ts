@@ -14,13 +14,13 @@ import {
   type Firestore
 } from 'firebase/firestore';
 import type { User } from 'firebase/auth';
-import { EmailDraft, Goal, MeetingGuard, TaskItem, WheelOfLifeLog } from '../types';
+import { EmailDraft, Goal, MeetingGuard, Project, TaskItem, WheelOfLifeLog } from '../types';
 import { isUnchanged, normalizeTask } from './tasks';
 import { onboardingRecord, type OnboardingOutcome, type OnboardingRecord } from './onboarding';
 
 // Datos de cada persona en users/{uid}/<colección>/<id>. Las reglas (firestore.rules) solo dejan acceder al propio uid.
-export type UserCollection = 'tasks' | 'wheelLogs' | 'meetings' | 'emails' | 'goals';
-export const USER_COLLECTIONS: UserCollection[] = ['tasks', 'wheelLogs', 'meetings', 'emails', 'goals'];
+export type UserCollection = 'tasks' | 'wheelLogs' | 'meetings' | 'emails' | 'goals' | 'projects';
+export const USER_COLLECTIONS: UserCollection[] = ['tasks', 'wheelLogs', 'meetings', 'emails', 'goals', 'projects'];
 
 export interface UserData {
   tasks: TaskItem[];
@@ -28,6 +28,7 @@ export interface UserData {
   meetings: MeetingGuard[];
   emails: EmailDraft[];
   goals: Goal[];
+  projects: Project[];
 }
 
 const userCollection = (db: Firestore, uid: string, name: UserCollection) => collection(db, 'users', uid, name);
@@ -40,7 +41,8 @@ const SORTERS = {
   wheelLogs: (a: WheelOfLifeLog, b: WheelOfLifeLog) => a.timestamp.localeCompare(b.timestamp),
   meetings: (a: MeetingGuard, b: MeetingGuard) => byDateDesc(a.createdAt, b.createdAt),
   emails: (a: EmailDraft, b: EmailDraft) => byDateDesc(a.updatedAt ?? a.sentAt, b.updatedAt ?? b.sentAt),
-  goals: (a: Goal, b: Goal) => byDateDesc(a.createdAt, b.createdAt)
+  goals: (a: Goal, b: Goal) => byDateDesc(a.createdAt, b.createdAt),
+  projects: (a: Project, b: Project) => byDateDesc(a.createdAt, b.createdAt)
 };
 
 export interface SnapshotInfo {
@@ -145,6 +147,27 @@ export const deleteGoal = async (db: Firestore, uid: string, goal: Goal) => {
       const current = await tx.get(ref);
       if ((current.data() as TaskItem | undefined)?.goalId !== goal.id) return;
       tx.update(ref, { goalId: deleteField(), wheelCategory: goal.area, updatedAt });
+    });
+  for (let i = 0; i < linked.docs.length; i += UNLINK_CONCURRENCY) {
+    await Promise.all(linked.docs.slice(i, i + UNLINK_CONCURRENCY).map((task) => unlink(task.ref)));
+  }
+};
+
+// PROYECTOS: el proyecto solo; sus tareas toman la meta del proyecto al leerlas (applyProjectGoals)
+export const saveProject = (db: Firestore, uid: string, project: Project) =>
+  setDoc(doc(userCollection(db, uid, 'projects'), project.id), { ...project, userId: uid });
+
+// Al eliminar un proyecto, sus tareas siguen en la meta del proyecto y sin el vínculo, como al eliminar una meta: cada
+// una en su propia transacción y solo si sigue apuntando a este proyecto
+export const deleteProject = async (db: Firestore, uid: string, project: Project) => {
+  await deleteDoc(doc(userCollection(db, uid, 'projects'), project.id));
+  const linked = await getDocs(query(userCollection(db, uid, 'tasks'), where('projectId', '==', project.id)));
+  const updatedAt = new Date().toISOString();
+  const unlink = (ref: (typeof linked.docs)[number]['ref']) =>
+    runTransaction(db, async (tx) => {
+      const current = await tx.get(ref);
+      if ((current.data() as TaskItem | undefined)?.projectId !== project.id) return;
+      tx.update(ref, { projectId: deleteField(), goalId: project.goalId, updatedAt });
     });
   for (let i = 0; i < linked.docs.length; i += UNLINK_CONCURRENCY) {
     await Promise.all(linked.docs.slice(i, i + UNLINK_CONCURRENCY).map((task) => unlink(task.ref)));

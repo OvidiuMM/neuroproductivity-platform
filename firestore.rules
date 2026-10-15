@@ -63,14 +63,14 @@ service cloud.firestore {
 
       match /{collection}/{docId} {
         allow read, delete: if isOwner(uid)
-          && collection in ['tasks', 'wheelLogs', 'meetings', 'emails', 'goals'];
+          && collection in ['tasks', 'wheelLogs', 'meetings', 'emails', 'goals', 'projects'];
         allow create: if hasAccess(uid)
-          && collection in ['tasks', 'wheelLogs', 'meetings', 'emails', 'goals'];
+          && collection in ['tasks', 'wheelLogs', 'meetings', 'emails', 'goals', 'projects'];
 
         // Las evaluaciones de la Rueda de la Vida son append-only: no se modifican.
         // Reescribir el mismo contenido sí se permite para que una importación pueda reintentarse.
         allow update: if hasAccess(uid)
-          && collection in ['tasks', 'wheelLogs', 'meetings', 'emails', 'goals']
+          && collection in ['tasks', 'wheelLogs', 'meetings', 'emails', 'goals', 'projects']
           && (collection != 'wheelLogs' || request.resource.data == resource.data);
       }
     }
