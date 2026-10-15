@@ -97,15 +97,21 @@ export interface MeetingGuard {
   createdAt: string;
 }
 
+// Correo de «Tiempo protegido». CLAR no lo envía: lo guarda y lo pasa al programa de correo.
+export type EmailStatus = 'draft' | 'saved';
+
 export interface EmailDraft {
   id: string;
   userId: string;
   subject: string;
   body: string;
-  attachments: { name: string; size: string }[];
+  // Solo nombre y tamaño (legible, y en bytes para reconocer el mismo archivo): el archivo no sale del equipo
+  attachments: { name: string; size: string; bytes?: number }[];
   noAttachmentsDeclared: boolean;
   recipients: string[];
-  sentAt?: string;
+  sentAt?: string; // cuándo se guardó terminado
+  status?: EmailStatus; // sin estado: guardado (los de antes de 0.9.2)
+  updatedAt?: string; // último guardado, también de los borradores
 }
 
 export interface UserProfile {

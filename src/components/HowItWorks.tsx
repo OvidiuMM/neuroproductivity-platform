@@ -89,7 +89,9 @@ const SCREENS: { tab: AppTab; title: string; icon: React.ReactNode; points: stri
     points: [
       'El «triángulo de las Bermudas» del tiempo son sus tres grandes fugas: reuniones, correo y mensajes. Aquí las controlas.',
       'Reuniones: no se pueden programar antes de las 12:00 h y exigen hora de fin, orden del día y un moderador.',
-      'Correo: primero adjuntos y cuerpo del mensaje; los destinatarios se desbloquean al final.'
+      'Correo: primero adjuntos y cuerpo del mensaje; los destinatarios se desbloquean al final. De los adjuntos, CLAR apunta solo el nombre y el tamaño: los archivos no salen de tu equipo.',
+      'Lo que no termines queda en «Borradores»: al cerrar se guarda solo, y con «Continuar» sigues donde lo dejaste. Los correos guardados también se pueden abrir y editar.',
+      'CLAR no envía el correo: «Abrir en mi correo» lo pasa a tu programa de correo con los destinatarios, el asunto y el texto; los adjuntos los añades allí.'
     ]
   }
 ];

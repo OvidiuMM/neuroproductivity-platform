@@ -1,20 +1,95 @@
 import React from 'react';
 import { MeetingGuard, EmailDraft } from '../types';
-import { ShieldCheck, Calendar, Mail, Clock, UserCheck, Paperclip, Plus } from 'lucide-react';
+import { ShieldCheck, Calendar, Mail, Clock, UserCheck, Paperclip, Plus, FileText, Trash2 } from 'lucide-react';
+import { isDraft, lastSaved } from '../services/email';
 
 interface BermudasShieldProps {
   meetings: MeetingGuard[];
   emails: EmailDraft[];
   onOpenNewMeeting: () => void;
   onOpenNewEmail: () => void;
+  // Abrir un correo guardado o seguir con un borrador, y eliminarlo
+  onOpenEmail: (email: EmailDraft) => void;
+  onDeleteEmail: (email: EmailDraft) => void;
 }
+
+const savedFormat = new Intl.DateTimeFormat('es-ES', {
+  day: 'numeric',
+  month: 'short',
+  hour: '2-digit',
+  minute: '2-digit'
+});
+
+// Un correo de la lista: borrador («Continuar») o guardado («Abrir»), con «Eliminar»
+const EmailCard: React.FC<{ email: EmailDraft; onOpen: () => void; onDelete: () => void }> = ({
+  email,
+  onOpen,
+  onDelete
+}) => {
+  const draft = isDraft(email);
+  const title = email.subject.trim() || '(Sin asunto)';
+  const saved = lastSaved(email);
+  return (
+    <li className="space-y-2 rounded-xl border border-slate-200 bg-slate-50/40 p-4">
+      <div className="flex items-start justify-between gap-2">
+        <h5 className="min-w-0 text-xs font-bold break-words text-slate-900">{title}</h5>
+        {saved && (
+          <span className="shrink-0 font-mono text-[10px] text-slate-500">{savedFormat.format(new Date(saved))}</span>
+        )}
+      </div>
+
+      {email.body.trim() && <p className="line-clamp-2 text-xs leading-relaxed text-slate-600">{email.body}</p>}
+
+      <div className="flex flex-wrap items-center justify-between gap-2 border-t border-slate-200/60 pt-1 text-[11px]">
+        <div className="flex items-center gap-1.5 text-slate-500">
+          <Paperclip className="h-3.5 w-3.5 text-slate-500" aria-hidden="true" />
+          <span>
+            {email.attachments.length > 0
+              ? `${email.attachments.length} ${email.attachments.length === 1 ? 'adjunto' : 'adjuntos'}`
+              : 'Sin adjuntos'}
+          </span>
+        </div>
+        {email.recipients.length > 0 && (
+          <div className="font-mono text-[10px] break-all text-indigo-700">Para: {email.recipients.join(', ')}</div>
+        )}
+      </div>
+
+      <div className="-ml-2 flex flex-wrap gap-1">
+        <button
+          type="button"
+          onClick={onOpen}
+          aria-label={`${draft ? 'Continuar el borrador' : 'Abrir el correo'} «${title}»`}
+          className="inline-flex min-h-11 items-center gap-1.5 rounded-lg px-2 text-xs font-semibold text-indigo-700 hover:bg-indigo-50 hover:text-indigo-900"
+        >
+          {draft ? 'Continuar' : 'Abrir'}
+        </button>
+        <button
+          type="button"
+          onClick={onDelete}
+          aria-label={`Eliminar ${draft ? 'el borrador' : 'el correo'} «${title}»`}
+          className="inline-flex min-h-11 items-center gap-1.5 rounded-lg px-2 text-xs font-semibold text-slate-600 hover:bg-red-50 hover:text-red-700"
+        >
+          <Trash2 className="h-3.5 w-3.5" aria-hidden="true" />
+          Eliminar
+        </button>
+      </div>
+    </li>
+  );
+};
 
 export const BermudasShield: React.FC<BermudasShieldProps> = ({
   meetings,
   emails,
   onOpenNewMeeting,
-  onOpenNewEmail
+  onOpenNewEmail,
+  onOpenEmail,
+  onDeleteEmail
 }) => {
+  const drafts = emails.filter(isDraft);
+  const saved = emails.filter((e) => !isDraft(e));
+  const card = (email: EmailDraft) => (
+    <EmailCard key={email.id} email={email} onOpen={() => onOpenEmail(email)} onDelete={() => onDeleteEmail(email)} />
+  );
   return (
     <div className="space-y-6">
       {/* Explicación de la contención del Triángulo de las Bermudas */}
@@ -137,33 +212,29 @@ export const BermudasShield: React.FC<BermudasShieldProps> = ({
             </p>
           </div>
 
-          <div className="space-y-3">
-            {emails.length === 0 ? (
-              <div className="p-6 text-center text-xs text-slate-500">No hay correos registrados.</div>
+          {drafts.length > 0 && (
+            <section aria-labelledby="email-drafts-title" className="space-y-2">
+              <h4
+                id="email-drafts-title"
+                className="flex items-center gap-1.5 text-xs font-bold tracking-wider text-slate-700 uppercase"
+              >
+                <FileText className="h-3.5 w-3.5 text-slate-500" aria-hidden="true" />
+                Borradores ({drafts.length})
+              </h4>
+              <ul className="space-y-3">{drafts.map(card)}</ul>
+            </section>
+          )}
+
+          <section aria-labelledby="email-saved-title" className="space-y-2">
+            <h4 id="email-saved-title" className="text-xs font-bold tracking-wider text-slate-700 uppercase">
+              Guardados ({saved.length})
+            </h4>
+            {saved.length === 0 ? (
+              <p className="p-6 text-center text-xs text-slate-500">No hay correos guardados.</p>
             ) : (
-              emails.map((e) => (
-                <div key={e.id} className="space-y-2 rounded-xl border border-slate-200 bg-slate-50/40 p-4">
-                  <div className="flex items-start justify-between gap-2">
-                    <h4 className="text-xs font-bold text-slate-900">{e.subject}</h4>
-                    <span className="font-mono text-[10px] text-slate-500">
-                      {new Date(e.sentAt || '').toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })}
-                    </span>
-                  </div>
-
-                  <p className="line-clamp-2 text-xs leading-relaxed text-slate-600">{e.body}</p>
-
-                  <div className="flex flex-wrap items-center justify-between gap-2 border-t border-slate-200/60 pt-1 text-[11px]">
-                    <div className="flex items-center gap-1.5 text-slate-500">
-                      <Paperclip className="h-3.5 w-3.5 text-slate-500" />
-                      <span>{e.attachments.length > 0 ? `${e.attachments.length} adjunto(s)` : 'Sin adjuntos'}</span>
-                    </div>
-
-                    <div className="font-mono text-[10px] text-indigo-700">Para: {e.recipients.join(', ')}</div>
-                  </div>
-                </div>
-              ))
+              <ul className="space-y-3">{saved.map(card)}</ul>
             )}
-          </div>
+          </section>
         </div>
       </div>
     </div>
