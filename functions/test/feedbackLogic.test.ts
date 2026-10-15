@@ -2,10 +2,13 @@ import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 import {
   DESCRIPTION_MAX_LENGTH,
+  REPLY_MAX_LENGTH,
   SUBJECT_MAX_LENGTH,
   buildFeedbackEmail,
+  buildReplyEmail,
   parseContext,
   parseFeedback,
+  parseReply,
   recentSends,
   type FeedbackTicket
 } from '../src/feedbackLogic';
@@ -85,5 +88,59 @@ describe('mensajes de contacto', () => {
     assert.match(email.text, /Ana \(ana@example\.com\) ha escrito desde CLAR\./);
     assert.match(email.text, /- Navegador: Chrome 141/);
     assert.match(email.text, /«Mensajes»: https:\/\/example\.web\.app/);
+  });
+});
+
+describe('respuestas de la administración', () => {
+  const ticket: FeedbackTicket = {
+    type: 'bug',
+    subject: 'No carga la agenda',
+    description: 'Se queda en blanco.\n\nPasa desde ayer.',
+    uid: 'u1',
+    email: 'ana@example.com',
+    name: 'Ana',
+    status: 'new',
+    createdAt: '2026-10-15T09:00:00.000Z',
+    updatedAt: '2026-10-15T09:00:00.000Z'
+  };
+
+  it('acepta el id de un mensaje y un texto no vacío, sin caracteres de control', () => {
+    assert.deepEqual(parseReply({ ticketId: 'AbC_12-x', message: '  Ya está arreglado.\u0007 ' }), {
+      ticketId: 'AbC_12-x',
+      message: 'Ya está arreglado.'
+    });
+    assert.equal(parseReply({ ticketId: 'AbC', message: '   ' }), null);
+    assert.equal(parseReply({ ticketId: '../otro', message: 'Hola' }), null);
+    assert.equal(parseReply({ message: 'Hola' }), null);
+    assert.equal(parseReply(null), null);
+    assert.equal(
+      parseReply({ ticketId: 'a', message: 'x'.repeat(REPLY_MAX_LENGTH + 10) })?.message.length,
+      REPLY_MAX_LENGTH
+    );
+  });
+
+  it('responde por email a quien escribió, con su mensaje citado, y la respuesta vuelve a la administración', () => {
+    const email = buildReplyEmail(ticket, 'Gracias, Ana. Ya está arreglado.', 'admin@example.com');
+    assert.equal(email.subject, 'Re: [CLAR] No carga la agenda');
+    assert.equal(email.replyTo, 'admin@example.com');
+    assert.equal(
+      email.text,
+      [
+        'Hola, Ana:',
+        '',
+        'Gracias, Ana. Ya está arreglado.',
+        '',
+        '—',
+        'Equipo de CLAR',
+        '',
+        'Tu mensaje (Error o fallo):',
+        '> No carga la agenda',
+        '>',
+        '> Se queda en blanco.',
+        '>',
+        '> Pasa desde ayer.'
+      ].join('\n')
+    );
+    assert.match(buildReplyEmail({ ...ticket, name: '' }, 'Hola', 'admin@example.com').text, /^Hola:\n/);
   });
 });

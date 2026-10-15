@@ -1,7 +1,14 @@
-import React, { useState } from 'react';
-import { Mail } from 'lucide-react';
+import React, { useEffect, useRef, useState } from 'react';
+import { Mail, Reply } from 'lucide-react';
 import { FEEDBACK_TYPES } from '../services/feedback';
-import type { ClosedFeedbackPage, FeedbackStatus, FeedbackTicket } from '../services/feedbackApi';
+import {
+  REPLY_MAX_LENGTH,
+  type ClosedFeedbackPage,
+  type FeedbackReply,
+  type FeedbackStatus,
+  type FeedbackTicket,
+  type ReplyResult
+} from '../services/feedbackApi';
 
 interface FeedbackAdminViewProps {
   // Abiertos (nuevos y leídos), en vivo
@@ -9,6 +16,8 @@ interface FeedbackAdminViewProps {
   error: string | null;
   // Devuelve si se guardó
   onSetStatus: (ticket: FeedbackTicket, status: FeedbackStatus) => Promise<boolean>;
+  // Envía la respuesta por email a quien escribió y la guarda en el mensaje
+  onReply: (ticket: FeedbackTicket, message: string) => Promise<ReplyResult>;
   // Cerrados, por páginas y bajo demanda
   loadClosed: (cursor: ClosedFeedbackPage['cursor']) => Promise<ClosedFeedbackPage>;
 }
@@ -29,9 +38,90 @@ const mergeById = (first: FeedbackTicket[], second: FeedbackTicket[]) => {
   return [...first, ...second.filter((t) => !seen.has(t.id))];
 };
 
-// Mensajes de contacto: los nuevos y leídos a la vista, los cerrados aparte. Se responde por email.
-export const FeedbackAdminView: React.FC<FeedbackAdminViewProps> = ({ tickets, error, onSetStatus, loadClosed }) => {
+// Respuesta a un mensaje: se envía por email desde la cuenta de CLAR; si la persona contesta, llega al email de la
+// administración. Al abrirse, el foco va al texto.
+const ReplyForm: React.FC<{
+  ticket: FeedbackTicket;
+  onSend: (message: string) => Promise<string | null>;
+  onCancel: () => void;
+}> = ({ ticket, onSend, onCancel }) => {
+  const [message, setMessage] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const field = useRef<HTMLTextAreaElement>(null);
+  useEffect(() => field.current?.focus(), []);
+  const id = `reply-${ticket.id}`;
+
+  const submit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setBusy(true);
+    setError(null);
+    const failure = await onSend(message.trim());
+    setBusy(false);
+    if (failure) setError(failure);
+  };
+
+  return (
+    <form onSubmit={submit} className="space-y-2 rounded-xl border border-indigo-200 bg-indigo-50/40 p-3">
+      <label htmlFor={id} className="block text-xs font-bold text-slate-800">
+        Respuesta para {ticket.name || ticket.email}
+      </label>
+      <textarea
+        ref={field}
+        id={id}
+        rows={5}
+        required
+        maxLength={REPLY_MAX_LENGTH}
+        value={message}
+        onChange={(e) => setMessage(e.target.value)}
+        aria-describedby={`${id}-help`}
+        className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-400 focus:outline-none"
+      />
+      <p id={`${id}-help`} className="text-[11px] text-slate-600">
+        Se envía por email a {ticket.email} desde la cuenta de CLAR, con su mensaje citado. Si contesta, te llegará a tu
+        email. {message.length}/{REPLY_MAX_LENGTH} caracteres.
+      </p>
+      {error && (
+        <p role="alert" className="rounded-xl border border-red-200 bg-red-50 p-2.5 text-xs text-red-700">
+          {error}
+        </p>
+      )}
+      <div className="flex flex-wrap gap-2">
+        <button
+          type="submit"
+          disabled={busy || !message.trim()}
+          className="min-h-11 rounded-xl bg-slate-900 px-4 text-xs font-bold text-white hover:bg-slate-800 disabled:opacity-60"
+        >
+          {busy ? 'Enviando…' : 'Enviar respuesta'}
+        </button>
+        <button
+          type="button"
+          onClick={onCancel}
+          disabled={busy}
+          className="min-h-11 rounded-xl px-3 text-xs font-semibold text-slate-600 hover:bg-slate-100 hover:text-slate-900"
+        >
+          Cancelar
+        </button>
+      </div>
+    </form>
+  );
+};
+
+// Mensajes de contacto: los nuevos y leídos a la vista, los cerrados aparte. Se responden desde aquí, por email.
+export const FeedbackAdminView: React.FC<FeedbackAdminViewProps> = ({
+  tickets,
+  error,
+  onSetStatus,
+  onReply,
+  loadClosed
+}) => {
   const [busyId, setBusyId] = useState<string | null>(null);
+  // Mensaje que se está respondiendo (uno a la vez) y el último respondido, para anunciarlo y devolver el foco
+  const [replyingId, setReplyingId] = useState<string | null>(null);
+  const [repliedId, setRepliedId] = useState<string | null>(null);
+  useEffect(() => {
+    if (repliedId) document.getElementById(`reply-button-${repliedId}`)?.focus();
+  }, [repliedId]);
   const open = tickets;
   // Cerrados: no se cargan hasta que se piden
   const [closed, setClosed] = useState<FeedbackTicket[] | null>(null);
@@ -66,6 +156,18 @@ export const FeedbackAdminView: React.FC<FeedbackAdminViewProps> = ({ tickets, e
     }
   };
 
+  const sendReply = async (ticket: FeedbackTicket, message: string) => {
+    const result = await onReply(ticket, message);
+    if ('error' in result) return result.error;
+    const addReply = (t: FeedbackTicket): FeedbackTicket =>
+      t.id === ticket.id ? { ...t, replies: [...(t.replies ?? []), result.reply] } : t;
+    // Los abiertos llegan en vivo; la lista de cerrados ya cargada se ajusta aquí
+    setClosed((current) => current && current.map(addReply));
+    setReplyingId(null);
+    setRepliedId(ticket.id);
+    return null;
+  };
+
   const actionClass =
     'min-h-11 rounded-xl border border-slate-200 px-3 text-xs font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-60';
 
@@ -94,13 +196,53 @@ export const FeedbackAdminView: React.FC<FeedbackAdminViewProps> = ({ tickets, e
           {ticket.context.online ? 'con conexión' : 'sin conexión'}
         </p>
       )}
+      {(ticket.replies?.length ?? 0) > 0 && (
+        <ol aria-label={`Respuestas a «${ticket.subject}»`} className="space-y-2 border-l-2 border-indigo-200 pl-3">
+          {ticket.replies!.map((reply: FeedbackReply) => (
+            <li key={reply.sentAt} className="space-y-0.5">
+              <p className="text-[11px] font-semibold text-indigo-800">
+                Tu respuesta · {dateTime.format(new Date(reply.sentAt))}
+              </p>
+              <p className="text-xs break-words whitespace-pre-wrap text-slate-700">{reply.message}</p>
+            </li>
+          ))}
+        </ol>
+      )}
+      {repliedId === ticket.id && (
+        <p role="status" className="text-xs font-semibold text-emerald-700">
+          Respuesta enviada.
+        </p>
+      )}
+      {replyingId === ticket.id && (
+        <ReplyForm
+          ticket={ticket}
+          onSend={(message) => sendReply(ticket, message)}
+          onCancel={() => setReplyingId(null)}
+        />
+      )}
       <div className="flex flex-wrap gap-2 pt-1">
+        {replyingId !== ticket.id && (
+          <button
+            id={`reply-button-${ticket.id}`}
+            type="button"
+            onClick={() => {
+              setRepliedId(null);
+              setReplyingId(ticket.id);
+            }}
+            aria-label={`Responder: ${ticket.subject}`}
+            className="inline-flex min-h-11 items-center gap-1.5 rounded-xl bg-slate-900 px-3 text-xs font-bold text-white hover:bg-slate-800"
+          >
+            <Reply className="h-4 w-4" aria-hidden="true" />
+            Responder
+          </button>
+        )}
         <a
           href={`mailto:${ticket.email}?subject=${encodeURIComponent(`Re: ${ticket.subject}`)}`}
-          className="inline-flex min-h-11 items-center gap-1.5 rounded-xl bg-slate-900 px-3 text-xs font-bold text-white hover:bg-slate-800"
+          aria-label={`Responder desde mi correo: ${ticket.subject}`}
+          className="inline-flex min-h-11 items-center gap-1.5 rounded-xl border border-slate-200 px-3 text-xs font-semibold text-slate-700 hover:bg-slate-50"
         >
           <Mail className="h-4 w-4" aria-hidden="true" />
-          Responder por email
+          Desde mi correo
         </a>
         {ticket.status === 'new' && (
           <button

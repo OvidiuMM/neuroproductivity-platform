@@ -34,7 +34,7 @@ const gmailUser = defineString('GMAIL_USER', { default: '', description: 'Cuenta
 const gmailAppPassword = defineSecret('GMAIL_APP_PASSWORD');
 // Dirección pública de la app en los emails (p. ej. https://clar.life); sin ella, la de Firebase Hosting
 const appUrlParam = defineString('APP_URL', { default: '', description: 'Dirección pública de la app' });
-const isEmulator = process.env.FUNCTIONS_EMULATOR === 'true';
+export const isEmulator = process.env.FUNCTIONS_EMULATOR === 'true';
 // En los emuladores no se envían correos; sin el secreto enlazado, el emulador no intenta leerlo de Secret Manager
 // (cada intento bloquea la llamada varios segundos)
 export const emailSecrets = isEmulator ? [] : [gmailAppPassword];
@@ -61,10 +61,10 @@ export const sendEmail = async (
   to: string,
   { subject, text, replyTo }: { subject: string; text: string; replyTo?: string },
   transport?: ReturnType<typeof createTransport>
-) => {
+): Promise<'sent' | 'skipped' | 'failed'> => {
   if (isEmulator || !gmailUser.value() || !to) {
     logger.info('Email skipped', { kind, emulator: isEmulator });
-    return;
+    return 'skipped';
   }
   try {
     await (transport ?? createTransport()).sendMail({
@@ -75,8 +75,10 @@ export const sendEmail = async (
       replyTo
     });
     logger.info('Email sent', { kind });
+    return 'sent';
   } catch (error) {
     logger.error('Email failed', { kind, code: (error as { code?: string }).code ?? 'unknown' });
+    return 'failed';
   }
 };
 
@@ -85,7 +87,7 @@ const sendAccessEmail = (kind: AccessEmail, record: AccessRecord, transport?: Re
 
 // Borra las marcas de administración que no son de la cuenta configurada. Se hace en cada llamada, así una
 // cuenta que deja de ser administración pierde la lectura de las solicitudes aunque no vuelva a entrar.
-const removeStaleAdminMarkers = async () => {
+export const removeStaleAdminMarkers = async () => {
   const markers = await db().collection('admins').get();
   await Promise.all(
     markers.docs.filter((d) => !isCurrentAdminMarker(d.data(), adminEmail())).map((d) => d.ref.delete())
@@ -263,7 +265,7 @@ export const setAccess = onCall({ region: REGION, secrets: emailSecrets }, async
 // bloqueó o se volvió a activar la aprobación, no se toca. Solo se cuentan y avisan las que de verdad se aprobaron.
 // Una solicitud que llega mientras tanto lee el modo nuevo en su transacción y se aprueba sola.
 const APPROVE_CONCURRENCY = 10;
-const inChunks = async <T>(items: T[], size: number, run: (item: T) => Promise<void>) => {
+const inChunks = async <T>(items: T[], size: number, run: (item: T) => Promise<unknown>) => {
   for (let i = 0; i < items.length; i += size) await Promise.all(items.slice(i, i + size).map(run));
 };
 

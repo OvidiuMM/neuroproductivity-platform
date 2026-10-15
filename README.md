@@ -104,6 +104,11 @@ El sistema rechaza las restricciones coercitivas (como las rotaciones atencional
 - **Adjuntos:** «Elegir archivos» abre el selector del sistema; se guardan solo el nombre y el tamaño, como lista de lo que adjuntar al enviarlo.
 - **Abrir en mi correo:** enlace `mailto:` con los destinatarios válidos, el asunto y el texto. CLAR no envía correos.
 
+### 9. Respuestas a los mensajes de contacto (0.9.2)
+
+- En **Administración** → **Mensajes**, «Responder» envía la respuesta por email a quien escribió, desde la cuenta de `GMAIL_USER` y con su mensaje citado; si contesta, le llega a la administración (`replyTo`). La Cloud Function `replyToFeedback` (solo la administración) guarda la respuesta en el mensaje (`replies`) únicamente si el envío sale, y un mensaje nuevo pasa a leído. Desde la app nadie puede escribir respuestas directamente (las reglas solo dejan cambiar el estado).
+- «Desde mi correo» sigue abriendo el programa de correo, para responder desde otra cuenta.
+
 ---
 
 ## 🛠️ Stack Tecnológico

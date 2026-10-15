@@ -29,6 +29,12 @@ export interface FeedbackInput {
   context?: FeedbackContext;
 }
 
+// Respuesta de la administración, enviada por email a quien escribió
+export interface FeedbackReply {
+  message: string;
+  sentAt: string;
+}
+
 export interface FeedbackTicket extends FeedbackInput {
   uid: string;
   email: string;
@@ -36,7 +42,10 @@ export interface FeedbackTicket extends FeedbackInput {
   status: FeedbackStatus;
   createdAt: string;
   updatedAt: string;
+  replies?: FeedbackReply[];
 }
+
+export const REPLY_MAX_LENGTH = 5000;
 
 // Texto sin caracteres de control (los saltos de línea solo donde se permiten), recortado y con su límite
 // eslint-disable-next-line no-control-regex -- justo lo que se busca: caracteres de control
@@ -74,6 +83,15 @@ export const parseFeedback = (data: unknown): FeedbackInput | null => {
   if (!type || !subject || !description) return null;
   const context = parseContext(d.context);
   return context ? { type, subject, description, context } : { type, subject, description };
+};
+
+// Respuesta válida de la administración, o null: el id de un mensaje y un texto no vacío
+export const parseReply = (data: unknown): { ticketId: string; message: string } | null => {
+  if (!data || typeof data !== 'object') return null;
+  const d = data as Record<string, unknown>;
+  const ticketId = typeof d.ticketId === 'string' && /^[A-Za-z0-9_-]{1,128}$/.test(d.ticketId) ? d.ticketId : '';
+  const message = cleanText(d.message, REPLY_MAX_LENGTH);
+  return ticketId && message ? { ticketId, message } : null;
 };
 
 // Envíos de la última hora (los anteriores ya no cuentan para el límite)
@@ -114,5 +132,24 @@ export const buildFeedbackEmail = (ticket: FeedbackTicket, appUrl: string) => ({
       : []),
     '',
     `Responde a este correo para contestar, o míralo en «Administración» → «Mensajes»: ${appUrl}`
+  ].join('\n')
+});
+
+// Respuesta a quien escribió, en texto plano y con su mensaje citado. Si contesta, le llega a la administración.
+export const buildReplyEmail = (ticket: FeedbackTicket, message: string, adminEmail: string) => ({
+  subject: `Re: [CLAR] ${ticket.subject}`,
+  replyTo: adminEmail,
+  text: [
+    ticket.name ? `Hola, ${ticket.name}:` : 'Hola:',
+    '',
+    message,
+    '',
+    '—',
+    'Equipo de CLAR',
+    '',
+    `Tu mensaje (${TYPE_LABEL[ticket.type]}):`,
+    `> ${ticket.subject}`,
+    '>',
+    ...ticket.description.split(/\r?\n/).map((line) => (line ? `> ${line}` : '>'))
   ].join('\n')
 });
