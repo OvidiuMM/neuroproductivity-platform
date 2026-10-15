@@ -1,5 +1,5 @@
 import React from 'react';
-import { ArrowDown, Check, Flame, Scale, Sparkles, Sprout, Target, Timer, Zap } from 'lucide-react';
+import { ArrowDown, Bell, Check, Flame, Scale, Sparkles, Sprout, Target, Timer, Zap } from 'lucide-react';
 import { Goal, TaskItem, TaskPriority, TaskStatus } from '../types';
 import {
   DEADLINE_TITLE_CLASS,
@@ -9,6 +9,7 @@ import {
   getDeadlineState
 } from '../services/tasks';
 import { formatEstimate } from '../services/taskListing';
+import { alarmMoment, describeAlarm } from '../services/alarms';
 import { TaskDates } from './TaskDates';
 import { TaskActionsMenu } from './TaskActionsMenu';
 
@@ -57,6 +58,18 @@ const PriorityBadge: React.FC<{ task: TaskItem; now: Date }> = ({ task, now }) =
           <span className="sr-only">(prioridad original: {PRIORITY_LABEL[task.priority]})</span>
         </span>
       )}
+    </span>
+  );
+};
+
+// Alarma: la hora, con cuándo suena en el título (sin hacer y con alarma válida)
+const AlarmBadge: React.FC<{ task: TaskItem }> = ({ task }) => {
+  if (task.status === 'DONE' || !alarmMoment(task)) return null;
+  return (
+    <span className="inline-flex items-center gap-1" title={describeAlarm(task) ?? undefined}>
+      <Bell className="h-3 w-3" aria-hidden="true" />
+      <span className="sr-only">Alarma:</span>
+      {task.alarmTime}
     </span>
   );
 };
@@ -146,6 +159,7 @@ export const TaskCard: React.FC<TaskCardProps> = ({
 
         <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] text-slate-500">
           <TaskDates task={task} now={now} />
+          <AlarmBadge task={task} />
           <EstimateBadge minutes={task.estimateMinutes} />
           {variant !== 'someday' && <PriorityBadge task={task} now={now} />}
           {goal ? (
