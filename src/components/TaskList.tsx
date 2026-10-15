@@ -1,10 +1,12 @@
 import React, { useState } from 'react';
 import { Goal, TaskItem, ListContext, TaskPriority, TaskStatus, WheelCategory } from '../types';
 import { PRIORITY_LABEL, isArchived } from '../services/tasks';
+import { blockerOf, tasksById } from '../services/dependencies';
 import {
   DEFAULT_LIST_PREFS,
   ESTIMATE_OPTIONS,
   arrangeTasks,
+  splitTop10,
   countActiveFilters,
   type DeadlineFilter,
   type ListFilters,
@@ -101,10 +103,12 @@ export const TaskList: React.FC<TaskListProps> = ({
   const somedayTasks = contextTasks.filter((t) => t.isSomeday);
 
   // Jerarquía Visual: el Top 10 son las 10 primeras tareas tras filtrar y ordenar
+  // (sin las bloqueadas: esperan a otra tarea y van con el resto)
+  const byId = tasksById(tasks);
+  const blockerFor = (task: TaskItem) => blockerOf(task, byId);
   const arrangedTasks = arrangeTasks(activeTasks, prefs, now);
   const hiddenByFilters = activeTasks.length - arrangedTasks.length;
-  const top10Tasks = arrangedTasks.slice(0, 10);
-  const peripheralTasks = arrangedTasks.slice(10);
+  const { top: top10Tasks, rest: peripheralTasks } = splitTop10(arrangedTasks, (task) => Boolean(blockerFor(task)));
 
   const filterFields: FilterField[] = [
     {
@@ -420,7 +424,11 @@ export const TaskList: React.FC<TaskListProps> = ({
               </div>
             </div>
 
-            {top10Tasks.length === 0 && activeTasks.length > 0 ? (
+            {top10Tasks.length === 0 && arrangedTasks.length > 0 ? (
+              <p className="rounded-2xl border border-slate-200 bg-white p-8 text-center text-sm font-semibold text-slate-600">
+                Todas las tareas de esta lista esperan a otra. Las tienes debajo.
+              </p>
+            ) : top10Tasks.length === 0 && activeTasks.length > 0 ? (
               // Hay tareas, pero los filtros las ocultan todas: no se invita a crear otra
               <div className="space-y-3 rounded-2xl border border-slate-200 bg-white p-8 text-center text-slate-600">
                 <p className="text-sm font-semibold">
@@ -450,6 +458,7 @@ export const TaskList: React.FC<TaskListProps> = ({
                   <TaskCard
                     key={task.id}
                     goal={goalOf(task)}
+                    blocker={blockerFor(task)}
                     task={task}
                     now={now}
                     variant="top"
@@ -466,19 +475,20 @@ export const TaskList: React.FC<TaskListProps> = ({
             <div className="space-y-3 border-t border-slate-200 pt-4">
               <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1 px-1">
                 <h3 className="text-xs font-bold tracking-wider text-slate-500 uppercase">
-                  El resto de tareas (de la 11 en adelante)
+                  El resto de tareas (de la {top10Tasks.length + 1} en adelante)
                 </h3>
               </div>
 
-              <ol aria-label="Posición 11 en adelante" className="space-y-1.5">
+              <ol aria-label={`Posición ${top10Tasks.length + 1} en adelante`} className="space-y-1.5">
                 {peripheralTasks.map((task, index) => (
                   <TaskCard
                     key={task.id}
                     goal={goalOf(task)}
+                    blocker={blockerFor(task)}
                     task={task}
                     now={now}
                     variant="peripheral"
-                    position={index + 11}
+                    position={index + top10Tasks.length + 1}
                     {...cardHandlers}
                   />
                 ))}
@@ -508,7 +518,15 @@ export const TaskList: React.FC<TaskListProps> = ({
           ) : (
             <ul aria-label="Algún día" className="space-y-2.5">
               {somedayTasks.map((task) => (
-                <TaskCard key={task.id} goal={goalOf(task)} task={task} now={now} variant="someday" {...cardHandlers} />
+                <TaskCard
+                  key={task.id}
+                  goal={goalOf(task)}
+                  blocker={blockerFor(task)}
+                  task={task}
+                  now={now}
+                  variant="someday"
+                  {...cardHandlers}
+                />
               ))}
             </ul>
           )}

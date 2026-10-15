@@ -7,10 +7,20 @@ interface TaskStatusSelectProps {
   taskTitle: string;
   onChange: (status: TaskStatus) => void;
   size?: 'sm' | 'xs';
+  // Espera a otra tarea: hasta que esa termine, no se puede marcar como hecha ni en progreso
+  blocked?: boolean;
 }
 
+const NEEDS_UNBLOCKED: TaskStatus[] = ['DONE', 'IN_PROGRESS'];
+
 // Estado manual; elegir "Hecha" archiva la tarea y cualquier otro estado la reactiva
-export const TaskStatusSelect: React.FC<TaskStatusSelectProps> = ({ status, taskTitle, onChange, size = 'sm' }) => {
+export const TaskStatusSelect: React.FC<TaskStatusSelectProps> = ({
+  status,
+  taskTitle,
+  onChange,
+  size = 'sm',
+  blocked = false
+}) => {
   const current = TASK_STATUSES.find((s) => s.value === status) ?? TASK_STATUSES[0];
   return (
     <select
@@ -22,8 +32,9 @@ export const TaskStatusSelect: React.FC<TaskStatusSelectProps> = ({ status, task
       }`}
     >
       {TASK_STATUSES.map((s) => (
-        <option key={s.value} value={s.value}>
+        <option key={s.value} value={s.value} disabled={blocked && NEEDS_UNBLOCKED.includes(s.value)}>
           {s.label}
+          {blocked && NEEDS_UNBLOCKED.includes(s.value) ? ' (bloqueada)' : ''}
         </option>
       ))}
     </select>

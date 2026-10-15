@@ -45,7 +45,8 @@ import {
   type UserCollection
 } from './services/repository';
 import { buildImport, clearLocalData, getLocalProfiles, type LocalProfileSummary } from './services/localData';
-import { arrangeTasks, parseListPrefs, type ListPrefs } from './services/taskListing';
+import { arrangeTasks, parseListPrefs, splitTop10, type ListPrefs } from './services/taskListing';
+import { blockerOf, dependentsOf, tasksById } from './services/dependencies';
 import { useNow } from './hooks/useNow';
 import { Navbar } from './components/Navbar';
 import { BottomNav, MORE_BUTTON_ID } from './components/BottomNav';
@@ -486,11 +487,25 @@ export default function App({ user, services, isAdmin = false }: AppProps) {
 
   const handleChangeStatus = (task: TaskItem, status: TaskStatus) => {
     if (status === task.status) return;
+    // Bloqueada por otra tarea abierta: no se puede hacer ni empezar todavía
+    const blocker = blockerOf(task, tasksById(tasks));
+    if (blocker && (status === 'DONE' || status === 'IN_PROGRESS')) {
+      showToast(`Esta tarea espera a «${blocker.title}»: márcala como hecha o cancélala antes.`);
+      return;
+    }
     // Tarea recurrente marcada como Hecha o Cancelada: se crea la siguiente repetición (una sola vez por tarea). Cancelar
     // una repetición no termina la serie: para eso se quita la repetición al editarla
     const closing = isArchivedStatus(status);
     const next = closing && !task.nextOccurrenceId ? nextRecurringTask(task) : null;
     const closedLabel = status === 'CANCELLED' ? 'cancelada' : 'hecha';
+    // Al cerrarla, las tareas que esperaban a ella se desbloquean
+    const freed = closing && !isArchived(task) ? dependentsOf(task, tasks) : [];
+    const freedNote =
+      freed.length === 1
+        ? ` Ya puedes empezar «${freed[0].title}».`
+        : freed.length > 1
+          ? ` Ya puedes empezar ${freed.length} tareas que esperaban a esta.`
+          : '';
     const updated = withStatus(task, status);
     // Deshacer devuelve la tarea como estaba (y quita la repetición que se acaba de crear) si nada cambió entretanto
     const restored = () => ({ ...task, updatedAt: new Date().toISOString() });
@@ -498,7 +513,7 @@ export default function App({ user, services, isAdmin = false }: AppProps) {
       const done = { ...updated, nextOccurrenceId: next.id };
       completeRecurringTask(db, uid, done, next).catch(reportError('guardar la tarea y su siguiente repetición'));
       showToast(
-        `Tarea ${closedLabel} y archivada. Siguiente repetición: ${formatTaskDates(next)?.replace('Vence: ', '')}.`,
+        `Tarea ${closedLabel} y archivada. Siguiente repetición: ${formatTaskDates(next)?.replace('Vence: ', '')}.${freedNote}`,
         undo(() => undoTaskChange(db, uid, [done, next], restored(), next.id))
       );
       return;
@@ -506,7 +521,7 @@ export default function App({ user, services, isAdmin = false }: AppProps) {
     saveTask(db, uid, updated).catch(reportError('actualizar el estado'));
     if (closing) {
       showToast(
-        `Tarea ${closedLabel} y archivada. La encontrarás en «Archivadas».`,
+        `Tarea ${closedLabel} y archivada. La encontrarás en «Archivadas».${freedNote}`,
         undo(() => undoTaskChange(db, uid, [updated], restored()))
       );
     } else if (isArchived(task)) {
@@ -705,15 +720,17 @@ export default function App({ user, services, isAdmin = false }: AppProps) {
   // Conteo de tareas por contexto
   const archivedTasks = tasks.filter(isArchived);
   const workCount = tasks.filter((t) => t.listContext === 'WORK' && !t.isSomeday && !isArchived(t)).length;
-  // «Top 10» cuenta lo mismo que muestra la lista: tareas activas del contexto tras aplicar los filtros
-  const top10Count = Math.min(
-    10,
+  // «Top 10» cuenta lo mismo que muestra la lista: tareas activas del contexto tras aplicar los filtros, sin las
+  // bloqueadas
+  const taskIndex = tasksById(tasks);
+  const top10Count = splitTop10(
     arrangeTasks(
       tasks.filter((t) => t.listContext === activeContext && !t.isSomeday && !isArchived(t)),
       listPrefs,
       now
-    ).length
-  );
+    ),
+    (task) => Boolean(blockerOf(task, taskIndex))
+  ).top.length;
   const personalCount = tasks.filter((t) => t.listContext === 'PERSONAL' && !t.isSomeday && !isArchived(t)).length;
 
   // Cálculo de promedio actual de la Rueda
@@ -996,6 +1013,7 @@ export default function App({ user, services, isAdmin = false }: AppProps) {
         initialGoalId={newTaskGoalId}
         editingTask={editingTask}
         goals={goals}
+        tasks={tasks}
       />
 
       {/* VENTANA DE TAREAS ARCHIVADAS (ESTADO HECHA) */}
