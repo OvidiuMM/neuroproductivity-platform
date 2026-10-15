@@ -36,6 +36,7 @@ import {
   importUserData,
   saveEmail,
   deleteEmail,
+  restoreDeletedEmail,
   saveMeeting,
   saveTask,
   subscribeToCollection,
@@ -542,8 +543,11 @@ export default function App({ user, services, isAdmin = false }: AppProps) {
   const handleDeleteEmail = (email: EmailDraft) => {
     deleteEmail(db, uid, email.id).catch(reportError('eliminar el correo'));
     showToast(isDraft(email) ? 'Borrador eliminado.' : 'Correo eliminado.', () => {
-      saveEmail(db, uid, email)
-        .then(() => showToast('Correo recuperado.'))
+      showToast('Deshaciendo…');
+      restoreDeletedEmail(db, uid, email)
+        .then((done) =>
+          showToast(done ? 'Correo recuperado.' : 'No se puede deshacer: el correo se ha vuelto a guardar entretanto.')
+        )
         .catch(reportError('recuperar el correo'));
     });
   };

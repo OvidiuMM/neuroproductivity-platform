@@ -27,6 +27,10 @@ test('the attach button opens the file picker and keeps only the name and size',
   ]);
   const list = page.getByRole('list', { name: 'Archivos que adjuntar' });
   await expect(list.getByRole('listitem')).toHaveText(['balance.xlsx (1,3 KB)', 'informe.pdf (2 MB)']);
+  // Mismo nombre y mismo tamaño a la vista, pero otros bytes: es otro archivo y se apunta
+  await pickFiles(page, [{ name: 'balance.xlsx', bytes: 1301 }]);
+  await expect(list.getByRole('listitem')).toHaveCount(3);
+  await page.getByRole('button', { name: 'Quitar el adjunto balance.xlsx' }).last().click();
   // El mismo archivo dos veces no se repite; quitado, se puede volver a elegir
   await pickFiles(page, [{ name: 'balance.xlsx', bytes: 1300 }]);
   await expect(list.getByRole('listitem')).toHaveCount(2);
@@ -85,6 +89,20 @@ test('an unfinished e-mail becomes a draft, and can be continued, saved, reopene
   await expect(page.getByText('No hay correos guardados.')).toBeVisible();
   await page.getByRole('button', { name: 'Deshacer' }).click();
   await expect(page.getByRole('region', { name: 'Guardados (1)' })).toContainText(subject);
+});
+
+test('a draft that is emptied stays emptied', async ({ page }) => {
+  await openEmailTool(page);
+  await page.getByRole('button', { name: 'Escribir un correo' }).click();
+  await page.getByLabel(/^Paso 3: Asunto/).fill('Para borrar');
+  await page.keyboard.press('Escape');
+  const drafts = page.getByRole('region', { name: 'Borradores (1)' });
+  await drafts.getByRole('button', { name: 'Continuar el borrador «Para borrar»' }).click();
+  await page.getByLabel(/^Paso 3: Asunto/).fill('');
+  await page.keyboard.press('Escape');
+  await expect(drafts.getByRole('button', { name: 'Continuar el borrador «(Sin asunto)»' })).toBeVisible();
+  await drafts.getByRole('button', { name: 'Continuar el borrador «(Sin asunto)»' }).click();
+  await expect(page.getByLabel(/^Paso 3: Asunto/)).toHaveValue('');
 });
 
 test('«Guardar borrador» keeps an e-mail that is just started', async ({ page }) => {

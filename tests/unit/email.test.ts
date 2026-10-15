@@ -6,7 +6,8 @@ import {
   formatFileSize,
   isDraft,
   lastSaved,
-  parseRecipients
+  parseRecipients,
+  sameAttachment
 } from '../../src/services/email';
 
 test('recipients are split by commas, semicolons or spaces and must all be addresses', () => {
@@ -49,4 +50,18 @@ test('an e-mail without a status is a saved one, and the last save is the newest
     lastSaved({ sentAt: '2026-10-01T10:00:00.000Z', updatedAt: '2026-10-02T10:00:00.000Z' }),
     '2026-10-02T10:00:00.000Z'
   );
+});
+
+test('the same attachment is the same name and the same bytes, or the same size text for old ones', () => {
+  const a = { name: 'informe.pdf', size: '10 KB', bytes: 10_240 };
+  // Mismo tamaño legible, distintos bytes: son archivos distintos
+  assert.equal(sameAttachment(a, { name: 'informe.pdf', size: '10 KB', bytes: 10_241 }), false);
+  assert.equal(sameAttachment(a, { name: 'informe.pdf', size: '10 KB', bytes: 10_240 }), true);
+  assert.equal(sameAttachment(a, { name: 'otro.pdf', size: '10 KB', bytes: 10_240 }), false);
+  // Adjuntos de antes de 0.9.2, sin bytes
+  assert.equal(
+    sameAttachment({ name: 'balance.xlsx', size: '1.2 MB' }, { name: 'balance.xlsx', size: '1.2 MB' }),
+    true
+  );
+  assert.equal(sameAttachment({ name: 'balance.xlsx', size: '1.2 MB' }, a), false);
 });
