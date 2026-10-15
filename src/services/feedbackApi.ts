@@ -17,6 +17,22 @@ import type { FeedbackContext, FeedbackType } from './feedback';
 
 export type FeedbackStatus = 'new' | 'read' | 'closed';
 
+// Respuesta de la administración, enviada por email a quien escribió (la guarda la Cloud Function replyToFeedback).
+// El id lo pone la app y se repite en los reintentos: así una respuesta nunca sale dos veces.
+export interface FeedbackReply {
+  id: string;
+  message: string;
+  sentAt: string;
+}
+
+// Id de una respuesta nueva: uno por formulario, el mismo en sus reintentos
+export const newReplyId = () => crypto.randomUUID().replace(/-/g, '');
+
+export const REPLY_MAX_LENGTH = 5000;
+
+// Al responder: la respuesta enviada y guardada, o por qué no se pudo
+export type ReplyResult = { reply: FeedbackReply } | { error: string };
+
 // Mensaje de contacto tal como lo guarda la Cloud Function submitFeedback (feedback_tickets)
 export interface FeedbackTicket {
   id: string;
@@ -30,6 +46,7 @@ export interface FeedbackTicket {
   status: FeedbackStatus;
   createdAt: string;
   updatedAt: string;
+  replies?: FeedbackReply[];
 }
 
 export interface FeedbackInput {
@@ -41,6 +58,15 @@ export interface FeedbackInput {
 
 export const submitFeedback = async (functions: Functions, input: FeedbackInput) =>
   (await httpsCallable<FeedbackInput, { id: string }>(functions, 'submitFeedback')(input)).data;
+
+// Solo la administración: envía la respuesta por email y, si sale, la guarda en el mensaje
+export const replyToFeedback = async (functions: Functions, ticketId: string, replyId: string, message: string) =>
+  (
+    await httpsCallable<{ ticketId: string; replyId: string; message: string }, FeedbackReply>(
+      functions,
+      'replyToFeedback'
+    )({ ticketId, replyId, message })
+  ).data;
 
 const toTicket = (d: QueryDocumentSnapshot) => ({ ...(d.data() as Omit<FeedbackTicket, 'id'>), id: d.id });
 const newestFirst = (a: FeedbackTicket, b: FeedbackTicket) => b.createdAt.localeCompare(a.createdAt);
