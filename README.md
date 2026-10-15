@@ -128,8 +128,8 @@ Al volver a evaluar la Rueda se ve el efecto de las acciones, y las áreas cambi
 
 ### Alarmas (0.9.2)
 
-- **Una hora por tarea** (`alarmTime`, HH:mm). El momento en que suena se calcula al leer, en la zona horaria del dispositivo (`src/services/alarms.ts`): con hora límite, dentro de las 24 h anteriores (el mismo día si es antes; si no, la víspera); solo con fecha, la víspera a esa hora. Una tarea que se repite necesita hora límite, y cada repetición hereda la alarma.
-- **Avisa con la app abierta** (`useTaskAlarms`): un aviso dentro de CLAR con «Ver tarea» y, con permiso, una notificación del sistema (sin service worker; en Android y en Safari del iPhone sin instalar, solo el aviso dentro de la app). Las alarmas que pasaron con la app cerrada avisan al abrirla si la tarea aún no ha vencido. Cada alarma avisa una sola vez, también con varias pestañas (`localStorage` y Web Locks).
+- **Una hora por tarea** (`alarmTime`, HH:mm). Todas las horas de la app se escriben en 24 h con un campo propio (`TimeField`, `src/services/timeInput.ts`: 9:30, 0930, 21:45), no con el selector del navegador, que en sistemas en 12 h muestra a. m./p. m. y podía guardar 23:00 en lugar de 11:00. El momento en que suena se calcula al leer, en la zona horaria del dispositivo (`src/services/alarms.ts`): con hora límite, dentro de las 24 h anteriores (el mismo día si es antes; si no, la víspera); solo con fecha, la víspera a esa hora. Una tarea que se repite necesita hora límite, y cada repetición hereda la alarma.
+- **Avisa con la app abierta** (`useTaskAlarms`): un aviso dentro de CLAR con «Ver tarea» y, con permiso, una notificación del sistema (sin service worker; en Android y en Safari del iPhone sin instalar, solo el aviso dentro de la app). Las alarmas que pasaron con la app cerrada avisan al abrirla si la tarea aún no ha vencido, y el aviso dice a qué hora era. El aviso y la notificación llevan la hora de la alarma. Cada alarma avisa una sola vez, también con varias pestañas (`localStorage` y Web Locks).
 - **Calendario:** el archivo .ics incluye la alarma (`VALARM`).
 
 ### Borradores de correo (0.9.2)
