@@ -84,11 +84,12 @@ describe('mensajes de contacto', () => {
       updatedAt: '2026-10-14T12:00:00.000Z'
     };
     const email = buildFeedbackEmail(ticket, 'https://example.web.app');
-    assert.equal(email.subject, '[CLAR] Sugerencia: Modo oscuro');
-    assert.equal(email.replyTo, 'ana@example.com');
-    assert.match(email.text, /Ana \(ana@example\.com\) ha escrito desde CLAR\./);
-    assert.match(email.text, /- Navegador: Chrome 141/);
-    assert.match(email.text, /«Mensajes» con «Responder»: https:\/\/example\.web\.app/);
+    assert.deepEqual(email, {
+      subject: '[CLAR] Mensaje nuevo: Sugerencia',
+      text: 'Hay un mensaje nuevo (Sugerencia). Léelo y contesta en «Administración» → «Mensajes»: https://example.web.app'
+    });
+    // Sin datos de quien escribe ni su mensaje: se leen en la app
+    assert.doesNotMatch(JSON.stringify(email), /Ana|ana@example\.com|Modo oscuro|Estaría bien|Chrome/);
   });
 });
 
@@ -136,10 +137,10 @@ describe('respuestas de la administración', () => {
     assert.deepEqual(replyState({}, replyId), { kind: 'new' });
   });
 
-  it('responde por email a quien escribió, con su mensaje citado, y la respuesta vuelve a la administración', () => {
-    const email = buildReplyEmail(ticket, 'Gracias, Ana. Ya está arreglado.', 'admin@example.com', 'https://clar.life');
+  it('responde por email a quien escribió, con su mensaje citado; si contesta, llega al buzón que la envía', () => {
+    const email = buildReplyEmail(ticket, 'Gracias, Ana. Ya está arreglado.', 'https://clar.life');
     assert.equal(email.subject, 'Re: [CLAR] No carga la agenda');
-    assert.equal(email.replyTo, 'admin@example.com');
+    assert.equal('replyTo' in email, false);
     assert.equal(
       email.text,
       [
@@ -159,9 +160,6 @@ describe('respuestas de la administración', () => {
         '> Pasa desde ayer.'
       ].join('\n')
     );
-    assert.match(
-      buildReplyEmail({ ...ticket, name: '' }, 'Hola', 'admin@example.com', 'https://clar.life').text,
-      /^Hola:\n/
-    );
+    assert.match(buildReplyEmail({ ...ticket, name: '' }, 'Hola', 'https://clar.life').text, /^Hola:\n/);
   });
 });
