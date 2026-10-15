@@ -24,10 +24,31 @@ export const alarmUnavailableReason = (task: Pick<TaskItem, 'dueDate' | 'dueTime
 // mueve la alarma de la víspera (las horas se comparan como texto, HH:mm).
 export const alarmMoment = (task: AlarmFields): Date | null => {
   if (!task.alarmTime || !ALARM_TIME_PATTERN.test(task.alarmTime) || alarmUnavailableReason(task)) return null;
-  if (task.dueTime && task.alarmTime < task.dueTime) return toLocalDate(task.dueDate!, task.alarmTime);
+  if (task.dueTime && task.alarmTime < task.dueTime) return alarmInstant(task.dueDate!, task.alarmTime);
   const eve = toLocalDate(task.dueDate!);
   eve.setDate(eve.getDate() - 1);
-  return toLocalDate(toDateString(eve), task.alarmTime);
+  return alarmInstant(toDateString(eve), task.alarmTime);
+};
+
+// Hora local de la alarma. Si no existe ese día (el salto al horario de verano, p. ej. las 02:30 del 31 de marzo en
+// Madrid), Date la pasa adelante (a las 03:30) y podría caer después del plazo; se toma la anterior, con el desfase
+// del horario nuevo (la 01:30 antes del salto): así queda tanto tiempo real antes del plazo como se pidió.
+const alarmInstant = (date: string, time: string) => {
+  const at = toLocalDate(date, time);
+  const [hours, minutes] = time.split(':').map(Number);
+  const drift = at.getHours() * 60 + at.getMinutes() - (hours * 60 + minutes);
+  return drift > 0 ? new Date(at.getTime() - drift * 60_000) : at;
+};
+
+// AVISOS DE OTRA PESTAÑA que llegan antes que la tarea (su copia aún no se ha sincronizado): esperan a que llegue,
+// como mucho unos minutos
+export const PENDING_ALERT_MS = 10 * 60_000;
+export const matchPendingAlerts = (pending: Map<string, number>, alarms: ScheduledAlarm[], now: number) => {
+  const matched = alarms.filter((alarm) => pending.has(alarm.key));
+  const rest = new Map(
+    [...pending].filter(([key, since]) => !matched.some((a) => a.key === key) && now - since < PENDING_ALERT_MS)
+  );
+  return { matched, rest };
 };
 
 const dayFormat = new Intl.DateTimeFormat('es-ES', { day: 'numeric', month: 'short' });
