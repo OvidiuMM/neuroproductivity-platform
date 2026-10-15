@@ -47,6 +47,18 @@ test('login and access request screens', async ({ page }) => {
   await expectNoViolations(page, 'solicitud de acceso');
 });
 
+test('legal pages', async ({ page }) => {
+  for (const [path, title] of [
+    ['/privacidad', 'Política de privacidad'],
+    ['/condiciones', 'Condiciones de uso'],
+    ['/aviso-legal', 'Aviso legal']
+  ]) {
+    await page.goto(path);
+    await expect(page.getByRole('heading', { level: 1, name: title })).toBeVisible();
+    await expectNoViolations(page, title);
+  }
+});
+
 test('main sections, forms and dialogs', async ({ page }) => {
   await page.goto('/');
   await signInWithGoogle(page);

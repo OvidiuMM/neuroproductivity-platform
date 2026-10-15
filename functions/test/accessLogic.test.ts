@@ -77,11 +77,13 @@ describe('aprobación de accesos', () => {
     assert.equal(canDecide('pending', 'revoked'), false);
   });
 
-  it('redacta los correos en texto plano con el mensaje y el enlace a la app', () => {
+  it('redacta los correos en texto plano; el aviso a la administración, sin datos de quien pide acceso', () => {
     const request = buildEmail('new-request', record({ message: 'Soy del equipo' }), 'https://app.example.com');
-    assert.match(request.text, /Ana Prueba \(ana@example\.com\) quiere acceder/);
-    assert.match(request.text, /Mensaje:\nSoy del equipo/);
-    assert.match(request.text, /«Solicitudes»: https:\/\/app\.example\.com/);
+    assert.equal(
+      request.text,
+      'Hay una solicitud de acceso nueva. Revísala en «Administración» → «Solicitudes»: https://app.example.com'
+    );
+    assert.doesNotMatch(JSON.stringify(request), /Ana|ana@example\.com|Soy del equipo/);
     const approved = buildEmail('approved', record(), 'https://app.example.com');
     assert.equal(approved.subject, 'Ya tienes acceso a CLAR');
     assert.match(approved.text, /^Hola Ana Prueba:/);
