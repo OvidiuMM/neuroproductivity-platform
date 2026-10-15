@@ -110,6 +110,7 @@ Al volver a evaluar la Rueda se ve el efecto de las acciones, y las áreas cambi
 - **Inicio:** el foco de la lista activa, las metas activas con su progreso y estadísticas de las tareas (hechas por día, semana y mes; antes o después del plazo; velocidad en tareas y horas estimadas por semana; tiempo medio hasta completarlas; racha; pendientes y vencidas; reparto por área), con recomendaciones según esos datos.
 - **Agenda:** vista semanal (de lunes a domingo) y por días (14 días, también los vacíos) con las tareas con fecha de las dos listas, los intervalos, las repeticiones previstas de las tareas recurrentes y las reuniones. En la vista por días las tareas vencidas aparecen aparte; al pulsar una tarea se edita.
 - **Contacto:** «Escríbenos» (en la Ayuda, en «Tu cuenta» y en la pantalla de acceso) envía ideas, fallos o dudas; la administración los lee y los responde por email desde la app.
+- **Textos legales:** política de privacidad (`/privacidad`), condiciones de uso (`/condiciones`) y aviso legal (`/aviso-legal`), públicos y sin iniciar sesión (`src/Root.tsx` elige la página por la ruta, sin cargar Firebase). Están enlazados desde las pantallas de inicio de sesión y de acceso, el pie, el menú de la cuenta y la Ayuda; al entrar se acepta tener al menos 14 años y las condiciones. El contenido está en `src/components/LegalTexts.tsx`, y el titular, el email de contacto y la fecha de la versión, en `src/services/legal.ts`: al cambiar el contenido, cambia también la fecha. Una prueba unitaria falla si falta el titular o el email.
 
 ## 🗒️ Novedades por versión
 
@@ -367,6 +368,7 @@ El repositorio utiliza `package-lock.json` (en la raíz y en `functions/`) como 
 │   └── test/                    # API, Admin, lógica de acceso y de contacto
 ├── src/
 │   ├── main.tsx                 # Montaje de React y preferencias de accesibilidad antes del primer render
+│   ├── Root.tsx                 # Textos legales públicos según la ruta; si no, la app
 │   ├── AuthGate.tsx             # Inicio de sesión obligatorio
 │   ├── AccessGate.tsx           # La app solo se abre con el acceso aprobado (estado en vivo)
 │   ├── App.tsx                  # Orquestador principal de estado y vistas
@@ -400,6 +402,7 @@ El repositorio utiliza `package-lock.json` (en la raíz y en `functions/`) como 
 │   │   ├── onboarding.ts        # Bienvenida vista, por cuenta
 │   │   ├── feedback.ts · feedbackApi.ts # Contacto: información técnica, envío, mensajes y respuestas
 │   │   ├── a11yPrefs.ts         # Preferencias del panel de accesibilidad
+│   │   ├── legal.ts             # Textos legales: rutas, titular, edad mínima y fecha de la versión
 │   │   ├── nlpEngine.ts         # Motor TF-IDF y Similitud del Coseno
 │   │   ├── syntaxAnalyzer.ts    # Analizador de verbos de acción física
 │   │   └── localData.ts         # Importación de los datos de la versión sin cuentas (localStorage)
@@ -424,6 +427,7 @@ El repositorio utiliza `package-lock.json` (en la raíz y en `functions/`) como 
 │       ├── ImportLocalDataModal.tsx # Importación de datos locales en el primer inicio de sesión
 │       ├── WelcomeDialog.tsx · ProductTour.tsx # Bienvenida y recorrido guiado
 │       ├── HowItWorks.tsx       # Ayuda
+│       ├── LegalPage.tsx · LegalTexts.tsx · LegalLinks.tsx # Privacidad, condiciones y aviso legal
 │       ├── Deferred.tsx         # Secciones y ventanas que se cargan al abrirlas
 │       ├── SyncIndicator.tsx    # Indicador de sincronización (pulsar fuerza la sincronización)
 │       └── SplashScreen.tsx     # Pantalla de arranque

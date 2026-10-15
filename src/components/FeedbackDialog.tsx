@@ -196,7 +196,8 @@ export const FeedbackDialog: React.FC<FeedbackDialogProps> = ({ functions, onClo
                 />
                 <span className="text-xs text-slate-700">
                   <span className="block font-bold text-slate-800">Adjuntar información técnica</span>
-                  Anónima: nos ayuda a reproducir un fallo. Ves exactamente lo que se envía.
+                  Solo lo que ves aquí, sin el identificador completo del navegador. Se guarda con tu mensaje y nos
+                  ayuda a reproducir un fallo.
                 </span>
               </label>
               {/* Siempre en la página (lo controla la casilla con aria-controls), oculta hasta marcarla */}

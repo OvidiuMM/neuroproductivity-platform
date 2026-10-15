@@ -5,6 +5,7 @@ import { ACCESS_MESSAGE_MAX_LENGTH, type OwnAccessStatus } from '../services/acc
 import { describeAuthError } from '../services/auth';
 import { DeleteAccountPanel } from './DeleteAccountPanel';
 import { AccessibilityTrigger, AccessibleScreen } from './AccessibilityPanel';
+import { LegalLinks } from './LegalLinks';
 
 interface AccessRequestScreenProps {
   status: Exclude<OwnAccessStatus, 'approved'>;
@@ -241,8 +242,9 @@ export const AccessRequestScreen: React.FC<AccessRequestScreenProps> = ({
               Cerrar sesión
             </button>
 
-            <div className="text-center">
+            <div className="space-y-2 text-center">
               <AccessibilityTrigger onClick={openAccessibility} />
+              <LegalLinks />
             </div>
           </div>
         </main>
