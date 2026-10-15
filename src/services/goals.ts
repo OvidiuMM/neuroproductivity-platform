@@ -1,5 +1,5 @@
-import type { Goal, TaskItem, WheelCategory, WheelOfLifeLog } from '../types';
-import { WHEEL_CATEGORIES } from './wheel';
+import type { Goal, TaskItem, WheelArea, WheelCategory, WheelOfLifeLog } from '../types';
+import { DEFAULT_AREAS, visibleAreas } from './wheel';
 import { isArchived, isCancelled, isDone } from './tasks';
 
 export const GOAL_TITLE_MAX = 100;
@@ -45,20 +45,27 @@ export interface AreaGoals {
 }
 
 // Áreas con sus metas activas, primero las de menor puntuación (las que más atención necesitan); en empate o sin
-// evaluación, en el orden de la Rueda
-export const areasWithGoals = (goals: Goal[], scores: Partial<Record<WheelCategory, number>> | null): AreaGoals[] => {
+// evaluación, en el orden de la Rueda. Son las áreas visibles y, para que ninguna meta activa desaparezca, las ocultas
+// (o que ya no existen) que aún tienen alguna.
+export const areasWithGoals = (
+  goals: Goal[],
+  scores: Partial<Record<WheelCategory, number>> | null,
+  areas: WheelArea[] = DEFAULT_AREAS
+): AreaGoals[] => {
   const active = sortGoals(goals).filter((g) => g.status === 'ACTIVE');
-  return WHEEL_CATEGORIES.map((area) => {
-    const score = scores?.[area];
-    return {
-      area,
-      score,
-      goals: active.filter((g) => g.area === area),
-      weak: score !== undefined && score <= WEAK_AREA_SCORE
-    };
-  }).sort(
-    (a, b) => (a.score ?? 0) - (b.score ?? 0) || WHEEL_CATEGORIES.indexOf(a.area) - WHEEL_CATEGORIES.indexOf(b.area)
-  );
+  const order = visibleAreas(areas).map((a) => a.id);
+  for (const goal of active) if (!order.includes(goal.area)) order.push(goal.area);
+  return order
+    .map((area) => {
+      const score = scores?.[area];
+      return {
+        area,
+        score,
+        goals: active.filter((g) => g.area === area),
+        weak: score !== undefined && score <= WEAK_AREA_SCORE
+      };
+    })
+    .sort((a, b) => (a.score ?? 0) - (b.score ?? 0) || order.indexOf(a.area) - order.indexOf(b.area));
 };
 
 // Metas activas por área de la Rueda

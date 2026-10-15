@@ -1,7 +1,7 @@
 # CLAR — Plataforma de Gestión del Tiempo y Neurociencia Aplicada
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
-[![Version](https://img.shields.io/badge/Version-0.9.3-indigo.svg)](#)
+[![Version](https://img.shields.io/badge/Version-0.9.4-indigo.svg)](#)
 [![React](https://img.shields.io/badge/React-19.0-61dafb.svg?logo=react&logoColor=black)](https://react.dev/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-7.x-3178c6.svg?logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
 [![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-4.x-38bdf8.svg?logo=tailwindcss&logoColor=white)](https://tailwindcss.com/)
@@ -55,7 +55,8 @@ Al volver a evaluar la Rueda se ve el efecto de las acciones, y las áreas cambi
 
 ### 1. Rueda de la Vida y trazabilidad (`M1`)
 
-- **Gráfico polar SVG:** 7 áreas (_Salud, Carrera Profesional, Finanzas, Familia, Ocio, Relaciones, Espiritualidad_) evaluadas del 0 al 10 con deslizadores; el gráfico se redibuja al momento. Cada área indica cuántas metas activas tiene, y la tarjeta «Metas» lleva al paso siguiente.
+- **Áreas de cada cuenta:** se empieza con 7 (_Salud, Carrera Profesional, Finanzas, Familia, Ocio, Relaciones, Espiritualidad_), que se pueden renombrar, ocultar y ampliar con áreas propias desde «Editar áreas» (entre 3 y 12 a la vista). Las 7 de partida conservan su nombre original como identificador y las nuevas tienen el suyo (`area-…`), así nada de lo guardado cambia; la lista va en el perfil (`wheelAreas`). Un área oculta sale de la Rueda, de las sugerencias y de las listas para elegir, pero conserva sus evaluaciones, sus metas (que siguen en «Metas») y sus tareas. Los nombres se muestran en toda la app y en las descargas; las sugerencias de área usan, para las nuevas, las palabras de su nombre (`src/services/wheel.ts`, `useAreas`).
+- **Gráfico polar SVG:** las áreas a la vista evaluadas del 0 al 10 con deslizadores; el gráfico se redibuja al momento. Cada área indica cuántas metas activas tiene, y la tarjeta «Metas» lleva al paso siguiente.
 - **Primer arranque guiado:** una cuenta sin evaluaciones abre directamente la Rueda con todas las áreas a 0 y un aviso de primer paso que enlaza a la «Ayuda» (pantallas, cómo se relacionan y dónde se guardan los datos).
 - **Persistencia append-only:** cada evaluación se guarda como una nueva, con su fecha en UTC (ISO 8601); las anteriores no se modifican, y las reglas de Firestore lo impiden.
 - **Comparativa histórica:** superpone a la evaluación actual cualquiera de las anteriores para ver qué áreas han mejorado.
@@ -150,6 +151,13 @@ Al volver a evaluar la Rueda se ve el efecto de las acciones, y las áreas cambi
 - **Tareas dependientes** (`dependsOn`): una tarea espera a otra y queda bloqueada hasta que esa esté hecha o cancelada; varias pueden esperar a la misma, en paralelo (ver [Listas](#3-listas-y-jerarquía-visual-m2)).
 - **Proyectos** (`users/{uid}/projects`): tareas con fecha de fin dentro de una meta, con su avance como una batería y avisos de plazo (ver [Metas](#2-metas-m6)).
 - **Descargas en JSON:** una tarea («⋯» → «Descargar (JSON)»), una meta o un proyecto, con todos sus datos y los nombres de lo relacionado (`src/services/exports.ts`).
+
+### Áreas propias, horas en 24 h y avisos (0.9.4)
+
+- **Áreas de la Rueda propias:** renombrar las 7 de partida, añadir áreas y ocultar las que no se usan, por cuenta (ver [Rueda de la Vida](#1-rueda-de-la-vida-y-trazabilidad-m1)).
+- **Horas en 24 h:** un campo propio de `hh:mm` en todas las horas, en lugar del selector del navegador (que en sistemas en 12 h podía guardar 23:00 en lugar de 11:00). El aviso de una alarma dice su hora y, si llega tarde porque CLAR estaba cerrada, cuándo era.
+- **Editar una tarea:** con el lápiz de su tarjeta o pulsando su título.
+- **Avisos rojos de administración:** solicitudes pendientes, mensajes sin leer y cuentas nuevas que entraron solas.
 
 ---
 

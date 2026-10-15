@@ -5,6 +5,7 @@ import { sortGoals } from '../services/goals';
 import { GoalProgress } from './GoalProgress';
 import { computeStats, recommendationsFor } from '../services/stats';
 import { toLocalDate } from '../services/tasks';
+import { useAreas } from '../hooks/useAreas';
 
 interface HomeViewProps {
   tasks: TaskItem[];
@@ -71,7 +72,8 @@ export const HomeView: React.FC<HomeViewProps> = ({
   const at = new Date(Math.max(now.getTime(), Date.now()));
   const stats = computeStats(contextTasks, at);
   const activeGoals = sortGoals(goals).filter((g) => g.status === 'ACTIVE');
-  const recommendations = recommendationsFor(stats, contextTasks, wheelLogs, at, goals);
+  const { areas, label: areaName } = useAreas();
+  const recommendations = recommendationsFor(stats, contextTasks, wheelLogs, at, goals, areas);
   const maxDaily = Math.max(1, ...stats.daily.map((d) => d.count));
   const datedDone = stats.onTime + stats.late;
   const maxArea = Math.max(1, ...stats.byArea.map((a) => a.count));
@@ -254,7 +256,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
               {stats.byArea.map(({ area, count }) => (
                 <li key={area} className="text-xs text-slate-700">
                   <div className="flex justify-between">
-                    <span>{area}</span>
+                    <span>{areaName(area)}</span>
                     <span className="font-mono font-semibold">{count}</span>
                   </div>
                   <div className="mt-1 h-1.5 rounded-full bg-slate-200" aria-hidden="true">
@@ -295,7 +297,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
                 {activeGoals.slice(0, 6).map((goal) => (
                   <li key={goal.id} className="space-y-1.5">
                     <p className="text-sm font-semibold break-words text-slate-900">{goal.title}</p>
-                    <p className="text-[11px] font-semibold text-indigo-700">{goal.area}</p>
+                    <p className="text-[11px] font-semibold text-indigo-700">{areaName(goal.area)}</p>
                     <GoalProgress goal={goal} tasks={tasks} />
                   </li>
                 ))}

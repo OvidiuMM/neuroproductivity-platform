@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Goal, TaskItem, ListContext, TaskPriority, TaskStatus, WheelCategory } from '../types';
+import { Goal, TaskItem, ListContext, TaskPriority, TaskStatus } from '../types';
 import { PRIORITY_LABEL, isArchived } from '../services/tasks';
 import { blockerOf, tasksById } from '../services/dependencies';
 import {
@@ -14,20 +14,12 @@ import {
   type SortBy
 } from '../services/taskListing';
 import { useNow } from '../hooks/useNow';
+import { useAreas } from '../hooks/useAreas';
 import { PHONE_QUERY, useMediaQuery } from '../hooks/useMediaQuery';
 import { TaskCard } from './TaskCard';
 import { BottomSheet } from './BottomSheet';
 import { Plus, Archive, Layers, ArrowUpDown, CheckCircle2, SlidersHorizontal, X } from 'lucide-react';
 
-const WHEEL_CATEGORIES: WheelCategory[] = [
-  'Salud',
-  'Carrera Profesional',
-  'Finanzas',
-  'Familia',
-  'Ocio',
-  'Relaciones',
-  'Espiritualidad'
-];
 const DEADLINE_FILTERS: { value: DeadlineFilter; label: string }[] = [
   { value: 'ALL', label: 'Todas' },
   { value: 'OVERDUE', label: 'Vencidas' },
@@ -108,7 +100,8 @@ export const TaskList: React.FC<TaskListProps> = ({
   // (sin las bloqueadas: esperan a otra tarea y van con el resto)
   const byId = tasksById(tasks);
   const blockerFor = (task: TaskItem) => blockerOf(task, byId);
-  const arrangedTasks = arrangeTasks(activeTasks, prefs, now);
+  const { label: areaName, selectable: selectableAreas } = useAreas();
+  const arrangedTasks = arrangeTasks(activeTasks, prefs, now, areaName);
   const hiddenByFilters = activeTasks.length - arrangedTasks.length;
   const { top: top10Tasks, rest: peripheralTasks } = splitTop10(arrangedTasks, (task) => Boolean(blockerFor(task)));
 
@@ -160,7 +153,13 @@ export const TaskList: React.FC<TaskListProps> = ({
       id: 'filter-category',
       label: 'Área de la Rueda',
       value: prefs.filters.category,
-      options: [{ value: 'ALL', label: 'Todas' }, ...WHEEL_CATEGORIES.map((c) => ({ value: c, label: c }))]
+      options: [
+        { value: 'ALL', label: 'Todas' },
+        ...selectableAreas(prefs.filters.category === 'ALL' ? undefined : prefs.filters.category).map((a) => ({
+          value: a.id,
+          label: a.label
+        }))
+      ]
     }
   ];
   // Los valores salen de las opciones de cada campo; la estimación se guarda como número

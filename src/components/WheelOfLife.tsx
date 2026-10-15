@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
 import { Goal, WheelOfLifeLog, WheelCategory } from '../types';
 import { activeGoalsByArea } from '../services/goals';
-import { WHEEL_CATEGORIES } from '../services/wheel';
-import { Compass, History, Save, Check, TrendingUp, Flag, BookOpen, Target, ArrowRight } from 'lucide-react';
+import { logAverage } from '../services/wheel';
+import { useAreas } from '../hooks/useAreas';
+import { Compass, History, Save, Check, TrendingUp, Flag, BookOpen, Target, ArrowRight, Pencil } from 'lucide-react';
 
 interface WheelOfLifeProps {
   logs: WheelOfLifeLog[];
@@ -13,13 +14,18 @@ interface WheelOfLifeProps {
   // Metas activas de cada área (áreas → metas → tareas); se gestionan en «Metas»
   goals: Goal[];
   onOpenGoals: () => void;
+  // Renombrar, ocultar o añadir áreas
+  onEditAreas: () => void;
 }
 
 // Margen del viewBox alrededor del círculo para que quepan las etiquetas de las áreas
 const LABEL_MARGIN_X = 100;
 const LABEL_MARGIN_Y = 16;
 
-const CATEGORIES = WHEEL_CATEGORIES;
+// En el gráfico, los nombres largos se recortan (completos en la lista de puntuaciones)
+const CHART_LABEL_MAX = 16;
+const chartLabel = (label: string) =>
+  label.length > CHART_LABEL_MAX ? `${label.slice(0, CHART_LABEL_MAX - 1)}…` : label;
 
 export const WheelOfLife: React.FC<WheelOfLifeProps> = ({
   logs,
@@ -27,25 +33,18 @@ export const WheelOfLife: React.FC<WheelOfLifeProps> = ({
   onAppendSnapshot,
   onOpenHelp,
   goals,
-  onOpenGoals
+  onOpenGoals,
+  onEditAreas
 }) => {
   const goalsByArea = activeGoalsByArea(goals);
-  // Sin evaluaciones guardadas (primer arranque) todas las áreas empiezan en 0
-  const latestLog = logs[logs.length - 1] || {
-    scores: {
-      Salud: 0,
-      'Carrera Profesional': 0,
-      Finanzas: 0,
-      Familia: 0,
-      Ocio: 0,
-      Relaciones: 0,
-      Espiritualidad: 0
-    }
-  };
-
-  const [currentScores, setCurrentScores] = useState<Record<WheelCategory, number>>({
-    ...latestLog.scores
-  });
+  // Las áreas a la vista de la cuenta, en su orden
+  const { visible, label } = useAreas();
+  const CATEGORIES = visible.map((area) => area.id);
+  // Sin evaluaciones guardadas (primer arranque) todas las áreas empiezan en 0; un área añadida después de la última
+  // evaluación, también
+  const latestLog = logs[logs.length - 1];
+  const [currentScores, setCurrentScores] = useState<Record<WheelCategory, number>>({ ...latestLog?.scores });
+  const scoreOf = (cat: WheelCategory) => currentScores[cat] ?? 0;
 
   const [showHistoryOverlay, setShowHistoryOverlay] = useState(true);
   const [selectedHistoricalIndex, setSelectedHistoricalIndex] = useState<number>(0);
@@ -86,8 +85,9 @@ export const WheelOfLife: React.FC<WheelOfLifeProps> = ({
     }));
   };
 
+  // Se guardan las áreas a la vista (las ocultas conservan sus evaluaciones anteriores)
   const handleConsolidateState = () => {
-    onAppendSnapshot(currentScores, snapshotLabel || undefined);
+    onAppendSnapshot(Object.fromEntries(CATEGORIES.map((cat) => [cat, scoreOf(cat)])), snapshotLabel || undefined);
     setSnapshotLabel('');
     setSavedSuccess(true);
     setTimeout(() => setSavedSuccess(false), 3000);
@@ -138,8 +138,16 @@ export const WheelOfLife: React.FC<WheelOfLifeProps> = ({
           </p>
         </div>
 
-        {/* Conmutador de Comparativa Histórica (HU-01 Escenario 2) */}
-        <div className="flex items-center gap-3">
+        {/* Conmutador de Comparativa Histórica (HU-01 Escenario 2) y edición de las áreas */}
+        <div className="flex flex-wrap items-center gap-3">
+          <button
+            type="button"
+            onClick={onEditAreas}
+            className="flex min-h-11 items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 text-xs font-semibold text-slate-700 hover:bg-slate-50"
+          >
+            <Pencil className="h-4 w-4 text-indigo-600" aria-hidden="true" />
+            Editar áreas
+          </button>
           <label className="flex cursor-pointer items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-semibold text-slate-700">
             <input
               type="checkbox"
@@ -209,7 +217,7 @@ export const WheelOfLife: React.FC<WheelOfLifeProps> = ({
 
               {/* Vértices interactivos para arrastre/clic directo */}
               {CATEGORIES.map((cat, i) => {
-                const { x, y } = getCoordinates(i, currentScores[cat]);
+                const { x, y } = getCoordinates(i, scoreOf(cat));
                 return (
                   <g key={cat}>
                     <circle
@@ -240,7 +248,7 @@ export const WheelOfLife: React.FC<WheelOfLifeProps> = ({
                     dominantBaseline="middle"
                     className="fill-slate-700 text-[11px] font-bold"
                   >
-                    {cat} ({currentScores[cat]}/10)
+                    {chartLabel(label(cat))} ({scoreOf(cat)}/10)
                   </text>
                 );
               })}
@@ -273,15 +281,16 @@ export const WheelOfLife: React.FC<WheelOfLifeProps> = ({
 
             <div className="max-h-[300px] space-y-3 overflow-y-auto pr-2">
               {CATEGORIES.map((cat) => {
-                const currentVal = currentScores[cat];
-                const histVal = historicalLog ? historicalLog.scores[cat] : currentVal;
+                const currentVal = scoreOf(cat);
+                // Una evaluación anterior a un área añadida no tiene su puntuación: sin diferencia
+                const histVal = historicalLog?.scores[cat] ?? currentVal;
                 const delta = currentVal - histVal;
 
                 return (
                   <div key={cat} className="space-y-1">
                     <div className="flex items-center justify-between text-xs">
                       <span className="font-semibold text-slate-800">
-                        {cat}
+                        {label(cat)}
                         {goalsByArea[cat] ? (
                           <span className="ml-1.5 font-normal text-indigo-700">
                             · {goalsByArea[cat]} {goalsByArea[cat] === 1 ? 'meta activa' : 'metas activas'}
@@ -303,7 +312,7 @@ export const WheelOfLife: React.FC<WheelOfLifeProps> = ({
                       max="10"
                       step="1"
                       value={currentVal}
-                      aria-label={`Puntuación de ${cat}`}
+                      aria-label={`Puntuación de ${label(cat)}`}
                       onChange={(e) => handleScoreChange(cat, parseInt(e.target.value, 10))}
                       className="h-1.5 w-full cursor-pointer appearance-none rounded-lg bg-slate-200 accent-indigo-600"
                     />
@@ -379,7 +388,7 @@ export const WheelOfLife: React.FC<WheelOfLifeProps> = ({
                     </span>
                   </div>
                   <div className="rounded-md border border-slate-200 bg-white px-2 py-0.5 font-mono text-[11px] text-slate-600">
-                    Promedio: {(Object.values(log.scores).reduce((a, b) => a + b, 0) / CATEGORIES.length).toFixed(1)}/10
+                    Promedio: {logAverage(log.scores).toFixed(1)}/10
                   </div>
                 </button>
               ))}
