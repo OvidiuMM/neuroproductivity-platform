@@ -1,8 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Mail, Reply } from 'lucide-react';
-import { FEEDBACK_TYPES } from '../services/feedback';
+import { FEEDBACK_TYPES, REPLY_MAX_LENGTH, cleanReply } from '../services/feedback';
 import {
-  REPLY_MAX_LENGTH,
   newReplyId,
   type ClosedFeedbackPage,
   type FeedbackReply,
@@ -43,11 +42,13 @@ const mergeById = (first: FeedbackTicket[], second: FeedbackTicket[]) => {
 // administración. Al abrirse, el foco va al texto.
 const ReplyForm: React.FC<{
   ticket: FeedbackTicket;
-  onSend: (replyId: string, message: string) => Promise<string | null>;
+  onSend: (replyId: string, message: string) => Promise<ReplyResult>;
+  // Enviada: se cierra el formulario
+  onSent: () => void;
   onCancel: () => void;
-}> = ({ ticket, onSend, onCancel }) => {
-  // Un id por formulario: si hay que reintentar, se repite y el servidor no la envía dos veces
-  const [replyId] = useState(newReplyId);
+}> = ({ ticket, onSend, onSent, onCancel }) => {
+  // Un id por respuesta: si hay que reintentar, se repite y el servidor no la envía dos veces
+  const [replyId, setReplyId] = useState(newReplyId);
   const [message, setMessage] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -57,11 +58,19 @@ const ReplyForm: React.FC<{
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
+    const text = cleanReply(message);
     setBusy(true);
     setError(null);
-    const failure = await onSend(replyId, message.trim());
+    const result = await onSend(replyId, text);
     setBusy(false);
-    if (failure) setError(failure);
+    if ('error' in result) return setError(result.error);
+    if (result.reply.message === text) return onSent();
+    // Con este id ya había salido un texto anterior (un intento que dio error sin que se supiera que salió): el
+    // servidor devuelve ese sin reenviar nada. Este texto no ha salido; se queda aquí y, si se envía, es otra respuesta
+    setReplyId(newReplyId());
+    setError(
+      'Tu respuesta anterior sí se envió: es la que ves arriba. Este texto no se ha enviado; si quieres, envíalo como otra respuesta.'
+    );
   };
 
   return (
@@ -75,6 +84,8 @@ const ReplyForm: React.FC<{
         rows={5}
         required
         maxLength={REPLY_MAX_LENGTH}
+        // Mientras se envía no cambia: lo que se ve es lo que sale
+        readOnly={busy}
         value={message}
         onChange={(e) => setMessage(e.target.value)}
         aria-describedby={`${id}-help`}
@@ -119,14 +130,17 @@ export const FeedbackAdminView: React.FC<FeedbackAdminViewProps> = ({
   loadClosed
 }) => {
   const [busyId, setBusyId] = useState<string | null>(null);
-  // Mensaje que se está respondiendo (uno a la vez) y el último respondido, para anunciarlo y devolver el foco
-  const [replyingId, setReplyingId] = useState<string | null>(null);
+  // Formulario de respuesta abierto (uno a la vez; cada vez que se abre es otro, aunque sea del mismo mensaje) y el
+  // último mensaje respondido, para anunciarlo y devolver el foco
+  const [replying, setReplying] = useState<{ ticketId: string; form: number } | null>(null);
   const [repliedId, setRepliedId] = useState<string | null>(null);
-  // El formulario abierto en este momento: una respuesta que termina mientras se escribe otra no la cierra
-  const replyingRef = useRef(replyingId);
+  const forms = useRef(0);
+  // El formulario abierto en este momento: una respuesta que termina mientras se escribe otra (de este mensaje u otro)
+  // no la cierra
+  const replyingRef = useRef(replying);
   useEffect(() => {
-    replyingRef.current = replyingId;
-  }, [replyingId]);
+    replyingRef.current = replying;
+  }, [replying]);
   useEffect(() => {
     if (repliedId) document.getElementById(`reply-button-${repliedId}`)?.focus();
   }, [repliedId]);
@@ -166,19 +180,21 @@ export const FeedbackAdminView: React.FC<FeedbackAdminViewProps> = ({
 
   const sendReply = async (ticket: FeedbackTicket, replyId: string, message: string) => {
     const result = await onReply(ticket, replyId, message);
-    if ('error' in result) return result.error;
+    if ('error' in result) return result;
     const addReply = (t: FeedbackTicket): FeedbackTicket =>
       t.id === ticket.id && !t.replies?.some((r) => r.id === result.reply.id)
         ? { ...t, replies: [...(t.replies ?? []), result.reply] }
         : t;
     // Los abiertos llegan en vivo; la lista de cerrados ya cargada se ajusta aquí
     setClosed((current) => current && current.map(addReply));
-    // Solo se cierra (y se anuncia, con el foco en «Responder») si su formulario sigue siendo el abierto
-    if (replyingRef.current === ticket.id) {
-      setReplyingId(null);
-      setRepliedId(ticket.id);
-    }
-    return null;
+    return result;
+  };
+
+  // Solo se cierra (y se anuncia, con el foco en «Responder») si el formulario que la envió sigue siendo el abierto
+  const replySent = (ticketId: string, form: number) => {
+    if (replyingRef.current?.form !== form) return;
+    setReplying(null);
+    setRepliedId(ticketId);
   };
 
   const actionClass =
@@ -226,21 +242,23 @@ export const FeedbackAdminView: React.FC<FeedbackAdminViewProps> = ({
           Respuesta enviada.
         </p>
       )}
-      {replyingId === ticket.id && (
+      {replying?.ticketId === ticket.id && (
         <ReplyForm
+          key={replying.form}
           ticket={ticket}
           onSend={(replyId, message) => sendReply(ticket, replyId, message)}
-          onCancel={() => setReplyingId(null)}
+          onSent={() => replySent(ticket.id, replying.form)}
+          onCancel={() => setReplying(null)}
         />
       )}
       <div className="flex flex-wrap gap-2 pt-1">
-        {replyingId !== ticket.id && (
+        {replying?.ticketId !== ticket.id && (
           <button
             id={`reply-button-${ticket.id}`}
             type="button"
             onClick={() => {
               setRepliedId(null);
-              setReplyingId(ticket.id);
+              setReplying({ ticketId: ticket.id, form: ++forms.current });
             }}
             aria-label={`Responder: ${ticket.subject}`}
             className="inline-flex min-h-11 items-center gap-1.5 rounded-xl bg-slate-900 px-3 text-xs font-bold text-white hover:bg-slate-800"

@@ -1,6 +1,14 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { describeBrowser, describeDevice, describeOs, deviceClassFor } from '../../src/services/feedback';
+import { parseReply } from '../../functions/src/feedbackLogic';
+import {
+  REPLY_MAX_LENGTH,
+  cleanReply,
+  describeBrowser,
+  describeDevice,
+  describeOs,
+  deviceClassFor
+} from '../../src/services/feedback';
 
 const UA = {
   androidChrome:
@@ -57,4 +65,18 @@ test('the technical context holds no full user agent', () => {
     online: true
   });
   assert.ok(!JSON.stringify(context).includes('Mozilla'));
+});
+
+test('a reply is sent already cleaned exactly as the server stores it', () => {
+  // Así la app reconoce si la respuesta que devuelve el servidor es este texto o uno anterior con el mismo id
+  for (const text of [
+    '  Hola:\r\n\tGracias por avisar.\u0007\u0000  ',
+    '\u001b[31mSin colores\u007f',
+    'Línea 1\n\nLínea 2 ',
+    'a'.repeat(REPLY_MAX_LENGTH + 10)
+  ]) {
+    assert.equal(cleanReply(text), parseReply({ ticketId: 'ticket', replyId: 'abcdefgh', message: text })?.message);
+  }
+  assert.equal(cleanReply('  Hola:\r\n\tGracias.\u0007  '), 'Hola:\r\n\tGracias.');
+  assert.equal(cleanReply('a'.repeat(REPLY_MAX_LENGTH + 10)).length, REPLY_MAX_LENGTH);
 });
