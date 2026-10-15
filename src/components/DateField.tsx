@@ -24,6 +24,8 @@ interface DateFieldProps {
   required?: boolean;
   className?: string;
   inputClassName?: string;
+  // Avisa cuando lo escrito aún no es la fecha guardada (a medias o imposible): para saber si hay cambios sin guardar
+  onDraftChange?: (pending: boolean) => void;
 }
 
 const POPOVER_WIDTH = 288;
@@ -59,7 +61,8 @@ export const DateField: React.FC<DateFieldProps> = ({
   hasVisibleLabel = false,
   required = false,
   className = '',
-  inputClassName = ''
+  inputClassName = '',
+  onDraftChange
 }) => {
   const generatedId = useId();
   const inputId = id ?? `date-${generatedId}`;
@@ -80,6 +83,17 @@ export const DateField: React.FC<DateFieldProps> = ({
   const parsed = parseDateInput(text);
   const missing = required && parsed === '';
   const invalid = parsed === null || missing;
+
+  // Texto a medias o imposible: un cambio que aún no ha llegado al valor. Al desmontarse, deja de contar
+  const pendingDraft = parsed !== value;
+  const onDraftChangeRef = useRef(onDraftChange);
+  useLayoutEffect(() => {
+    onDraftChangeRef.current = onDraftChange;
+  });
+  useEffect(() => {
+    onDraftChangeRef.current?.(pendingDraft);
+  }, [pendingDraft]);
+  useEffect(() => () => onDraftChangeRef.current?.(false), []);
 
   // Cambios desde fuera (sugerencia del analizador, «Hoy», otra tarea): se muestran sin pisar lo que se escribe
   const [shownValue, setShownValue] = useState(value);

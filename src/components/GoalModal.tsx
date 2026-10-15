@@ -48,7 +48,9 @@ export const GoalModal: React.FC<GoalModalProps> = ({
   // Cambios sin guardar: frente a como se abrió (la ventana se monta al abrirse)
   const snapshot = JSON.stringify([title, area, why, targetDate]);
   const [openedSnapshot] = useState(snapshot);
-  const guard = useDiscardGuard(snapshot !== openedSnapshot, onClose);
+  // Una fecha a medio escribir (o imposible) también es un cambio
+  const [dateDraft, setDateDraft] = useState(false);
+  const guard = useDiscardGuard(snapshot !== openedSnapshot || dateDraft, onClose);
 
   const dialogRef = useRef<HTMLDivElement>(null);
   useModalFocus(true, dialogRef, guard.requestClose);
@@ -161,7 +163,13 @@ export const GoalModal: React.FC<GoalModalProps> = ({
             <span className={labelClass}>
               Fecha objetivo <span className="font-normal tracking-normal text-slate-500 normal-case">(opcional)</span>
             </span>
-            <DateField label="Fecha objetivo" value={targetDate} onChange={setTargetDate} inputClassName={inputClass} />
+            <DateField
+              label="Fecha objetivo"
+              value={targetDate}
+              onChange={setTargetDate}
+              onDraftChange={setDateDraft}
+              inputClassName={inputClass}
+            />
           </div>
 
           {submitted && error && (
