@@ -10,6 +10,7 @@ import {
   parseFeedback,
   parseReply,
   recentSends,
+  replyState,
   type FeedbackTicket
 } from '../src/feedbackLogic';
 
@@ -104,19 +105,35 @@ describe('respuestas de la administración', () => {
     updatedAt: '2026-10-15T09:00:00.000Z'
   };
 
-  it('acepta el id de un mensaje y un texto no vacío, sin caracteres de control', () => {
-    assert.deepEqual(parseReply({ ticketId: 'AbC_12-x', message: '  Ya está arreglado.\u0007 ' }), {
+  const replyId = 'a1b2c3d4e5f6';
+
+  it('acepta el id de un mensaje, el de la respuesta y un texto no vacío, sin caracteres de control', () => {
+    assert.deepEqual(parseReply({ ticketId: 'AbC_12-x', replyId, message: '  Ya está arreglado.\u0007 ' }), {
       ticketId: 'AbC_12-x',
+      replyId,
       message: 'Ya está arreglado.'
     });
-    assert.equal(parseReply({ ticketId: 'AbC', message: '   ' }), null);
-    assert.equal(parseReply({ ticketId: '../otro', message: 'Hola' }), null);
-    assert.equal(parseReply({ message: 'Hola' }), null);
+    assert.equal(parseReply({ ticketId: 'AbC', replyId, message: '   ' }), null);
+    assert.equal(parseReply({ ticketId: '../otro', replyId, message: 'Hola' }), null);
+    assert.equal(parseReply({ ticketId: 'AbC', message: 'Hola' }), null);
+    assert.equal(parseReply({ ticketId: 'AbC', replyId: 'a.b', message: 'Hola' }), null);
+    assert.equal(parseReply({ ticketId: 'AbC', replyId: 'corto', message: 'Hola' }), null);
+    assert.equal(parseReply({ replyId, message: 'Hola' }), null);
     assert.equal(parseReply(null), null);
     assert.equal(
-      parseReply({ ticketId: 'a', message: 'x'.repeat(REPLY_MAX_LENGTH + 10) })?.message.length,
+      parseReply({ ticketId: 'a', replyId, message: 'x'.repeat(REPLY_MAX_LENGTH + 10) })?.message.length,
       REPLY_MAX_LENGTH
     );
+  });
+
+  it('una respuesta ya enviada no se reenvía, ni una que quedó a medias', () => {
+    const sent = { id: replyId, message: 'Hola', sentAt: '2026-10-15T10:00:00.000Z' };
+    assert.deepEqual(replyState({ replies: [sent] }, replyId), { kind: 'sent', reply: sent });
+    assert.deepEqual(replyState({ pendingReplies: { [replyId]: '2026-10-15T10:00:00.000Z' } }, replyId), {
+      kind: 'uncertain'
+    });
+    assert.deepEqual(replyState({ replies: [sent] }, 'otraRespuesta1'), { kind: 'new' });
+    assert.deepEqual(replyState({}, replyId), { kind: 'new' });
   });
 
   it('responde por email a quien escribió, con su mensaje citado, y la respuesta vuelve a la administración', () => {

@@ -15,7 +15,7 @@ interface AdminViewProps {
   tickets: FeedbackTicket[];
   feedbackError: string | null;
   onSetFeedbackStatus: (ticket: FeedbackTicket, status: FeedbackStatus) => Promise<boolean>;
-  onReplyFeedback: (ticket: FeedbackTicket, message: string) => Promise<ReplyResult>;
+  onReplyFeedback: (ticket: FeedbackTicket, replyId: string, message: string) => Promise<ReplyResult>;
   loadClosedFeedback: (cursor: ClosedFeedbackPage['cursor']) => Promise<ClosedFeedbackPage>;
 }
 

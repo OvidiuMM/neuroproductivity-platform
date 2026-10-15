@@ -3,6 +3,7 @@ import { Mail, Reply } from 'lucide-react';
 import { FEEDBACK_TYPES } from '../services/feedback';
 import {
   REPLY_MAX_LENGTH,
+  newReplyId,
   type ClosedFeedbackPage,
   type FeedbackReply,
   type FeedbackStatus,
@@ -16,8 +17,8 @@ interface FeedbackAdminViewProps {
   error: string | null;
   // Devuelve si se guardó
   onSetStatus: (ticket: FeedbackTicket, status: FeedbackStatus) => Promise<boolean>;
-  // Envía la respuesta por email a quien escribió y la guarda en el mensaje
-  onReply: (ticket: FeedbackTicket, message: string) => Promise<ReplyResult>;
+  // Envía la respuesta por email a quien escribió y la guarda en el mensaje (el id se repite en los reintentos)
+  onReply: (ticket: FeedbackTicket, replyId: string, message: string) => Promise<ReplyResult>;
   // Cerrados, por páginas y bajo demanda
   loadClosed: (cursor: ClosedFeedbackPage['cursor']) => Promise<ClosedFeedbackPage>;
 }
@@ -42,9 +43,11 @@ const mergeById = (first: FeedbackTicket[], second: FeedbackTicket[]) => {
 // administración. Al abrirse, el foco va al texto.
 const ReplyForm: React.FC<{
   ticket: FeedbackTicket;
-  onSend: (message: string) => Promise<string | null>;
+  onSend: (replyId: string, message: string) => Promise<string | null>;
   onCancel: () => void;
 }> = ({ ticket, onSend, onCancel }) => {
+  // Un id por formulario: si hay que reintentar, se repite y el servidor no la envía dos veces
+  const [replyId] = useState(newReplyId);
   const [message, setMessage] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -56,7 +59,7 @@ const ReplyForm: React.FC<{
     e.preventDefault();
     setBusy(true);
     setError(null);
-    const failure = await onSend(message.trim());
+    const failure = await onSend(replyId, message.trim());
     setBusy(false);
     if (failure) setError(failure);
   };
@@ -119,6 +122,11 @@ export const FeedbackAdminView: React.FC<FeedbackAdminViewProps> = ({
   // Mensaje que se está respondiendo (uno a la vez) y el último respondido, para anunciarlo y devolver el foco
   const [replyingId, setReplyingId] = useState<string | null>(null);
   const [repliedId, setRepliedId] = useState<string | null>(null);
+  // El formulario abierto en este momento: una respuesta que termina mientras se escribe otra no la cierra
+  const replyingRef = useRef(replyingId);
+  useEffect(() => {
+    replyingRef.current = replyingId;
+  }, [replyingId]);
   useEffect(() => {
     if (repliedId) document.getElementById(`reply-button-${repliedId}`)?.focus();
   }, [repliedId]);
@@ -156,15 +164,20 @@ export const FeedbackAdminView: React.FC<FeedbackAdminViewProps> = ({
     }
   };
 
-  const sendReply = async (ticket: FeedbackTicket, message: string) => {
-    const result = await onReply(ticket, message);
+  const sendReply = async (ticket: FeedbackTicket, replyId: string, message: string) => {
+    const result = await onReply(ticket, replyId, message);
     if ('error' in result) return result.error;
     const addReply = (t: FeedbackTicket): FeedbackTicket =>
-      t.id === ticket.id ? { ...t, replies: [...(t.replies ?? []), result.reply] } : t;
+      t.id === ticket.id && !t.replies?.some((r) => r.id === result.reply.id)
+        ? { ...t, replies: [...(t.replies ?? []), result.reply] }
+        : t;
     // Los abiertos llegan en vivo; la lista de cerrados ya cargada se ajusta aquí
     setClosed((current) => current && current.map(addReply));
-    setReplyingId(null);
-    setRepliedId(ticket.id);
+    // Solo se cierra (y se anuncia, con el foco en «Responder») si su formulario sigue siendo el abierto
+    if (replyingRef.current === ticket.id) {
+      setReplyingId(null);
+      setRepliedId(ticket.id);
+    }
     return null;
   };
 
@@ -199,7 +212,7 @@ export const FeedbackAdminView: React.FC<FeedbackAdminViewProps> = ({
       {(ticket.replies?.length ?? 0) > 0 && (
         <ol aria-label={`Respuestas a «${ticket.subject}»`} className="space-y-2 border-l-2 border-indigo-200 pl-3">
           {ticket.replies!.map((reply: FeedbackReply) => (
-            <li key={reply.sentAt} className="space-y-0.5">
+            <li key={reply.id} className="space-y-0.5">
               <p className="text-[11px] font-semibold text-indigo-800">
                 Tu respuesta · {dateTime.format(new Date(reply.sentAt))}
               </p>
@@ -216,7 +229,7 @@ export const FeedbackAdminView: React.FC<FeedbackAdminViewProps> = ({
       {replyingId === ticket.id && (
         <ReplyForm
           ticket={ticket}
-          onSend={(message) => sendReply(ticket, message)}
+          onSend={(replyId, message) => sendReply(ticket, replyId, message)}
           onCancel={() => setReplyingId(null)}
         />
       )}

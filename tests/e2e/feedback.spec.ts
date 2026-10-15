@@ -135,3 +135,45 @@ test('the server asks for a confirmed email, allows five messages an hour and fo
   expect((await listDocuments('feedback_tickets')).filter((t) => t.uid === uid)).toHaveLength(0);
   expect((await callFunction('submitFeedback', idToken, message)).status).toBe(429);
 });
+
+test('a reply that finishes while another is being written does not close it', async ({ page }) => {
+  test.slow(); // Varias llamadas a funciones
+  const { idToken } = await createVerifiedAccount();
+  const stamp = Date.now().toString(36);
+  const [first, second] = [`Primera duda ${stamp}`, `Segunda duda ${stamp}`];
+  for (const subject of [first, second]) {
+    expect(
+      (await callFunction('submitFeedback', idToken, { type: 'general', subject, description: 'Una duda.' })).status
+    ).toBe(200);
+  }
+  await page.goto('/');
+  await signInWithGoogle(page, ADMIN_EMAIL);
+  await page.getByRole('button', { name: /^Administración/ }).click();
+  await page.getByRole('button', { name: /^Mensajes/ }).click();
+
+  // La primera respuesta se queda enviándose…
+  let release = () => {};
+  const held = new Promise<void>((resolve) => (release = resolve));
+  await page.route('**/replyToFeedback', async (route) => {
+    await held;
+    await route.continue();
+  });
+  const firstItem = page.getByRole('listitem', { name: `${first} (Nuevo)` });
+  await firstItem.getByRole('button', { name: `Responder: ${first}` }).click();
+  await firstItem.getByRole('textbox', { name: /^Respuesta para / }).fill('Respuesta a la primera.');
+  await firstItem.getByRole('button', { name: 'Enviar respuesta' }).click();
+  await expect(firstItem.getByRole('button', { name: 'Enviando…' })).toBeVisible();
+
+  // …mientras se escribe la segunda
+  const secondItem = page.getByRole('listitem', { name: `${second} (Nuevo)` });
+  await secondItem.getByRole('button', { name: `Responder: ${second}` }).click();
+  const secondAnswer = secondItem.getByRole('textbox', { name: /^Respuesta para / });
+  await secondAnswer.fill('Respuesta a la segunda, a medias');
+  release();
+
+  await expect(
+    page.getByRole('listitem', { name: `${first} (Leído)` }).getByRole('list', { name: /^Respuestas a / })
+  ).toContainText('Respuesta a la primera.', SERVER_CALL);
+  await expect(secondAnswer).toHaveValue('Respuesta a la segunda, a medias');
+  await expect(secondAnswer).toBeFocused();
+});
