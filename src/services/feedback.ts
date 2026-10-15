@@ -10,6 +10,13 @@ export const FEEDBACK_TYPES: { value: FeedbackType; label: string }[] = [
 
 export const FEEDBACK_SUBJECT_MAX = 120;
 export const FEEDBACK_DESCRIPTION_MAX = 2000;
+export const REPLY_MAX_LENGTH = 5000;
+
+// Respuesta de la administración tal como la guarda replyToFeedback: sin caracteres de control (salvo tabuladores y
+// saltos de línea), recortada y con su límite. Se envía ya así, para poder compararla con la que devuelve
+// eslint-disable-next-line no-control-regex -- justo lo que se busca: caracteres de control
+const CONTROL = /[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F]/g;
+export const cleanReply = (text: string) => text.replace(CONTROL, '').trim().slice(0, REPLY_MAX_LENGTH);
 
 export type DeviceClass = 'móvil' | 'tableta' | 'escritorio';
 
