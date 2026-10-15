@@ -1,7 +1,8 @@
 // Motor NLP de Enlace Cognitivo (Módulo 3: TF-IDF y Similitud de Coseno)
 // Analiza el título y descripción de la tarea para sugerir automáticamente el área de la Rueda de la Vida
 
-import { WheelCategory } from '../types';
+import type { WheelArea, WheelCategory } from '../types';
+import { DEFAULT_AREAS, visibleAreas } from './wheel';
 
 // Stopwords en español para filtrado léxico
 const SPANISH_STOPWORDS = new Set([
@@ -415,7 +416,21 @@ export interface NLPSuggestionResult {
   isAboveThreshold: boolean; // Umbral empírico >= 0.65 (o adaptado si coincide léxicamente)
 }
 
-export function inferWheelCategory(title: string, description: string): NLPSuggestionResult {
+// Áreas candidatas de una cuenta: solo las visibles. Las de partida usan su corpus (más las palabras de su nombre si se
+// renombraron); las añadidas, las palabras de su nombre
+const candidatesFor = (areas: WheelArea[]) =>
+  visibleAreas(areas).map((area) => {
+    const base = (CATEGORY_CORPUS as Partial<Record<string, string[]>>)[area.id];
+    if (base && area.label === area.id) return { id: area.id, words: base, centroid: CATEGORY_CENTROIDS[area.id] };
+    const words = [...new Set([...(base ?? []), ...tokenizeAndClean(area.label)])];
+    return { id: area.id, words, centroid: calculateTF(words) };
+  });
+
+export function inferWheelCategory(
+  title: string,
+  description: string,
+  areas: WheelArea[] = DEFAULT_AREAS
+): NLPSuggestionResult {
   const combinedText = `${title} ${description}`;
   const tokens = tokenizeAndClean(combinedText);
   const docTF = calculateTF(tokens);
@@ -424,20 +439,21 @@ export function inferWheelCategory(title: string, description: string): NLPSugge
   let bestCategory: WheelCategory | null = null;
   let maxScore = 0;
   const matchedTokens: string[] = [];
+  const candidates = candidatesFor(areas);
 
-  for (const [category, centroid] of Object.entries(CATEGORY_CENTROIDS) as [WheelCategory, Record<string, number>][]) {
+  for (const { id, centroid } of candidates) {
     const similarity = cosineSimilarity(docTF, centroid);
-    scores[category] = Number(similarity.toFixed(3));
+    scores[id] = Number(similarity.toFixed(3));
 
     if (similarity > maxScore) {
       maxScore = similarity;
-      bestCategory = category;
+      bestCategory = id;
     }
   }
 
   // Detectar tokens coincidentes para feedback explicativo
   if (bestCategory) {
-    const categoryWords = new Set(CATEGORY_CORPUS[bestCategory]);
+    const categoryWords = new Set(candidates.find((c) => c.id === bestCategory)!.words);
     for (const token of tokens) {
       if (categoryWords.has(token)) {
         matchedTokens.push(token);

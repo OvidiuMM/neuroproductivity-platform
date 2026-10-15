@@ -40,7 +40,8 @@ const SCREENS: { tab: AppTab; title: string; icon: React.ReactNode; points: stri
     title: 'Rueda de la Vida',
     icon: <Compass className="h-5 w-5 text-indigo-600" />,
     points: [
-      'Puntúa de 0 a 10 tu satisfacción en 7 áreas: Salud, Carrera Profesional, Finanzas, Familia, Ocio, Relaciones y Espiritualidad.',
+      'Puntúa de 0 a 10 tu satisfacción en cada área. Empiezas con 7: Salud, Carrera Profesional, Finanzas, Familia, Ocio, Relaciones y Espiritualidad.',
+      '«Editar áreas» te deja renombrarlas, añadir las tuyas y ocultar las que no uses (entre 3 y 12 a la vista). Un área oculta conserva sus evaluaciones, sus metas y sus tareas.',
       'Cada vez que pulsas «Guardar la evaluación» se guarda una evaluación nueva; las anteriores nunca se modifican.',
       'Activa la comparativa histórica para superponer una evaluación anterior y ver qué áreas han mejorado.',
       'Las áreas más bajas son las mejores candidatas para una meta: en «Metas» aparecen las primeras.'

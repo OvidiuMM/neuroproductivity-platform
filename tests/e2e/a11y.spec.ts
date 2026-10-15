@@ -244,6 +244,16 @@ test('projects: the list, the form and a project with its tasks', async ({ page 
   await expectNoViolations(page, 'lista de proyectos');
 });
 
+test('the Wheel area editor', async ({ page }) => {
+  await page.goto('/');
+  await signInWithGoogle(page);
+  await openSection(page, 'Rueda de la Vida');
+  await page.getByRole('button', { name: 'Editar áreas' }).click();
+  await page.getByRole('button', { name: 'Añadir un área' }).click();
+  await expect(page.getByRole('dialog', { name: 'Áreas de tu Rueda' })).toBeVisible();
+  await expectNoViolations(page, 'editor de áreas');
+});
+
 test('welcome dialog, every step', async ({ page }) => {
   await page.goto('/');
   await signInWithGoogle(page, undefined, undefined, { onboarded: false });

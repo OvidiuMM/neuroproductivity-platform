@@ -12,6 +12,7 @@ import {
   ListContext,
   TaskItem,
   TaskStatus,
+  WheelArea,
   WheelCategory,
   WheelOfLifeLog,
   MeetingGuard,
@@ -36,6 +37,8 @@ import {
   saveProject,
   deleteProject,
   subscribeToProfile,
+  saveWheelAreas,
+  type ProfileRecord,
   markOnboardingSeen,
   importUserData,
   saveEmail,
@@ -64,14 +67,10 @@ import { useTaskAlarms } from './hooks/useTaskAlarms';
 import { alarmLateNote, formatClock } from './services/alarms';
 import { showSystemNotification } from './services/notifications';
 import { TOUR_STEPS } from './tourSteps';
-import {
-  hasSeenLocally,
-  hasSeenOnboarding,
-  rememberLocally,
-  type OnboardingOutcome,
-  type OnboardingRecord
-} from './services/onboarding';
+import { hasSeenLocally, hasSeenOnboarding, rememberLocally, type OnboardingOutcome } from './services/onboarding';
 import { applyGoalAreas, latestScores } from './services/goals';
+import { DEFAULT_AREAS, logAverage, resolveAreas } from './services/wheel';
+import { AreasContext } from './hooks/useAreas';
 import { applyProjectGoals, projectsOfGoal } from './services/projects';
 import { exportFilename, goalExport, projectExport, taskExport } from './services/exports';
 import { downloadJson } from './services/download';
@@ -134,6 +133,7 @@ const GoalsView = retryableLazy(() => import('./components/GoalsView').then((m) 
 const GoalModal = retryableLazy(() => import('./components/GoalModal').then((m) => m.GoalModal));
 const ProjectsView = retryableLazy(() => import('./components/ProjectsView').then((m) => m.ProjectsView));
 const ProjectModal = retryableLazy(() => import('./components/ProjectModal').then((m) => m.ProjectModal));
+const AreasModal = retryableLazy(() => import('./components/AreasModal').then((m) => m.AreasModal));
 const WelcomeDialog = retryableLazy(() => import('./components/WelcomeDialog').then((m) => m.WelcomeDialog));
 const ProductTour = retryableLazy(() => import('./components/ProductTour').then((m) => m.ProductTour));
 
@@ -593,7 +593,7 @@ export default function App({ user, services, isAdmin = false }: AppProps) {
   };
 
   // DESCARGAS EN JSON: una tarea, una meta o un proyecto, con todos sus datos y lo que hace falta para entenderlos
-  const exportContext = () => ({ tasks, goals, projects, version: __APP_VERSION__ });
+  const exportContext = () => ({ tasks, goals, projects, areas: wheelAreas, version: __APP_VERSION__ });
   const handleDownloadTask = (task: TaskItem) =>
     downloadJson(exportFilename('tarea', task.title), taskExport(task, exportContext()));
   const handleDownloadGoal = (goal: Goal) =>
@@ -704,21 +704,34 @@ export default function App({ user, services, isAdmin = false }: AppProps) {
   // BIENVENIDA: una vez por cuenta. Cuenta como vista si lo dice el perfil o este dispositivo; si no, se espera al
   // perfil confirmado por el servidor para no mostrarla a quien ya la vio en otro dispositivo
   const [profileOnboarding, setProfileOnboarding] = useState<{
-    record: OnboardingRecord | null;
+    record: ProfileRecord | null;
     fromServer: boolean;
   }>({ record: null, fromServer: false });
   const [seenOnThisDevice] = useState(() => hasSeenLocally(uid));
+  // ÁREAS DE LA RUEDA de la cuenta (en el perfil); sin nada guardado, las 7 de partida
+  const [wheelAreas, setWheelAreas] = useState<WheelArea[]>(DEFAULT_AREAS);
   const [welcomeClosed, setWelcomeClosed] = useState(false);
   useEffect(
     () =>
       subscribeToProfile(
         db,
         uid,
-        (record, fromServer) => setProfileOnboarding({ record, fromServer }),
+        (record, fromServer) => {
+          setProfileOnboarding({ record, fromServer });
+          // Las áreas solo cambian (y con ellas las vistas que las usan) si cambia lo guardado
+          const next = resolveAreas(record?.wheelAreas);
+          setWheelAreas((current) => (JSON.stringify(current) === JSON.stringify(next) ? current : next));
+        },
         (e) => console.error('Error loading profile:', e)
       ),
     [db, uid]
   );
+  const [isAreasEditorOpen, setIsAreasEditorOpen] = useState(false);
+  const handleSaveAreas = (areas: WheelArea[]) => {
+    saveWheelAreas(db, uid, areas).catch(reportError('guardar las áreas'));
+    showToast('Áreas guardadas.');
+  };
+
   // También se puede volver a ver desde la guía. Si al entrar por primera vez hay datos de la versión sin cuentas,
   // primero se resuelve su importación: una sola ventana modal a la vez
   const [isWelcomeReplay, setIsWelcomeReplay] = useState(false);
@@ -766,6 +779,7 @@ export default function App({ user, services, isAdmin = false }: AppProps) {
   };
   // La pantalla de bienvenida no cuenta: es decorativa, se quita sola y deja pasar los clics mientras se desvanece
   const isDialogOpen =
+    isAreasEditorOpen ||
     isFeedbackOpen ||
     isWelcomeOpen ||
     isTourOpen ||
@@ -822,430 +836,439 @@ export default function App({ user, services, isAdmin = false }: AppProps) {
 
   // Cálculo de promedio actual de la Rueda
   const latestLog = wheelLogs[wheelLogs.length - 1];
-  const wheelAverage = latestLog
-    ? (Object.values(latestLog.scores).reduce((a, b) => a + b, 0) / Object.values(latestLog.scores).length).toFixed(1)
-    : '0.0';
+  const wheelAverage = latestLog ? logAverage(latestLog.scores).toFixed(1) : '0.0';
 
   return (
-    // En el móvil queda sitio abajo para la barra de secciones y el botón «Nueva tarea»
-    <div className="flex min-h-screen flex-col bg-slate-50 pr-[env(safe-area-inset-right)] pb-[calc(9rem+env(safe-area-inset-bottom))] pl-[env(safe-area-inset-left)] font-sans text-slate-900 antialiased selection:bg-indigo-500 selection:text-white md:pb-0">
-      {/* Con un diálogo abierto, el resto de la página queda inerte: ni el teclado ni los lectores de pantalla llegan */}
-      <div className="contents" inert={isDialogOpen}>
-        <a
-          href="#main-content"
-          className="sr-only focus:not-sr-only focus:fixed focus:top-2 focus:left-2 focus:z-[60] focus:rounded-lg focus:bg-slate-900 focus:px-4 focus:py-2 focus:text-sm focus:font-semibold focus:text-white"
-        >
-          Saltar al contenido
-        </a>
-        {/* Barra de Navegación Superior con Contrato de 3 Zonas */}
-        <Navbar
-          activeTab={activeTab}
-          setActiveTab={navigate}
-          activeContext={activeContext}
-          setActiveContext={setActiveContext}
-          activeUser={profile}
-          onOpenAccount={() => setIsAccountMenuOpen(true)}
-          taskCounts={{ work: workCount, personal: personalCount }}
-          syncStatus={syncStatus}
-          onForceSync={handleForceSync}
-          isAdmin={isAdmin}
-          pendingAccessCount={pendingAccessCount}
-        />
+    // Las áreas de la Rueda de la cuenta, para todas las vistas. En el móvil queda sitio abajo para la barra de secciones
+    // y el botón «Nueva tarea»
+    <AreasContext.Provider value={wheelAreas}>
+      <div className="flex min-h-screen flex-col bg-slate-50 pr-[env(safe-area-inset-right)] pb-[calc(9rem+env(safe-area-inset-bottom))] pl-[env(safe-area-inset-left)] font-sans text-slate-900 antialiased selection:bg-indigo-500 selection:text-white md:pb-0">
+        {/* Con un diálogo abierto, el resto de la página queda inerte: ni el teclado ni los lectores de pantalla llegan */}
+        <div className="contents" inert={isDialogOpen}>
+          <a
+            href="#main-content"
+            className="sr-only focus:not-sr-only focus:fixed focus:top-2 focus:left-2 focus:z-[60] focus:rounded-lg focus:bg-slate-900 focus:px-4 focus:py-2 focus:text-sm focus:font-semibold focus:text-white"
+          >
+            Saltar al contenido
+          </a>
+          {/* Barra de Navegación Superior con Contrato de 3 Zonas */}
+          <Navbar
+            activeTab={activeTab}
+            setActiveTab={navigate}
+            activeContext={activeContext}
+            setActiveContext={setActiveContext}
+            activeUser={profile}
+            onOpenAccount={() => setIsAccountMenuOpen(true)}
+            taskCounts={{ work: workCount, personal: personalCount }}
+            syncStatus={syncStatus}
+            onForceSync={handleForceSync}
+            isAdmin={isAdmin}
+            pendingAccessCount={pendingAccessCount}
+          />
 
-        {/* NUEVA TAREA: debajo de la cabecera en tableta y escritorio; en el móvil, botón flotante sobre la barra */}
-        <div className="mx-auto hidden w-full max-w-7xl justify-end px-4 pt-4 sm:px-6 md:flex lg:px-8">
+          {/* NUEVA TAREA: debajo de la cabecera en tableta y escritorio; en el móvil, botón flotante sobre la barra */}
+          <div className="mx-auto hidden w-full max-w-7xl justify-end px-4 pt-4 sm:px-6 md:flex lg:px-8">
+            <button
+              type="button"
+              onClick={() => openNewTask()}
+              data-tour="new-task"
+              className="inline-flex h-10 w-full items-center justify-center gap-2 rounded-xl bg-slate-900 px-4 text-sm font-bold text-white shadow-sm transition-colors hover:bg-slate-800 sm:w-auto"
+            >
+              <Plus className="h-4 w-4" aria-hidden="true" />
+              Nueva tarea
+            </button>
+          </div>
+
+          {/* CONTENIDO PRINCIPAL */}
+          <main
+            id="main-content"
+            tabIndex={-1}
+            className="mx-auto w-full max-w-7xl flex-1 space-y-6 px-4 pt-4 pb-8 focus:outline-none sm:px-6 lg:px-8"
+          >
+            {/* INICIO: foco de la lista activa, estadísticas y recomendaciones */}
+            {activeTab === 'home' && (
+              <HomeView
+                tasks={tasks}
+                goals={goals}
+                activeContext={activeContext}
+                accountName={profile.name}
+                top10Count={top10Count}
+                wheelLogs={wheelLogs}
+                wheelAverage={wheelAverage}
+                meetings={meetings}
+                now={now}
+                onOpenAccount={() => setIsAccountMenuOpen(true)}
+                onNavigate={navigate}
+              />
+            )}
+
+            {/* PESTAÑA 1: LISTAS DUALES (GESTOR DUAL CON JERARQUÍA VISUAL TOP 10) */}
+            {activeTab === 'tasks' && (
+              <TaskList
+                tasks={tasks}
+                goals={goals}
+                activeContext={activeContext}
+                prefs={listPrefs}
+                onPrefsChange={setListPrefs}
+                archivedCount={archivedTasks.length}
+                onChangeStatus={handleChangeStatus}
+                onDeleteTask={handleDeleteTask}
+                onDownloadTask={handleDownloadTask}
+                onEditTask={(task) => {
+                  setEditingTask(task);
+                  setIsTaskModalOpen(true);
+                }}
+                onOpenNewTask={openNewTask}
+                onOpenArchive={() => setIsArchiveOpen(true)}
+              />
+            )}
+
+            {/* AGENDA: tareas con fecha de las dos listas, repeticiones previstas y reuniones */}
+            {activeTab === 'agenda' && (
+              <DeferredSection retry={AgendaView.retry}>
+                <AgendaView
+                  tasks={tasks}
+                  meetings={meetings}
+                  onEditTask={(task) => {
+                    setEditingTask(task);
+                    setIsTaskModalOpen(true);
+                  }}
+                />
+              </DeferredSection>
+            )}
+
+            {/* PESTAÑA 2: RUEDA DE LA VIDA (MÓDULO 1) */}
+            {activeTab === 'wheel' && (
+              // Se remonta cuando llegan los datos confirmados por el servidor para partir de la última evaluación
+              <DeferredSection retry={WheelOfLife.retry}>
+                <WheelOfLife
+                  key={wheelSynced ? 'synced' : 'cache'}
+                  logs={wheelLogs}
+                  showFirstStep={wheelSynced && wheelLogs.length === 0}
+                  onAppendSnapshot={handleAppendWheelSnapshot}
+                  onOpenHelp={() => navigate('help')}
+                  goals={goals}
+                  onOpenGoals={() => navigate('goals')}
+                  onEditAreas={() => setIsAreasEditorOpen(true)}
+                />
+              </DeferredSection>
+            )}
+
+            {/* METAS: de las áreas de la Rueda a las tareas, empezando por las áreas más bajas */}
+            {activeTab === 'goals' && (
+              <DeferredSection retry={GoalsView.retry}>
+                <GoalsView
+                  goals={goals}
+                  tasks={tasks}
+                  scores={wheelSynced || wheelLogs.length > 0 ? latestScores(wheelLogs) : undefined}
+                  onNewGoal={(area) => setGoalEditor({ area })}
+                  onEditGoal={(goal) => setGoalEditor({ goal })}
+                  onSetGoalStatus={handleSetGoalStatus}
+                  onAddTask={(goal) => openNewTask({ goalId: goal.id })}
+                  projects={projects}
+                  onOpenProject={(project) => openProject(project.id)}
+                  onNewProject={(goal) => setProjectEditor({ goalId: goal.id })}
+                  onDownloadGoal={handleDownloadGoal}
+                  onEditTask={(task) => {
+                    setEditingTask(task);
+                    setIsTaskModalOpen(true);
+                  }}
+                  onOpenWheel={() => navigate('wheel')}
+                />
+              </DeferredSection>
+            )}
+
+            {/* PROYECTOS: tareas con fecha de fin dentro de una meta, con su avance (batería) y sus avisos de plazo */}
+            {activeTab === 'projects' && (
+              <DeferredSection retry={ProjectsView.retry}>
+                <ProjectsView
+                  projects={projects}
+                  goals={goals}
+                  tasks={tasks}
+                  selectedProjectId={selectedProjectId}
+                  onSelectProject={setSelectedProjectId}
+                  onNewProject={() => setProjectEditor({})}
+                  onEditProject={(project) => setProjectEditor({ project })}
+                  onSetProjectStatus={handleSetProjectStatus}
+                  onAddTask={(project) => openNewTask({ project })}
+                  onChangeTaskStatus={handleChangeStatus}
+                  onEditTask={(task) => {
+                    setEditingTask(task);
+                    setIsTaskModalOpen(true);
+                  }}
+                  onDeleteTask={(task) => handleDeleteTask(task.id)}
+                  onDownloadTask={handleDownloadTask}
+                  onDownloadProject={handleDownloadProject}
+                  onOpenGoals={() => navigate('goals')}
+                />
+              </DeferredSection>
+            )}
+
+            {/* PESTAÑA 3: BLINDAJE BERMUDAS (MÓDULO 5) */}
+            {activeTab === 'bermudas' && (
+              <DeferredSection retry={BermudasShield.retry}>
+                <BermudasShield
+                  meetings={meetings}
+                  emails={emails}
+                  onOpenNewMeeting={() => setIsMeetingModalOpen(true)}
+                  onOpenNewEmail={() => setEmailEditor({})}
+                  onOpenEmail={(email) => setEmailEditor({ email })}
+                  onDeleteEmail={handleDeleteEmail}
+                />
+              </DeferredSection>
+            )}
+
+            {/* PESTAÑA 4: CÓMO FUNCIONA LA APP */}
+            {activeTab === 'help' && (
+              <DeferredSection retry={HowItWorks.retry}>
+                <HowItWorks
+                  onNavigate={navigate}
+                  onStartTour={() => startTour()}
+                  onShowWelcome={() => setIsWelcomeReplay(true)}
+                  onContact={() => setIsFeedbackOpen(true)}
+                />
+              </DeferredSection>
+            )}
+
+            {activeTab === 'access' && isAdmin && (
+              <DeferredSection retry={AdminView.retry}>
+                <AdminView
+                  requests={accessRequests}
+                  currentUid={uid}
+                  accessError={accessError}
+                  onDecide={handleDecideAccess}
+                  requestsSeenAt={requestsSeenAt}
+                  onSeenRequests={markRequestsSeen}
+                  approvalRequired={approvalRequired}
+                  onSetApprovalRequired={handleSetApprovalRequired}
+                  tickets={feedbackTickets}
+                  feedbackError={feedbackError}
+                  onSetFeedbackStatus={handleSetFeedbackStatus}
+                  onReplyFeedback={handleReplyFeedback}
+                  loadClosedFeedback={(cursor) => loadClosedFeedback(db, cursor)}
+                />
+              </DeferredSection>
+            )}
+          </main>
+
+          {/* FOOTER DISCRETO Y EDITORIAL */}
+          <footer className="mt-12 border-t border-slate-200 bg-white py-6 text-xs text-slate-500">
+            <div className="mx-auto flex max-w-7xl flex-col items-center justify-between gap-3 px-4 sm:flex-row sm:px-6 lg:px-8">
+              <div className="flex flex-wrap items-center justify-center gap-2">
+                <span className="font-bold text-slate-700">CLAR v{__APP_VERSION__}</span>
+                <span className="text-slate-300">·</span>
+                <p className="text-slate-500">Decide qué hacer ahora, con claridad.</p>
+              </div>
+              <div className="flex flex-wrap items-center justify-center gap-3 text-slate-600">
+                <button
+                  onClick={() => navigate('help')}
+                  className="text-[11px] font-semibold text-indigo-600 hover:text-indigo-800"
+                >
+                  Ver la ayuda
+                </button>
+                <LegalLinks newTab />
+              </div>
+            </div>
+          </footer>
+
           <button
             type="button"
             onClick={() => openNewTask()}
             data-tour="new-task"
-            className="inline-flex h-10 w-full items-center justify-center gap-2 rounded-xl bg-slate-900 px-4 text-sm font-bold text-white shadow-sm transition-colors hover:bg-slate-800 sm:w-auto"
+            aria-label="Nueva tarea"
+            className="fixed right-[calc(1rem+env(safe-area-inset-right))] bottom-[calc(5rem+env(safe-area-inset-bottom))] z-40 flex h-14 w-14 items-center justify-center rounded-2xl bg-slate-900 text-white shadow-lg shadow-slate-900/30 transition-transform hover:bg-slate-800 active:scale-95 md:hidden"
           >
-            <Plus className="h-4 w-4" aria-hidden="true" />
-            Nueva tarea
+            <Plus className="h-6 w-6" aria-hidden="true" />
           </button>
+
+          <BottomNav
+            activeTab={activeTab}
+            onNavigate={navigate}
+            isMoreOpen={isMoreOpen}
+            onOpenMore={() => setIsMoreOpen(true)}
+            pendingAccessCount={isAdmin ? pendingAccessCount : 0}
+          />
         </div>
 
-        {/* CONTENIDO PRINCIPAL */}
-        <main
-          id="main-content"
-          tabIndex={-1}
-          className="mx-auto w-full max-w-7xl flex-1 space-y-6 px-4 pt-4 pb-8 focus:outline-none sm:px-6 lg:px-8"
-        >
-          {/* INICIO: foco de la lista activa, estadísticas y recomendaciones */}
-          {activeTab === 'home' && (
-            <HomeView
-              tasks={tasks}
-              goals={goals}
-              activeContext={activeContext}
-              accountName={profile.name}
-              top10Count={top10Count}
-              wheelLogs={wheelLogs}
-              wheelAverage={wheelAverage}
-              meetings={meetings}
-              now={now}
-              onOpenAccount={() => setIsAccountMenuOpen(true)}
-              onNavigate={navigate}
-            />
-          )}
-
-          {/* PESTAÑA 1: LISTAS DUALES (GESTOR DUAL CON JERARQUÍA VISUAL TOP 10) */}
-          {activeTab === 'tasks' && (
-            <TaskList
-              tasks={tasks}
-              goals={goals}
-              activeContext={activeContext}
-              prefs={listPrefs}
-              onPrefsChange={setListPrefs}
-              archivedCount={archivedTasks.length}
-              onChangeStatus={handleChangeStatus}
-              onDeleteTask={handleDeleteTask}
-              onDownloadTask={handleDownloadTask}
-              onEditTask={(task) => {
-                setEditingTask(task);
-                setIsTaskModalOpen(true);
-              }}
-              onOpenNewTask={openNewTask}
-              onOpenArchive={() => setIsArchiveOpen(true)}
-            />
-          )}
-
-          {/* AGENDA: tareas con fecha de las dos listas, repeticiones previstas y reuniones */}
-          {activeTab === 'agenda' && (
-            <DeferredSection retry={AgendaView.retry}>
-              <AgendaView
-                tasks={tasks}
-                meetings={meetings}
-                onEditTask={(task) => {
-                  setEditingTask(task);
-                  setIsTaskModalOpen(true);
-                }}
-              />
-            </DeferredSection>
-          )}
-
-          {/* PESTAÑA 2: RUEDA DE LA VIDA (MÓDULO 1) */}
-          {activeTab === 'wheel' && (
-            // Se remonta cuando llegan los datos confirmados por el servidor para partir de la última evaluación
-            <DeferredSection retry={WheelOfLife.retry}>
-              <WheelOfLife
-                key={wheelSynced ? 'synced' : 'cache'}
-                logs={wheelLogs}
-                showFirstStep={wheelSynced && wheelLogs.length === 0}
-                onAppendSnapshot={handleAppendWheelSnapshot}
-                onOpenHelp={() => navigate('help')}
-                goals={goals}
-                onOpenGoals={() => navigate('goals')}
-              />
-            </DeferredSection>
-          )}
-
-          {/* METAS: de las áreas de la Rueda a las tareas, empezando por las áreas más bajas */}
-          {activeTab === 'goals' && (
-            <DeferredSection retry={GoalsView.retry}>
-              <GoalsView
-                goals={goals}
-                tasks={tasks}
-                scores={wheelSynced || wheelLogs.length > 0 ? latestScores(wheelLogs) : undefined}
-                onNewGoal={(area) => setGoalEditor({ area })}
-                onEditGoal={(goal) => setGoalEditor({ goal })}
-                onSetGoalStatus={handleSetGoalStatus}
-                onAddTask={(goal) => openNewTask({ goalId: goal.id })}
-                projects={projects}
-                onOpenProject={(project) => openProject(project.id)}
-                onNewProject={(goal) => setProjectEditor({ goalId: goal.id })}
-                onDownloadGoal={handleDownloadGoal}
-                onEditTask={(task) => {
-                  setEditingTask(task);
-                  setIsTaskModalOpen(true);
-                }}
-                onOpenWheel={() => navigate('wheel')}
-              />
-            </DeferredSection>
-          )}
-
-          {/* PROYECTOS: tareas con fecha de fin dentro de una meta, con su avance (batería) y sus avisos de plazo */}
-          {activeTab === 'projects' && (
-            <DeferredSection retry={ProjectsView.retry}>
-              <ProjectsView
-                projects={projects}
-                goals={goals}
-                tasks={tasks}
-                selectedProjectId={selectedProjectId}
-                onSelectProject={setSelectedProjectId}
-                onNewProject={() => setProjectEditor({})}
-                onEditProject={(project) => setProjectEditor({ project })}
-                onSetProjectStatus={handleSetProjectStatus}
-                onAddTask={(project) => openNewTask({ project })}
-                onChangeTaskStatus={handleChangeStatus}
-                onEditTask={(task) => {
-                  setEditingTask(task);
-                  setIsTaskModalOpen(true);
-                }}
-                onDeleteTask={(task) => handleDeleteTask(task.id)}
-                onDownloadTask={handleDownloadTask}
-                onDownloadProject={handleDownloadProject}
-                onOpenGoals={() => navigate('goals')}
-              />
-            </DeferredSection>
-          )}
-
-          {/* PESTAÑA 3: BLINDAJE BERMUDAS (MÓDULO 5) */}
-          {activeTab === 'bermudas' && (
-            <DeferredSection retry={BermudasShield.retry}>
-              <BermudasShield
-                meetings={meetings}
-                emails={emails}
-                onOpenNewMeeting={() => setIsMeetingModalOpen(true)}
-                onOpenNewEmail={() => setEmailEditor({})}
-                onOpenEmail={(email) => setEmailEditor({ email })}
-                onDeleteEmail={handleDeleteEmail}
-              />
-            </DeferredSection>
-          )}
-
-          {/* PESTAÑA 4: CÓMO FUNCIONA LA APP */}
-          {activeTab === 'help' && (
-            <DeferredSection retry={HowItWorks.retry}>
-              <HowItWorks
-                onNavigate={navigate}
-                onStartTour={() => startTour()}
-                onShowWelcome={() => setIsWelcomeReplay(true)}
-                onContact={() => setIsFeedbackOpen(true)}
-              />
-            </DeferredSection>
-          )}
-
-          {activeTab === 'access' && isAdmin && (
-            <DeferredSection retry={AdminView.retry}>
-              <AdminView
-                requests={accessRequests}
-                currentUid={uid}
-                accessError={accessError}
-                onDecide={handleDecideAccess}
-                requestsSeenAt={requestsSeenAt}
-                onSeenRequests={markRequestsSeen}
-                approvalRequired={approvalRequired}
-                onSetApprovalRequired={handleSetApprovalRequired}
-                tickets={feedbackTickets}
-                feedbackError={feedbackError}
-                onSetFeedbackStatus={handleSetFeedbackStatus}
-                onReplyFeedback={handleReplyFeedback}
-                loadClosedFeedback={(cursor) => loadClosedFeedback(db, cursor)}
-              />
-            </DeferredSection>
-          )}
-        </main>
-
-        {/* FOOTER DISCRETO Y EDITORIAL */}
-        <footer className="mt-12 border-t border-slate-200 bg-white py-6 text-xs text-slate-500">
-          <div className="mx-auto flex max-w-7xl flex-col items-center justify-between gap-3 px-4 sm:flex-row sm:px-6 lg:px-8">
-            <div className="flex flex-wrap items-center justify-center gap-2">
-              <span className="font-bold text-slate-700">CLAR v{__APP_VERSION__}</span>
-              <span className="text-slate-300">·</span>
-              <p className="text-slate-500">Decide qué hacer ahora, con claridad.</p>
-            </div>
-            <div className="flex flex-wrap items-center justify-center gap-3 text-slate-600">
-              <button
-                onClick={() => navigate('help')}
-                className="text-[11px] font-semibold text-indigo-600 hover:text-indigo-800"
-              >
-                Ver la ayuda
-              </button>
-              <LegalLinks newTab />
-            </div>
-          </div>
-        </footer>
-
-        <button
-          type="button"
-          onClick={() => openNewTask()}
-          data-tour="new-task"
-          aria-label="Nueva tarea"
-          className="fixed right-[calc(1rem+env(safe-area-inset-right))] bottom-[calc(5rem+env(safe-area-inset-bottom))] z-40 flex h-14 w-14 items-center justify-center rounded-2xl bg-slate-900 text-white shadow-lg shadow-slate-900/30 transition-transform hover:bg-slate-800 active:scale-95 md:hidden"
-        >
-          <Plus className="h-6 w-6" aria-hidden="true" />
-        </button>
-
-        <BottomNav
+        <MoreSheet
+          isOpen={isMoreOpen}
+          onClose={() => setIsMoreOpen(false)}
           activeTab={activeTab}
           onNavigate={navigate}
-          isMoreOpen={isMoreOpen}
-          onOpenMore={() => setIsMoreOpen(true)}
-          pendingAccessCount={isAdmin ? pendingAccessCount : 0}
+          isAdmin={isAdmin}
+          pendingAccessCount={pendingAccessCount}
+          syncStatus={syncStatus}
+          onForceSync={handleForceSync}
+          activeUser={profile}
+          onOpenAccount={() => setIsAccountMenuOpen(true)}
         />
-      </div>
 
-      <MoreSheet
-        isOpen={isMoreOpen}
-        onClose={() => setIsMoreOpen(false)}
-        activeTab={activeTab}
-        onNavigate={navigate}
-        isAdmin={isAdmin}
-        pendingAccessCount={pendingAccessCount}
-        syncStatus={syncStatus}
-        onForceSync={handleForceSync}
-        activeUser={profile}
-        onOpenAccount={() => setIsAccountMenuOpen(true)}
-      />
-
-      {/* Con una ventana abierta los avisos esperan: quedarían fuera de su foco (no se llegaría con el teclado) y
+        {/* Con una ventana abierta los avisos esperan: quedarían fuera de su foco (no se llegaría con el teclado) y
           taparían sus controles. Se muestran al cerrarla. */}
-      <AlarmAlerts
-        alarms={isDialogOpen ? [] : visibleAlarms}
-        onOpenTask={openAlarmTask}
-        onDismiss={(key) => setAlarmAlerts((list) => list.filter((a) => a.key !== key))}
-      />
+        <AlarmAlerts
+          alarms={isDialogOpen ? [] : visibleAlarms}
+          onOpenTask={openAlarmTask}
+          onDismiss={(key) => setAlarmAlerts((list) => list.filter((a) => a.key !== key))}
+        />
 
-      {/* BANNER TOAST DE NOTIFICACIÓN: región viva siempre presente para que los lectores de pantalla lo anuncien */}
-      <div role="status" aria-live="polite">
-        {toast && (
-          <div className="animate-in slide-in-from-bottom-3 fixed right-[calc(1rem+env(safe-area-inset-right))] bottom-[calc(9.5rem+env(safe-area-inset-bottom))] left-[calc(1rem+env(safe-area-inset-left))] z-50 flex items-center gap-2.5 rounded-2xl bg-slate-900 px-4 py-3 text-xs text-white shadow-xl duration-200 md:right-6 md:bottom-6 md:left-auto">
-            <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-400" aria-hidden="true" />
-            <span className="font-semibold">{toast.message}</span>
-            {toast.undo && (
-              <button
-                type="button"
-                onClick={toast.undo}
-                className="-my-1 ml-auto min-h-9 shrink-0 rounded-lg px-2.5 font-bold text-indigo-300 hover:bg-white/10 hover:text-indigo-200"
-              >
-                Deshacer
-              </button>
-            )}
-          </div>
+        {/* BANNER TOAST DE NOTIFICACIÓN: región viva siempre presente para que los lectores de pantalla lo anuncien */}
+        <div role="status" aria-live="polite">
+          {toast && (
+            <div className="animate-in slide-in-from-bottom-3 fixed right-[calc(1rem+env(safe-area-inset-right))] bottom-[calc(9.5rem+env(safe-area-inset-bottom))] left-[calc(1rem+env(safe-area-inset-left))] z-50 flex items-center gap-2.5 rounded-2xl bg-slate-900 px-4 py-3 text-xs text-white shadow-xl duration-200 md:right-6 md:bottom-6 md:left-auto">
+              <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-400" aria-hidden="true" />
+              <span className="font-semibold">{toast.message}</span>
+              {toast.undo && (
+                <button
+                  type="button"
+                  onClick={toast.undo}
+                  className="-my-1 ml-auto min-h-9 shrink-0 rounded-lg px-2.5 font-bold text-indigo-300 hover:bg-white/10 hover:text-indigo-200"
+                >
+                  Deshacer
+                </button>
+              )}
+            </div>
+          )}
+        </div>
+
+        {/* PANTALLA DE INICIO MÓVIL (SPLASH SCREEN) */}
+        {showSplash && (
+          <SplashScreen version={__APP_VERSION__} autoDismissMs={1600} onFinish={() => setShowSplash(false)} />
         )}
-      </div>
 
-      {/* PANTALLA DE INICIO MÓVIL (SPLASH SCREEN) */}
-      {showSplash && (
-        <SplashScreen version={__APP_VERSION__} autoDismissMs={1600} onFinish={() => setShowSplash(false)} />
-      )}
+        {/* MODAL 1: CAPTURA DE TAREA CON ANALIZADOR SINTÁCTICO Y TF-IDF */}
+        <TaskModal
+          isOpen={isTaskModalOpen}
+          onClose={() => {
+            setIsTaskModalOpen(false);
+            setEditingTask(null);
+          }}
+          onSaveTask={handleSaveTask}
+          initialContext={activeContext}
+          initialSomeday={newTaskIsSomeday}
+          initialGoalId={newTaskGoalId}
+          initialProjectId={newTaskProjectId}
+          editingTask={editingTask}
+          goals={goals}
+          projects={projects}
+          tasks={tasks}
+        />
 
-      {/* MODAL 1: CAPTURA DE TAREA CON ANALIZADOR SINTÁCTICO Y TF-IDF */}
-      <TaskModal
-        isOpen={isTaskModalOpen}
-        onClose={() => {
-          setIsTaskModalOpen(false);
-          setEditingTask(null);
-        }}
-        onSaveTask={handleSaveTask}
-        initialContext={activeContext}
-        initialSomeday={newTaskIsSomeday}
-        initialGoalId={newTaskGoalId}
-        initialProjectId={newTaskProjectId}
-        editingTask={editingTask}
-        goals={goals}
-        projects={projects}
-        tasks={tasks}
-      />
+        {/* VENTANA DE TAREAS ARCHIVADAS (ESTADO HECHA) */}
+        <ArchivedTasksModal
+          isOpen={isArchiveOpen}
+          onClose={() => setIsArchiveOpen(false)}
+          tasks={archivedTasks}
+          onChangeStatus={handleChangeStatus}
+          onDeleteTask={handleDeleteTask}
+        />
 
-      {/* VENTANA DE TAREAS ARCHIVADAS (ESTADO HECHA) */}
-      <ArchivedTasksModal
-        isOpen={isArchiveOpen}
-        onClose={() => setIsArchiveOpen(false)}
-        tasks={archivedTasks}
-        onChangeStatus={handleChangeStatus}
-        onDeleteTask={handleDeleteTask}
-      />
+        {/* MODAL 2: AGENDA DE REUNIONES CON TRIPLE VALIDACIÓN Y BLOQUEO MATUTINO */}
+        <MeetingModal
+          isOpen={isMeetingModalOpen}
+          onClose={() => setIsMeetingModalOpen(false)}
+          onSaveMeeting={handleSaveMeeting}
+        />
 
-      {/* MODAL 2: AGENDA DE REUNIONES CON TRIPLE VALIDACIÓN Y BLOQUEO MATUTINO */}
-      <MeetingModal
-        isOpen={isMeetingModalOpen}
-        onClose={() => setIsMeetingModalOpen(false)}
-        onSaveMeeting={handleSaveMeeting}
-      />
+        {/* MODAL 3: CORREO CON REDACCIÓN INVERSA Y ALERTA NO-SCROLL */}
+        {emailEditor && (
+          <EmailModal email={emailEditor.email} onClose={() => setEmailEditor(null)} onSave={handleSaveEmail} />
+        )}
 
-      {/* MODAL 3: CORREO CON REDACCIÓN INVERSA Y ALERTA NO-SCROLL */}
-      {emailEditor && (
-        <EmailModal email={emailEditor.email} onClose={() => setEmailEditor(null)} onSave={handleSaveEmail} />
-      )}
+        {/* MODAL 4: CUENTA (CERRAR SESIÓN, DESCARGAR DATOS, ELIMINAR CUENTA) */}
+        <AccountMenu
+          isOpen={isAccountMenuOpen}
+          onClose={() => setIsAccountMenuOpen(false)}
+          user={profile}
+          onSignOut={() => signOutAndClearCache(services)}
+          hasPassword={hasPassword(user)}
+          onExportData={handleExportData}
+          onDeleteAccount={handleDeleteAccount}
+          onChangePassword={(currentPassword, newPassword) => changePassword(user, currentPassword, newPassword)}
+          onSignOutEverywhere={() => signOutEverywhere(services)}
+          returnFocusTo={accountButton}
+          onContact={() => {
+            setIsAccountMenuOpen(false);
+            setIsFeedbackOpen(true);
+          }}
+          onOpenAccessibility={() => {
+            setIsAccountMenuOpen(false);
+            setIsAccessibilityOpen(true);
+          }}
+        />
 
-      {/* MODAL 4: CUENTA (CERRAR SESIÓN, DESCARGAR DATOS, ELIMINAR CUENTA) */}
-      <AccountMenu
-        isOpen={isAccountMenuOpen}
-        onClose={() => setIsAccountMenuOpen(false)}
-        user={profile}
-        onSignOut={() => signOutAndClearCache(services)}
-        hasPassword={hasPassword(user)}
-        onExportData={handleExportData}
-        onDeleteAccount={handleDeleteAccount}
-        onChangePassword={(currentPassword, newPassword) => changePassword(user, currentPassword, newPassword)}
-        onSignOutEverywhere={() => signOutEverywhere(services)}
-        returnFocusTo={accountButton}
-        onContact={() => {
-          setIsAccountMenuOpen(false);
-          setIsFeedbackOpen(true);
-        }}
-        onOpenAccessibility={() => {
-          setIsAccountMenuOpen(false);
-          setIsAccessibilityOpen(true);
-        }}
-      />
-
-      {/* Se abre desde el menú de la cuenta, que ya no existe al cerrarse: el foco vuelve al botón de la cuenta */}
-      <AccessibilityPanel
-        isOpen={isAccessibilityOpen}
-        onClose={() => setIsAccessibilityOpen(false)}
-        returnFocusTo={accountButton}
-      />
-
-      {/* CONTACTO: sugerencias, errores o mensajes (se monta al abrirse, así empieza limpio) */}
-      {isFeedbackOpen && (
-        <FeedbackDialog
-          functions={services.functions}
-          onClose={() => setIsFeedbackOpen(false)}
+        {/* Se abre desde el menú de la cuenta, que ya no existe al cerrarse: el foco vuelve al botón de la cuenta */}
+        <AccessibilityPanel
+          isOpen={isAccessibilityOpen}
+          onClose={() => setIsAccessibilityOpen(false)}
           returnFocusTo={accountButton}
         />
-      )}
 
-      {/* BIENVENIDA DE LA PRIMERA VEZ */}
-      {isWelcomeOpen && (
-        <DeferredDialog retry={WelcomeDialog.retry} onCancel={() => finishWelcome('skipped')}>
-          <WelcomeDialog onFinish={finishWelcome} />
-        </DeferredDialog>
-      )}
-      {isTourOpen && (
-        <DeferredDialog retry={ProductTour.retry} onCancel={finishTour}>
-          <ProductTour steps={TOUR_STEPS} onFinish={finishTour} />
-        </DeferredDialog>
-      )}
-
-      {/* METAS: crear o editar (se monta al abrirse, así empieza limpio) */}
-      {goalEditor && (
-        <DeferredDialog retry={GoalModal.retry} onCancel={() => setGoalEditor(null)}>
-          <GoalModal
-            goal={goalEditor.goal}
-            initialArea={goalEditor.area}
-            onSave={handleSaveGoal}
-            onDelete={handleDeleteGoal}
-            projectCount={goalEditor.goal ? projectsOfGoal(goalEditor.goal.id, projects).length : 0}
-            onClose={() => setGoalEditor(null)}
+        {/* CONTACTO: sugerencias, errores o mensajes (se monta al abrirse, así empieza limpio) */}
+        {isFeedbackOpen && (
+          <FeedbackDialog
+            functions={services.functions}
+            onClose={() => setIsFeedbackOpen(false)}
+            returnFocusTo={accountButton}
           />
-        </DeferredDialog>
-      )}
+        )}
 
-      {/* PROYECTOS: crear o editar (se monta al abrirse, así empieza limpio) */}
-      {projectEditor && (
-        <DeferredDialog retry={ProjectModal.retry} onCancel={() => setProjectEditor(null)}>
-          <ProjectModal
-            project={projectEditor.project}
-            initialGoalId={projectEditor.goalId}
-            goals={goals}
-            onSave={handleSaveProject}
-            onDelete={handleDeleteProject}
-            onClose={() => setProjectEditor(null)}
+        {/* BIENVENIDA DE LA PRIMERA VEZ */}
+        {isWelcomeOpen && (
+          <DeferredDialog retry={WelcomeDialog.retry} onCancel={() => finishWelcome('skipped')}>
+            <WelcomeDialog onFinish={finishWelcome} />
+          </DeferredDialog>
+        )}
+        {isTourOpen && (
+          <DeferredDialog retry={ProductTour.retry} onCancel={finishTour}>
+            <ProductTour steps={TOUR_STEPS} onFinish={finishTour} />
+          </DeferredDialog>
+        )}
+
+        {/* METAS: crear o editar (se monta al abrirse, así empieza limpio) */}
+        {goalEditor && (
+          <DeferredDialog retry={GoalModal.retry} onCancel={() => setGoalEditor(null)}>
+            <GoalModal
+              goal={goalEditor.goal}
+              initialArea={goalEditor.area}
+              onSave={handleSaveGoal}
+              onDelete={handleDeleteGoal}
+              projectCount={goalEditor.goal ? projectsOfGoal(goalEditor.goal.id, projects).length : 0}
+              onClose={() => setGoalEditor(null)}
+            />
+          </DeferredDialog>
+        )}
+
+        {/* PROYECTOS: crear o editar (se monta al abrirse, así empieza limpio) */}
+        {projectEditor && (
+          <DeferredDialog retry={ProjectModal.retry} onCancel={() => setProjectEditor(null)}>
+            <ProjectModal
+              project={projectEditor.project}
+              initialGoalId={projectEditor.goalId}
+              goals={goals}
+              onSave={handleSaveProject}
+              onDelete={handleDeleteProject}
+              onClose={() => setProjectEditor(null)}
+            />
+          </DeferredDialog>
+        )}
+
+        {/* ÁREAS DE LA RUEDA: renombrar, ocultar y añadir (se monta al abrirse) */}
+        {isAreasEditorOpen && (
+          <DeferredDialog retry={AreasModal.retry} onCancel={() => setIsAreasEditorOpen(false)}>
+            <AreasModal areas={wheelAreas} onSave={handleSaveAreas} onClose={() => setIsAreasEditorOpen(false)} />
+          </DeferredDialog>
+        )}
+
+        {/* MODAL 5: IMPORTAR DATOS DE LA VERSIÓN SIN CUENTAS */}
+        {isImportOpen && (
+          <ImportLocalDataModal
+            profiles={localProfiles}
+            onImport={handleImportLocalData}
+            onDiscard={handleDiscardLocalData}
+            onLater={() => setIsImportPostponed(true)}
           />
-        </DeferredDialog>
-      )}
-
-      {/* MODAL 5: IMPORTAR DATOS DE LA VERSIÓN SIN CUENTAS */}
-      {isImportOpen && (
-        <ImportLocalDataModal
-          profiles={localProfiles}
-          onImport={handleImportLocalData}
-          onDiscard={handleDiscardLocalData}
-          onLater={() => setIsImportPostponed(true)}
-        />
-      )}
-    </div>
+        )}
+      </div>
+    </AreasContext.Provider>
   );
 }

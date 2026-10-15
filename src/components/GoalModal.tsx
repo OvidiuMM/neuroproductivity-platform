@@ -4,7 +4,7 @@ import { useModalFocus } from '../hooks/useModalFocus';
 import { useDiscardGuard } from '../hooks/useDiscardGuard';
 import { Goal, WheelCategory } from '../types';
 import { GOAL_TITLE_MAX, GOAL_WHY_MAX, validateGoal } from '../services/goals';
-import { WHEEL_CATEGORIES } from '../services/wheel';
+import { useAreas } from '../hooks/useAreas';
 import { DateField } from './DateField';
 import { DiscardChangesPrompt } from './DiscardChangesPrompt';
 
@@ -34,7 +34,8 @@ export const GoalModal: React.FC<GoalModalProps> = ({
   onClose
 }) => {
   const [title, setTitle] = useState(goal?.title ?? '');
-  const [area, setArea] = useState<WheelCategory | ''>(goal?.area ?? initialArea ?? '');
+  const [area, setArea] = useState<WheelCategory>(goal?.area ?? initialArea ?? '');
+  const { selectable } = useAreas();
   const [why, setWhy] = useState(goal?.why ?? '');
   const [targetDate, setTargetDate] = useState(goal?.targetDate ?? '');
   const [submitted, setSubmitted] = useState(false);
@@ -132,13 +133,13 @@ export const GoalModal: React.FC<GoalModalProps> = ({
             <select
               id="goal-area"
               value={area}
-              onChange={(e) => setArea(e.target.value as WheelCategory | '')}
+              onChange={(e) => setArea(e.target.value)}
               className={`${inputClass} bg-white`}
             >
               <option value="">Elige un área…</option>
-              {WHEEL_CATEGORIES.map((c) => (
-                <option key={c} value={c}>
-                  {c}
+              {selectable(area || undefined).map(({ id, label: name }) => (
+                <option key={id} value={id}>
+                  {name}
                 </option>
               ))}
             </select>

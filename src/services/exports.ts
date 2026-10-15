@@ -1,8 +1,9 @@
-import type { Goal, Project, TaskItem } from '../types';
+import type { Goal, Project, TaskItem, WheelArea } from '../types';
 import { goalProgress } from './goals';
 import { projectDeadline, projectProgress, projectTasks } from './projects';
 import { dependentsOf } from './dependencies';
 import { fileSlug } from './download';
+import { DEFAULT_AREAS, areaLabel } from './wheel';
 
 // DESCARGAS EN JSON de una tarea, una meta o un proyecto, con todos sus datos y lo necesario para entenderlas solas:
 // los nombres de su meta, su proyecto y las tareas de las que dependen, y las tareas asociadas.
@@ -13,6 +14,8 @@ interface ExportContext {
   projects: Project[];
   version: string;
   now?: Date;
+  // Para dar el nombre de las áreas (cada cuenta puede cambiarlo); sin ellas, las de partida
+  areas?: WheelArea[];
 }
 
 const header = (type: 'task' | 'goal' | 'project', { version, now = new Date() }: ExportContext) => ({
@@ -23,7 +26,13 @@ const header = (type: 'task' | 'goal' | 'project', { version, now = new Date() }
 });
 
 const taskRef = (task: TaskItem) => ({ id: task.id, title: task.title, status: task.status });
-const goalRef = (goal: Goal) => ({ id: goal.id, title: goal.title, area: goal.area, status: goal.status });
+const goalRef = (goal: Goal, areas: WheelArea[]) => ({
+  id: goal.id,
+  title: goal.title,
+  area: goal.area,
+  areaLabel: areaLabel(areas, goal.area),
+  status: goal.status
+});
 const projectRef = (project: Project) => ({
   id: project.id,
   title: project.title,
@@ -37,11 +46,13 @@ export const taskExport = (task: TaskItem, context: ExportContext) => {
   const goal = context.goals.find((g) => g.id === task.goalId);
   const project = context.projects.find((p) => p.id === task.projectId);
   const waitsFor = context.tasks.find((t) => t.id === task.dependsOn);
+  const areas = context.areas ?? DEFAULT_AREAS;
   return {
     ...header('task', context),
     task,
     related: {
-      goal: goal ? goalRef(goal) : null,
+      area: task.wheelCategory ? { id: task.wheelCategory, label: areaLabel(areas, task.wheelCategory) } : null,
+      goal: goal ? goalRef(goal, areas) : null,
       project: project ? projectRef(project) : null,
       waitsFor: waitsFor ? taskRef(waitsFor) : null,
       waitedBy: dependentsOf(task, context.tasks).map(taskRef)
@@ -53,6 +64,7 @@ export const taskExport = (task: TaskItem, context: ExportContext) => {
 export const goalExport = (goal: Goal, context: ExportContext) => ({
   ...header('goal', context),
   goal,
+  areaLabel: areaLabel(context.areas ?? DEFAULT_AREAS, goal.area),
   progress: goalProgress(goal, context.tasks),
   projects: context.projects
     .filter((p) => p.goalId === goal.id)
@@ -67,7 +79,7 @@ export const projectExport = (project: Project, context: ExportContext) => {
   return {
     ...header('project', context),
     project,
-    goal: goal ? goalRef(goal) : null,
+    goal: goal ? goalRef(goal, context.areas ?? DEFAULT_AREAS) : null,
     progress: projectProgress(project, context.tasks),
     deadline: { state: deadline.state, openTasks: deadline.open, tasksDueAfterEnd: deadline.lateTasks.map(taskRef) },
     tasks: projectTasks(project, context.tasks)
