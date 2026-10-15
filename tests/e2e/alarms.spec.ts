@@ -1,13 +1,13 @@
-import { expect, test, type Page } from '@playwright/test';
+import { expect, test, type BrowserContext, type Page } from '@playwright/test';
 import { openSection, showMoreOptions, signInWithGoogle } from './helpers';
 
 test.use({ timezoneId: 'Europe/Madrid' });
 
 // Notificaciones del sistema de prueba: se apuntan en window.__notifications. El permiso empieza sin decidir.
-const fakeNotifications = (page: Page) =>
-  page.addInitScript(() => {
+const fakeNotifications = (target: Page | BrowserContext, initial: NotificationPermission = 'default') =>
+  target.addInitScript((start) => {
     const shown: { title: string; body?: string }[] = [];
-    let permission: NotificationPermission = 'default';
+    let permission = start;
     class FakeNotification {
       static get permission() {
         return permission;
@@ -24,7 +24,7 @@ const fakeNotifications = (page: Page) =>
     }
     Object.defineProperty(window, 'Notification', { value: FakeNotification, configurable: true });
     Object.defineProperty(window, '__notifications', { value: shown });
-  });
+  }, initial);
 const notifications = (page: Page) =>
   page.evaluate(() => (window as unknown as { __notifications: { title: string; body?: string }[] }).__notifications);
 
@@ -70,11 +70,15 @@ test('an alarm warns in CLAR and with a system notification, only once', async (
   const alert = page.getByRole('region', { name: `Alarma: ${title}` });
   await expect(alert).toHaveCount(0);
 
-  // A su hora: aviso dentro de la app y notificación del sistema
+  // A su hora, con una ventana abierta: la notificación del sistema sale ya y el aviso de la app espera a que se
+  // cierre (fuera de la ventana no se llegaría a él con el teclado)
+  await page.getByRole('button', { name: 'Nueva tarea', exact: true }).click();
   await page.clock.fastForward('03:00');
+  await expect.poll(() => notifications(page)).toEqual([expect.objectContaining({ title: `Alarma: ${title}` })]);
+  await expect(alert).toHaveCount(0);
+  await page.keyboard.press('Escape');
   await expect(alert).toBeVisible();
   await expect(alert).toContainText(`Vence: `);
-  expect(await notifications(page)).toEqual([expect.objectContaining({ title: `Alarma: ${title}` })]);
 
   // «Ver tarea» la abre para editarla y quita el aviso
   await alert.getByRole('button', { name: 'Ver tarea' }).click();
@@ -95,6 +99,14 @@ test('an alarm warns in CLAR and with a system notification, only once', async (
 });
 
 test('an alarm whose time already passed warns at once while the task is not due yet', async ({ page }) => {
+  // Aunque el navegador no deje guardar las alarmas ya avisadas (almacenamiento lleno o bloqueado), avisa igual
+  await page.addInitScript(() => {
+    const original = Object.getOwnPropertyDescriptor(Storage.prototype, 'setItem')!.value as Storage['setItem'];
+    Storage.prototype.setItem = function (this: Storage, key: string, value: string) {
+      if (key.startsWith('clar_alarms_fired:')) throw new DOMException('Lleno', 'QuotaExceededError');
+      original.call(this, key, value);
+    };
+  });
   await page.goto('/');
   await signInWithGoogle(page);
   await openSection(page, 'Listas');
@@ -135,4 +147,30 @@ test('a repeating task needs a due time for an alarm; with only a date it rings 
   await expect(alarmField).toBeEnabled();
   await expect(alarmField).toHaveValue('20:00');
   await expect(alarmField).toHaveAccessibleDescription(/^Sonará /);
+});
+
+test('with two tabs open, both show the alert and the system notification comes once', async ({ context }) => {
+  test.slow(); // Dos pestañas
+  await fakeNotifications(context, 'granted');
+  const first = await context.newPage();
+  await first.clock.install();
+  await first.goto('/');
+  await signInWithGoogle(first);
+  await openSection(first, 'Listas');
+  const second = await context.newPage();
+  await second.clock.install();
+  await second.goto('/');
+  await openSection(second, 'Listas');
+
+  const title = `Pagar la factura ${Date.now().toString(36)}`;
+  await newTaskWithAlarm(first, title, await fromNow(first, 30), (await fromNow(first, 2)).time);
+  await first.getByRole('button', { name: 'Guardar la tarea' }).click();
+  await expect(second.getByRole('heading', { name: title })).toBeVisible();
+
+  await first.clock.fastForward('03:00');
+  await second.clock.fastForward('03:00');
+  for (const page of [first, second])
+    await expect(page.getByRole('region', { name: `Alarma: ${title}` })).toBeVisible();
+  const shown = [...(await notifications(first)), ...(await notifications(second))];
+  expect(shown.filter((n) => n.title === `Alarma: ${title}`)).toHaveLength(1);
 });

@@ -629,12 +629,13 @@ export default function App({ user, services, isAdmin = false }: AppProps) {
     isAccessibilityOpen ||
     isImportOpen;
 
-  // ALARMAS: avisan mientras la app está abierta, dentro de ella y, con permiso, también con una notificación del
-  // sistema. El aviso muestra la tarea tal como está ahora y desaparece si se marca como hecha.
+  // ALARMAS: avisan mientras la app está abierta, dentro de ella (en todas las pestañas) y, con permiso, también con
+  // una notificación del sistema. El aviso muestra la tarea tal como está ahora y desaparece si se marca como hecha.
   const [alarmAlerts, setAlarmAlerts] = useState<ScheduledAlarm[]>([]);
-  useTaskAlarms(uid, tasks, (alarm) => {
-    setAlarmAlerts((list) => [...list.filter((a) => a.key !== alarm.key), alarm]);
-    showSystemNotification(`Alarma: ${alarm.task.title}`, formatTaskDates(alarm.task) ?? '', alarm.key);
+  useTaskAlarms(uid, tasks, {
+    onAlert: (alarm) => setAlarmAlerts((list) => [...list.filter((a) => a.key !== alarm.key), alarm]),
+    onNotify: (alarm) =>
+      showSystemNotification(`Alarma: ${alarm.task.title}`, formatTaskDates(alarm.task) ?? '', alarm.key)
   });
   const visibleAlarms = alarmAlerts.flatMap((alarm) => {
     const task = tasks.find((t) => t.id === alarm.task.id);
@@ -891,9 +892,10 @@ export default function App({ user, services, isAdmin = false }: AppProps) {
         onOpenAccount={() => setIsAccountMenuOpen(true)}
       />
 
+      {/* Con una ventana abierta los avisos esperan: quedarían fuera de su foco (no se llegaría con el teclado) y
+          taparían sus controles. Se muestran al cerrarla. */}
       <AlarmAlerts
-        alarms={visibleAlarms}
-        canOpenTask={!isDialogOpen}
+        alarms={isDialogOpen ? [] : visibleAlarms}
         onOpenTask={openAlarmTask}
         onDismiss={(key) => setAlarmAlerts((list) => list.filter((a) => a.key !== key))}
       />

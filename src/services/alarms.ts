@@ -1,5 +1,6 @@
 import type { TaskItem } from '../types';
 import { dueMoment, isArchived, toLocalDate } from './tasks';
+import { toDateString } from './recurrence';
 
 // ALARMAS: la tarea guarda solo la hora (HH:mm). El momento en que suena se calcula al leer, en la zona horaria del
 // dispositivo, así nunca hay que reescribirla y una repetición nueva la hereda tal cual.
@@ -19,12 +20,14 @@ export const alarmUnavailableReason = (task: Pick<TaskItem, 'dueDate' | 'dueTime
 //   la víspera (a la misma hora que la límite, 24 h antes).
 // - Solo con fecha límite: a esa hora de la víspera.
 // - Una tarea que se repite necesita hora límite.
+// Primero se elige el día y después se le pone la hora: así un cambio al horario de verano en el día límite no
+// mueve la alarma de la víspera (las horas se comparan como texto, HH:mm).
 export const alarmMoment = (task: AlarmFields): Date | null => {
   if (!task.alarmTime || !ALARM_TIME_PATTERN.test(task.alarmTime) || alarmUnavailableReason(task)) return null;
-  const at = toLocalDate(task.dueDate!, task.alarmTime);
-  if (task.dueTime && at < toLocalDate(task.dueDate!, task.dueTime)) return at;
-  at.setDate(at.getDate() - 1);
-  return at;
+  if (task.dueTime && task.alarmTime < task.dueTime) return toLocalDate(task.dueDate!, task.alarmTime);
+  const eve = toLocalDate(task.dueDate!);
+  eve.setDate(eve.getDate() - 1);
+  return toLocalDate(toDateString(eve), task.alarmTime);
 };
 
 const dayFormat = new Intl.DateTimeFormat('es-ES', { day: 'numeric', month: 'short' });
@@ -35,7 +38,7 @@ export const formatClock = (date: Date) => `${pad(date.getHours())}:${pad(date.g
 export const describeAlarm = (task: AlarmFields) => {
   const at = alarmMoment(task);
   if (!at) return null;
-  const sameDay = at.getDate() === toLocalDate(task.dueDate!).getDate();
+  const sameDay = Boolean(task.dueTime && task.alarmTime! < task.dueTime);
   return sameDay
     ? `Sonará el ${dayFormat.format(at)} a las ${formatClock(at)}.`
     : `Sonará la víspera, el ${dayFormat.format(at)}, a las ${formatClock(at)}.`;
