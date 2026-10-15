@@ -314,7 +314,12 @@ export const TaskModal: React.FC<TaskModalProps> = ({
     repeatWeekdays,
     repeatMonthlyMode
   };
-  const isDirty = isOpen && JSON.stringify(currentForm) !== JSON.stringify(initialForm);
+  // Una fecha a medio escribir (o imposible) aún no está en el formulario, pero también es un cambio
+  const [dateDrafts, setDateDrafts] = useState<Record<string, boolean>>({});
+  const draftOf = (field: string) => (pending: boolean) =>
+    setDateDrafts((drafts) => (Boolean(drafts[field]) === pending ? drafts : { ...drafts, [field]: pending }));
+  const isDirty =
+    isOpen && (JSON.stringify(currentForm) !== JSON.stringify(initialForm) || Object.values(dateDrafts).some(Boolean));
   const guard = useDiscardGuard(isDirty, onClose);
 
   // Disparador del Motor NLP TF-IDF (Módulo 3) en evento onBlur o cuando hay texto suficiente
@@ -740,6 +745,7 @@ export const TaskModal: React.FC<TaskModalProps> = ({
                 label="Fecha límite"
                 value={dueDate}
                 onChange={setDueDate}
+                onDraftChange={draftOf('dueDate')}
                 className="min-w-0 flex-1"
                 inputClassName="px-2.5 py-1.5 rounded-lg border border-slate-300 text-xs focus:outline-none focus:ring-2 focus:ring-indigo-400"
               />
@@ -1040,6 +1046,7 @@ export const TaskModal: React.FC<TaskModalProps> = ({
                         label="Fecha de inicio"
                         value={startDate}
                         onChange={setStartDate}
+                        onDraftChange={draftOf('startDate')}
                         className="min-w-0 flex-1"
                         inputClassName="px-2.5 py-1.5 rounded-lg border border-slate-300 text-xs focus:outline-none focus:ring-2 focus:ring-indigo-400"
                       />

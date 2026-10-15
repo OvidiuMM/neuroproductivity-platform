@@ -100,3 +100,35 @@ test('a goal form with unsaved changes also asks before closing', async ({ page 
   await prompt.getByRole('button', { name: 'Descartar' }).click();
   await expect(form).toBeHidden();
 });
+
+test('an unfinished or impossible date also counts as a change, in the task and goal forms', async ({ page }) => {
+  await page.goto('/');
+  await signInWithGoogle(page);
+  await page.getByRole('button', { name: 'Listas', exact: true }).click();
+  const prompt = page.getByRole('alertdialog', { name: '¿Descartar los cambios?' });
+
+  // Solo una fecha a medio escribir: el valor no cambia, pero lo escrito se perdería
+  await page.getByRole('button', { name: 'Añadir la primera tarea' }).click();
+  await page.getByLabel('Fecha límite', { exact: true }).fill('20/10/');
+  await page.keyboard.press('Escape');
+  await expect(prompt).toBeVisible();
+  await prompt.getByRole('button', { name: 'Seguir editando' }).click();
+  // También al cerrar la pestaña
+  const dialog = page.waitForEvent('dialog');
+  await page.close({ runBeforeUnload: true });
+  const beforeUnload = await dialog;
+  expect(beforeUnload.type()).toBe('beforeunload');
+  await beforeUnload.dismiss();
+  await page.keyboard.press('Escape');
+  await prompt.getByRole('button', { name: 'Descartar' }).click();
+
+  // En la meta, una fecha imposible
+  await openSection(page, 'Metas');
+  await page.getByRole('button', { name: 'Nueva meta', exact: true }).click();
+  await page
+    .getByRole('dialog', { name: 'Nueva meta' })
+    .getByLabel('Fecha objetivo', { exact: true })
+    .fill('31/02/2027');
+  await page.keyboard.press('Escape');
+  await expect(prompt).toContainText('Has empezado una meta nueva y no la has guardado.');
+});
