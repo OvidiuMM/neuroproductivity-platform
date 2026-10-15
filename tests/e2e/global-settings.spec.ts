@@ -32,11 +32,20 @@ test('without mandatory approval, pending requests are approved and new accounts
     // La pendiente entra sin recargar
     await expect(pending.getByRole('button', { name: 'Nueva tarea', exact: true })).toBeVisible(SERVER_CALL);
 
-    // Una cuenta nueva entra directamente, sin pantalla de solicitud
+    // Una cuenta nueva entra directamente, sin pantalla de solicitud…
+    await admin.getByRole('button', { name: 'Inicio', exact: true }).click();
     const newcomer = await browser.newPage();
     await newcomer.goto('/');
     await signInWithGoogle(newcomer, undefined, undefined, { approve: false });
     await expect(newcomer.getByRole('button', { name: 'Nueva tarea', exact: true })).toBeVisible(SERVER_CALL);
+
+    // …y la administración lo ve en rojo hasta mirar las solicitudes, donde sale como nueva
+    const adminTab = admin.getByRole('button', { name: /^Administración/ });
+    await expect(adminTab).toHaveAccessibleName('Administración, 1 pendiente', SERVER_CALL);
+    await adminTab.click();
+    await expect(admin.getByRole('button', { name: 'Solicitudes' })).toBeVisible();
+    await expect(admin.getByText('Nueva', { exact: true })).toHaveCount(1);
+    await expect(adminTab).toHaveAccessibleName('Administración');
   } finally {
     // Se vuelve a la aprobación obligatoria pase lo que pase
     await toggle.click();

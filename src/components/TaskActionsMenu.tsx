@@ -1,5 +1,5 @@
 import React, { useEffect, useId, useRef, useState } from 'react';
-import { Edit2, FileDown, MoreHorizontal, Trash2 } from 'lucide-react';
+import { FileDown, MoreHorizontal, Trash2 } from 'lucide-react';
 import { TaskItem, TaskStatus } from '../types';
 import { buildCalendarEvent, buildIcs, googleCalendarUrl, outlookCalendarUrl } from '../services/calendar';
 import { TaskStatusSelect } from './TaskStatusSelect';
@@ -7,7 +7,6 @@ import { downloadFile, fileSlug } from '../services/download';
 
 interface TaskActionsMenuProps {
   task: TaskItem;
-  onEdit: () => void;
   onChangeStatus: (status: TaskStatus) => void;
   onDelete: () => void;
   // Espera a otra tarea que sigue abierta
@@ -17,17 +16,17 @@ interface TaskActionsMenuProps {
 }
 
 // Alto aproximado del panel: si no cabe debajo del botón (p. ej. sobre la barra inferior del móvil), se abre arriba
-const PANEL_HEIGHT = 384;
+const PANEL_HEIGHT = 340;
 
 const itemClass =
   'flex min-h-11 w-full items-center gap-2.5 px-3 text-left text-sm font-semibold text-slate-700 hover:bg-slate-50';
 const linkClass = 'flex min-h-10 w-full items-center px-3 text-left text-xs text-slate-700 hover:bg-slate-50';
 
-// Acciones de una tarea en un solo botón «⋯»: editar, cambiar el estado, añadir al calendario y eliminar.
+// Acciones de una tarea en un solo botón «⋯»: cambiar el estado, añadir al calendario, descargar y eliminar (editar
+// tiene su propio botón en la tarjeta).
 // Es un panel desplegable (no un menú ARIA): se recorre con Tab y se cierra con Escape o tocando fuera.
 export const TaskActionsMenu: React.FC<TaskActionsMenuProps> = ({
   task,
-  onEdit,
   onChangeStatus,
   onDelete,
   blocked = false,
@@ -97,12 +96,7 @@ export const TaskActionsMenu: React.FC<TaskActionsMenuProps> = ({
             openUp ? 'bottom-full mb-1' : 'top-full mt-1'
           }`}
         >
-          <button type="button" onClick={act(onEdit)} aria-label={`Editar «${task.title}»`} className={itemClass}>
-            <Edit2 className="h-4 w-4 text-slate-500" aria-hidden="true" />
-            Editar
-          </button>
-
-          <div className="flex items-center justify-between gap-2 border-t border-slate-100 px-3 py-2">
+          <div className="flex items-center justify-between gap-2 px-3 py-2">
             <span className="text-xs font-semibold text-slate-600" aria-hidden="true">
               Estado
             </span>
