@@ -1,14 +1,14 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import type { TaskItem } from '../types';
-import { scheduledAlarms, type ScheduledAlarm } from '../services/alarms';
+import { matchPendingAlerts, scheduledAlarms, type ScheduledAlarm } from '../services/alarms';
 
 // Alarmas ya avisadas, por cuenta: no se repiten al recargar ni en otra pestaña. Se olvidan pasados dos días.
 const firedStorageKey = (uid: string) => `clar_alarms_fired:${uid}`;
 const KEEP_FIRED_MS = 2 * 24 * 60 * 60 * 1000;
 // Se revisa al menos cada minuto: así un cambio de hora del equipo o una suspensión no deja ninguna sin avisar
 const MAX_WAIT_MS = 60_000;
-// Las avisadas en esta pestaña. Si el navegador no deja guardar (almacenamiento lleno o bloqueado), al menos no se
-// repiten mientras siga abierta.
+// Las avisadas en esta pestaña, por cuenta (dos cuentas pueden tener tareas con el mismo id, p. ej. importadas). Si
+// el navegador no deja guardar (almacenamiento lleno o bloqueado), al menos no se repiten mientras siga abierta.
 const claimedHere = new Set<string>();
 
 const readFired = (uid: string): Record<string, number> => {
@@ -21,8 +21,9 @@ const readFired = (uid: string): Record<string, number> => {
 
 // Marca la alarma como avisada si nadie lo hizo antes; true si le toca avisar a esta pestaña
 const claimSync = (uid: string, key: string) => {
-  if (claimedHere.has(key)) return false;
-  claimedHere.add(key);
+  const here = `${uid}:${key}`;
+  if (claimedHere.has(here)) return false;
+  claimedHere.add(here);
   const now = Date.now();
   const fired = readFired(uid);
   if (fired[key]) return false;
@@ -60,14 +61,19 @@ export const useTaskAlarms = (uid: string, tasks: TaskItem[], handlers: AlarmHan
   const [check, setCheck] = useState(0);
 
   // La pestaña que se queda una alarma lo cuenta a las demás, que muestran también el aviso (puede que la que la
-  // tomó esté en segundo plano y la que se está mirando no tenga notificaciones)
+  // tomó esté en segundo plano y la que se está mirando no tenga notificaciones). Si aquí aún no ha llegado la tarea,
+  // el aviso espera a que llegue.
   const channelRef = useRef<BroadcastChannel | null>(null);
+  const pendingRef = useRef(new Map<string, number>());
   useEffect(() => {
+    pendingRef.current = new Map();
     if (!('BroadcastChannel' in window)) return;
     const channel = new BroadcastChannel(`clar-alarms:${uid}`);
     channel.onmessage = (event: MessageEvent<{ key?: unknown }>) => {
+      if (typeof event.data.key !== 'string') return;
       const alarm = scheduledAlarms(tasksRef.current, new Date()).find((a) => a.key === event.data.key);
       if (alarm) handlersRef.current.onAlert(alarm);
+      else pendingRef.current.set(event.data.key, Date.now());
     };
     channelRef.current = channel;
     return () => {
@@ -79,6 +85,9 @@ export const useTaskAlarms = (uid: string, tasks: TaskItem[], handlers: AlarmHan
   useEffect(() => {
     const now = new Date();
     const alarms = scheduledAlarms(tasks, now);
+    const { matched, rest } = matchPendingAlerts(pendingRef.current, alarms, now.getTime());
+    pendingRef.current = rest;
+    for (const alarm of matched) handlersRef.current.onAlert(alarm);
     for (const alarm of alarms.filter((a) => a.at <= now)) {
       void claim(uid, alarm.key).then((mine) => {
         if (!mine) return;

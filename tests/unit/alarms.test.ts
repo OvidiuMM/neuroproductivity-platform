@@ -1,7 +1,14 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import type { TaskItem } from '../../src/types';
-import { alarmMoment, alarmUnavailableReason, describeAlarm, scheduledAlarms } from '../../src/services/alarms';
+import {
+  alarmMoment,
+  alarmUnavailableReason,
+  describeAlarm,
+  matchPendingAlerts,
+  PENDING_ALERT_MS,
+  scheduledAlarms
+} from '../../src/services/alarms';
 
 const task = (overrides: Partial<TaskItem>): TaskItem => ({
   ...{
@@ -99,4 +106,22 @@ test('scheduled alarms skip done, someday and overdue tasks, and come in order',
   const [first] = scheduledAlarms([task({ dueDate: '2030-06-15', dueTime: '11:00', alarmTime: '10:57' })], now);
   const [edited] = scheduledAlarms([task({ dueDate: '2030-06-15', dueTime: '11:00', alarmTime: '10:50' })], now);
   assert.notEqual(first.key, edited.key);
+});
+
+test('an alert from another tab waits for its task, for a few minutes at most', () => {
+  const now = new Date(2030, 5, 15, 10, 0);
+  const [alarm] = scheduledAlarms([task({ dueDate: '2030-06-15', dueTime: '11:00', alarmTime: '09:58' })], now);
+  const pending = new Map([
+    [alarm.key, now.getTime() - 1000],
+    ['otra@2030-06-15T07:00:00.000Z', now.getTime() - 2000],
+    ['vieja@2030-06-15T06:00:00.000Z', now.getTime() - PENDING_ALERT_MS - 1]
+  ]);
+  // Aún sin la tarea: no sale nada y la vieja se descarta
+  const before = matchPendingAlerts(pending, [], now.getTime());
+  assert.deepEqual(before.matched, []);
+  assert.deepEqual([...before.rest.keys()], [alarm.key, 'otra@2030-06-15T07:00:00.000Z']);
+  // Llega la tarea: sale su aviso y deja de esperar
+  const after = matchPendingAlerts(before.rest, [alarm], now.getTime());
+  assert.deepEqual(after.matched, [alarm]);
+  assert.deepEqual([...after.rest.keys()], ['otra@2030-06-15T07:00:00.000Z']);
 });

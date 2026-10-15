@@ -43,8 +43,10 @@ export const buildCalendarEvent = (source: TaskItem, appUrl: string): CalendarEv
 
   // La alarma se cuenta desde el borde del evento que marca el plazo (en una serie, la misma para cada repetición)
   const alarmAt = alarmMoment(source);
-  const alarm = (deadline: Date, related: 'START' | 'END') =>
-    alarmAt ? { alarm: { related, minutesBefore: Math.round((deadline.getTime() - alarmAt.getTime()) / 60_000) } } : {};
+  const alarm = (deadline: Date, related: 'START' | 'END') => {
+    const minutesBefore = alarmAt ? Math.round((deadline.getTime() - alarmAt.getTime()) / 60_000) : 0;
+    return minutesBefore > 0 ? { alarm: { related, minutesBefore } } : {};
+  };
 
   // Sin horas: evento de día completo (de varios días si la tarea tiene intervalo)
   if (allDay) {
