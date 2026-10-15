@@ -157,10 +157,11 @@ export const deleteGoal = async (db: Firestore, uid: string, goal: Goal) => {
 export const saveProject = (db: Firestore, uid: string, project: Project) =>
   setDoc(doc(userCollection(db, uid, 'projects'), project.id), { ...project, userId: uid });
 
-// Al eliminar un proyecto, sus tareas siguen en la meta del proyecto y sin el vínculo, como al eliminar una meta: cada
-// una en su propia transacción y solo si sigue apuntando a este proyecto
-export const deleteProject = async (db: Firestore, uid: string, project: Project) => {
-  await deleteDoc(doc(userCollection(db, uid, 'projects'), project.id));
+// Al eliminar un proyecto, sus tareas siguen en la meta del proyecto y sin el vínculo: cada una en su propia
+// transacción y solo si sigue apuntando a este proyecto. Primero se desvinculan y después se borra el proyecto: si algo
+// falla a medias, el proyecto sigue ahí (sus tareas siguen tomando su meta) y se puede volver a eliminar, que termina
+// el trabajo. Una tarea que se vincule mientras tanto se desvincula en una segunda pasada.
+const unlinkProjectTasks = async (db: Firestore, uid: string, project: Project) => {
   const linked = await getDocs(query(userCollection(db, uid, 'tasks'), where('projectId', '==', project.id)));
   const updatedAt = new Date().toISOString();
   const unlink = (ref: (typeof linked.docs)[number]['ref']) =>
@@ -172,6 +173,12 @@ export const deleteProject = async (db: Firestore, uid: string, project: Project
   for (let i = 0; i < linked.docs.length; i += UNLINK_CONCURRENCY) {
     await Promise.all(linked.docs.slice(i, i + UNLINK_CONCURRENCY).map((task) => unlink(task.ref)));
   }
+};
+
+export const deleteProject = async (db: Firestore, uid: string, project: Project) => {
+  await unlinkProjectTasks(db, uid, project);
+  await deleteDoc(doc(userCollection(db, uid, 'projects'), project.id));
+  await unlinkProjectTasks(db, uid, project);
 };
 
 export const appendWheelLog = (db: Firestore, uid: string, log: WheelOfLifeLog) =>
