@@ -7,7 +7,7 @@ export const PendingBadge: React.FC<{ count: number; corner?: boolean }> = ({ co
   count > 0 ? (
     <span
       aria-hidden="true"
-      className={`h-4 min-w-4 rounded-full bg-orange-700 px-1 text-center text-[10px] leading-4 font-bold text-white ${
+      className={`h-4 min-w-4 rounded-full bg-red-600 px-1 text-center text-[10px] leading-4 font-bold text-white ${
         corner ? 'absolute -top-1.5 -right-1.5 ring-2 ring-white' : ''
       }`}
     >

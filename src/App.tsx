@@ -51,6 +51,7 @@ import {
 import { buildImport, clearLocalData, getLocalProfiles, type LocalProfileSummary } from './services/localData';
 import { arrangeTasks, parseListPrefs, splitTop10, type ListPrefs } from './services/taskListing';
 import { blockerOf, dependentsOf, tasksById } from './services/dependencies';
+import { adminAlerts, requestsSeenKey } from './services/adminAlerts';
 import { useNow } from './hooks/useNow';
 import { Navbar } from './components/Navbar';
 import { BottomNav, MORE_BUTTON_ID } from './components/BottomNav';
@@ -270,10 +271,21 @@ export default function App({ user, services, isAdmin = false }: AppProps) {
       setFeedbackError('No se pudieron cargar los mensajes.');
     });
   }, [db, isAdmin]);
-  // Lo pendiente en Administración: solicitudes por decidir y mensajes sin leer
-  const pendingAccessCount =
-    accessRequests.filter((r) => r.status === 'pending').length +
-    feedbackTickets.filter((t) => t.status === 'new').length;
+  // Lo pendiente en Administración (aviso rojo): solicitudes por decidir, mensajes sin leer y cuentas que entraron
+  // solas desde la última vez que se miraron las solicitudes en este dispositivo (la primera vez, desde ahora)
+  const [requestsSeenAt, setRequestsSeenAt] = useState(() => {
+    const stored = localStorage.getItem(requestsSeenKey(uid));
+    if (stored) return stored;
+    const now = new Date().toISOString();
+    if (isAdmin) localStorage.setItem(requestsSeenKey(uid), now);
+    return now;
+  });
+  const markRequestsSeen = useCallback(() => {
+    const now = new Date().toISOString();
+    localStorage.setItem(requestsSeenKey(uid), now);
+    setRequestsSeenAt(now);
+  }, [uid]);
+  const pendingAccessCount = adminAlerts(accessRequests, feedbackTickets, requestsSeenAt).total;
   // Devuelve si se guardó: la vista solo ajusta su lista de cerrados cuando la escritura fue bien
   const handleSetFeedbackStatus = async (ticket: FeedbackTicket, status: FeedbackTicket['status']) => {
     setFeedbackError(null);
@@ -1010,6 +1022,8 @@ export default function App({ user, services, isAdmin = false }: AppProps) {
                 currentUid={uid}
                 accessError={accessError}
                 onDecide={handleDecideAccess}
+                requestsSeenAt={requestsSeenAt}
+                onSeenRequests={markRequestsSeen}
                 approvalRequired={approvalRequired}
                 onSetApprovalRequired={handleSetApprovalRequired}
                 tickets={feedbackTickets}
