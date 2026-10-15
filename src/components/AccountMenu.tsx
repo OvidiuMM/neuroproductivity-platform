@@ -14,6 +14,7 @@ import {
   MessageSquare
 } from 'lucide-react';
 import { DeleteAccountPanel } from './DeleteAccountPanel';
+import { LegalLink } from './LegalLinks';
 
 interface AccountMenuProps {
   isOpen: boolean;
@@ -169,7 +170,11 @@ export const AccountMenu: React.FC<AccountMenuProps> = ({
             <Cloud className="mt-0.5 h-4 w-4 shrink-0 text-slate-500" aria-hidden="true" />
             <p>
               Tus datos se guardan en tu cuenta (Google Cloud, UE) y solo tú puedes acceder a ellos. Se sincronizan
-              entre tus dispositivos y, sin conexión, los cambios se envían al recuperarla.
+              entre tus dispositivos y, sin conexión, los cambios se envían al recuperarla. Más detalles en la{' '}
+              <LegalLink to="privacy" newTab>
+                política de privacidad
+              </LegalLink>
+              .
             </p>
           </div>
 
