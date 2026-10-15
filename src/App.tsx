@@ -20,7 +20,7 @@ import {
   GoalStatus,
   UserProfile
 } from './types';
-import { formatTaskDates, isArchived, withStatus } from './services/tasks';
+import { formatTaskDates, isArchived, isArchivedStatus, withStatus } from './services/tasks';
 import { nextRecurringTask } from './services/recurrence';
 import { forceSync, signOutAndClearCache, type FirebaseServices } from './services/firebase';
 import {
@@ -486,8 +486,11 @@ export default function App({ user, services, isAdmin = false }: AppProps) {
 
   const handleChangeStatus = (task: TaskItem, status: TaskStatus) => {
     if (status === task.status) return;
-    // Tarea recurrente marcada como Hecha: se crea la siguiente repetición (una sola vez por tarea)
-    const next = status === 'DONE' && !task.nextOccurrenceId ? nextRecurringTask(task) : null;
+    // Tarea recurrente marcada como Hecha o Cancelada: se crea la siguiente repetición (una sola vez por tarea). Cancelar
+    // una repetición no termina la serie: para eso se quita la repetición al editarla
+    const closing = isArchivedStatus(status);
+    const next = closing && !task.nextOccurrenceId ? nextRecurringTask(task) : null;
+    const closedLabel = status === 'CANCELLED' ? 'cancelada' : 'hecha';
     const updated = withStatus(task, status);
     // Deshacer devuelve la tarea como estaba (y quita la repetición que se acaba de crear) si nada cambió entretanto
     const restored = () => ({ ...task, updatedAt: new Date().toISOString() });
@@ -495,15 +498,15 @@ export default function App({ user, services, isAdmin = false }: AppProps) {
       const done = { ...updated, nextOccurrenceId: next.id };
       completeRecurringTask(db, uid, done, next).catch(reportError('guardar la tarea y su siguiente repetición'));
       showToast(
-        `Tarea hecha y archivada. Siguiente repetición: ${formatTaskDates(next)?.replace('Vence: ', '')}.`,
+        `Tarea ${closedLabel} y archivada. Siguiente repetición: ${formatTaskDates(next)?.replace('Vence: ', '')}.`,
         undo(() => undoTaskChange(db, uid, [done, next], restored(), next.id))
       );
       return;
     }
     saveTask(db, uid, updated).catch(reportError('actualizar el estado'));
-    if (status === 'DONE') {
+    if (closing) {
       showToast(
-        'Tarea hecha y archivada. La encontrarás en «Archivadas».',
+        `Tarea ${closedLabel} y archivada. La encontrarás en «Archivadas».`,
         undo(() => undoTaskChange(db, uid, [updated], restored()))
       );
     } else if (isArchived(task)) {

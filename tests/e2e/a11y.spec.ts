@@ -285,6 +285,16 @@ test('admin access tab', async ({ page }) => {
   await expectNoViolations(page, 'accesos');
 });
 
+test('the prompt before discarding unsaved changes', async ({ page }) => {
+  await page.goto('/');
+  await signInWithGoogle(page);
+  await page.getByRole('button', { name: 'Nueva Tarea' }).click();
+  await page.getByPlaceholder('ej. Llamar al proveedor para acordar el plazo de entrega').fill('Llamar a la gestoría');
+  await page.keyboard.press('Escape');
+  await expect(page.getByRole('alertdialog', { name: '¿Descartar los cambios?' })).toBeVisible();
+  await expectNoViolations(page, 'aviso de cambios sin guardar');
+});
+
 test('task alarm: the field in the form and the alert', async ({ page }) => {
   await page.goto('/');
   await signInWithGoogle(page);

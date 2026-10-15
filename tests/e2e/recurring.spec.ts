@@ -130,3 +130,26 @@ test('editing a repetition that fell on a shorter month keeps the series day', a
     page.getByText(dateFormat.format(new Date(year, 2, 31)).replace(/ \d{4}$/, ''), { exact: false }).first()
   ).toBeVisible();
 });
+
+test('cancelling one repetition archives it as cancelled and creates the next one', async ({ page }) => {
+  const today = new Date();
+  const tomorrow = new Date(today.getFullYear(), today.getMonth(), today.getDate() + 1);
+
+  await page.goto('/');
+  await signInWithGoogle(page);
+  await page.getByRole('button', { name: 'Listas', exact: true }).click();
+
+  const title = `Regar las plantas ${Date.now().toString(36)}`;
+  await page.getByRole('button', { name: 'Añadir la primera tarea' }).click();
+  await showMoreOptions(page);
+  await page.getByLabel('Repetir').selectOption('DAILY');
+  await page.getByLabel('Fecha de inicio', { exact: true }).fill(toDateString(today));
+  await fillAndSaveTask(page, { title });
+
+  await openTaskActions(page, title);
+  await page.getByLabel(`Estado de «${title}»`).selectOption('CANCELLED');
+  await expect(page.getByText(/^Tarea cancelada y archivada\. Siguiente repetición:/)).toBeVisible();
+  // La serie sigue: la siguiente repetición, mañana
+  await expect(page.getByRole('heading', { name: title })).toHaveCount(1);
+  await expect(page.getByText(`Vence: ${dateFormat.format(tomorrow)}`)).toBeVisible();
+});

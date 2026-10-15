@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { useModalFocus } from '../hooks/useModalFocus';
+import { useDiscardGuard } from '../hooks/useDiscardGuard';
 import {
   Goal,
   TaskItem,
@@ -58,6 +59,7 @@ import {
 } from 'lucide-react';
 import { DateField } from './DateField';
 import { NotificationPermission } from './NotificationPermission';
+import { DiscardChangesPrompt } from './DiscardChangesPrompt';
 import { alarmUnavailableReason, describeAlarm } from '../services/alarms';
 import { suggestGoal } from '../services/goals';
 import { WHEEL_CATEGORIES } from '../services/wheel';
@@ -87,6 +89,88 @@ const WHEEL_CATEGORIES_LIST: WheelCategory[] = [
   'Relaciones',
   'Espiritualidad'
 ];
+
+// Valores del formulario: los que escribe o elige la persona (lo demás es estado de la interfaz)
+interface FormValues {
+  title: string;
+  goalId: string;
+  description: string;
+  listContext: ListContext;
+  priority: TaskPriority;
+  isSomeday: boolean;
+  wheelCategory?: WheelCategory;
+  wheelCategoryConfidence?: number;
+  linkedBy: 'MANUAL' | 'AUTO_TFIDF';
+  observations: TaskObservation[];
+  newObsText: string;
+  startDate: string;
+  startTime: string;
+  dueDate: string;
+  dueTime: string;
+  alarmTime: string;
+  estimateMinutes?: number;
+  repeatFrequency: RecurrenceFrequency | '';
+  repeatInterval: number;
+  repeatWeekdays: number[];
+  repeatMonthlyMode: MonthlyMode;
+}
+
+// El formulario al abrirse: vacío para una tarea nueva, o con los datos de la que se edita. Las claves van en el mismo
+// orden que en el formulario actual, para compararlos.
+const formFor = (
+  editingTask: TaskItem | null | undefined,
+  initialContext: ListContext,
+  initialSomeday: boolean,
+  initialGoalId: string | undefined
+): FormValues =>
+  editingTask
+    ? {
+        title: editingTask.title,
+        goalId: editingTask.goalId ?? '',
+        description: editingTask.description,
+        listContext: editingTask.listContext,
+        priority: editingTask.priority,
+        isSomeday: editingTask.isSomeday,
+        wheelCategory: editingTask.wheelCategory,
+        wheelCategoryConfidence: editingTask.wheelCategoryConfidence,
+        linkedBy: editingTask.linkedBy || 'MANUAL',
+        observations: editingTask.observations || [],
+        newObsText: '',
+        // Una tarea repetida se edita como serie: desde su repetición actual hasta la fecha límite de la serie
+        startDate: (editingTask.recurrence ? editingTask.dueDate : editingTask.startDate) ?? '',
+        startTime: editingTask.startTime ?? '',
+        dueDate: (editingTask.recurrence ? editingTask.recurrence.until : editingTask.dueDate) ?? '',
+        dueTime: editingTask.dueTime ?? '',
+        alarmTime: editingTask.alarmTime ?? '',
+        estimateMinutes: editingTask.estimateMinutes,
+        repeatFrequency: editingTask.recurrence?.frequency ?? '',
+        repeatInterval: editingTask.recurrence?.interval ?? 1,
+        repeatWeekdays: editingTask.recurrence?.weekdays ?? [],
+        repeatMonthlyMode: editingTask.recurrence?.monthlyMode ?? 'DAY_OF_MONTH'
+      }
+    : {
+        title: '',
+        goalId: initialGoalId ?? '',
+        description: '',
+        listContext: initialContext,
+        priority: 'MEDIUM',
+        isSomeday: initialSomeday,
+        wheelCategory: undefined,
+        wheelCategoryConfidence: undefined,
+        linkedBy: 'MANUAL',
+        observations: [],
+        newObsText: '',
+        startDate: '',
+        startTime: '',
+        dueDate: '',
+        dueTime: '',
+        alarmTime: '',
+        estimateMinutes: undefined,
+        repeatFrequency: '',
+        repeatInterval: 1,
+        repeatWeekdays: [],
+        repeatMonthlyMode: 'DAY_OF_MONTH'
+      };
 
 export const TaskModal: React.FC<TaskModalProps> = ({
   isOpen,
@@ -139,11 +223,41 @@ export const TaskModal: React.FC<TaskModalProps> = ({
   // «Más opciones» empieza abierto si la tarea ya usa alguno de sus campos (o si es una tarea «Quizá» nueva)
   const [showMore, setShowMore] = useState(false);
 
+  // Formulario tal como se abre (vacío o con la tarea): con él se sabe si hay cambios sin guardar
+  const initialForm = useMemo(
+    () => formFor(editingTask, initialContext, initialSomeday, initialGoalId),
+    // isOpen: cada vez que se abre, el formulario vuelve a empezar
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [isOpen, editingTask, initialContext, initialSomeday, initialGoalId]
+  );
+
   // Inicializar o limpiar al abrir modal
   useEffect(() => {
     nlpRequest.current++; // descarta cualquier sugerencia NLP pendiente del formulario anterior
     // eslint-disable-next-line react-hooks/set-state-in-effect -- el formulario se rellena o limpia al abrirse
     setNlpLoading(false);
+    const form = initialForm;
+    setTitle(form.title);
+    setGoalId(form.goalId);
+    setDescription(form.description);
+    setListContext(form.listContext);
+    setPriority(form.priority);
+    setIsSomeday(form.isSomeday);
+    setWheelCategory(form.wheelCategory);
+    setWheelCategoryConfidence(form.wheelCategoryConfidence);
+    setLinkedBy(form.linkedBy);
+    setObservations(form.observations);
+    setNewObsText(form.newObsText);
+    setStartDate(form.startDate);
+    setStartTime(form.startTime);
+    setDueDate(form.dueDate);
+    setDueTime(form.dueTime);
+    setAlarmTime(form.alarmTime);
+    setEstimateMinutes(form.estimateMinutes);
+    setRepeatFrequency(form.repeatFrequency);
+    setRepeatInterval(form.repeatInterval);
+    setRepeatWeekdays(form.repeatWeekdays);
+    setRepeatMonthlyMode(form.repeatMonthlyMode);
     if (editingTask) {
       setShowMore(
         Boolean(
@@ -156,55 +270,46 @@ export const TaskModal: React.FC<TaskModalProps> = ({
           editingTask.observations?.length
         )
       );
-      setTitle(editingTask.title);
-      setGoalId(editingTask.goalId ?? '');
-      setDescription(editingTask.description);
-      setListContext(editingTask.listContext);
-      setPriority(editingTask.priority);
-      setIsSomeday(editingTask.isSomeday);
-      setWheelCategory(editingTask.wheelCategory);
-      setWheelCategoryConfidence(editingTask.wheelCategoryConfidence);
-      setLinkedBy(editingTask.linkedBy || 'MANUAL');
-      setObservations(editingTask.observations || []);
-      // Una tarea repetida se edita como serie: desde su repetición actual hasta la fecha límite de la serie
-      setStartDate((editingTask.recurrence ? editingTask.dueDate : editingTask.startDate) ?? '');
-      setStartTime(editingTask.startTime ?? '');
-      setDueDate((editingTask.recurrence ? editingTask.recurrence.until : editingTask.dueDate) ?? '');
-      setDueTime(editingTask.dueTime ?? '');
-      setAlarmTime(editingTask.alarmTime ?? '');
-      setEstimateMinutes(editingTask.estimateMinutes);
-      setRepeatFrequency(editingTask.recurrence?.frequency ?? '');
-      setRepeatInterval(editingTask.recurrence?.interval ?? 1);
-      setRepeatWeekdays(editingTask.recurrence?.weekdays ?? []);
-      setRepeatMonthlyMode(editingTask.recurrence?.monthlyMode ?? 'DAY_OF_MONTH');
       setOverrideSyntaxWarning(true);
     } else {
       setShowMore(initialSomeday);
-      setTitle('');
-      setGoalId(initialGoalId ?? '');
-      setDescription('');
-      setListContext(initialContext);
-      setPriority('MEDIUM');
-      setIsSomeday(initialSomeday);
-      setStartDate('');
-      setStartTime('');
-      setDueDate('');
-      setDueTime('');
-      setAlarmTime('');
-      setEstimateMinutes(undefined);
-      setRepeatFrequency('');
-      setRepeatInterval(1);
-      setRepeatWeekdays([]);
-      setRepeatMonthlyMode('DAY_OF_MONTH');
-      setWheelCategory(undefined);
-      setWheelCategoryConfidence(undefined);
-      setLinkedBy('MANUAL');
-      setObservations([]);
       setNlpResult(null);
       setTouched({});
       setOverrideSyntaxWarning(false);
     }
-  }, [isOpen, editingTask, initialContext, initialSomeday, initialGoalId]);
+  }, [initialForm, editingTask, initialSomeday]);
+
+  // CAMBIOS SIN GUARDAR: lo que hay en el formulario frente a como se abrió
+  const currentForm: FormValues = {
+    title,
+    goalId,
+    description,
+    listContext,
+    priority,
+    isSomeday,
+    wheelCategory,
+    wheelCategoryConfidence,
+    linkedBy,
+    observations,
+    newObsText,
+    startDate,
+    startTime,
+    dueDate,
+    dueTime,
+    alarmTime,
+    estimateMinutes,
+    repeatFrequency,
+    repeatInterval,
+    repeatWeekdays,
+    repeatMonthlyMode
+  };
+  // Una fecha a medio escribir (o imposible) aún no está en el formulario, pero también es un cambio
+  const [dateDrafts, setDateDrafts] = useState<Record<string, boolean>>({});
+  const draftOf = (field: string) => (pending: boolean) =>
+    setDateDrafts((drafts) => (Boolean(drafts[field]) === pending ? drafts : { ...drafts, [field]: pending }));
+  const isDirty =
+    isOpen && (JSON.stringify(currentForm) !== JSON.stringify(initialForm) || Object.values(dateDrafts).some(Boolean));
+  const guard = useDiscardGuard(isDirty, onClose);
 
   // Disparador del Motor NLP TF-IDF (Módulo 3) en evento onBlur o cuando hay texto suficiente
   const triggerNLPInference = () => {
@@ -386,7 +491,7 @@ export const TaskModal: React.FC<TaskModalProps> = ({
   };
 
   const dialogRef = useRef<HTMLDivElement>(null);
-  useModalFocus(isOpen, dialogRef, onClose);
+  useModalFocus(isOpen, dialogRef, guard.requestClose);
 
   if (!isOpen) return null;
 
@@ -400,7 +505,10 @@ export const TaskModal: React.FC<TaskModalProps> = ({
         className="animate-in fade-in zoom-in-95 my-auto w-full max-w-2xl overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl duration-200"
       >
         {/* Cabecera del Modal */}
-        <div className="flex items-center justify-between border-b border-slate-100 bg-slate-50/70 px-6 py-4">
+        <div
+          inert={guard.confirming}
+          className="flex items-center justify-between border-b border-slate-100 bg-slate-50/70 px-6 py-4"
+        >
           <div>
             <h2 id="task-modal-title" className="flex items-center gap-2 text-base font-bold text-slate-900">
               <ListPlus className="h-5 w-5 text-indigo-600" />
@@ -409,7 +517,7 @@ export const TaskModal: React.FC<TaskModalProps> = ({
             <p className="mt-0.5 text-xs text-slate-500">Empieza por un verbo: así sabrás exactamente qué hacer.</p>
           </div>
           <button
-            onClick={onClose}
+            onClick={guard.requestClose}
             aria-label="Cerrar"
             className="rounded-lg p-1.5 text-slate-500 transition-colors hover:bg-slate-200/60 hover:text-slate-600"
           >
@@ -417,7 +525,7 @@ export const TaskModal: React.FC<TaskModalProps> = ({
           </button>
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-5 p-6">
+        <form onSubmit={handleSubmit} inert={guard.confirming} className="space-y-5 p-6">
           {/* CAMPO 1: Contexto de Lista (Segregación Estricta Módulo 2) */}
           <div>
             <p
@@ -620,6 +728,7 @@ export const TaskModal: React.FC<TaskModalProps> = ({
                 label="Fecha límite"
                 value={dueDate}
                 onChange={setDueDate}
+                onDraftChange={draftOf('dueDate')}
                 className="min-w-0 flex-1"
                 inputClassName="px-2.5 py-1.5 rounded-lg border border-slate-300 text-xs focus:outline-none focus:ring-2 focus:ring-indigo-400"
               />
@@ -871,6 +980,7 @@ export const TaskModal: React.FC<TaskModalProps> = ({
                         label="Fecha de inicio"
                         value={startDate}
                         onChange={setStartDate}
+                        onDraftChange={draftOf('startDate')}
                         className="min-w-0 flex-1"
                         inputClassName="px-2.5 py-1.5 rounded-lg border border-slate-300 text-xs focus:outline-none focus:ring-2 focus:ring-indigo-400"
                       />
@@ -1125,7 +1235,7 @@ export const TaskModal: React.FC<TaskModalProps> = ({
           <div className="flex items-center justify-end gap-3 border-t border-slate-100 pt-2">
             <button
               type="button"
-              onClick={onClose}
+              onClick={guard.requestClose}
               className="rounded-xl px-4 py-2 text-xs font-semibold text-slate-600 transition-colors hover:bg-slate-100 hover:text-slate-900"
             >
               Cancelar
@@ -1144,6 +1254,18 @@ export const TaskModal: React.FC<TaskModalProps> = ({
             </button>
           </div>
         </form>
+
+        {guard.confirming && (
+          <DiscardChangesPrompt
+            text={
+              editingTask
+                ? 'Has cambiado esta tarea y no has guardado los cambios.'
+                : 'Has empezado una tarea nueva y no la has guardado.'
+            }
+            onKeepEditing={guard.keepEditing}
+            onDiscard={guard.discard}
+          />
+        )}
       </div>
     </div>
   );

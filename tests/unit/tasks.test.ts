@@ -3,6 +3,8 @@ import { describe, it } from 'node:test';
 import {
   formatTaskDates,
   getDeadlineState,
+  isArchived,
+  isDone,
   isUnchanged,
   normalizeTask,
   validateTaskDates,
@@ -50,6 +52,15 @@ describe('withStatus', () => {
     const reactivated = withStatus(done, 'IN_PROGRESS', now);
     assert.equal(reactivated.status, 'IN_PROGRESS');
     assert.equal(reactivated.doneAt, undefined);
+  });
+
+  it('archives a cancelled task with its date, but it is not done', () => {
+    const cancelled = withStatus(task(), 'CANCELLED', now);
+    assert.equal(cancelled.doneAt, now.toISOString());
+    assert.equal(isArchived(cancelled), true);
+    assert.equal(isDone(cancelled), false);
+    assert.equal(isDone(withStatus(task(), 'DONE', now)), true);
+    assert.equal(isArchived(task({ status: 'BLOCKED' })), false);
   });
 });
 

@@ -67,12 +67,13 @@ const SCREENS: { tab: AppTab; title: string; icon: React.ReactNode; points: stri
       'Si la fecha límite está a más de una semana, la tarea cuenta un nivel menos de prioridad. También puedes indicar cuánto te llevará (estimación).',
       'Al crear una tarea, el analizador te pide una acción física concreta (por ejemplo «Llamar al taller…») en lugar de un tema abstracto.',
       'Meta: vincula la tarea a una de tus metas y tomará su área (si el título se parece a una meta, CLAR te propone vincularla). Sin meta, el motor de sugerencias te propone el área de la Rueda con la que se relaciona. El campo aparece cuando ya tienes metas.',
-      'Cada tarea tiene un estado: Pendiente, En progreso, Bloqueada o Hecha. Al marcarla Hecha se archiva; desde «Archivadas» la reactivas cambiando su estado.',
+      'Cada tarea tiene un estado: Pendiente, En progreso, Bloqueada, Hecha o Cancelada. Hecha y Cancelada la archivan; una cancelada no cuenta como hecha en las estadísticas ni en el avance de las metas. Desde «Archivadas» la reactivas cambiando su estado.',
+      'Si cierras el formulario de una tarea o de una meta con cambios sin guardar, CLAR te pregunta antes de descartarlos; si cierras la pestaña, te avisa el navegador.',
       'Puedes darle una fecha límite o un intervalo, con hora opcional: el título se pone violeta cuando falta menos de una semana y rojo cuando ha vencido. Las fechas se escriben como dd/mm/aaaa o se eligen en el calendario, con la semana empezando en lunes.',
       'Con fecha límite, «Añadir al calendario», en el menú «⋯» de la tarea, la lleva a Google Calendar, Outlook o cualquier calendario (archivo .ics).',
       'Alarma: una hora para que CLAR te avise antes del plazo, dentro de las 24 h anteriores (con la tarea a las 11:00, una alarma a las 10:57 suena 3 minutos antes). Sin hora límite, suena la víspera a esa hora; una tarea que se repite necesita hora límite para llevarla.',
       'La alarma avisa mientras CLAR esté abierta: dentro de la app y, si lo permites, con una notificación del sistema (en Android, y en el iPhone sin instalar CLAR en la pantalla de inicio, solo dentro de la app). Si abres CLAR después de la hora de la alarma pero antes del plazo, avisa al momento. El archivo .ics del calendario también la lleva.',
-      'Las tareas pueden repetirse (cada día, semana, mes o año; por ejemplo, «cada mes, el 2.º lunes»). Al repetir, «Inicio» es desde cuándo se repite y la fecha límite hasta cuándo; cada repetición vence su propio día. Al marcarla Hecha se archiva y se crea la siguiente.',
+      'Las tareas pueden repetirse (cada día, semana, mes o año; por ejemplo, «cada mes, el 2.º lunes»). Al repetir, «Inicio» es desde cuándo se repite y la fecha límite hasta cuándo; cada repetición vence su propio día. Al marcarla Hecha o Cancelada se archiva y se crea la siguiente.',
       'Las ideas sin urgencia van a «Algún día» y no compiten con el Top 10.'
     ]
   },
