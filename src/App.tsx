@@ -72,6 +72,8 @@ import {
 } from './services/onboarding';
 import { applyGoalAreas, latestScores } from './services/goals';
 import { applyProjectGoals, projectsOfGoal } from './services/projects';
+import { exportFilename, goalExport, projectExport, taskExport } from './services/exports';
+import { downloadJson } from './services/download';
 import type { SyncStatus } from './components/SyncIndicator';
 import { TaskList } from './components/TaskList';
 import { TaskModal, type TaskFormData } from './components/TaskModal';
@@ -577,6 +579,15 @@ export default function App({ user, services, isAdmin = false }: AppProps) {
     showToast('Meta eliminada. Sus tareas siguen en tus listas.');
   };
 
+  // DESCARGAS EN JSON: una tarea, una meta o un proyecto, con todos sus datos y lo que hace falta para entenderlos
+  const exportContext = () => ({ tasks, goals, projects, version: __APP_VERSION__ });
+  const handleDownloadTask = (task: TaskItem) =>
+    downloadJson(exportFilename('tarea', task.title), taskExport(task, exportContext()));
+  const handleDownloadGoal = (goal: Goal) =>
+    downloadJson(exportFilename('meta', goal.title), goalExport(goal, exportContext()));
+  const handleDownloadProject = (project: Project) =>
+    downloadJson(exportFilename('proyecto', project.title), projectExport(project, exportContext()));
+
   // PROYECTOS: al eliminar uno, sus tareas se quedan en su meta
   const handleSaveProject = (project: Project) => {
     const previous = projects.find((p) => p.id === project.id);
@@ -868,6 +879,7 @@ export default function App({ user, services, isAdmin = false }: AppProps) {
               archivedCount={archivedTasks.length}
               onChangeStatus={handleChangeStatus}
               onDeleteTask={handleDeleteTask}
+              onDownloadTask={handleDownloadTask}
               onEditTask={(task) => {
                 setEditingTask(task);
                 setIsTaskModalOpen(true);
@@ -921,6 +933,7 @@ export default function App({ user, services, isAdmin = false }: AppProps) {
                 projects={projects}
                 onOpenProject={(project) => openProject(project.id)}
                 onNewProject={(goal) => setProjectEditor({ goalId: goal.id })}
+                onDownloadGoal={handleDownloadGoal}
                 onEditTask={(task) => {
                   setEditingTask(task);
                   setIsTaskModalOpen(true);
@@ -949,6 +962,8 @@ export default function App({ user, services, isAdmin = false }: AppProps) {
                   setIsTaskModalOpen(true);
                 }}
                 onDeleteTask={(task) => handleDeleteTask(task.id)}
+                onDownloadTask={handleDownloadTask}
+                onDownloadProject={handleDownloadProject}
                 onOpenGoals={() => navigate('goals')}
               />
             </DeferredSection>
