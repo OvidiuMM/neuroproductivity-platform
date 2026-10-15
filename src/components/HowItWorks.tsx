@@ -2,6 +2,7 @@ import React from 'react';
 import { AppTab } from '../types';
 import { LegalLink } from './LegalLinks';
 import {
+  FolderKanban,
   BookOpen,
   Compass,
   Briefcase,
@@ -54,7 +55,20 @@ const SCREENS: { tab: AppTab; title: string; icon: React.ReactNode; points: stri
       'Las áreas aparecen de la puntuación más baja a la más alta, según tu última evaluación. Las que tienen 5 o menos y aún no tienen metas salen en «Necesitan atención».',
       'Cada meta muestra su progreso (tareas hechas sobre el total) y las tareas que le quedan. Pulsa una para editarla.',
       '«Añadir tarea» crea una tarea ya vinculada a la meta. También puedes vincularla desde el formulario de la tarea; la tarea toma el área de su meta.',
-      'Cuando la consigas, márcala como lograda; si deja de interesarte, archívala. Las logradas y archivadas quedan plegadas al final.'
+      'Cuando la consigas, márcala como lograda; si deja de interesarte, archívala. Las logradas y archivadas quedan plegadas al final.',
+      'Cada meta muestra también sus proyectos activos, con su avance; «Nuevo proyecto» crea uno ya en esa meta.'
+    ]
+  },
+  {
+    tab: 'projects',
+    title: 'Proyectos',
+    icon: <FolderKanban className="h-5 w-5 text-indigo-600" />,
+    points: [
+      'Un proyecto agrupa las tareas de algo con fecha de fin, por ejemplo «Reformar la cocina» dentro de la meta «Tener la casa a punto». Pertenece a una meta y sus tareas cuentan en el avance de esa meta.',
+      'Su avance se ve como una batería: el porcentaje de tareas hechas (las canceladas no cuentan).',
+      'Abre un proyecto para ver y manejar sus tareas igual que en «Listas»: completarlas, cambiar su estado, editarlas o borrarlas. «Añadir tarea» la crea ya en el proyecto.',
+      'Avisa si va fuera de plazo (pasó la fecha de fin y quedan tareas), si termina pronto y si alguna tarea vence después del fin. Cuando acabes, márcalo como terminado; también lo puedes archivar.',
+      'Al eliminar un proyecto, sus tareas siguen en la meta. Una meta con proyectos no se puede eliminar hasta quitárselos.'
     ]
   },
   {
@@ -111,9 +125,9 @@ export const HowItWorks: React.FC<HowItWorksProps> = ({ onNavigate, onStartTour,
         </h2>
         <p className="max-w-3xl text-sm leading-relaxed text-slate-600">
           CLAR va de lo que te importa a lo que haces hoy: decides qué áreas de tu vida quieres mejorar (Rueda), les
-          pones metas, conviertes cada meta en acciones concretas (tareas), eliges qué toca hoy (Top 10 y Agenda) y
-          proteges el tiempo para hacerlas. En el móvil, la barra inferior lleva Inicio, Listas, Agenda y Metas; la
-          Rueda, Tiempo protegido y la Ayuda están en «Más».
+          pones metas, conviertes cada meta en acciones concretas (tareas, sueltas o agrupadas en proyectos con fecha de
+          fin), eliges qué toca hoy (Top 10 y Agenda) y proteges el tiempo para hacerlas. En el móvil, la barra inferior
+          lleva Inicio, Listas, Agenda y Metas; la Rueda, Proyectos, Tiempo protegido y la Ayuda están en «Más».
         </p>
       </div>
 
@@ -215,9 +229,9 @@ export const HowItWorks: React.FC<HowItWorksProps> = ({ onNavigate, onStartTour,
           </li>
           <li>
             <strong>Metas → Tareas:</strong> «Añadir tarea» crea la tarea ya vinculada a su meta, y la tarea toma el
-            área de la meta. Al escribir una tarea, CLAR te propone la meta que más se parece; si no tiene meta, el
-            motor de sugerencias propone un área de la Rueda. Así lo que haces cada día queda vinculado a lo que quieres
-            mejorar.
+            área de la meta. Lo que tiene fecha de fin y varias tareas va en un proyecto de la meta. Al escribir una
+            tarea, CLAR te propone la meta que más se parece; si no tiene meta, el motor de sugerencias propone un área
+            de la Rueda. Así lo que haces cada día queda vinculado a lo que quieres mejorar.
           </li>
           <li>
             <strong>Tareas → Top 10 y Agenda:</strong> las más importantes forman tu Top 10 y las que tienen fecha, tu
@@ -241,14 +255,14 @@ export const HowItWorks: React.FC<HowItWorksProps> = ({ onNavigate, onStartTour,
         </h3>
         <p className="text-sm leading-relaxed text-amber-950">
           Todo se guarda en tu cuenta de CLAR, en servidores de Google Cloud en la Unión Europea (Bélgica), y solo tú
-          puedes acceder: tus tareas, metas, evaluaciones, reuniones y correos (de los adjuntos, solo el nombre y el
-          tamaño). Si la administración tiene activada la aprobación de cuentas, revisa cada una antes de su primer uso;
-          para ello ve tu nombre, tu email, tu foto de perfil (si entras con Google) y el mensaje de la solicitud, nunca
-          tus datos. Los mensajes de «Escríbenos» se guardan con tu nombre y tu email para responderte por email. Se
-          sincroniza entre tus dispositivos y la app sigue funcionando sin conexión: los cambios se envían al
-          recuperarla. El indicador de la cabecera está verde cuando todo está guardado en el servidor y naranja cuando
-          hay cambios pendientes o no hay conexión; púlsalo para forzar la sincronización. Desde el menú de tu cuenta
-          puedes descargar tus datos, cambiar la contraseña (si entras con email), cerrar la sesión en todos tus
+          puedes acceder: tus tareas, metas, proyectos, evaluaciones, reuniones y correos (de los adjuntos, solo el
+          nombre y el tamaño). Si la administración tiene activada la aprobación de cuentas, revisa cada una antes de su
+          primer uso; para ello ve tu nombre, tu email, tu foto de perfil (si entras con Google) y el mensaje de la
+          solicitud, nunca tus datos. Los mensajes de «Escríbenos» se guardan con tu nombre y tu email para responderte
+          por email. Se sincroniza entre tus dispositivos y la app sigue funcionando sin conexión: los cambios se envían
+          al recuperarla. El indicador de la cabecera está verde cuando todo está guardado en el servidor y naranja
+          cuando hay cambios pendientes o no hay conexión; púlsalo para forzar la sincronización. Desde el menú de tu
+          cuenta puedes descargar tus datos, cambiar la contraseña (si entras con email), cerrar la sesión en todos tus
           dispositivos o eliminar la cuenta con todo su contenido. Todo el detalle, en la{' '}
           <LegalLink to="privacy" newTab>
             política de privacidad

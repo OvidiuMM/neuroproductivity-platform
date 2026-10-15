@@ -111,6 +111,19 @@ describe('firestore.rules', () => {
     await assertSucceeds(deleteDoc(doc(ana, 'users/ana/goals/goal-1')));
   });
 
+  it('keeps projects private to their owner, who can create, change and delete them', async () => {
+    const project = { id: 'project-1', title: 'Reformar la cocina', goalId: 'goal-1', status: 'ACTIVE' };
+    const ana = env.authenticatedContext('ana').firestore();
+    const bruno = env.authenticatedContext('bruno').firestore();
+
+    await assertSucceeds(setDoc(doc(ana, 'users/ana/projects/project-1'), project));
+    await assertSucceeds(updateDoc(doc(ana, 'users/ana/projects/project-1'), { status: 'FINISHED' }));
+    await assertFails(getDoc(doc(bruno, 'users/ana/projects/project-1')));
+    await assertFails(setDoc(doc(bruno, 'users/ana/projects/project-2'), project));
+    await assertFails(deleteDoc(doc(bruno, 'users/ana/projects/project-1')));
+    await assertSucceeds(deleteDoc(doc(ana, 'users/ana/projects/project-1')));
+  });
+
   it('rejects collections outside the allowed list', async () => {
     const ana = env.authenticatedContext('ana').firestore();
 

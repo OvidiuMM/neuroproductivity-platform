@@ -1,4 +1,5 @@
 import {
+  FolderKanban,
   BookOpen,
   Briefcase,
   CalendarDays,
@@ -28,6 +29,7 @@ export const SECTIONS: Section[] = [
   { tab: 'agenda', label: 'Agenda', short: 'Agenda', icon: CalendarDays },
   { tab: 'wheel', label: 'Rueda de la Vida', short: 'Rueda', icon: Compass },
   { tab: 'goals', label: 'Metas', short: 'Metas', icon: Target },
+  { tab: 'projects', label: 'Proyectos', short: 'Proyectos', icon: FolderKanban },
   { tab: 'bermudas', label: 'Tiempo protegido', short: 'Tiempo', icon: ShieldCheck },
   { tab: 'help', label: 'Ayuda', short: 'Ayuda', icon: BookOpen, iconOnly: true }
 ];

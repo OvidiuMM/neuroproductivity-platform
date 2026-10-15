@@ -41,13 +41,13 @@ El sistema rechaza las restricciones coercitivas (como las rotaciones atencional
 
 1. **Rueda de la Vida:** puntúas de 0 a 10 tu satisfacción en 7 áreas. Es el punto de partida.
 2. **Metas:** lo que quieres conseguir en cada área, empezando por las más bajas. Las áreas con 5 o menos y sin metas salen en «Necesitan atención».
-3. **Tareas:** acciones físicas concretas, en la lista Profesional o Personal. Cada meta tiene «Añadir tarea», y una tarea vinculada toma el área de su meta.
+3. **Tareas:** acciones físicas concretas, en la lista Profesional o Personal. Cada meta tiene «Añadir tarea», y una tarea vinculada toma el área de su meta. Lo que tiene fecha de fin y varias tareas se agrupa en un **proyecto** de la meta.
 4. **Top 10 y Agenda:** qué hacer hoy y cuándo, con alarmas antes del plazo.
 5. **Tiempo protegido:** mañanas sin reuniones y correos escritos en orden.
 
 Al volver a evaluar la Rueda se ve el efecto de las acciones, y las áreas cambian de orden en «Metas».
 
-**Navegación:** en tableta y escritorio, la cabecera lleva las secciones (Inicio, Listas, Agenda, Rueda de la Vida, Metas, Tiempo protegido, Ayuda y, para la administración, Administración), las dos listas, la sincronización y la cuenta. En el móvil, la barra inferior lleva Inicio, Listas, Agenda, Metas y «Más» (Rueda de la Vida, Tiempo protegido, Ayuda, Administración, la sincronización y la cuenta), con un botón flotante «Nueva tarea».
+**Navegación:** en tableta y escritorio, la cabecera lleva las secciones (Inicio, Listas, Agenda, Rueda de la Vida, Metas, Proyectos, Tiempo protegido, Ayuda y, para la administración, Administración), las dos listas, la sincronización y la cuenta. En el móvil, la barra inferior lleva Inicio, Listas, Agenda, Metas y «Más» (Rueda de la Vida, Proyectos, Tiempo protegido, Ayuda, Administración, la sincronización y la cuenta), con un botón flotante «Nueva tarea».
 
 ---
 
@@ -66,6 +66,7 @@ Al volver a evaluar la Rueda se ve el efecto de las acciones, y las áreas cambi
 - **Sección «Metas»:** las áreas van de la puntuación más baja a la más alta según la última evaluación (sin evaluación, en el orden de la Rueda), cada una con sus metas activas, su progreso (tareas hechas sobre el total) y las tareas que les quedan. Las áreas con 5 o menos y sin metas salen en «Necesitan atención», con un botón que abre la meta con esa área elegida. «Añadir tarea» crea una tarea ya vinculada a la meta. Las logradas y archivadas quedan plegadas al final.
 - **Vínculo con las tareas** (`goalId`): la tarea toma el área de su meta al leerse, así cambiar el área de una meta no reescribe sus tareas. Al eliminar una meta, sus tareas se quedan sin meta y con su área.
 - **Inicio:** una tarjeta con las metas activas y su progreso, y una recomendación cuando el área más baja de la última evaluación (5 o menos) no tiene metas.
+- **Proyectos** (`users/{uid}/projects`, sección «Proyectos»): nombre, meta (obligatoria), fecha de fin y descripción; activos, terminados o archivados. Las tareas de un proyecto (`projectId`) toman su meta al leerse (`applyProjectGoals`) y cuentan en el avance de la meta. Cada proyecto muestra su avance como una batería (tareas hechas sobre el total, sin las canceladas) y avisa si va fuera de plazo (pasó la fecha de fin con tareas abiertas), si termina en menos de una semana, si todas sus tareas están hechas y si alguna vence después del fin. En su vista, las tareas se manejan con las mismas tarjetas que en «Listas». Cada meta muestra sus proyectos activos; una meta con proyectos no se puede eliminar, y al eliminar un proyecto sus tareas siguen en la meta (`src/services/projects.ts`).
 
 ### 3. Listas y jerarquía visual (`M2`)
 
@@ -120,7 +121,7 @@ Al volver a evaluar la Rueda se ve el efecto de las acciones, y las áreas cambi
 
 - **Metas:** objetivos concretos dentro de un área de la Rueda (`users/{uid}/goals`). Las tareas se vinculan con `goalId` y toman el área de su meta al leerse; el progreso de cada meta son sus tareas hechas sobre el total.
 - **Sección «Metas» (0.9.1):** el paso entre la Rueda y las tareas. Las áreas van de la puntuación más baja a la más alta según la última evaluación, cada una con sus metas activas, su progreso y las tareas que les quedan. «Añadir tarea» crea una tarea ya vinculada a la meta. Las áreas con 5 o menos y sin metas salen en «Necesitan atención».
-- **Navegación móvil:** barra inferior (Inicio, Listas, Agenda, Metas y «Más», con la Rueda, Tiempo protegido, la Ayuda, la sincronización y la cuenta), botón flotante «Nueva tarea» y hojas inferiores para «Más» y para ordenar y filtrar.
+- **Navegación móvil:** barra inferior (Inicio, Listas, Agenda, Metas y «Más», con la Rueda, Proyectos, Tiempo protegido, la Ayuda, la sincronización y la cuenta), botón flotante «Nueva tarea» y hojas inferiores para «Más» y para ordenar y filtrar.
 - **Tareas:** completar de un toque con «Deshacer» (comprobado en una transacción), menú «⋯» y formulario en dos niveles.
 - **Bienvenida y recorrido guiado:** se muestran una vez por cuenta (`hasSeenOnboarding` en el perfil, con copia local) y se repiten desde Ayuda.
 - **Contacto:** «Escríbenos» envía el mensaje a la Cloud Function `submitFeedback` (email confirmado, 5 por hora), que lo guarda en `feedback_tickets` y avisa por email. La administración lo lee en «Administración» → «Mensajes».

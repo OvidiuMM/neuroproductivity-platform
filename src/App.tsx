@@ -18,6 +18,8 @@ import {
   EmailDraft,
   Goal,
   GoalStatus,
+  Project,
+  ProjectStatus,
   UserProfile
 } from './types';
 import { formatTaskDates, isArchived, isArchivedStatus, withStatus } from './services/tasks';
@@ -31,6 +33,8 @@ import {
   restoreDeletedTask,
   saveGoal,
   deleteGoal,
+  saveProject,
+  deleteProject,
   subscribeToProfile,
   markOnboardingSeen,
   importUserData,
@@ -67,6 +71,7 @@ import {
   type OnboardingRecord
 } from './services/onboarding';
 import { applyGoalAreas, latestScores } from './services/goals';
+import { applyProjectGoals, projectsOfGoal } from './services/projects';
 import type { SyncStatus } from './components/SyncIndicator';
 import { TaskList } from './components/TaskList';
 import { TaskModal, type TaskFormData } from './components/TaskModal';
@@ -124,6 +129,8 @@ const HowItWorks = retryableLazy(() => import('./components/HowItWorks').then((m
 const AdminView = retryableLazy(() => import('./components/AdminView').then((m) => m.AdminView));
 const GoalsView = retryableLazy(() => import('./components/GoalsView').then((m) => m.GoalsView));
 const GoalModal = retryableLazy(() => import('./components/GoalModal').then((m) => m.GoalModal));
+const ProjectsView = retryableLazy(() => import('./components/ProjectsView').then((m) => m.ProjectsView));
+const ProjectModal = retryableLazy(() => import('./components/ProjectModal').then((m) => m.ProjectModal));
 const WelcomeDialog = retryableLazy(() => import('./components/WelcomeDialog').then((m) => m.WelcomeDialog));
 const ProductTour = retryableLazy(() => import('./components/ProductTour').then((m) => m.ProductTour));
 
@@ -164,8 +171,15 @@ export default function App({ user, services, isAdmin = false }: AppProps) {
   const [meetings, setMeetings] = useState<MeetingGuard[]>([]);
   const [emails, setEmails] = useState<EmailDraft[]>([]);
   const [goals, setGoals] = useState<Goal[]>([]);
-  // Las tareas vinculadas a una meta tienen el área de la meta
-  const tasks = useMemo(() => applyGoalAreas(storedTasks, goals), [storedTasks, goals]);
+  const [projects, setProjects] = useState<Project[]>([]);
+  // Las tareas de un proyecto tienen la meta del proyecto, y las vinculadas a una meta, el área de la meta
+  const tasks = useMemo(
+    () => applyGoalAreas(applyProjectGoals(storedTasks, projects), goals),
+    [storedTasks, projects, goals]
+  );
+  // Proyecto abierto en «Proyectos» y editor de proyectos (uno que se edita, o uno nuevo con su meta ya elegida)
+  const [selectedProjectId, setSelectedProjectId] = useState<string | null>(null);
+  const [projectEditor, setProjectEditor] = useState<{ project?: Project; goalId?: string } | null>(null);
   // Editor de metas: abierto con la meta que se edita, o vacío para crear una
   // Meta que se edita, o una nueva (con su área ya elegida si se crea desde un área de «Metas»)
   const [goalEditor, setGoalEditor] = useState<{ goal?: Goal; area?: WheelCategory } | null>(null);
@@ -190,6 +204,12 @@ export default function App({ user, services, isAdmin = false }: AppProps) {
   const navigate = (tab: AppTab) => {
     hasNavigated.current = true;
     setActiveTab(tab);
+    // Entrar en «Proyectos» desde la navegación lleva a la lista
+    if (tab === 'projects') setSelectedProjectId(null);
+  };
+  const openProject = (projectId: string) => {
+    navigate('projects');
+    setSelectedProjectId(projectId);
   };
 
   // ACCESOS (solo administración): solicitudes en vivo para la pestaña y su contador de pendientes
@@ -304,6 +324,7 @@ export default function App({ user, services, isAdmin = false }: AppProps) {
   const [editingTask, setEditingTask] = useState<TaskItem | null>(null);
   const [newTaskIsSomeday, setNewTaskIsSomeday] = useState(false);
   const [newTaskGoalId, setNewTaskGoalId] = useState<string | undefined>();
+  const [newTaskProjectId, setNewTaskProjectId] = useState<string | undefined>();
   const [isArchiveOpen, setIsArchiveOpen] = useState(false);
   const [isMeetingModalOpen, setIsMeetingModalOpen] = useState(false);
   // Correo que se está escribiendo: uno nuevo, un borrador que se continúa o uno guardado que se abre
@@ -439,16 +460,27 @@ export default function App({ user, services, isAdmin = false }: AppProps) {
           trackSync('goals', info);
         },
         onError
+      ),
+      subscribeToCollection(
+        db,
+        uid,
+        'projects',
+        (items, info) => {
+          setProjects(items);
+          trackSync('projects', info);
+        },
+        onError
       )
     ];
     return () => unsubscribers.forEach((unsubscribe) => unsubscribe());
   }, [db, uid, reportError]);
 
   // Las escrituras se reflejan al instante (caché local) y se sincronizan con el servidor en segundo plano
-  const openNewTask = (options?: { someday?: boolean; goalId?: string }) => {
+  const openNewTask = (options?: { someday?: boolean; goalId?: string; project?: Project }) => {
     setEditingTask(null);
     setNewTaskIsSomeday(Boolean(options?.someday));
-    setNewTaskGoalId(options?.goalId);
+    setNewTaskGoalId(options?.project?.goalId ?? options?.goalId);
+    setNewTaskProjectId(options?.project?.id);
     setIsTaskModalOpen(true);
   };
 
@@ -544,6 +576,31 @@ export default function App({ user, services, isAdmin = false }: AppProps) {
   const handleDeleteGoal = (goal: Goal) => {
     deleteGoal(db, uid, goal).catch(reportError('eliminar la meta'));
     showToast('Meta eliminada. Sus tareas siguen en tus listas.');
+  };
+
+  // PROYECTOS: al eliminar uno, sus tareas se quedan en su meta
+  const handleSaveProject = (project: Project) => {
+    const previous = projects.find((p) => p.id === project.id);
+    saveProject(db, uid, project).catch(reportError('guardar el proyecto'));
+    showToast(previous ? 'Proyecto guardado.' : 'Proyecto creado. Añádele tareas.');
+    if (!previous) openProject(project.id);
+  };
+  const handleSetProjectStatus = (project: Project, status: ProjectStatus) => {
+    saveProject(db, uid, { ...project, status, updatedAt: new Date().toISOString() }).catch(
+      reportError('guardar el proyecto')
+    );
+    showToast(
+      status === 'FINISHED'
+        ? 'Proyecto terminado.'
+        : status === 'ARCHIVED'
+          ? 'Proyecto archivado.'
+          : 'Proyecto reactivado.'
+    );
+  };
+  const handleDeleteProject = (project: Project) => {
+    deleteProject(db, uid, project).catch(reportError('eliminar el proyecto'));
+    if (selectedProjectId === project.id) setSelectedProjectId(null);
+    showToast('Proyecto eliminado. Sus tareas siguen en la meta.');
   };
 
   const handleDeleteTask = (id: string) => {
@@ -691,6 +748,7 @@ export default function App({ user, services, isAdmin = false }: AppProps) {
     isTourOpen ||
     isMoreOpen ||
     goalEditor !== null ||
+    projectEditor !== null ||
     isTaskModalOpen ||
     isArchiveOpen ||
     isMeetingModalOpen ||
@@ -862,11 +920,38 @@ export default function App({ user, services, isAdmin = false }: AppProps) {
                 onEditGoal={(goal) => setGoalEditor({ goal })}
                 onSetGoalStatus={handleSetGoalStatus}
                 onAddTask={(goal) => openNewTask({ goalId: goal.id })}
+                projects={projects}
+                onOpenProject={(project) => openProject(project.id)}
+                onNewProject={(goal) => setProjectEditor({ goalId: goal.id })}
                 onEditTask={(task) => {
                   setEditingTask(task);
                   setIsTaskModalOpen(true);
                 }}
                 onOpenWheel={() => navigate('wheel')}
+              />
+            </DeferredSection>
+          )}
+
+          {/* PROYECTOS: tareas con fecha de fin dentro de una meta, con su avance (batería) y sus avisos de plazo */}
+          {activeTab === 'projects' && (
+            <DeferredSection retry={ProjectsView.retry}>
+              <ProjectsView
+                projects={projects}
+                goals={goals}
+                tasks={tasks}
+                selectedProjectId={selectedProjectId}
+                onSelectProject={setSelectedProjectId}
+                onNewProject={() => setProjectEditor({})}
+                onEditProject={(project) => setProjectEditor({ project })}
+                onSetProjectStatus={handleSetProjectStatus}
+                onAddTask={(project) => openNewTask({ project })}
+                onChangeTaskStatus={handleChangeStatus}
+                onEditTask={(task) => {
+                  setEditingTask(task);
+                  setIsTaskModalOpen(true);
+                }}
+                onDeleteTask={(task) => handleDeleteTask(task.id)}
+                onOpenGoals={() => navigate('goals')}
               />
             </DeferredSection>
           )}
@@ -1011,8 +1096,10 @@ export default function App({ user, services, isAdmin = false }: AppProps) {
         initialContext={activeContext}
         initialSomeday={newTaskIsSomeday}
         initialGoalId={newTaskGoalId}
+        initialProjectId={newTaskProjectId}
         editingTask={editingTask}
         goals={goals}
+        projects={projects}
         tasks={tasks}
       />
 
@@ -1095,7 +1182,22 @@ export default function App({ user, services, isAdmin = false }: AppProps) {
             initialArea={goalEditor.area}
             onSave={handleSaveGoal}
             onDelete={handleDeleteGoal}
+            projectCount={goalEditor.goal ? projectsOfGoal(goalEditor.goal.id, projects).length : 0}
             onClose={() => setGoalEditor(null)}
+          />
+        </DeferredDialog>
+      )}
+
+      {/* PROYECTOS: crear o editar (se monta al abrirse, así empieza limpio) */}
+      {projectEditor && (
+        <DeferredDialog retry={ProjectModal.retry} onCancel={() => setProjectEditor(null)}>
+          <ProjectModal
+            project={projectEditor.project}
+            initialGoalId={projectEditor.goalId}
+            goals={goals}
+            onSave={handleSaveProject}
+            onDelete={handleDeleteProject}
+            onClose={() => setProjectEditor(null)}
           />
         </DeferredDialog>
       )}

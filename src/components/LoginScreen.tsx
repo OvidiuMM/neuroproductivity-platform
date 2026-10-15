@@ -111,9 +111,9 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
             <Cloud className="mt-0.5 h-4 w-4 shrink-0 text-slate-500" />
             <p>
               Si el acceso se aprueba cuenta a cuenta, al entrar por primera vez podrás solicitarlo (con email y
-              contraseña, después de confirmar tu email). Tus tareas, metas, evaluaciones, agenda y correos se guardan
-              en tu cuenta, en servidores de Google Cloud en la Unión Europea (Bélgica). Solo tú puedes acceder a ellos,
-              y puedes descargarlos o eliminarlos cuando quieras desde el menú de tu cuenta.
+              contraseña, después de confirmar tu email). Tus tareas, metas, proyectos, evaluaciones, agenda y correos
+              se guardan en tu cuenta, en servidores de Google Cloud en la Unión Europea (Bélgica). Solo tú puedes
+              acceder a ellos, y puedes descargarlos o eliminarlos cuando quieras desde el menú de tu cuenta.
             </p>
           </div>
 
