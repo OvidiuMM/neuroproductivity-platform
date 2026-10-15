@@ -96,6 +96,38 @@ test('archives a task when marked done and reactivates it from the archive', asy
   await expect(card.getByText('En progreso', { exact: true })).toBeVisible();
 });
 
+test('a cancelled task is archived as cancelled, with «Deshacer», and can be reactivated', async ({ page }) => {
+  await page.goto('/');
+  await signInWithGoogle(page);
+  await page.getByRole('button', { name: 'Listas', exact: true }).click();
+
+  const title = `Reservar la sala del taller ${unique()}`;
+  await page.getByRole('button', { name: 'Añadir la primera tarea' }).click();
+  await fillAndSaveTask(page, { title });
+
+  // Cancelada desde «⋯»: sale de la lista, con «Deshacer»
+  await openTaskActions(page, title);
+  await page.getByLabel(`Estado de «${title}»`).selectOption('CANCELLED');
+  await expect(page.getByText('Tarea cancelada y archivada. La encontrarás en «Archivadas».')).toBeVisible();
+  await expect(page.getByRole('heading', { name: title })).toBeHidden();
+  await page.getByRole('button', { name: 'Deshacer' }).click();
+  await expect(page.getByRole('heading', { name: title })).toBeVisible();
+  await openTaskActions(page, title);
+  await page.getByLabel(`Estado de «${title}»`).selectOption('CANCELLED');
+  await expect(page.getByRole('heading', { name: title })).toBeHidden();
+
+  // En «Archivadas», como cancelada; al reactivarla vuelve a su lista
+  await page.getByRole('button', { name: /Archivadas/ }).click();
+  const archive = page.getByRole('dialog', { name: 'Tareas archivadas' });
+  const row = archive.getByRole('listitem').filter({ hasText: title });
+  await expect(row).toContainText('Cancelada el');
+  await expect(archive.getByLabel(`Estado de «${title}»`)).toHaveValue('CANCELLED');
+  await archive.getByLabel(`Estado de «${title}»`).selectOption('PENDING');
+  await expect(row).toBeHidden();
+  await archive.getByRole('button', { name: 'Cerrar' }).click();
+  await expect(page.getByRole('heading', { name: title })).toBeVisible();
+});
+
 test('changing the status from «⋯» with the keyboard leaves the focus on that button', async ({ page }) => {
   await page.goto('/');
   await signInWithGoogle(page);

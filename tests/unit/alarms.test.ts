@@ -85,7 +85,7 @@ test('the form says when it will ring', () => {
   assert.equal(describeAlarm(task({ dueDate: '2030-06-15' })), null);
 });
 
-test('scheduled alarms skip done, someday and overdue tasks, and come in order', () => {
+test('scheduled alarms skip done, cancelled, someday and overdue tasks, and come in order', () => {
   const now = new Date(2030, 5, 15, 10, 0);
   const tasks = [
     task({ id: 'later', dueDate: '2030-06-15', dueTime: '18:00', alarmTime: '17:30' }),
@@ -94,6 +94,7 @@ test('scheduled alarms skip done, someday and overdue tasks, and come in order',
     task({ id: 'missed', dueDate: '2030-06-15', dueTime: '12:00', alarmTime: '09:00' }),
     task({ id: 'overdue', dueDate: '2030-06-15', dueTime: '09:30', alarmTime: '09:00' }),
     task({ id: 'done', dueDate: '2030-06-15', dueTime: '11:00', alarmTime: '10:57', status: 'DONE' }),
+    task({ id: 'cancelled', dueDate: '2030-06-15', dueTime: '11:00', alarmTime: '10:57', status: 'CANCELLED' }),
     task({ id: 'someday', dueDate: '2030-06-15', dueTime: '11:00', alarmTime: '10:57', isSomeday: true }),
     task({ id: 'none', dueDate: '2030-06-15', dueTime: '11:00' })
   ];

@@ -39,9 +39,10 @@ const task = (overrides: Partial<TaskItem>): TaskItem =>
     ...overrides
   }) as TaskItem;
 
-test('goal progress counts the linked tasks that are done', () => {
+test('goal progress counts the linked tasks that are done, leaving cancelled ones out', () => {
   const tasks = [
     task({ id: 'a', goalId: 'g1', status: 'DONE' }),
+    task({ id: 'cancelled', goalId: 'g1', status: 'CANCELLED' }),
     task({ id: 'b', goalId: 'g1' }),
     task({ id: 'c', goalId: 'g1', status: 'IN_PROGRESS' }),
     task({ id: 'd', goalId: 'other', status: 'DONE' }),
@@ -185,6 +186,7 @@ test('without an evaluation, areas keep the Wheel order and none is marked as ne
 test('a goal lists the tasks still to do, those with the nearest due date first', () => {
   const tasks = [
     task({ id: 'done', goalId: 'g1', status: 'DONE', dueDate: '2026-01-01' }),
+    task({ id: 'cancelled', goalId: 'g1', status: 'CANCELLED', dueDate: '2026-01-02' }),
     task({ id: 'later', goalId: 'g1', title: 'B', dueDate: '2026-05-01' }),
     task({ id: 'undated', goalId: 'g1', title: 'A' }),
     task({ id: 'soon', goalId: 'g1', title: 'C', dueDate: '2026-04-01', status: 'BLOCKED' }),

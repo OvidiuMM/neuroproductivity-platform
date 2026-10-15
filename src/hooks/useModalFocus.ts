@@ -31,7 +31,9 @@ export const useModalFocus = (
     if (!isOpen || !container) return;
 
     const previouslyFocused = opener ?? (document.activeElement as HTMLElement | null);
-    const focusables = () => [...container.querySelectorAll<HTMLElement>(FOCUSABLE)];
+    // Lo que está detrás de un aviso dentro de la ventana (inerte) no cuenta
+    const focusables = () =>
+      [...container.querySelectorAll<HTMLElement>(FOCUSABLE)].filter((element) => !element.closest('[inert]'));
     (container.querySelector<HTMLElement>('[data-autofocus]') ?? focusables()[0])?.focus();
 
     const onKeyDown = (e: KeyboardEvent) => {

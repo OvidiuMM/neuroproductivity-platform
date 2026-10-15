@@ -4,8 +4,8 @@ export type AppTab = 'home' | 'tasks' | 'agenda' | 'wheel' | 'goals' | 'bermudas
 
 export type TaskPriority = 'CRITICAL' | 'HIGH' | 'MEDIUM' | 'LOW';
 
-// Estado manual de la tarea; DONE la archiva (sale de las listas y del Top 10)
-export type TaskStatus = 'PENDING' | 'BLOCKED' | 'IN_PROGRESS' | 'DONE';
+// Estado manual de la tarea; DONE (hecha) y CANCELLED (cancelada) la archivan: sale de las listas y del Top 10
+export type TaskStatus = 'PENDING' | 'BLOCKED' | 'IN_PROGRESS' | 'DONE' | 'CANCELLED';
 
 export type WheelCategory =
   'Salud' | 'Carrera Profesional' | 'Finanzas' | 'Familia' | 'Ocio' | 'Relaciones' | 'Espiritualidad';
@@ -34,7 +34,7 @@ export interface TaskItem {
   wheelCategoryConfidence?: number;
   linkedBy?: 'MANUAL' | 'AUTO_TFIDF';
   status: TaskStatus;
-  doneAt?: string; // ISO / UTC: cuándo pasó a Hecha (orden del archivo)
+  doneAt?: string; // ISO / UTC: cuándo pasó a Hecha o Cancelada (orden del archivo)
   // Fechas opcionales en hora local del dispositivo. Solo fecha límite = plazo; con inicio = intervalo.
   startDate?: string; // YYYY-MM-DD
   startTime?: string; // HH:mm (opcional)

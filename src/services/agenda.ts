@@ -1,5 +1,5 @@
 import { ListContext, MeetingGuard, TaskItem } from '../types';
-import { DeadlineState, getDeadlineState, toLocalDate } from './tasks';
+import { DeadlineState, getDeadlineState, isArchived, toLocalDate } from './tasks';
 import { occurrencesBetween, toDateString } from './recurrence';
 
 // Elemento de la agenda en un día concreto
@@ -42,7 +42,7 @@ export const buildAgenda = (
   const add = (item: AgendaItem) => agenda.get(item.date)?.push(item);
 
   for (const task of tasks) {
-    if (task.status === 'DONE' || !task.dueDate) continue;
+    if (isArchived(task) || !task.dueDate) continue;
     const base = { title: task.title, context: task.listContext, task, deadline: getDeadlineState(task, now) };
 
     // Una tarea repetida no es un intervalo: cada repetición ocupa solo su día
@@ -108,5 +108,5 @@ export const buildAgenda = (
 // Tareas activas cuya fecha límite ya pasó (se muestran aparte en la vista por días)
 export const overdueTasks = (tasks: TaskItem[], now = new Date()) =>
   tasks
-    .filter((t) => t.status !== 'DONE' && getDeadlineState(t, now) === 'overdue')
+    .filter((t) => !isArchived(t) && getDeadlineState(t, now) === 'overdue')
     .sort((a, b) => (a.dueDate ?? '').localeCompare(b.dueDate ?? ''));
