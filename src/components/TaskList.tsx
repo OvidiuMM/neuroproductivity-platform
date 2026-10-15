@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Goal, TaskItem, ListContext, TaskPriority, TaskStatus, WheelCategory } from '../types';
-import { PRIORITY_LABEL } from '../services/tasks';
+import { PRIORITY_LABEL, isArchived } from '../services/tasks';
 import {
   DEFAULT_LIST_PREFS,
   ESTIMATE_OPTIONS,
@@ -94,7 +94,7 @@ export const TaskList: React.FC<TaskListProps> = ({
   const now = useNow();
 
   // Filtrado por contexto estricto (Segregación Inquebrantable); las tareas hechas están archivadas
-  const contextTasks = tasks.filter((t) => t.listContext === activeContext && t.status !== 'DONE');
+  const contextTasks = tasks.filter((t) => t.listContext === activeContext && !isArchived(t));
 
   // Separación entre tareas activas y el sumidero cognitivo "Quizá" / "Algún día"
   const activeTasks = contextTasks.filter((t) => !t.isSomeday);

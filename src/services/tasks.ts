@@ -4,7 +4,8 @@ export const TASK_STATUSES: { value: TaskStatus; label: string; className: strin
   { value: 'PENDING', label: 'Pendiente', className: 'bg-slate-100 text-slate-700 border-slate-200' },
   { value: 'IN_PROGRESS', label: 'En progreso', className: 'bg-blue-50 text-blue-700 border-blue-200' },
   { value: 'BLOCKED', label: 'Bloqueada', className: 'bg-amber-50 text-amber-800 border-amber-200' },
-  { value: 'DONE', label: 'Hecha', className: 'bg-emerald-50 text-emerald-700 border-emerald-200' }
+  { value: 'DONE', label: 'Hecha', className: 'bg-emerald-50 text-emerald-700 border-emerald-200' },
+  { value: 'CANCELLED', label: 'Cancelada', className: 'bg-zinc-100 text-zinc-700 border-zinc-300' }
 ];
 
 export const PRIORITY_LABEL: Record<TaskPriority, string> = {
@@ -24,15 +25,21 @@ export const normalizeTask = ({ completed, ...task }: StoredTask): TaskItem => (
   status: task.status ?? (completed ? 'DONE' : 'PENDING')
 });
 
-export const isArchived = (task: TaskItem) => task.status === 'DONE';
+// Hecha y Cancelada archivan la tarea. Una cancelada no cuenta como hecha: ni en las estadísticas ni en el avance
+export type ArchivedStatus = Extract<TaskStatus, 'DONE' | 'CANCELLED'>;
+export const isArchivedStatus = (status: TaskStatus): status is ArchivedStatus =>
+  status === 'DONE' || status === 'CANCELLED';
+export const isArchived = (task: Pick<TaskItem, 'status'>) => isArchivedStatus(task.status);
+export const isDone = (task: Pick<TaskItem, 'status'>) => task.status === 'DONE';
+export const isCancelled = (task: Pick<TaskItem, 'status'>) => task.status === 'CANCELLED';
 
-// Cambiar a Hecha archiva la tarea; cualquier otro estado la reactiva
+// Cambiar a Hecha o Cancelada archiva la tarea (con la fecha en doneAt); cualquier otro estado la reactiva
 export const withStatus = (task: TaskItem, status: TaskStatus, now = new Date()): TaskItem => {
   const { doneAt: _previousDoneAt, ...rest } = task;
   return {
     ...rest,
     status,
-    ...(status === 'DONE' ? { doneAt: now.toISOString() } : {}),
+    ...(isArchivedStatus(status) ? { doneAt: now.toISOString() } : {}),
     updatedAt: now.toISOString()
   };
 };

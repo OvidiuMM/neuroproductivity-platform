@@ -156,7 +156,8 @@ describe('overdueTasks', () => {
         task('b', { dueDate: '2026-10-10' }),
         task('a', { dueDate: '2026-10-01' }),
         task('c', { dueDate: '2026-10-20' }),
-        task('d', { dueDate: '2026-10-02', status: 'DONE' })
+        task('d', { dueDate: '2026-10-02', status: 'DONE' }),
+        task('e', { dueDate: '2026-10-03', status: 'CANCELLED' })
       ],
       now
     );

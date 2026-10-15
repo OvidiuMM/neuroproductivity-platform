@@ -1,19 +1,20 @@
 import type { Goal, TaskItem, WheelCategory, WheelOfLifeLog } from '../types';
 import { WHEEL_CATEGORIES } from './wheel';
+import { isArchived, isCancelled, isDone } from './tasks';
 
 export const GOAL_TITLE_MAX = 100;
 export const GOAL_WHY_MAX = 280;
 
-// Progreso de una meta: tareas vinculadas hechas sobre el total (las archivadas cuentan como hechas)
+// Progreso de una meta: tareas vinculadas hechas sobre el total. Las canceladas no cuentan en ninguno de los dos
 export const goalProgress = (goal: Pick<Goal, 'id'>, tasks: TaskItem[]) => {
-  const linked = tasks.filter((t) => t.goalId === goal.id);
-  return { done: linked.filter((t) => t.status === 'DONE').length, total: linked.length };
+  const linked = tasks.filter((t) => t.goalId === goal.id && !isCancelled(t));
+  return { done: linked.filter(isDone).length, total: linked.length };
 };
 
 // Tareas de una meta que quedan por hacer: primero las que tienen fecha límite, de la más próxima a la más lejana
 export const pendingGoalTasks = (goal: Pick<Goal, 'id'>, tasks: TaskItem[]) =>
   tasks
-    .filter((t) => t.goalId === goal.id && t.status !== 'DONE')
+    .filter((t) => t.goalId === goal.id && !isArchived(t))
     .sort((a, b) => (a.dueDate ?? '9999').localeCompare(b.dueDate ?? '9999') || a.title.localeCompare(b.title, 'es'));
 
 // El área de una tarea vinculada es la de su meta: se resuelve al leer, así cambiar el área de una meta no tiene que

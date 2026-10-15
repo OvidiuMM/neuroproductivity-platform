@@ -6,7 +6,8 @@ import {
   PRIORITY_LABEL,
   TASK_STATUSES,
   effectivePriority,
-  getDeadlineState
+  getDeadlineState,
+  isArchived
 } from '../services/tasks';
 import { formatEstimate } from '../services/taskListing';
 import { alarmMoment, describeAlarm } from '../services/alarms';
@@ -64,7 +65,7 @@ const PriorityBadge: React.FC<{ task: TaskItem; now: Date }> = ({ task, now }) =
 
 // Alarma: la hora, con cuándo suena en el título (sin hacer y con alarma válida)
 const AlarmBadge: React.FC<{ task: TaskItem }> = ({ task }) => {
-  if (task.status === 'DONE' || !alarmMoment(task)) return null;
+  if (isArchived(task) || !alarmMoment(task)) return null;
   return (
     <span className="inline-flex items-center gap-1" title={describeAlarm(task) ?? undefined}>
       <Bell className="h-3 w-3" aria-hidden="true" />

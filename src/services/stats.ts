@@ -2,7 +2,7 @@ import { AppTab, Goal, TaskItem, WheelCategory, WheelOfLifeLog } from '../types'
 import { areasWithGoals, latestScores } from './goals';
 import { startOfWeek } from './agenda';
 import { toDateString } from './recurrence';
-import { dueMoment, isArchived } from './tasks';
+import { dueMoment, isArchived, isDone } from './tasks';
 
 // Estadísticas de la pantalla de Inicio, a partir de las tareas de una lista (las hechas guardan doneAt)
 
@@ -48,8 +48,9 @@ export const computeStats = (tasks: TaskItem[], now = new Date()): TaskStats => 
   const recentFrom = addDays(today, -RECENT_DAYS + 1);
   const velocityFrom = addDays(weekStart, -7 * VELOCITY_WEEKS);
 
-  // Solo lo hecho hasta `now` (un reloj adelantado en otro dispositivo no cuenta trabajo futuro como hecho)
-  const done = tasks.filter((t) => isArchived(t) && t.doneAt && new Date(t.doneAt) <= now);
+  // Solo lo hecho hasta `now` (un reloj adelantado en otro dispositivo no cuenta trabajo futuro como hecho). Las
+  // canceladas no cuentan: ni como hechas ni como abiertas
+  const done = tasks.filter((t) => isDone(t) && t.doneAt && new Date(t.doneAt) <= now);
   const doneSince = (from: Date) => done.filter((t) => doneMoment(t)! >= from);
 
   const countsByDay = new Map<string, number>();
