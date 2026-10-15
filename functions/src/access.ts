@@ -30,14 +30,19 @@ const adminEmailParam = defineString('ADMIN_EMAIL', {
   default: '',
   description: 'Email de la cuenta de Google que aprueba los accesos'
 });
-const gmailUser = defineString('GMAIL_USER', { default: '', description: 'Cuenta de Gmail que envía los avisos' });
-const gmailAppPassword = defineSecret('GMAIL_APP_PASSWORD');
+// Buzón que envía los avisos y las respuestas (y recibe lo que contesten), por SMTP con TLS
+const smtpUser = defineString('SMTP_USER', {
+  default: '',
+  description: 'Buzón que envía los avisos y recibe las respuestas (p. ej. info@clar.life)'
+});
+const smtpHost = defineString('SMTP_HOST', { default: 'smtp.ionos.es', description: 'Servidor SMTP del buzón' });
+const smtpPassword = defineSecret('SMTP_PASSWORD');
 // Dirección pública de la app en los emails (p. ej. https://clar.life); sin ella, la de Firebase Hosting
 const appUrlParam = defineString('APP_URL', { default: '', description: 'Dirección pública de la app' });
 export const isEmulator = process.env.FUNCTIONS_EMULATOR === 'true';
 // En los emuladores no se envían correos; sin el secreto enlazado, el emulador no intenta leerlo de Secret Manager
 // (cada intento bloquea la llamada varios segundos)
-export const emailSecrets = isEmulator ? [] : [gmailAppPassword];
+export const emailSecrets = isEmulator ? [] : [smtpPassword];
 
 const db = adminDb;
 
@@ -45,13 +50,15 @@ const isDemoProject = () => (process.env.GCLOUD_PROJECT ?? '').startsWith('demo-
 export const adminEmail = () => (isDemoProject() ? DEMO_ADMIN_EMAIL : adminEmailParam.value());
 export const appUrl = () => publicAppUrl(appUrlParam.value(), process.env.GCLOUD_PROJECT ?? '');
 
-// Avisos por email (Gmail con contraseña de aplicación). En los emuladores no se envía nada. Un fallo del
+// Avisos por email desde el buzón de SMTP_USER. En los emuladores no se envía nada. Un fallo del
 // correo no deshace la solicitud, la decisión ni el mensaje: queda en los logs, sin datos personales (ni el uid).
 const EMAIL_CONCURRENCY = 3;
 const createTransport = (pool = false) =>
   nodemailer.createTransport({
-    service: 'gmail',
-    auth: { user: gmailUser.value(), pass: gmailAppPassword.value() },
+    host: smtpHost.value(),
+    port: 465,
+    secure: true,
+    auth: { user: smtpUser.value(), pass: smtpPassword.value() },
     // Varios correos seguidos (aprobaciones en bloque) comparten unas pocas conexiones
     ...(pool ? { pool: true, maxConnections: EMAIL_CONCURRENCY } : {})
   });
@@ -59,20 +66,19 @@ const createTransport = (pool = false) =>
 export const sendEmail = async (
   kind: string,
   to: string,
-  { subject, text, replyTo }: { subject: string; text: string; replyTo?: string },
+  { subject, text }: { subject: string; text: string },
   transport?: ReturnType<typeof createTransport>
 ): Promise<'sent' | 'skipped' | 'failed'> => {
-  if (isEmulator || !gmailUser.value() || !to) {
+  if (isEmulator || !smtpUser.value() || !to) {
     logger.info('Email skipped', { kind, emulator: isEmulator });
     return 'skipped';
   }
   try {
     await (transport ?? createTransport()).sendMail({
-      from: `CLAR <${gmailUser.value()}>`,
+      from: `CLAR <${smtpUser.value()}>`,
       to,
       subject,
-      text,
-      replyTo
+      text
     });
     logger.info('Email sent', { kind });
     return 'sent';
@@ -304,7 +310,7 @@ export const setAccessMode = onCall({ region: REGION, secrets: emailSecrets, tim
 
   // Avisos con unas pocas conexiones compartidas; un fallo queda en los logs y no afecta a los demás
   const toNotify = approved.filter((record) => normalizeEmail(record.email) !== normalizeEmail(adminEmail()));
-  const transport = isEmulator || !gmailUser.value() || toNotify.length === 0 ? undefined : createTransport(true);
+  const transport = isEmulator || !smtpUser.value() || toNotify.length === 0 ? undefined : createTransport(true);
   try {
     await inChunks(toNotify, EMAIL_CONCURRENCY, (record) => sendAccessEmail('approved', record, transport));
   } finally {

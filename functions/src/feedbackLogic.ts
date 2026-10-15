@@ -121,38 +121,16 @@ const TYPE_LABEL: Record<FeedbackType, string> = {
   general: 'Mensaje general'
 };
 
-// Correo a la administración, solo en texto plano: asunto y descripción los escribe quien envía el mensaje
+// Aviso a la administración, en texto plano y sin datos de quien escribe ni su mensaje (minimización): se leen y se
+// contestan en la app
 export const buildFeedbackEmail = (ticket: FeedbackTicket, appUrl: string) => ({
-  subject: `[CLAR] ${TYPE_LABEL[ticket.type]}: ${ticket.subject}`,
-  replyTo: ticket.email,
-  text: [
-    `${ticket.name || 'Alguien'} (${ticket.email}) ha escrito desde CLAR.`,
-    '',
-    `Tipo: ${TYPE_LABEL[ticket.type]}`,
-    `Asunto: ${ticket.subject}`,
-    '',
-    ticket.description,
-    ...(ticket.context
-      ? [
-          '',
-          'Información técnica:',
-          `- Versión: ${ticket.context.appVersion}`,
-          `- Sistema: ${ticket.context.os}`,
-          `- Navegador: ${ticket.context.browser}`,
-          `- Dispositivo: ${ticket.context.deviceClass}`,
-          `- Idioma: ${ticket.context.language}`,
-          `- Conexión: ${ticket.context.online ? 'sí' : 'no'}`
-        ]
-      : []),
-    '',
-    `Responde a este correo, o contesta desde «Administración» → «Mensajes» con «Responder»: ${appUrl}`
-  ].join('\n')
+  subject: `[CLAR] Mensaje nuevo: ${TYPE_LABEL[ticket.type]}`,
+  text: `Hay un mensaje nuevo (${TYPE_LABEL[ticket.type]}). Léelo y contesta en «Administración» → «Mensajes»: ${appUrl}`
 });
 
-// Respuesta a quien escribió, en texto plano y con su mensaje citado. Si contesta, le llega a la administración.
-export const buildReplyEmail = (ticket: FeedbackTicket, message: string, adminEmail: string, appUrl: string) => ({
+// Respuesta a quien escribió, en texto plano y con su mensaje citado. Si contesta, le llega al buzón que la envía.
+export const buildReplyEmail = (ticket: FeedbackTicket, message: string, appUrl: string) => ({
   subject: `Re: [CLAR] ${ticket.subject}`,
-  replyTo: adminEmail,
   text: [
     ticket.name ? `Hola, ${ticket.name}:` : 'Hola:',
     '',

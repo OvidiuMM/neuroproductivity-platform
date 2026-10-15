@@ -32,7 +32,7 @@ El sistema rechaza las restricciones coercitivas (como las rotaciones atencional
 
   Los textos pequeños usan como mínimo `slate-500` sobre blanco para cumplir el contraste WCAG AA.
 
-- **Tipografía:** Plus Jakarta Sans para la interfaz y JetBrains Mono para cifras y versiones.
+- **Tipografía:** la del sistema de cada dispositivo. No se cargan fuentes externas: no se envía la IP de nadie a terceros al abrir la app.
 - **Lema:** «Decide qué hacer ahora, con claridad».
 
 ---
@@ -113,6 +113,7 @@ Al volver a evaluar la Rueda se ve el efecto de las acciones, y las áreas cambi
 - **Inicio:** el foco de la lista activa, las metas activas con su progreso y estadísticas de las tareas (hechas por día, semana y mes; antes o después del plazo; velocidad en tareas y horas estimadas por semana; tiempo medio hasta completarlas; racha; pendientes y vencidas; reparto por área), con recomendaciones según esos datos.
 - **Agenda:** vista semanal (de lunes a domingo) y por días (14 días, también los vacíos) con las tareas con fecha de las dos listas, los intervalos, las repeticiones previstas de las tareas recurrentes y las reuniones. En la vista por días las tareas vencidas aparecen aparte; al pulsar una tarea se edita.
 - **Contacto:** «Escríbenos» (en la Ayuda, en «Tu cuenta» y en la pantalla de acceso) envía ideas, fallos o dudas; la administración los lee y los responde por email desde la app.
+- **Textos legales:** política de privacidad (`/privacidad`), condiciones de uso (`/condiciones`) y aviso legal (`/aviso-legal`), públicos y sin iniciar sesión (`src/Root.tsx` elige la página por la ruta, sin cargar Firebase). Están enlazados desde las pantallas de inicio de sesión y de acceso, el pie, el menú de la cuenta y la Ayuda; al entrar se acepta tener al menos 14 años y las condiciones. El contenido está en `src/components/LegalTexts.tsx`, y el titular, el email de contacto y la fecha de la versión, en `src/services/legal.ts`: al cambiar el contenido, cambia también la fecha. Una prueba unitaria falla si falta el titular o el email.
 
 ## 🗒️ Novedades por versión
 
@@ -139,7 +140,7 @@ Al volver a evaluar la Rueda se ve el efecto de las acciones, y las áreas cambi
 
 ### Respuestas a los mensajes de contacto (0.9.2)
 
-- En **Administración** → **Mensajes**, «Responder» envía la respuesta por email a quien escribió, desde la cuenta de `GMAIL_USER` y con su mensaje citado; si contesta, le llega a la administración (`replyTo`). La Cloud Function `replyToFeedback` (solo la administración) guarda la respuesta en el mensaje (`replies`) únicamente si el envío sale, y un mensaje nuevo pasa a leído. Desde la app nadie puede escribir respuestas directamente (las reglas solo dejan cambiar el estado).
+- En **Administración** → **Mensajes**, «Responder» envía la respuesta por email a quien escribió, desde el buzón de `SMTP_USER` y con su mensaje citado; si contesta, le llega a ese buzón. La Cloud Function `replyToFeedback` (solo la administración) guarda la respuesta en el mensaje (`replies`) únicamente si el envío sale, y un mensaje nuevo pasa a leído. Desde la app nadie puede escribir respuestas directamente (las reglas solo dejan cambiar el estado).
 - «Desde mi correo» sigue abriendo el programa de correo, para responder desde otra cuenta.
 
 ### Proyectos, dependencias, «Cancelada» y descargas (0.9.3)
@@ -154,14 +155,14 @@ Al volver a evaluar la Rueda se ve el efecto de las acciones, y las áreas cambi
 
 ## 🛠️ Stack Tecnológico
 
-| Capa                   | Tecnologías                                                                                                                                                                              |
-| :--------------------- | :--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Frontend**           | React 19, TypeScript, Vite, Tailwind CSS v4, Lucide Icons                                                                                                                                |
-| **Algoritmia**         | Motor TF-IDF & Cosine Similarity en TS, Parser sintáctico de verbos en español                                                                                                           |
-| **Visualización**      | SVG interactivo polar / radar, Matemáticas polares de deformación poligonal                                                                                                              |
-| **Cuentas y datos**    | Firebase Authentication (Google y email con contraseña) y Cloud Firestore (`europe-west1`) con caché persistente: funciona sin conexión y sincroniza entre dispositivos                  |
-| **Hosting y API**      | Firebase Hosting (SPA, en https://clar.life) y Cloud Functions for Firebase 2.ª gen (`europe-west1`): Express para la API y funciones de acceso y contacto, con avisos por email (Gmail) |
-| **Referencia Backend** | PostgreSQL (Esquema DDL relacional con índices parciales B-Tree y tipos JSONB)                                                                                                           |
+| Capa                   | Tecnologías                                                                                                                                                                                      |
+| :--------------------- | :----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Frontend**           | React 19, TypeScript, Vite, Tailwind CSS v4, Lucide Icons                                                                                                                                        |
+| **Algoritmia**         | Motor TF-IDF & Cosine Similarity en TS, Parser sintáctico de verbos en español                                                                                                                   |
+| **Visualización**      | SVG interactivo polar / radar, Matemáticas polares de deformación poligonal                                                                                                                      |
+| **Cuentas y datos**    | Firebase Authentication (Google y email con contraseña) y Cloud Firestore (`europe-west1`) con caché persistente: funciona sin conexión y sincroniza entre dispositivos                          |
+| **Hosting y API**      | Firebase Hosting (SPA, en https://clar.life) y Cloud Functions for Firebase 2.ª gen (`europe-west1`): Express para la API y funciones de acceso y contacto, con avisos por email (SMTP de IONOS) |
+| **Referencia Backend** | PostgreSQL (Esquema DDL relacional con índices parciales B-Tree y tipos JSONB)                                                                                                                   |
 
 ---
 
@@ -227,6 +228,8 @@ Firebase Hosting sirve la SPA compilada (`dist/`), la función `api` (Cloud Func
 | `/.well-known/assetlinks.json` | Función `api` (Digital Asset Links de la APK Android) |
 | `**`                           | `index.html` (fallback de la SPA)                     |
 
+Todas las respuestas llevan cabeceras de seguridad, definidas en `firebase.json`: `X-Content-Type-Options`, `Referrer-Policy`, `Permissions-Policy` (sin cámara, micrófono, ubicación, pagos ni USB) y una política de seguridad de contenidos (CSP) que solo permite el propio dominio, el inicio de sesión de Google, las APIs de Firebase (`*.googleapis.com`), las Cloud Functions (`*.cloudfunctions.net`) y las fotos de perfil de Google. Por ahora la CSP y la `Cross-Origin-Opener-Policy` van en modo «solo informar» (`…-Report-Only`): no bloquean nada y avisan en la consola del navegador. Un servicio externo nuevo hay que añadirlo a la CSP.
+
 Requisitos: un proyecto de Firebase en plan Blaze (Cloud Functions lo exige), una base de datos de Firestore `(default)` en `europe-west1`, los proveedores de inicio de sesión **Google** y **Correo electrónico/contraseña** activados en Authentication y la Firebase CLI con sesión iniciada (`npx firebase login`).
 
 El ID del proyecto no se versiona: `.firebaserc` está en `.gitignore`. En cada clon, selecciona el proyecto una vez:
@@ -235,7 +238,7 @@ El ID del proyecto no se versiona: `.firebaserc` está en `.gitignore`. En cada 
 firebase use --add
 ```
 
-Las funciones usan los parámetros `ANDROID_PACKAGE_NAME` y `ANDROID_SHA256_FINGERPRINT` (la función `api`), `ADMIN_EMAIL` y `GMAIL_USER` (accesos y contacto) y, opcional, `APP_URL` (la dirección de la app en los emails). `firebase deploy` pide los que faltan y los guarda en `functions/.env.<project-id>`, ignorado por git; en CI salen de las variables y los secretos del repositorio. Para los emuladores, defínelos en `functions/.env.local`.
+Las funciones usan los parámetros `ANDROID_PACKAGE_NAME` y `ANDROID_SHA256_FINGERPRINT` (la función `api`), `ADMIN_EMAIL` y `SMTP_USER` (accesos y contacto) y, opcionales, `SMTP_HOST` (el servidor SMTP; por defecto `smtp.ionos.es`) y `APP_URL` (la dirección de la app en los emails). `firebase deploy` pide los que faltan y los guarda en `functions/.env.<project-id>`, ignorado por git; en CI salen de las variables y los secretos del repositorio. Para los emuladores, defínelos en `functions/.env.local`.
 
 #### Aprobación de accesos
 
@@ -246,22 +249,22 @@ Por defecto, cada cuenta necesita la aprobación de la administración antes de 
 
 - Las Cloud Functions `syncAccess`, `requestAccess`, `setAccess`, `setAccessMode`, `forgetAccess` y `revokeSessions` (esta última cierra las sesiones de la cuenta en todos los dispositivos) (`functions/src/access.ts`) son las únicas que escriben `access/{uid}`, `admins/{uid}`, `settings/access` y `blocked_emails`; desde la app solo la administración lee `settings`, y nadie lee ni escribe `blocked_emails`. Las reglas consultan `access/{uid}` para dejar crear y modificar en `users/{uid}/…`, y la marca `admins/{uid}` (con el email de la administración, que debe coincidir con el de quien lee) para la lista de solicitudes.
 - La administración es la cuenta (de Google, o con email confirmado) cuyo email coincide con el parámetro `ADMIN_EMAIL`; se aprueba sola al entrar. En los emuladores (proyecto demo) es `admin@example.com`.
-- Avisos por email con Gmail y una contraseña de aplicación: a la administración por cada solicitud nueva y por cada mensaje de contacto, a la persona cuando se aprueba su acceso, y las respuestas de la administración a los mensajes. Los envía la cuenta del parámetro `GMAIL_USER`; la contraseña está en Secret Manager como `GMAIL_APP_PASSWORD` y nunca en el repositorio ni en los `.env`. En los emuladores no se envía nada.
+- Avisos por email, por SMTP con TLS (puerto 465) desde un buzón de IONOS, proveedor de la UE con contrato de encargado del tratamiento: a la administración por cada solicitud nueva y por cada mensaje de contacto, a la persona cuando se aprueba su acceso, y las respuestas de la administración a los mensajes. Los avisos a la administración no llevan datos de quien escribe ni su mensaje: se leen en la app. Los envía el buzón del parámetro `SMTP_USER` (en producción, `info@clar.life`), que también recibe lo que contesten; la contraseña está en Secret Manager como `SMTP_PASSWORD` y nunca en el repositorio ni en los `.env`. En los emuladores no se envía nada.
 
 Configuración, una sola vez, con las variables `PROJECT_ID`, `PROJECT_NUMBER` y `SA` del despliegue automático (más abajo):
 
 ```bash
-# 1. Contraseña de aplicación de la cuenta de Gmail que envía los avisos (requiere la verificación en dos pasos):
-#    https://myaccount.google.com/apppasswords
-# 2. Guardarla en Secret Manager; el CLI la pide por teclado y no queda en el historial
-npx firebase functions:secrets:set GMAIL_APP_PASSWORD --project "$PROJECT_ID"
+# 1. Un buzón del dominio en IONOS (p. ej. info@clar.life) y el contrato de encargado del tratamiento aceptado en el
+#    panel de IONOS. Los registros MX, SPF, DKIM y DMARC los crea IONOS al crear el buzón
+# 2. Guardar la contraseña del buzón en Secret Manager; el CLI la pide por teclado y no queda en el historial
+npx firebase functions:secrets:set SMTP_PASSWORD --project "$PROJECT_ID"
 # 3. Permisos: la cuenta de servicio de las funciones lee el secreto y la de GitHub Actions lo puede consultar al desplegar
-gcloud secrets add-iam-policy-binding GMAIL_APP_PASSWORD --project "$PROJECT_ID" \
+gcloud secrets add-iam-policy-binding SMTP_PASSWORD --project "$PROJECT_ID" \
   --member "serviceAccount:$PROJECT_NUMBER-compute@developer.gserviceaccount.com" --role roles/secretmanager.secretAccessor
 gcloud projects add-iam-policy-binding "$PROJECT_ID" --member "serviceAccount:$SA" --role roles/secretmanager.viewer --condition None
-# 4. Emails de la administración y de la cuenta que envía, como secretos del repositorio (gh los pide por teclado)
+# 4. Email de la administración, como secreto del repositorio (gh lo pide por teclado), y el buzón que envía
 gh secret set ADMIN_EMAIL
-gh secret set GMAIL_USER
+gh variable set SMTP_USER --body "info@clar.life"
 ```
 
 ```bash
@@ -300,7 +303,8 @@ El workflow necesita estos valores en el repositorio. Los secrets se ocultan en 
 | Variable | `ANDROID_PACKAGE_NAME`           | Package name de la APK                                                        |
 | Variable | `ANDROID_SHA256_FINGERPRINT`     | Huella SHA-256 del certificado de firma de la APK                             |
 | Secret   | `ADMIN_EMAIL`                    | Email de la administración: aprueba los accesos y lee y responde los mensajes |
-| Secret   | `GMAIL_USER`                     | Cuenta de Gmail que envía los avisos y las respuestas                         |
+| Variable | `SMTP_USER`                      | Buzón que envía los avisos y las respuestas, y recibe lo que contesten        |
+| Variable | `SMTP_HOST`                      | Opcional: servidor SMTP del buzón (por defecto `smtp.ionos.es`)               |
 | Variable | `APP_URL`                        | Opcional: dirección de la app en los emails (`https://clar.life`)             |
 
 Configuración inicial, una sola vez, con una cuenta propietaria del proyecto:
@@ -312,7 +316,7 @@ SA="github-deployer@$PROJECT_ID.iam.gserviceaccount.com"
 REPO_ID=1408574835  # gh api repos/OvidiuMM/neuroproductivity-platform -q .id
 
 # 1. Cuenta de servicio con los permisos para desplegar Hosting, Functions y las reglas de Firestore
-#    (secretmanager.viewer: el CLI comprueba el secreto GMAIL_APP_PASSWORD al desplegar)
+#    (secretmanager.viewer: el CLI comprueba el secreto SMTP_PASSWORD al desplegar)
 gcloud iam service-accounts create github-deployer --project "$PROJECT_ID" --display-name "GitHub Actions deployer"
 for role in roles/firebasehosting.admin roles/cloudfunctions.admin roles/firebaserules.admin roles/datastore.indexAdmin roles/secretmanager.viewer; do
   gcloud projects add-iam-policy-binding "$PROJECT_ID" --member "serviceAccount:$SA" --role "$role" --condition None
@@ -367,7 +371,7 @@ El repositorio utiliza `package-lock.json` (en la raíz y en `functions/`) como 
 │   │   ├── app.ts               # Rutas Express: /api/health, /api/nlp/infer y assetlinks.json
 │   │   ├── adminApp.ts          # Firebase Admin compartido
 │   │   ├── access.ts            # syncAccess, requestAccess, setAccess, setAccessMode, forgetAccess, revokeSessions
-│   │   │                        #   y avisos por Gmail
+│   │   │                        #   y avisos por email (SMTP)
 │   │   ├── accessLogic.ts       # Reglas puras del acceso (estados, esperas, modo de aprobación, correos)
 │   │   ├── feedback.ts          # submitFeedback y replyToFeedback (mensajes de contacto y sus respuestas)
 │   │   ├── feedbackLogic.ts     # Validación, límite por hora y correos del contacto
@@ -375,6 +379,7 @@ El repositorio utiliza `package-lock.json` (en la raíz y en `functions/`) como 
 │   └── test/                    # API, Admin, lógica de acceso y de contacto
 ├── src/
 │   ├── main.tsx                 # Montaje de React y preferencias de accesibilidad antes del primer render
+│   ├── Root.tsx                 # Textos legales públicos según la ruta; si no, la app
 │   ├── AuthGate.tsx             # Inicio de sesión obligatorio
 │   ├── AccessGate.tsx           # La app solo se abre con el acceso aprobado (estado en vivo)
 │   ├── App.tsx                  # Orquestador principal de estado y vistas
@@ -412,6 +417,7 @@ El repositorio utiliza `package-lock.json` (en la raíz y en `functions/`) como 
 │   │   ├── onboarding.ts        # Bienvenida vista, por cuenta
 │   │   ├── feedback.ts · feedbackApi.ts # Contacto: información técnica, envío, mensajes y respuestas
 │   │   ├── a11yPrefs.ts         # Preferencias del panel de accesibilidad
+│   │   ├── legal.ts             # Textos legales: rutas, titular, edad mínima y fecha de la versión
 │   │   ├── nlpEngine.ts         # Motor TF-IDF y Similitud del Coseno
 │   │   ├── syntaxAnalyzer.ts    # Analizador de verbos de acción física
 │   │   └── localData.ts         # Importación de los datos de la versión sin cuentas (localStorage)
@@ -438,6 +444,7 @@ El repositorio utiliza `package-lock.json` (en la raíz y en `functions/`) como 
 │       ├── ImportLocalDataModal.tsx # Importación de datos locales en el primer inicio de sesión
 │       ├── WelcomeDialog.tsx · ProductTour.tsx # Bienvenida y recorrido guiado
 │       ├── HowItWorks.tsx       # Ayuda
+│       ├── LegalPage.tsx · LegalTexts.tsx · LegalLinks.tsx # Privacidad, condiciones y aviso legal
 │       ├── Deferred.tsx         # Secciones y ventanas que se cargan al abrirlas
 │       ├── SyncIndicator.tsx    # Indicador de sincronización (pulsar fuerza la sincronización)
 │       └── SplashScreen.tsx     # Pantalla de arranque

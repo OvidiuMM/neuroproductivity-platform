@@ -3,6 +3,8 @@ import { ShieldCheck, Compass, Briefcase, Cloud } from 'lucide-react';
 import { BRAND_NAME, BRAND_TAGLINE, BrandMark } from './BrandMark';
 import { AccessibilityTrigger, AccessibleScreen } from './AccessibilityPanel';
 import { EmailAuthForm } from './EmailAuthForm';
+import { LegalLink, LegalLinks } from './LegalLinks';
+import { MIN_AGE } from '../services/legal';
 
 interface LoginScreenProps {
   onSignIn: () => void;
@@ -99,6 +101,12 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
           </div>
           <EmailAuthForm onSignIn={onEmailSignIn} onSignUp={onEmailSignUp} onReset={onPasswordReset} />
 
+          <p className="text-[11px] leading-relaxed text-slate-600">
+            Al continuar, con Google o con tu email, confirmas que tienes al menos {MIN_AGE} años y aceptas las{' '}
+            <LegalLink to="terms">condiciones de uso</LegalLink>. Cómo tratamos tus datos:{' '}
+            <LegalLink to="privacy">política de privacidad</LegalLink>.
+          </p>
+
           <div className="flex items-start gap-2.5 rounded-2xl border border-slate-200 bg-slate-50 p-3.5 text-[11px] leading-relaxed text-slate-600">
             <Cloud className="mt-0.5 h-4 w-4 shrink-0 text-slate-500" />
             <p>
@@ -109,8 +117,9 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
             </p>
           </div>
 
-          <div className="text-center">
+          <div className="space-y-2 text-center">
             <AccessibilityTrigger onClick={openAccessibility} />
+            <LegalLinks />
           </div>
         </div>
       </div>
