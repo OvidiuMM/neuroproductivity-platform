@@ -1,8 +1,9 @@
 import React, { useEffect, useId, useRef, useState } from 'react';
-import { Edit2, MoreHorizontal, Trash2 } from 'lucide-react';
+import { Edit2, FileDown, MoreHorizontal, Trash2 } from 'lucide-react';
 import { TaskItem, TaskStatus } from '../types';
 import { buildCalendarEvent, buildIcs, googleCalendarUrl, outlookCalendarUrl } from '../services/calendar';
 import { TaskStatusSelect } from './TaskStatusSelect';
+import { downloadFile, fileSlug } from '../services/download';
 
 interface TaskActionsMenuProps {
   task: TaskItem;
@@ -11,20 +12,12 @@ interface TaskActionsMenuProps {
   onDelete: () => void;
   // Espera a otra tarea que sigue abierta
   blocked?: boolean;
+  // Descarga la tarea con todos sus datos en JSON
+  onDownload?: () => void;
 }
 
 // Alto aproximado del panel: si no cabe debajo del botón (p. ej. sobre la barra inferior del móvil), se abre arriba
-const PANEL_HEIGHT = 340;
-
-const downloadIcs = (filename: string, content: string) => {
-  const url = URL.createObjectURL(new Blob([content], { type: 'text/calendar;charset=utf-8' }));
-  const link = document.createElement('a');
-  link.href = url;
-  link.download = filename;
-  link.click();
-  // Revocar en el mismo instante cancela la descarga en algunos navegadores
-  setTimeout(() => URL.revokeObjectURL(url), 1_000);
-};
+const PANEL_HEIGHT = 384;
 
 const itemClass =
   'flex min-h-11 w-full items-center gap-2.5 px-3 text-left text-sm font-semibold text-slate-700 hover:bg-slate-50';
@@ -37,7 +30,8 @@ export const TaskActionsMenu: React.FC<TaskActionsMenuProps> = ({
   onEdit,
   onChangeStatus,
   onDelete,
-  blocked = false
+  blocked = false,
+  onDownload
 }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [openUp, setOpenUp] = useState(false);
@@ -164,9 +158,10 @@ export const TaskActionsMenu: React.FC<TaskActionsMenuProps> = ({
                     type="button"
                     className={linkClass}
                     onClick={act(() =>
-                      downloadIcs(
-                        `${task.title.slice(0, 40).replace(/[^\p{L}\p{N}]+/gu, '-') || 'tarea'}.ics`,
-                        buildIcs(event)
+                      downloadFile(
+                        `${fileSlug(task.title, 'tarea')}.ics`,
+                        buildIcs(event),
+                        'text/calendar;charset=utf-8'
                       )
                     )}
                   >
@@ -178,6 +173,18 @@ export const TaskActionsMenu: React.FC<TaskActionsMenuProps> = ({
               <p className="px-3 pb-1 text-xs text-slate-600">Pon una fecha límite para añadirla al calendario.</p>
             )}
           </div>
+
+          {onDownload && (
+            <button
+              type="button"
+              onClick={act(onDownload)}
+              aria-label={`Descargar «${task.title}» (JSON)`}
+              className={`${itemClass} border-t border-slate-100`}
+            >
+              <FileDown className="h-4 w-4 text-indigo-600" aria-hidden="true" />
+              Descargar (JSON)
+            </button>
+          )}
 
           <button
             type="button"

@@ -63,6 +63,7 @@ interface TaskListProps {
   onChangeStatus: (task: TaskItem, status: TaskStatus) => void;
   onDeleteTask: (id: string) => void;
   onEditTask: (task: TaskItem) => void;
+  onDownloadTask: (task: TaskItem) => void;
   onOpenNewTask: (options?: { someday?: boolean }) => void;
   onOpenArchive: () => void;
 }
@@ -77,6 +78,7 @@ export const TaskList: React.FC<TaskListProps> = ({
   onChangeStatus,
   onDeleteTask,
   onEditTask,
+  onDownloadTask,
   onOpenNewTask,
   onOpenArchive
 }) => {
@@ -220,7 +222,8 @@ export const TaskList: React.FC<TaskListProps> = ({
   const cardHandlers = {
     onChangeStatus,
     onEdit: onEditTask,
-    onDelete: (task: TaskItem) => onDeleteTask(task.id)
+    onDelete: (task: TaskItem) => onDeleteTask(task.id),
+    onDownload: onDownloadTask
   };
 
   // Botón al final de la lista para añadir otra tarea sin volver arriba

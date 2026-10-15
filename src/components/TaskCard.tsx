@@ -30,6 +30,8 @@ interface TaskCardProps {
   onChangeStatus: (task: TaskItem, status: TaskStatus) => void;
   onEdit: (task: TaskItem) => void;
   onDelete: (task: TaskItem) => void;
+  // Descarga la tarea con todos sus datos en JSON
+  onDownload?: (task: TaskItem) => void;
 }
 
 const PRIORITY_STYLE: Record<TaskPriority, { className: string; Icon: typeof Flame; iconClass: string }> = {
@@ -113,7 +115,8 @@ export const TaskCard: React.FC<TaskCardProps> = ({
   position,
   onChangeStatus,
   onEdit,
-  onDelete
+  onDelete,
+  onDownload
 }) => {
   // El color de plazo sustituye al color base: con las dos clases, el orden del CSS decidiría cuál gana
   const titleColor = (base: string) => DEADLINE_TITLE_CLASS[getDeadlineState(task, now)] || base;
@@ -204,6 +207,7 @@ export const TaskCard: React.FC<TaskCardProps> = ({
         onChangeStatus={(status) => onChangeStatus(task, status)}
         onDelete={() => onDelete(task)}
         blocked={Boolean(blocker)}
+        onDownload={onDownload ? () => onDownload(task) : undefined}
       />
     </li>
   );
