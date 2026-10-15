@@ -32,7 +32,7 @@ El sistema rechaza las restricciones coercitivas (como las rotaciones atencional
 
   Los textos pequeños usan como mínimo `slate-500` sobre blanco para cumplir el contraste WCAG AA.
 
-- **Tipografía:** Plus Jakarta Sans para la interfaz y JetBrains Mono para cifras y versiones.
+- **Tipografía:** la del sistema de cada dispositivo. No se cargan fuentes externas: no se envía la IP de nadie a terceros al abrir la app.
 - **Lema:** «Decide qué hacer ahora, con claridad».
 
 ---
@@ -215,6 +215,8 @@ Firebase Hosting sirve la SPA compilada (`dist/`), la función `api` (Cloud Func
 | `/api/**`                      | Función `api` (`functions/src/app.ts`)                |
 | `/.well-known/assetlinks.json` | Función `api` (Digital Asset Links de la APK Android) |
 | `**`                           | `index.html` (fallback de la SPA)                     |
+
+Todas las respuestas llevan cabeceras de seguridad, definidas en `firebase.json`: `X-Content-Type-Options`, `Referrer-Policy`, `Permissions-Policy` (sin cámara, micrófono, ubicación, pagos ni USB) y una política de seguridad de contenidos (CSP) que solo permite el propio dominio, el inicio de sesión de Google, las APIs de Firebase (`*.googleapis.com`), las Cloud Functions (`*.cloudfunctions.net`) y las fotos de perfil de Google. Por ahora la CSP y la `Cross-Origin-Opener-Policy` van en modo «solo informar» (`…-Report-Only`): no bloquean nada y avisan en la consola del navegador. Un servicio externo nuevo hay que añadirlo a la CSP.
 
 Requisitos: un proyecto de Firebase en plan Blaze (Cloud Functions lo exige), una base de datos de Firestore `(default)` en `europe-west1`, los proveedores de inicio de sesión **Google** y **Correo electrónico/contraseña** activados en Authentication y la Firebase CLI con sesión iniciada (`npx firebase login`).
 
