@@ -81,7 +81,7 @@ test('main sections, forms and dialogs', async ({ page }) => {
   await page.getByRole('button', { name: 'Tiempo protegido', exact: true }).click();
   await expectNoViolations(page, 'blindaje bermudas');
 
-  await page.getByRole('button', { name: 'Ayuda' }).click();
+  await page.getByRole('button', { name: 'Ayuda', exact: true }).click();
   await expectNoViolations(page, 'cómo funciona');
 
   await page.getByRole('button', { name: 'Tu cuenta' }).click();
@@ -223,7 +223,7 @@ test('welcome dialog, every step', async ({ page }) => {
 test('guided tour bubble', async ({ page }) => {
   await page.goto('/');
   await signInWithGoogle(page);
-  await page.getByRole('button', { name: 'Ayuda' }).click();
+  await page.getByRole('button', { name: 'Ayuda', exact: true }).click();
   await expectNoViolations(page, 'guía con la guía rápida');
   await page.getByRole('button', { name: 'Repetir el recorrido' }).click();
   await expect(page.getByRole('dialog', { name: 'Captura una tarea' })).toBeVisible();

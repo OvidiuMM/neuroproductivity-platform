@@ -38,7 +38,7 @@ const SORT_OPTIONS: { value: SortBy; label: string }[] = [
   { value: 'deadline', label: 'Fecha límite (más próxima primero)' },
   { value: 'estimate', label: 'Estimación (más cortas primero)' },
   { value: 'date', label: 'Cambiadas hace menos' },
-  { value: 'category', label: 'Categoría de la Rueda de la Vida' }
+  { value: 'category', label: 'Área de la Rueda (o de la meta)' }
 ];
 const FILTERS_BUTTON_ID = 'list-filters-button';
 
@@ -506,7 +506,7 @@ export const TaskList: React.FC<TaskListProps> = ({
               <p className="text-xs font-semibold">No tienes nada guardado para algún día.</p>
             </div>
           ) : (
-            <ul aria-label="Quizá" className="space-y-2.5">
+            <ul aria-label="Algún día" className="space-y-2.5">
               {somedayTasks.map((task) => (
                 <TaskCard key={task.id} goal={goalOf(task)} task={task} now={now} variant="someday" {...cardHandlers} />
               ))}

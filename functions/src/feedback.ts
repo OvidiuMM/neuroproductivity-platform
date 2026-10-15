@@ -106,7 +106,7 @@ export const replyToFeedback = onCall({ region: REGION, secrets: emailSecrets },
   const result = await sendEmail(
     'feedback-reply',
     start.ticket.email,
-    buildReplyEmail(start.ticket, reply.message, adminEmail())
+    buildReplyEmail(start.ticket, reply.message, adminEmail(), appUrl())
   );
   if (result === 'failed' || (result === 'skipped' && !isEmulator)) {
     // No salió: se quita la anotación para poder reintentarlo

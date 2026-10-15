@@ -908,7 +908,7 @@ export default function App({ user, services, isAdmin = false }: AppProps) {
                 onClick={() => navigate('help')}
                 className="text-[11px] font-semibold text-indigo-600 hover:text-indigo-800"
               >
-                Guía de uso
+                Ver la ayuda
               </button>
             </div>
           </div>

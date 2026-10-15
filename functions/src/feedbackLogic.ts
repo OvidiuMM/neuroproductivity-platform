@@ -145,12 +145,12 @@ export const buildFeedbackEmail = (ticket: FeedbackTicket, appUrl: string) => ({
         ]
       : []),
     '',
-    `Responde a este correo para contestar, o míralo en «Administración» → «Mensajes»: ${appUrl}`
+    `Responde a este correo, o contesta desde «Administración» → «Mensajes» con «Responder»: ${appUrl}`
   ].join('\n')
 });
 
 // Respuesta a quien escribió, en texto plano y con su mensaje citado. Si contesta, le llega a la administración.
-export const buildReplyEmail = (ticket: FeedbackTicket, message: string, adminEmail: string) => ({
+export const buildReplyEmail = (ticket: FeedbackTicket, message: string, adminEmail: string, appUrl: string) => ({
   subject: `Re: [CLAR] ${ticket.subject}`,
   replyTo: adminEmail,
   text: [
@@ -160,6 +160,7 @@ export const buildReplyEmail = (ticket: FeedbackTicket, message: string, adminEm
     '',
     '—',
     'Equipo de CLAR',
+    appUrl,
     '',
     `Tu mensaje (${TYPE_LABEL[ticket.type]}):`,
     `> ${ticket.subject}`,

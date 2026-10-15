@@ -27,8 +27,9 @@ const SCREENS: { tab: AppTab; title: string; icon: React.ReactNode; points: stri
     title: 'Inicio',
     icon: <LayoutDashboard className="h-5 w-5 text-indigo-600" />,
     points: [
-      'El foco de la lista activa (Profesional o Personal) y sus indicadores: Top 10, Índice de la Rueda y reuniones.',
+      'El foco de la lista activa (Profesional o Personal) y sus indicadores: Top 10, Rueda de la Vida y reuniones.',
       'Tus estadísticas: tareas hechas por día, semana y mes, cuántas terminas antes o después del plazo, tu velocidad, tu racha y tus pendientes.',
+      'Tus metas activas con su progreso; «Gestionar las metas» te lleva a «Metas».',
       'Recomendaciones según tus datos, por ejemplo empezar por la tarea vencida más antigua.'
     ]
   },
@@ -64,11 +65,12 @@ const SCREENS: { tab: AppTab; title: string; icon: React.ReactNode; points: stri
       'Las 10 primeras tareas, según el orden y los filtros que elijas (prioridad, fecha límite, estimación, estado o área), forman tu Top 10; el resto queda en segundo plano.',
       'Si la fecha límite está a más de una semana, la tarea cuenta un nivel menos de prioridad. También puedes indicar cuánto te llevará (estimación).',
       'Al crear una tarea, el analizador te pide una acción física concreta (por ejemplo «Llamar al taller…») en lugar de un tema abstracto.',
+      'Meta: vincula la tarea a una de tus metas y tomará su área (si el título se parece a una meta, CLAR te propone vincularla). Sin meta, el motor de sugerencias te propone el área de la Rueda con la que se relaciona. El campo aparece cuando ya tienes metas.',
       'Cada tarea tiene un estado: Pendiente, En progreso, Bloqueada o Hecha. Al marcarla Hecha se archiva; desde «Archivadas» la reactivas cambiando su estado.',
       'Puedes darle una fecha límite o un intervalo, con hora opcional: el título se pone violeta cuando falta menos de una semana y rojo cuando ha vencido. Las fechas se escriben como dd/mm/aaaa o se eligen en el calendario, con la semana empezando en lunes.',
-      'Con fecha límite, el botón de calendario la añade a Google Calendar, Outlook o cualquier calendario (archivo .ics).',
+      'Con fecha límite, «Añadir al calendario», en el menú «⋯» de la tarea, la lleva a Google Calendar, Outlook o cualquier calendario (archivo .ics).',
       'Alarma: una hora para que CLAR te avise antes del plazo, dentro de las 24 h anteriores (con la tarea a las 11:00, una alarma a las 10:57 suena 3 minutos antes). Sin hora límite, suena la víspera a esa hora; una tarea que se repite necesita hora límite para llevarla.',
-      'La alarma avisa mientras CLAR esté abierta: dentro de la app y, si lo permites, con una notificación del sistema (en el móvil, solo dentro de la app). Si abres CLAR después de la hora de la alarma pero antes del plazo, avisa al momento. El archivo .ics del calendario también la lleva.',
+      'La alarma avisa mientras CLAR esté abierta: dentro de la app y, si lo permites, con una notificación del sistema (en Android, y en el iPhone sin instalar CLAR en la pantalla de inicio, solo dentro de la app). Si abres CLAR después de la hora de la alarma pero antes del plazo, avisa al momento. El archivo .ics del calendario también la lleva.',
       'Las tareas pueden repetirse (cada día, semana, mes o año; por ejemplo, «cada mes, el 2.º lunes»). Al repetir, «Inicio» es desde cuándo se repite y la fecha límite hasta cuándo; cada repetición vence su propio día. Al marcarla Hecha se archiva y se crea la siguiente.',
       'Las ideas sin urgencia van a «Algún día» y no compiten con el Top 10.'
     ]
@@ -87,7 +89,7 @@ const SCREENS: { tab: AppTab; title: string; icon: React.ReactNode; points: stri
     title: 'Tiempo protegido',
     icon: <ShieldCheck className="h-5 w-5 text-indigo-600" />,
     points: [
-      'El «triángulo de las Bermudas» del tiempo son sus tres grandes fugas: reuniones, correo y mensajes. Aquí las controlas.',
+      'El «triángulo de las Bermudas» del tiempo son sus tres grandes fugas: reuniones, correo y mensajes. Aquí tienes herramientas para las dos primeras.',
       'Reuniones: no se pueden programar antes de las 12:00 h y exigen hora de fin, orden del día y un moderador.',
       'Correo: primero adjuntos y cuerpo del mensaje; los destinatarios se desbloquean al final. De los adjuntos, CLAR apunta solo el nombre y el tamaño: los archivos no salen de tu equipo.',
       'Lo que no termines queda en «Borradores»: al cerrar se guarda solo, y con «Continuar» sigues donde lo dejaste. Los correos guardados también se pueden abrir y editar.',
@@ -105,8 +107,10 @@ export const HowItWorks: React.FC<HowItWorksProps> = ({ onNavigate, onStartTour,
           Ayuda
         </h2>
         <p className="max-w-3xl text-sm leading-relaxed text-slate-600">
-          CLAR sigue cuatro pasos: decides qué áreas de tu vida quieres mejorar, les pones metas, conviertes cada meta
-          en acciones concretas y proteges el tiempo que necesitas para hacerlas.
+          CLAR va de lo que te importa a lo que haces hoy: decides qué áreas de tu vida quieres mejorar (Rueda), les
+          pones metas, conviertes cada meta en acciones concretas (tareas), eliges qué toca hoy (Top 10 y Agenda) y
+          proteges el tiempo para hacerlas. En el móvil, la barra inferior lleva Inicio, Listas, Agenda y Metas; la
+          Rueda, Tiempo protegido y la Ayuda están en «Más».
         </p>
       </div>
 
@@ -115,7 +119,8 @@ export const HowItWorks: React.FC<HowItWorksProps> = ({ onNavigate, onStartTour,
         <div>
           <h3 className="text-sm font-bold text-slate-900">Guía rápida</h3>
           <p className="text-xs text-slate-700">
-            Un recorrido de un minuto por lo esencial, la introducción al método, o escríbenos con una idea o un fallo.
+            Un recorrido de un minuto por lo esencial, la introducción al método, o escríbenos con una idea o un fallo:
+            te responderemos por email.
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
@@ -150,8 +155,8 @@ export const HowItWorks: React.FC<HowItWorksProps> = ({ onNavigate, onStartTour,
           {[
             ['Evalúa tu Rueda de la Vida', 'Es tu punto de partida y muestra qué áreas necesitan atención.'],
             ['Ponle una meta a un área', 'En «Metas», empieza por las áreas más bajas.'],
-            ['Añade tareas a tus metas', 'Acciones físicas concretas en la lista Profesional o Personal.'],
-            ['Protege tu agenda', 'Reserva las mañanas y redacta los correos en el orden correcto.']
+            ['Añade tareas a tus metas', 'Con «Añadir tarea» en cada meta: acciones físicas concretas.'],
+            ['Protege tu tiempo', 'Mañanas sin reuniones y correos escritos en orden, con borradores.']
           ].map(([title, text], i) => (
             <li key={title} className="flex gap-3 rounded-xl border border-slate-200 bg-slate-50 p-4">
               <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-indigo-600 text-xs font-bold text-white">
@@ -202,15 +207,25 @@ export const HowItWorks: React.FC<HowItWorksProps> = ({ onNavigate, onStartTour,
         </h3>
         <ul className="list-disc space-y-2 pl-5 text-sm leading-relaxed text-slate-600">
           <li>
-            <strong>Rueda → Tareas:</strong> al escribir una tarea, el motor de sugerencias propone el área de la rueda
-            con la que se relaciona. Así lo que haces cada día queda vinculado a las áreas que quieres mejorar.
+            <strong>Rueda → Metas:</strong> en «Metas», las áreas van de la puntuación más baja a la más alta; las que
+            tienen 5 o menos y aún no tienen metas salen en «Necesitan atención».
           </li>
           <li>
-            <strong>Tareas → Tiempo protegido:</strong> las mañanas sin reuniones son el tiempo para trabajar tu Top 10.
+            <strong>Metas → Tareas:</strong> «Añadir tarea» crea la tarea ya vinculada a su meta, y la tarea toma el
+            área de la meta. Al escribir una tarea, CLAR te propone la meta que más se parece; si no tiene meta, el
+            motor de sugerencias propone un área de la Rueda. Así lo que haces cada día queda vinculado a lo que quieres
+            mejorar.
           </li>
           <li>
-            <strong>Vuelta a la Rueda:</strong> reevalúa la rueda cada cierto tiempo y compárala con evaluaciones
-            anteriores para ver el efecto de tus acciones.
+            <strong>Tareas → Top 10 y Agenda:</strong> las más importantes forman tu Top 10 y las que tienen fecha, tu
+            Agenda; una alarma te avisa antes del plazo.
+          </li>
+          <li>
+            <strong>Top 10 → Tiempo protegido:</strong> las mañanas sin reuniones son el tiempo para trabajar tu Top 10.
+          </li>
+          <li>
+            <strong>Vuelta a la Rueda:</strong> cuando tus metas avancen, vuelve a evaluar la Rueda y compárala con las
+            evaluaciones anteriores: verás el efecto de tus acciones y las áreas cambiarán de orden en «Metas».
           </li>
         </ul>
       </div>
@@ -223,13 +238,15 @@ export const HowItWorks: React.FC<HowItWorksProps> = ({ onNavigate, onStartTour,
         </h3>
         <p className="text-sm leading-relaxed text-amber-950">
           Todo se guarda en tu cuenta de CLAR, en servidores de Google Cloud en la Unión Europea (Bélgica), y solo tú
-          puedes acceder. La administración aprueba cada cuenta antes de su primer uso; para ello ve tu nombre, tu
-          email, tu foto de perfil (si entras con Google) y el mensaje de la solicitud, nunca tus datos. Se sincroniza
-          entre tus dispositivos y la app sigue funcionando sin conexión: los cambios se envían al recuperarla. El
-          indicador de la cabecera está verde cuando todo está guardado en el servidor y naranja cuando hay cambios
-          pendientes o no hay conexión; púlsalo para forzar la sincronización. Desde el menú de tu cuenta puedes
-          descargar tus datos, cambiar la contraseña (si entras con email), cerrar la sesión en todos tus dispositivos o
-          eliminar la cuenta con todo su contenido.
+          puedes acceder: tus tareas, metas, evaluaciones, reuniones y correos (de los adjuntos, solo el nombre y el
+          tamaño). Si la administración tiene activada la aprobación de cuentas, revisa cada una antes de su primer uso;
+          para ello ve tu nombre, tu email, tu foto de perfil (si entras con Google) y el mensaje de la solicitud, nunca
+          tus datos. Los mensajes de «Escríbenos» se guardan con tu nombre y tu email para responderte por email. Se
+          sincroniza entre tus dispositivos y la app sigue funcionando sin conexión: los cambios se envían al
+          recuperarla. El indicador de la cabecera está verde cuando todo está guardado en el servidor y naranja cuando
+          hay cambios pendientes o no hay conexión; púlsalo para forzar la sincronización. Desde el menú de tu cuenta
+          puedes descargar tus datos, cambiar la contraseña (si entras con email), cerrar la sesión en todos tus
+          dispositivos o eliminar la cuenta con todo su contenido.
         </p>
       </div>
 

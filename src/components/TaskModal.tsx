@@ -554,7 +554,7 @@ export const TaskModal: React.FC<TaskModalProps> = ({
           </div>
 
           {/* META: a qué meta contribuye la tarea (solo si hay metas) */}
-          {goalOptions.length > 0 && (
+          {goalOptions.length > 0 ? (
             <div>
               <label
                 htmlFor="task-goal"
@@ -597,6 +597,11 @@ export const TaskModal: React.FC<TaskModalProps> = ({
                 </button>
               )}
             </div>
+          ) : (
+            <p className="text-[11px] text-slate-500">
+              <Target className="mr-1 inline h-3.5 w-3.5 align-[-2px] text-indigo-500" aria-hidden="true" />
+              Puedes vincular la tarea a una meta cuando la crees en «Metas».
+            </p>
           )}
 
           {/* FECHA LÍMITE: a la vista; el inicio y la repetición están en «Más opciones» */}
@@ -709,7 +714,7 @@ export const TaskModal: React.FC<TaskModalProps> = ({
               <span>
                 Más opciones
                 <span className="ml-2 font-normal tracking-normal text-slate-500 normal-case">
-                  descripción, estimación, área, inicio, repetición, «Quizá» y notas
+                  descripción, estimación, área, inicio, repetición, «Algún día» y notas
                 </span>
               </span>
               <ChevronDown
@@ -828,11 +833,17 @@ export const TaskModal: React.FC<TaskModalProps> = ({
                       </option>
                     ))}
                   </select>
-                  {wheelCategory && (
+                  {goal ? (
                     <p className="mt-1 text-[11px] text-slate-500">
-                      Área: <strong>{wheelCategory}</strong> (
-                      {linkedBy === 'AUTO_TFIDF' ? 'sugerida' : 'elegida por ti'})
+                      La de su meta, «{goal.title}»: para cambiarla, cambia la meta o quítala.
                     </p>
+                  ) : (
+                    wheelCategory && (
+                      <p className="mt-1 text-[11px] text-slate-500">
+                        Área: <strong>{wheelCategory}</strong> (
+                        {linkedBy === 'AUTO_TFIDF' ? 'sugerida' : 'elegida por ti'})
+                      </p>
+                    )
                   )}
                 </div>
               </div>

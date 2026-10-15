@@ -88,7 +88,7 @@ describe('mensajes de contacto', () => {
     assert.equal(email.replyTo, 'ana@example.com');
     assert.match(email.text, /Ana \(ana@example\.com\) ha escrito desde CLAR\./);
     assert.match(email.text, /- Navegador: Chrome 141/);
-    assert.match(email.text, /«Mensajes»: https:\/\/example\.web\.app/);
+    assert.match(email.text, /«Mensajes» con «Responder»: https:\/\/example\.web\.app/);
   });
 });
 
@@ -137,7 +137,7 @@ describe('respuestas de la administración', () => {
   });
 
   it('responde por email a quien escribió, con su mensaje citado, y la respuesta vuelve a la administración', () => {
-    const email = buildReplyEmail(ticket, 'Gracias, Ana. Ya está arreglado.', 'admin@example.com');
+    const email = buildReplyEmail(ticket, 'Gracias, Ana. Ya está arreglado.', 'admin@example.com', 'https://clar.life');
     assert.equal(email.subject, 'Re: [CLAR] No carga la agenda');
     assert.equal(email.replyTo, 'admin@example.com');
     assert.equal(
@@ -149,6 +149,7 @@ describe('respuestas de la administración', () => {
         '',
         '—',
         'Equipo de CLAR',
+        'https://clar.life',
         '',
         'Tu mensaje (Error o fallo):',
         '> No carga la agenda',
@@ -158,6 +159,9 @@ describe('respuestas de la administración', () => {
         '> Pasa desde ayer.'
       ].join('\n')
     );
-    assert.match(buildReplyEmail({ ...ticket, name: '' }, 'Hola', 'admin@example.com').text, /^Hola:\n/);
+    assert.match(
+      buildReplyEmail({ ...ticket, name: '' }, 'Hola', 'admin@example.com', 'https://clar.life').text,
+      /^Hola:\n/
+    );
   });
 });

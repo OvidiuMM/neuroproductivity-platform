@@ -21,7 +21,7 @@ interface NavbarProps {
 }
 
 // Cabecera de una sola línea en todos los tamaños: marca y versión, las secciones (desde 768 px), las dos listas, la
-// sincronización y la cuenta (desde 768 px). En el móvil las secciones y la cuenta van en la barra inferior.
+// sincronización y la cuenta (desde 768 px). En el móvil las secciones van en la barra inferior y la cuenta, en «Más».
 export const Navbar: React.FC<NavbarProps> = ({
   activeTab,
   setActiveTab,

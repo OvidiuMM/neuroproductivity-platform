@@ -110,8 +110,8 @@ export const WheelOfLife: React.FC<WheelOfLifeProps> = ({
             <h3 className="text-sm font-bold text-indigo-950">Primer paso: evalúa tu Rueda de la Vida</h3>
             <p className="text-xs leading-relaxed text-indigo-900">
               Puntúa de 0 a 10 tu satisfacción actual en cada área y pulsa <strong>Guardar la evaluación</strong>. Será
-              tu punto de partida: las tareas que crees se vincularán a estas áreas y podrás comparar tu progreso en
-              cada nueva evaluación.
+              tu punto de partida: en «Metas» verás primero las áreas más bajas para ponerles metas, y podrás comparar
+              tu progreso en cada nueva evaluación.
             </p>
           </div>
           <button
@@ -133,8 +133,8 @@ export const WheelOfLife: React.FC<WheelOfLifeProps> = ({
             Rueda de la Vida
           </h2>
           <p className="mt-1 max-w-2xl text-xs leading-relaxed text-slate-500">
-            Puntúa del 0 al 10 cuánto te satisface cada área de tu vida. Cada evaluación queda guardada para que veas
-            cómo cambias.
+            Puntúa del 0 al 10 cuánto te satisface cada área de tu vida. Las más bajas son el punto de partida de tus
+            metas, y cada evaluación queda guardada para que veas cómo cambias.
           </p>
         </div>
 

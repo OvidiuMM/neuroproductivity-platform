@@ -37,7 +37,7 @@ export const TOUR_STEPS: TourStep[] = [
     id: 'wheel',
     target: '[data-tour="nav-wheel"], [data-tour="nav-more"]',
     title: 'Rueda de la Vida',
-    body: 'Puntúa del 0 al 10 cada área de tu vida. Es el punto de partida: muestra qué áreas necesitan atención.'
+    body: 'Puntúa del 0 al 10 cada área de tu vida. Es el punto de partida: muestra qué áreas necesitan atención. En el móvil está en «Más».'
   },
   {
     id: 'goals',
@@ -55,6 +55,6 @@ export const TOUR_STEPS: TourStep[] = [
     id: 'help',
     target: '[data-tour="nav-help"], [data-tour="nav-more"]',
     title: 'Ayuda',
-    body: 'La guía de la app, y desde ella puedes repetir este recorrido cuando quieras.'
+    body: 'La guía de la app (en el móvil, en «Más»). Desde ella puedes repetir este recorrido cuando quieras.'
   }
 ];
