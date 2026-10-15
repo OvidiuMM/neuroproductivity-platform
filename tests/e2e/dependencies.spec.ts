@@ -77,3 +77,44 @@ test('a task cannot wait for one that already waits for it', async ({ page }) =>
     `Esperan a esta tarea: «${second}».`
   );
 });
+
+test('if the chosen task starts waiting for this one meanwhile, the form refuses to save the cycle', async ({
+  page
+}) => {
+  await page.goto('/');
+  await signInWithGoogle(page);
+  await page.getByRole('button', { name: 'Listas', exact: true }).click();
+  const stamp = unique();
+  const first = `Medir la terraza ${stamp}`;
+  const second = `Comprar el toldo ${stamp}`;
+  await page.getByRole('button', { name: 'Añadir la primera tarea' }).click();
+  await fillAndSaveTask(page, { title: first });
+  await page.getByRole('button', { name: 'Nueva Tarea' }).click();
+  await fillAndSaveTask(page, { title: second });
+
+  // La primera va a esperar a la segunda…
+  await openTaskActions(page, first);
+  await page.getByRole('button', { name: `Editar «${first}»` }).click();
+  await showMoreOptions(page);
+  await page.getByLabel(/^Empieza después de/).selectOption({ label: second });
+
+  // …mientras, en otra pestaña, la segunda pasa a esperar a la primera
+  const other = await page.context().newPage();
+  await other.goto('/');
+  await other.getByRole('button', { name: 'Listas', exact: true }).click();
+  await openTaskActions(other, second);
+  await other.getByRole('button', { name: `Editar «${second}»` }).click();
+  await showMoreOptions(other);
+  await other.getByLabel(/^Empieza después de/).selectOption({ label: first });
+  await other.getByRole('button', { name: 'Guardar los cambios' }).click();
+  await expect(other.getByRole('dialog', { name: 'Editar la tarea' })).toBeHidden();
+  // (se cierra cuando la otra pestaña ya lo muestra: así el cambio ya ha salido de ella)
+  await expect(other.getByText(`Bloqueada: espera a «${first}»`)).toHaveCount(1);
+  await other.close();
+
+  // Guardar ahora cerraría un ciclo: el formulario lo dice y no deja guardar
+  const editor = page.getByRole('dialog', { name: 'Editar la tarea' });
+  await expect(page.getByText(`Bloqueada: espera a «${first}»`)).toHaveCount(1);
+  await expect(editor.getByRole('alert').filter({ hasText: 'Esa tarea ya espera a esta' })).toBeVisible();
+  await expect(editor.getByRole('button', { name: 'Guardar los cambios' })).toBeDisabled();
+});

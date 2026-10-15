@@ -46,7 +46,9 @@ export const ProjectModal: React.FC<ProjectModalProps> = ({
   // Cambios sin guardar: frente a como se abrió
   const snapshot = JSON.stringify([title, goalId, endDate, description]);
   const [openedSnapshot] = useState(snapshot);
-  const guard = useDiscardGuard(snapshot !== openedSnapshot, onClose);
+  // Una fecha a medio escribir (o imposible) también es un cambio
+  const [dateDraft, setDateDraft] = useState(false);
+  const guard = useDiscardGuard(snapshot !== openedSnapshot || dateDraft, onClose);
 
   const dialogRef = useRef<HTMLDivElement>(null);
   useModalFocus(true, dialogRef, guard.requestClose);
@@ -155,7 +157,13 @@ export const ProjectModal: React.FC<ProjectModalProps> = ({
             <span className={labelClass}>
               Fecha de fin <span className="text-red-600">*</span>
             </span>
-            <DateField label="Fecha de fin" value={endDate} onChange={setEndDate} inputClassName={inputClass} />
+            <DateField
+              label="Fecha de fin"
+              value={endDate}
+              onChange={setEndDate}
+              onDraftChange={setDateDraft}
+              inputClassName={inputClass}
+            />
           </div>
 
           <div>
