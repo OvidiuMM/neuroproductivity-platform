@@ -122,25 +122,29 @@ jobs:
           service_account: ${{ secrets.GCP_SERVICE_ACCOUNT }}
 
       # functions/.env.<project-id> no se versiona; en CI los parámetros salen de las variables y los secretos
-      # del repositorio. Los emails van en secretos para que no aparezcan en los logs. La contraseña de
-      # aplicación de Gmail no pasa por aquí: está en Secret Manager (GMAIL_APP_PASSWORD).
+      # del repositorio. El email de la administración va en un secreto para que no aparezca en los logs. La
+      # contraseña del buzón que envía los correos no pasa por aquí: está en Secret Manager (SMTP_PASSWORD).
       - name: Write Cloud Functions params
         env:
           ANDROID_PACKAGE_NAME: ${{ vars.ANDROID_PACKAGE_NAME }}
           ANDROID_SHA256_FINGERPRINT: ${{ vars.ANDROID_SHA256_FINGERPRINT }}
           ADMIN_EMAIL: ${{ secrets.ADMIN_EMAIL }}
-          GMAIL_USER: ${{ secrets.GMAIL_USER }}
+          # Buzón que envía los avisos y recibe las respuestas (p. ej. info@clar.life); SMTP_HOST es opcional
+          SMTP_USER: ${{ vars.SMTP_USER }}
+          SMTP_HOST: ${{ vars.SMTP_HOST }}
           # Opcional: dirección pública de la app en los emails (p. ej. https://clar.life)
           APP_URL: ${{ vars.APP_URL }}
         run: |
-          for name in ANDROID_PACKAGE_NAME ANDROID_SHA256_FINGERPRINT ADMIN_EMAIL GMAIL_USER; do
+          for name in ANDROID_PACKAGE_NAME ANDROID_SHA256_FINGERPRINT ADMIN_EMAIL SMTP_USER; do
             if [ -z "${!name}" ]; then
               echo "::error::Falta la variable o el secreto de repositorio $name"
               exit 1
             fi
           done
-          printf 'ANDROID_PACKAGE_NAME=%s\nANDROID_SHA256_FINGERPRINT=%s\nADMIN_EMAIL=%s\nGMAIL_USER=%s\nAPP_URL=%s\n' \
-            "$ANDROID_PACKAGE_NAME" "$ANDROID_SHA256_FINGERPRINT" "$ADMIN_EMAIL" "$GMAIL_USER" "$APP_URL" > functions/.env
+          printf 'ANDROID_PACKAGE_NAME=%s\nANDROID_SHA256_FINGERPRINT=%s\nADMIN_EMAIL=%s\nSMTP_USER=%s\nAPP_URL=%s\n' \
+            "$ANDROID_PACKAGE_NAME" "$ANDROID_SHA256_FINGERPRINT" "$ADMIN_EMAIL" "$SMTP_USER" "$APP_URL" > functions/.env
+          # Sin SMTP_HOST, la función usa su valor por defecto (smtp.ionos.es)
+          if [ -n "$SMTP_HOST" ]; then printf 'SMTP_HOST=%s\n' "$SMTP_HOST" >> functions/.env; fi
 
       # Los predeploy de firebase.json compilan la SPA y la función antes de subirlas.
       # firebase-tools sale de devDependencies (versión fijada en package.json).

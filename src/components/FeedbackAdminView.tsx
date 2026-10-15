@@ -38,8 +38,8 @@ const mergeById = (first: FeedbackTicket[], second: FeedbackTicket[]) => {
   return [...first, ...second.filter((t) => !seen.has(t.id))];
 };
 
-// Respuesta a un mensaje: se envía por email desde la cuenta de CLAR; si la persona contesta, llega al email de la
-// administración. Al abrirse, el foco va al texto.
+// Respuesta a un mensaje: se envía por email desde el buzón de CLAR; si la persona contesta, llega a ese buzón. Al
+// abrirse, el foco va al texto.
 const ReplyForm: React.FC<{
   ticket: FeedbackTicket;
   onSend: (replyId: string, message: string) => Promise<ReplyResult>;
@@ -92,8 +92,8 @@ const ReplyForm: React.FC<{
         className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-400 focus:outline-none"
       />
       <p id={`${id}-help`} className="text-[11px] text-slate-600">
-        Se envía por email a {ticket.email} desde la cuenta de CLAR, con su mensaje citado. Si contesta, te llegará a tu
-        email. {message.length}/{REPLY_MAX_LENGTH} caracteres.
+        Se envía por email a {ticket.email} desde el buzón de CLAR, con su mensaje citado. Si contesta, llegará a ese
+        buzón. {message.length}/{REPLY_MAX_LENGTH} caracteres.
       </p>
       {error && (
         <p role="alert" className="rounded-xl border border-red-200 bg-red-50 p-2.5 text-xs text-red-700">
