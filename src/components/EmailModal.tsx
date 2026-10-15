@@ -21,7 +21,8 @@ import {
   buildMailto,
   formatFileSize,
   isDraft,
-  parseRecipients
+  parseRecipients,
+  sameAttachment
 } from '../services/email';
 
 // draft: «Guardar borrador» · auto: al cerrar con cambios sin guardar · saved: correo terminado
@@ -97,9 +98,11 @@ export const EmailModal: React.FC<EmailModalProps> = ({ email, onClose, onSave }
     };
   };
 
-  // Cerrar (X, «Cerrar» o Escape) nunca pierde lo escrito: con cambios sin guardar, se guarda como borrador
+  // Cerrar (X, «Cerrar» o Escape) nunca pierde lo escrito: con cambios sin guardar, se guarda como borrador. Uno nuevo
+  // y vacío no se guarda; uno que ya existía, sí, aunque se haya vaciado (si no, al abrirlo volvería lo borrado).
+  const canSaveDraft = email ? isDirty : hasContent;
   const close = () => {
-    if (isDirty && hasContent) onSave(build('draft'), 'auto');
+    if (isDirty && canSaveDraft) onSave(build('draft'), 'auto');
     onClose();
   };
 
@@ -118,11 +121,12 @@ export const EmailModal: React.FC<EmailModalProps> = ({ email, onClose, onSave }
 
   // Solo el nombre y el tamaño: es la lista de lo que hay que adjuntar al enviarlo, el archivo no sale del equipo
   const handleFiles = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const picked = [...(e.target.files ?? [])].map((file) => ({ name: file.name, size: formatFileSize(file.size) }));
-    setAttachments((list) => [
-      ...list,
-      ...picked.filter((file) => !list.some((a) => a.name === file.name && a.size === file.size))
-    ]);
+    const picked = [...(e.target.files ?? [])].map((file) => ({
+      name: file.name,
+      size: formatFileSize(file.size),
+      bytes: file.size
+    }));
+    setAttachments((list) => [...list, ...picked.filter((file) => !list.some((a) => sameAttachment(a, file)))]);
     if (picked.length) setNoAttachmentsDeclared(false);
     // Así se puede volver a elegir el mismo archivo después de quitarlo
     e.target.value = '';
@@ -378,7 +382,7 @@ export const EmailModal: React.FC<EmailModalProps> = ({ email, onClose, onSave }
               <button
                 type="button"
                 onClick={saveDraft}
-                disabled={!hasContent}
+                disabled={!canSaveDraft}
                 className={`${secondaryButton} disabled:cursor-not-allowed disabled:opacity-50`}
               >
                 <FileText className="h-4 w-4" aria-hidden="true" />
