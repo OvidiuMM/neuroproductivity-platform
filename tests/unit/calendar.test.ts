@@ -143,3 +143,32 @@ describe('recurring tasks in calendars', () => {
     assert.doesNotMatch(buildIcs(event), /RRULE/);
   });
 });
+
+describe('alarms in calendars', () => {
+  const ics = (overrides: Partial<TaskItem>) => buildIcs(buildCalendarEvent(task(overrides), APP)!);
+
+  it('counts a timed deadline alarm from the start of the event', () => {
+    const file = ics({ dueDate: '2030-06-15', dueTime: '11:00', alarmTime: '10:57' });
+    assert.match(file, /BEGIN:VALARM\r\nACTION:DISPLAY\r\nDESCRIPTION:.+\r\nTRIGGER:-PT3M\r\nEND:VALARM\r\nEND:VEVENT/);
+  });
+
+  it('counts an interval or all-day alarm from the end of the event', () => {
+    // Intervalo: el final es la hora límite; la alarma de las 23:00 es la víspera (12 h antes)
+    const interval = ics({
+      startDate: '2030-06-14',
+      startTime: '09:00',
+      dueDate: '2030-06-15',
+      dueTime: '11:00',
+      alarmTime: '23:00'
+    });
+    assert.match(interval, /TRIGGER;RELATED=END:-PT720M/);
+    // Solo fecha: la víspera a las 20:00, contada desde el final del día límite (28 h antes)
+    assert.match(ics({ dueDate: '2030-06-15', alarmTime: '20:00' }), /TRIGGER;RELATED=END:-PT1680M/);
+  });
+
+  it('has no alarm without one, or when the task cannot have it', () => {
+    assert.doesNotMatch(ics({ dueDate: '2030-06-15', dueTime: '11:00' }), /VALARM/);
+    const recurrence = { frequency: 'WEEKLY' as const, interval: 1, weekdays: [6] };
+    assert.doesNotMatch(ics({ dueDate: '2030-06-15', recurrence, alarmTime: '08:00' }), /VALARM/);
+  });
+});

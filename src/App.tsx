@@ -51,6 +51,10 @@ import { PHONE_QUERY, useMediaQuery } from './hooks/useMediaQuery';
 import { MoreSheet } from './components/MoreSheet';
 // Va ya en el paquete principal: también la usa la pantalla de acceso
 import { FeedbackDialog } from './components/FeedbackDialog';
+import { AlarmAlerts } from './components/AlarmAlerts';
+import { useTaskAlarms } from './hooks/useTaskAlarms';
+import type { ScheduledAlarm } from './services/alarms';
+import { showSystemNotification } from './services/notifications';
 import { TOUR_STEPS } from './tourSteps';
 import {
   hasSeenLocally,
@@ -625,6 +629,23 @@ export default function App({ user, services, isAdmin = false }: AppProps) {
     isAccessibilityOpen ||
     isImportOpen;
 
+  // ALARMAS: avisan mientras la app está abierta, dentro de ella y, con permiso, también con una notificación del
+  // sistema. El aviso muestra la tarea tal como está ahora y desaparece si se marca como hecha.
+  const [alarmAlerts, setAlarmAlerts] = useState<ScheduledAlarm[]>([]);
+  useTaskAlarms(uid, tasks, (alarm) => {
+    setAlarmAlerts((list) => [...list.filter((a) => a.key !== alarm.key), alarm]);
+    showSystemNotification(`Alarma: ${alarm.task.title}`, formatTaskDates(alarm.task) ?? '', alarm.key);
+  });
+  const visibleAlarms = alarmAlerts.flatMap((alarm) => {
+    const task = tasks.find((t) => t.id === alarm.task.id);
+    return task && !isArchived(task) ? [{ ...alarm, task }] : [];
+  });
+  const openAlarmTask = (task: TaskItem) => {
+    setAlarmAlerts((list) => list.filter((a) => a.task.id !== task.id));
+    setEditingTask(task);
+    setIsTaskModalOpen(true);
+  };
+
   // Conteo de tareas por contexto
   const archivedTasks = tasks.filter(isArchived);
   const workCount = tasks.filter((t) => t.listContext === 'WORK' && !t.isSomeday && !isArchived(t)).length;
@@ -868,6 +889,13 @@ export default function App({ user, services, isAdmin = false }: AppProps) {
         onForceSync={handleForceSync}
         activeUser={profile}
         onOpenAccount={() => setIsAccountMenuOpen(true)}
+      />
+
+      <AlarmAlerts
+        alarms={visibleAlarms}
+        canOpenTask={!isDialogOpen}
+        onOpenTask={openAlarmTask}
+        onDismiss={(key) => setAlarmAlerts((list) => list.filter((a) => a.key !== key))}
       />
 
       {/* BANNER TOAST DE NOTIFICACIÓN: región viva siempre presente para que los lectores de pantalla lo anuncien */}

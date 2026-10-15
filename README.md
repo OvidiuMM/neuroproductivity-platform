@@ -1,7 +1,7 @@
 # CLAR — Plataforma de Gestión del Tiempo y Neurociencia Aplicada
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
-[![Version](https://img.shields.io/badge/Version-0.9.1-indigo.svg)](#)
+[![Version](https://img.shields.io/badge/Version-0.9.2-indigo.svg)](#)
 [![React](https://img.shields.io/badge/React-19.0-61dafb.svg?logo=react&logoColor=black)](https://react.dev/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-7.x-3178c6.svg?logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
 [![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-4.x-38bdf8.svg?logo=tailwindcss&logoColor=white)](https://tailwindcss.com/)
@@ -91,6 +91,12 @@ El sistema rechaza las restricciones coercitivas (como las rotaciones atencional
 - **Tareas:** completar de un toque con «Deshacer» (comprobado en una transacción), menú «⋯» y formulario en dos niveles.
 - **Bienvenida y recorrido guiado:** se muestran una vez por cuenta (`hasSeenOnboarding` en el perfil, con copia local) y se repiten desde Ayuda.
 - **Contacto:** «Escríbenos» envía el mensaje a la Cloud Function `submitFeedback` (email confirmado, 5 por hora), que lo guarda en `feedback_tickets` y avisa por email. La administración lo lee en «Administración» → «Mensajes».
+
+### 7. Alarmas (0.9.2)
+
+- **Una hora por tarea** (`alarmTime`, HH:mm). El momento en que suena se calcula al leer, en la zona horaria del dispositivo (`src/services/alarms.ts`): con hora límite, dentro de las 24 h anteriores (el mismo día si es antes; si no, la víspera); solo con fecha, la víspera a esa hora. Una tarea que se repite necesita hora límite, y cada repetición hereda la alarma.
+- **Avisa con la app abierta** (`useTaskAlarms`): un aviso dentro de CLAR con «Ver tarea» y, con permiso, una notificación del sistema (sin service worker; en Android y en Safari del iPhone sin instalar, solo el aviso dentro de la app). Las alarmas que pasaron con la app cerrada avisan al abrirla si la tarea aún no ha vencido. Cada alarma avisa una sola vez, también con varias pestañas (`localStorage` y Web Locks).
+- **Calendario:** el archivo .ics incluye la alarma (`VALARM`).
 
 ---
 

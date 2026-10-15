@@ -1,6 +1,7 @@
 import { TaskItem } from '../types';
 import { dueMoment, toLocalDate } from './tasks';
 import { toRRule } from './recurrence';
+import { alarmMoment } from './alarms';
 
 // Evento de calendario a partir de las fechas de una tarea. Se exporta con enlaces "añadir evento"
 // de cada proveedor o con un archivo .ics: no hace falta conectar ninguna cuenta.
@@ -12,6 +13,8 @@ export interface CalendarEvent {
   start: Date; // día completo: medianoche local del primer día
   end: Date; // día completo: medianoche local del día siguiente al último (exclusivo)
   rrule?: string; // tareas recurrentes: la serie completa (Google Calendar y .ics; los enlaces de Outlook no lo admiten)
+  // Alarma de la tarea (solo en el .ics): minutos antes del inicio o del final del evento, el borde que es el plazo
+  alarm?: { minutesBefore: number; related: 'START' | 'END' };
 }
 
 const DEADLINE_EVENT_MS = 30 * 60 * 1000;
@@ -38,22 +41,29 @@ export const buildCalendarEvent = (source: TaskItem, appUrl: string): CalendarEv
     ...(task.recurrence ? { rrule: toRRule(task.recurrence, allDay, dueDate) } : {})
   };
 
+  // La alarma se cuenta desde el borde del evento que marca el plazo (en una serie, la misma para cada repetición)
+  const alarmAt = alarmMoment(source);
+  const alarm = (deadline: Date, related: 'START' | 'END') =>
+    alarmAt ? { alarm: { related, minutesBefore: Math.round((deadline.getTime() - alarmAt.getTime()) / 60_000) } } : {};
+
   // Sin horas: evento de día completo (de varios días si la tarea tiene intervalo)
   if (allDay) {
-    return {
-      ...base,
-      allDay: true,
-      start: toLocalDate(task.startDate ?? dueDate),
-      end: addDays(toLocalDate(dueDate), 1)
-    };
+    const end = addDays(toLocalDate(dueDate), 1);
+    return { ...base, allDay: true, start: toLocalDate(task.startDate ?? dueDate), end, ...alarm(end, 'END') };
   }
 
   const due = dueMoment(task)!;
   // Solo plazo con hora: evento corto que empieza a la hora límite
   if (!task.startDate) {
-    return { ...base, allDay: false, start: due, end: new Date(due.getTime() + DEADLINE_EVENT_MS) };
+    return {
+      ...base,
+      allDay: false,
+      start: due,
+      end: new Date(due.getTime() + DEADLINE_EVENT_MS),
+      ...alarm(due, 'START')
+    };
   }
-  return { ...base, allDay: false, start: toLocalDate(task.startDate, task.startTime), end: due };
+  return { ...base, allDay: false, start: toLocalDate(task.startDate, task.startTime), end: due, ...alarm(due, 'END') };
 };
 
 const pad = (n: number) => String(n).padStart(2, '0');
@@ -129,6 +139,15 @@ export const buildIcs = (event: CalendarEvent, now = new Date()) => {
     ...(event.rrule ? [event.rrule] : []),
     `SUMMARY:${escapeIcsText(event.title)}`,
     `DESCRIPTION:${escapeIcsText(event.description)}`,
+    ...(event.alarm
+      ? [
+          'BEGIN:VALARM',
+          'ACTION:DISPLAY',
+          `DESCRIPTION:${escapeIcsText(event.title)}`,
+          `TRIGGER${event.alarm.related === 'END' ? ';RELATED=END' : ''}:-PT${event.alarm.minutesBefore}M`,
+          'END:VALARM'
+        ]
+      : []),
     'END:VEVENT',
     'END:VCALENDAR'
   ]
