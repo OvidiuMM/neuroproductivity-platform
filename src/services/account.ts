@@ -10,19 +10,10 @@ import { httpsCallable } from 'firebase/functions';
 import { forgetAccess } from './access';
 import { signOutAndClearCache, type FirebaseServices } from './firebase';
 import { deleteAllUserData, exportUserData } from './repository';
+import { downloadJson } from './download';
 
 // Descarga y borrado de la cuenta. Funcionan también sin acceso aprobado (las reglas dejan leer y borrar
 // los propios datos siempre), así una cuenta pendiente o retirada puede llevarse o eliminar lo suyo.
-
-const downloadJson = (filename: string, data: unknown) => {
-  const url = URL.createObjectURL(new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' }));
-  const link = document.createElement('a');
-  link.href = url;
-  link.download = filename;
-  link.click();
-  // Revocar en el mismo instante cancela la descarga en algunos navegadores
-  setTimeout(() => URL.revokeObjectURL(url), 1_000);
-};
 
 export const downloadAccountData = async ({ db }: FirebaseServices, user: User) => {
   const data = await exportUserData(db, user.uid);

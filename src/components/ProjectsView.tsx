@@ -5,6 +5,7 @@ import {
   CalendarClock,
   CheckCircle2,
   ChevronDown,
+  FileDown,
   FolderKanban,
   Pencil,
   Plus,
@@ -34,6 +35,8 @@ interface ProjectsViewProps {
   onChangeTaskStatus: (task: TaskItem, status: TaskStatus) => void;
   onEditTask: (task: TaskItem) => void;
   onDeleteTask: (task: TaskItem) => void;
+  onDownloadTask: (task: TaskItem) => void;
+  onDownloadProject: (project: Project) => void;
   onOpenGoals: () => void;
 }
 
@@ -125,6 +128,8 @@ export const ProjectsView: React.FC<ProjectsViewProps> = ({
   onChangeTaskStatus,
   onEditTask,
   onDeleteTask,
+  onDownloadTask,
+  onDownloadProject,
   onOpenGoals
 }) => {
   const now = useNow();
@@ -209,6 +214,15 @@ export const ProjectsView: React.FC<ProjectsViewProps> = ({
                 Reactivar
               </button>
             )}
+            <button
+              type="button"
+              onClick={() => onDownloadProject(selected)}
+              aria-label={`Descargar «${selected.title}» (JSON)`}
+              className={actionButton}
+            >
+              <FileDown className="h-4 w-4 text-indigo-600" aria-hidden="true" />
+              Descargar (JSON)
+            </button>
           </div>
         </section>
 
@@ -242,6 +256,7 @@ export const ProjectsView: React.FC<ProjectsViewProps> = ({
                   onChangeStatus={onChangeTaskStatus}
                   onEdit={onEditTask}
                   onDelete={onDeleteTask}
+                  onDownload={onDownloadTask}
                 />
               ))}
             </ol>
