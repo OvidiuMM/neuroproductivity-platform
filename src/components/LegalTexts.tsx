@@ -79,9 +79,9 @@ export const PrivacyPolicy: React.FC = () => (
         </li>
         <li>
           <strong>En tu dispositivo:</strong> la sesión de Firebase, una copia de tus datos para usar la app sin
-          conexión (se intenta borrar al cerrar sesión, pero el borrado no está garantizado) y algunas preferencias:
-          accesibilidad, orden y filtros de las listas, alarmas ya avisadas y si viste la bienvenida. Todo es necesario
-          para que la app funcione: CLAR no usa cookies de seguimiento, analítica ni publicidad.
+          conexión (se borra al cerrar sesión; ver «Cuánto tiempo se guardan») y algunas preferencias: accesibilidad,
+          orden y filtros de las listas, alarmas ya avisadas y si viste la bienvenida. Todo es necesario para que la app
+          funcione: CLAR no usa cookies de seguimiento, analítica ni publicidad.
         </li>
       </List>
       <p>
@@ -153,8 +153,8 @@ export const PrivacyPolicy: React.FC = () => (
           necesario para atenderte.
         </li>
         <li>
-          Copia en tu dispositivo: al cerrar sesión se intenta borrar, pero puede permanecer si no se logra limpiar la
-          caché; no se garantiza un plazo de eliminación.
+          Copia en tu dispositivo: hasta que cierres sesión. Si en ese momento CLAR está abierta en otras pestañas, el
+          navegador no deja borrarla y se queda hasta que vuelvas a cerrar sesión con una sola pestaña abierta.
         </li>
       </List>
     </Section>
