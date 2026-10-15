@@ -747,6 +747,7 @@ export default function App({ user, services, isAdmin = false }: AppProps) {
     isTourOpen ||
     isMoreOpen ||
     goalEditor !== null ||
+    projectEditor !== null ||
     isTaskModalOpen ||
     isArchiveOpen ||
     isMeetingModalOpen ||

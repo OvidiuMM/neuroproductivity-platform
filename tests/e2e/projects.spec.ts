@@ -73,6 +73,8 @@ test('a project of a goal holds its tasks, shows its progress as a battery and w
   // Con la fecha de fin pasada y tareas abiertas, está fuera de plazo
   await page.getByRole('button', { name: 'Editar', exact: true }).click();
   const projectForm = page.getByRole('dialog', { name: 'Editar el proyecto' });
+  // Con el editor abierto, el resto de la app queda inerte (fuera del árbol de accesibilidad)
+  await expect(page.getByRole('button', { name: 'Todos los proyectos' })).toHaveCount(0);
   await projectForm.getByLabel('Fecha de fin', { exact: true }).fill(localDateFromToday(-2));
   await projectForm.getByRole('button', { name: 'Guardar los cambios' }).click();
   await expect(page.getByText(/^Fuera de plazo: terminaba el .+ y quedan 1 tarea\.$/)).toBeVisible();
