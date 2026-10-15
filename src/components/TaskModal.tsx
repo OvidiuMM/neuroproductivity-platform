@@ -62,6 +62,7 @@ import {
 import { DateField } from './DateField';
 import { NotificationPermission } from './NotificationPermission';
 import { DiscardChangesPrompt } from './DiscardChangesPrompt';
+import { TimeField } from './TimeField';
 import { alarmUnavailableReason, describeAlarm } from '../services/alarms';
 import { suggestGoal } from '../services/goals';
 import { WHEEL_CATEGORIES } from '../services/wheel';
@@ -816,12 +817,12 @@ export const TaskModal: React.FC<TaskModalProps> = ({
                 className="min-w-0 flex-1"
                 inputClassName="px-2.5 py-1.5 rounded-lg border border-slate-300 text-xs focus:outline-none focus:ring-2 focus:ring-indigo-400"
               />
-              <input
-                type="time"
+              <TimeField
+                label="Hora límite"
                 value={dueTime}
-                onChange={(e) => setDueTime(e.target.value)}
+                onChange={setDueTime}
+                onDraftChange={draftOf('dueTime')}
                 disabled={!dueDate && !isRepeating}
-                aria-label="Hora límite"
                 className="w-24 rounded-lg border border-slate-300 px-2 py-1.5 text-xs focus:ring-2 focus:ring-indigo-400 focus:outline-none disabled:bg-slate-100 disabled:text-slate-400"
               />
             </div>
@@ -842,11 +843,13 @@ export const TaskModal: React.FC<TaskModalProps> = ({
               Alarma <span className="font-normal tracking-normal text-slate-500 normal-case">(opcional)</span>
             </label>
             <div className="flex items-center gap-2">
-              <input
+              <TimeField
                 id="task-alarm"
-                type="time"
+                label="Alarma"
+                hasVisibleLabel
                 value={alarmBlocked ? '' : alarmTime}
-                onChange={(e) => setAlarmTime(e.target.value)}
+                onChange={setAlarmTime}
+                onDraftChange={draftOf('alarmTime')}
                 disabled={Boolean(alarmBlocked)}
                 aria-describedby="task-alarm-help"
                 className="w-28 rounded-lg border border-slate-300 px-2 py-1.5 text-xs focus:ring-2 focus:ring-indigo-400 focus:outline-none disabled:bg-slate-100 disabled:text-slate-400"
@@ -1125,12 +1128,12 @@ export const TaskModal: React.FC<TaskModalProps> = ({
                         className="min-w-0 flex-1"
                         inputClassName="px-2.5 py-1.5 rounded-lg border border-slate-300 text-xs focus:outline-none focus:ring-2 focus:ring-indigo-400"
                       />
-                      <input
-                        type="time"
+                      <TimeField
+                        label="Hora de inicio"
                         value={startTime}
-                        onChange={(e) => setStartTime(e.target.value)}
+                        onChange={setStartTime}
+                        onDraftChange={draftOf('startTime')}
                         disabled={!startDate && !isRepeating}
-                        aria-label="Hora de inicio"
                         className="w-24 rounded-lg border border-slate-300 px-2 py-1.5 text-xs focus:ring-2 focus:ring-indigo-400 focus:outline-none disabled:bg-slate-100 disabled:text-slate-400"
                       />
                     </div>
