@@ -78,10 +78,13 @@ import { ImportLocalDataModal } from './components/ImportLocalDataModal';
 import { HomeView } from './components/HomeView';
 import {
   loadClosedFeedback,
+  replyToFeedback,
   setFeedbackStatus,
   subscribeToOpenFeedback,
-  type FeedbackTicket
+  type FeedbackTicket,
+  type ReplyResult
 } from './services/feedbackApi';
+import { FirebaseError } from 'firebase/app';
 import { AccessibilityPanel } from './components/AccessibilityPanel';
 import {
   setAccess,
@@ -120,6 +123,15 @@ const GoalsView = retryableLazy(() => import('./components/GoalsView').then((m) 
 const GoalModal = retryableLazy(() => import('./components/GoalModal').then((m) => m.GoalModal));
 const WelcomeDialog = retryableLazy(() => import('./components/WelcomeDialog').then((m) => m.WelcomeDialog));
 const ProductTour = retryableLazy(() => import('./components/ProductTour').then((m) => m.ProductTour));
+
+// Por qué no salió una respuesta a un mensaje de contacto (los códigos que devuelve replyToFeedback)
+const REPLY_ERRORS: Record<string, string> = {
+  'functions/permission-denied': 'Solo la administración puede responder los mensajes.',
+  'functions/invalid-argument': 'Escribe la respuesta.',
+  'functions/not-found': 'El mensaje ya no existe: quizá se eliminó la cuenta que lo envió.',
+  'functions/unavailable': 'No se pudo enviar la respuesta. Inténtalo de nuevo.',
+  'functions/failed-precondition': 'El envío de correos no está configurado.'
+};
 
 export default function App({ user, services, isAdmin = false }: AppProps) {
   const { db } = services;
@@ -245,6 +257,20 @@ export default function App({ user, services, isAdmin = false }: AppProps) {
       console.error('Error updating feedback:', e);
       setFeedbackError('No se pudo guardar el cambio. Revisa tu conexión e inténtalo de nuevo.');
       return false;
+    }
+  };
+
+  // RESPONDER A UN MENSAJE: la función lo envía por email y, si sale, lo guarda
+  const handleReplyFeedback = async (ticket: FeedbackTicket, message: string): Promise<ReplyResult> => {
+    try {
+      return { reply: await replyToFeedback(services.functions, ticket.id, message) };
+    } catch (e) {
+      console.error('Error replying to feedback:', e);
+      return {
+        error:
+          (e instanceof FirebaseError && REPLY_ERRORS[e.code]) ||
+          'No se pudo enviar la respuesta. Comprueba la conexión e inténtalo de nuevo.'
+      };
     }
   };
 
@@ -852,6 +878,7 @@ export default function App({ user, services, isAdmin = false }: AppProps) {
                 tickets={feedbackTickets}
                 feedbackError={feedbackError}
                 onSetFeedbackStatus={handleSetFeedbackStatus}
+                onReplyFeedback={handleReplyFeedback}
                 loadClosedFeedback={(cursor) => loadClosedFeedback(db, cursor)}
               />
             </DeferredSection>

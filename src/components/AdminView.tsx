@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { UserCheck } from 'lucide-react';
 import type { AccessRequest, DecisionStatus } from '../services/access';
-import type { ClosedFeedbackPage, FeedbackStatus, FeedbackTicket } from '../services/feedbackApi';
+import type { ClosedFeedbackPage, FeedbackStatus, FeedbackTicket, ReplyResult } from '../services/feedbackApi';
 import { AccessAdminView } from './AccessAdminView';
 import { FeedbackAdminView } from './FeedbackAdminView';
 
@@ -15,6 +15,7 @@ interface AdminViewProps {
   tickets: FeedbackTicket[];
   feedbackError: string | null;
   onSetFeedbackStatus: (ticket: FeedbackTicket, status: FeedbackStatus) => Promise<boolean>;
+  onReplyFeedback: (ticket: FeedbackTicket, message: string) => Promise<ReplyResult>;
   loadClosedFeedback: (cursor: ClosedFeedbackPage['cursor']) => Promise<ClosedFeedbackPage>;
 }
 
@@ -31,6 +32,7 @@ export const AdminView: React.FC<AdminViewProps> = ({
   tickets,
   feedbackError,
   onSetFeedbackStatus,
+  onReplyFeedback,
   loadClosedFeedback
 }) => {
   const [panel, setPanel] = useState<Panel>('requests');
@@ -85,6 +87,7 @@ export const AdminView: React.FC<AdminViewProps> = ({
           tickets={tickets}
           error={feedbackError}
           onSetStatus={onSetFeedbackStatus}
+          onReply={onReplyFeedback}
           loadClosed={loadClosedFeedback}
         />
       )}

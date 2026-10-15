@@ -1,9 +1,28 @@
 import { HttpsError, onCall } from 'firebase-functions/https';
 import * as logger from 'firebase-functions/logger';
+import { FieldValue } from 'firebase-admin/firestore';
 import { adminDb } from './adminApp';
-import { normalizeEmail } from './accessLogic';
-import { adminEmail, appUrl, emailSecrets, REGION, requireAuth, sendEmail } from './access';
-import { FEEDBACK_LIMIT, buildFeedbackEmail, parseFeedback, recentSends, type FeedbackTicket } from './feedbackLogic';
+import { isAdminToken, normalizeEmail } from './accessLogic';
+import {
+  adminEmail,
+  appUrl,
+  emailSecrets,
+  isEmulator,
+  REGION,
+  removeStaleAdminMarkers,
+  requireAuth,
+  sendEmail
+} from './access';
+import {
+  FEEDBACK_LIMIT,
+  buildFeedbackEmail,
+  buildReplyEmail,
+  parseFeedback,
+  parseReply,
+  recentSends,
+  type FeedbackReply,
+  type FeedbackTicket
+} from './feedbackLogic';
 
 const db = adminDb;
 
@@ -46,4 +65,37 @@ export const submitFeedback = onCall({ region: REGION, secrets: emailSecrets }, 
   logger.info('Feedback received', { type: input.type, hasContext: Boolean(input.context) });
   await sendEmail('feedback', adminEmail(), buildFeedbackEmail(ticket, appUrl()));
   return { id: ticketRef.id };
+});
+
+// Respuesta de la administración: se envía por email a quien escribió (si contesta, le llega a la administración) y,
+// solo si el envío sale, se guarda en el mensaje. Un mensaje nuevo pasa a leído. En los emuladores no se envía nada y
+// se guarda igual, para poder probarlo.
+export const replyToFeedback = onCall({ region: REGION, secrets: emailSecrets }, async (request) => {
+  const auth = requireAuth(request);
+  await removeStaleAdminMarkers();
+  if (!isAdminToken(auth.token, adminEmail())) {
+    throw new HttpsError('permission-denied', 'Solo la administración puede responder los mensajes.');
+  }
+  const reply = parseReply(request.data);
+  if (!reply) throw new HttpsError('invalid-argument', 'Escribe la respuesta.');
+
+  const ref = db().doc(`feedback_tickets/${reply.ticketId}`);
+  const snapshot = await ref.get();
+  if (!snapshot.exists) throw new HttpsError('not-found', 'El mensaje ya no existe.');
+  const ticket = snapshot.data() as FeedbackTicket;
+
+  const result = await sendEmail('feedback-reply', ticket.email, buildReplyEmail(ticket, reply.message, adminEmail()));
+  if (result === 'failed') throw new HttpsError('unavailable', 'No se pudo enviar la respuesta. Inténtalo de nuevo.');
+  if (result === 'skipped' && !isEmulator) {
+    throw new HttpsError('failed-precondition', 'El envío de correos no está configurado.');
+  }
+
+  const saved: FeedbackReply = { message: reply.message, sentAt: new Date().toISOString() };
+  await ref.update({
+    replies: FieldValue.arrayUnion(saved),
+    status: ticket.status === 'new' ? 'read' : ticket.status,
+    updatedAt: saved.sentAt
+  });
+  logger.info('Feedback replied');
+  return saved;
 });
