@@ -9,7 +9,8 @@ html.a11y-text-large {
 html.a11y-text-xlarge {
   font-size: 125%;
 }
-/* Los puntos de corte no cambian con el tamaño raíz: con el texto ampliado la cabecera pasa a varias líneas */
+/* Los puntos de corte no cambian con el tamaño raíz: si con el texto ampliado la cabecera no cabe, pasa a varias
+   líneas en lugar de salirse */
 html.a11y-text-large .navbar-row,
 html.a11y-text-xlarge .navbar-row {
   flex-wrap: wrap;

@@ -58,15 +58,16 @@ export const Navbar: React.FC<NavbarProps> = ({
     // Con viewport-fit=cover (pantalla completa en iOS) la cabecera deja sitio a la barra de estado y la muesca
     <header className="sticky top-0 z-40 border-b border-slate-200 bg-white/95 pt-[env(safe-area-inset-top)] backdrop-blur-md">
       <div className="mx-auto max-w-7xl px-3 sm:px-6 lg:px-8">
-        {/* Una sola fila; solo con el texto ampliado (panel de accesibilidad) puede pasar a varias */}
+        {/* Una sola fila, también con el texto ampliado en el móvil; solo si aun así no cabe, pasa a varias */}
         <div className="navbar-row flex min-h-14 flex-nowrap items-center justify-between gap-2 py-2 sm:gap-3">
-          {/* Marca: símbolo, nombre y versión en todos los tamaños */}
+          {/* Marca: símbolo y nombre; la versión, desde 640 px (en el móvil está al pie de la página). Así la fila cabe
+              también con el texto ampliado. */}
           <div className="flex min-w-0 shrink-0 items-center gap-2">
             <BrandMark size={36} />
-            <span className="text-lg leading-tight font-extrabold tracking-[0.2em] whitespace-nowrap text-slate-900">
+            <span className="text-lg leading-tight font-extrabold tracking-[0.12em] whitespace-nowrap text-slate-900 sm:tracking-[0.2em]">
               {BRAND_NAME}
             </span>
-            <span className="rounded border border-indigo-200 bg-indigo-50 px-1.5 py-0.5 font-mono text-[10px] font-bold whitespace-nowrap text-indigo-700">
+            <span className="hidden rounded border border-indigo-200 bg-indigo-50 px-1.5 py-0.5 font-mono text-[10px] font-bold whitespace-nowrap text-indigo-700 sm:inline">
               v{__APP_VERSION__}
             </span>
           </div>
