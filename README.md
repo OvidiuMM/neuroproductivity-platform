@@ -1,7 +1,7 @@
 # CLAR — Plataforma de Gestión del Tiempo y Neurociencia Aplicada
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
-[![Version](https://img.shields.io/badge/Version-0.9.2-indigo.svg)](#)
+[![Version](https://img.shields.io/badge/Version-0.9.3-indigo.svg)](#)
 [![React](https://img.shields.io/badge/React-19.0-61dafb.svg?logo=react&logoColor=black)](https://react.dev/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-7.x-3178c6.svg?logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
 [![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-4.x-38bdf8.svg?logo=tailwindcss&logoColor=white)](https://tailwindcss.com/)
@@ -142,6 +142,14 @@ Al volver a evaluar la Rueda se ve el efecto de las acciones, y las áreas cambi
 
 - En **Administración** → **Mensajes**, «Responder» envía la respuesta por email a quien escribió, desde el buzón de `SMTP_USER` y con su mensaje citado; si contesta, le llega a ese buzón. La Cloud Function `replyToFeedback` (solo la administración) guarda la respuesta en el mensaje (`replies`) únicamente si el envío sale, y un mensaje nuevo pasa a leído. Desde la app nadie puede escribir respuestas directamente (las reglas solo dejan cambiar el estado).
 - «Desde mi correo» sigue abriendo el programa de correo, para responder desde otra cuenta.
+
+### Proyectos, dependencias, «Cancelada» y descargas (0.9.3)
+
+- **Estado «Cancelada»:** archiva la tarea como «Hecha», con su fecha y «Deshacer», pero no cuenta como hecha: ni en las estadísticas ni en el avance de metas y proyectos. Cancelar una repetición crea la siguiente.
+- **Cambios sin guardar:** cerrar el formulario de una tarea, una meta o un proyecto con cambios pregunta antes de descartarlos; cerrar la pestaña, lo avisa el navegador (`useDiscardGuard`).
+- **Tareas dependientes** (`dependsOn`): una tarea espera a otra y queda bloqueada hasta que esa esté hecha o cancelada; varias pueden esperar a la misma, en paralelo (ver [Listas](#3-listas-y-jerarquía-visual-m2)).
+- **Proyectos** (`users/{uid}/projects`): tareas con fecha de fin dentro de una meta, con su avance como una batería y avisos de plazo (ver [Metas](#2-metas-m6)).
+- **Descargas en JSON:** una tarea («⋯» → «Descargar (JSON)»), una meta o un proyecto, con todos sus datos y los nombres de lo relacionado (`src/services/exports.ts`).
 
 ---
 
@@ -379,9 +387,10 @@ El repositorio utiliza `package-lock.json` (en la raíz y en `functions/`) como 
 │   ├── tourSteps.ts             # Pasos del recorrido guiado
 │   ├── lazy.tsx                 # Carga bajo demanda con reintento
 │   ├── index.css                # Tailwind CSS y estilos de accesibilidad (texto, contraste, movimiento, foco)
-│   ├── types/index.ts           # Modelos de datos (TaskItem, Goal, Recurrence, WheelOfLifeLog, EmailDraft…)
+│   ├── types/index.ts           # Modelos de datos (TaskItem, Goal, Project, Recurrence, WheelOfLifeLog, EmailDraft…)
 │   ├── hooks/
 │   │   ├── useModalFocus.ts     # Foco de los diálogos: entra, se queda dentro y vuelve al cerrar
+│   │   ├── useDiscardGuard.ts   # Preguntar antes de descartar cambios sin guardar (y al cerrar la pestaña)
 │   │   ├── useMediaQuery.ts     # Tamaño de pantalla (móvil o no)
 │   │   ├── useNow.ts            # Reloj por minutos para plazos y prioridad efectiva
 │   │   └── useTaskAlarms.ts     # Alarmas de las tareas mientras la app está abierta
@@ -393,6 +402,9 @@ El repositorio utiliza `package-lock.json` (en la raíz y en `functions/`) como 
 │   │   ├── auth.ts              # Email y contraseña: alta con verificación, acceso, recuperación y cambio
 │   │   ├── account.ts           # Descarga de los datos, eliminación de la cuenta y cierre de todas las sesiones
 │   │   ├── wheel.ts · goals.ts  # Áreas de la Rueda; metas, su orden por puntuación y su progreso
+│   │   ├── projects.ts          # Proyectos: avance, plazo, meta de sus tareas y orden
+│   │   ├── dependencies.ts      # Tareas que esperan a otra: bloqueos, ciclos y candidatas
+│   │   ├── exports.ts · download.ts # Descargas en JSON de una tarea, una meta o un proyecto
 │   │   ├── tasks.ts             # Estados, plazos y prioridad efectiva
 │   │   ├── taskListing.ts       # Orden, filtros y estimación del Top 10
 │   │   ├── recurrence.ts        # Tareas recurrentes y su exportación RRULE
@@ -416,6 +428,8 @@ El repositorio utiliza `package-lock.json` (en la raíz y en `functions/`) como 
 │       ├── HomeView.tsx         # Inicio: foco de la lista, metas, estadísticas y recomendaciones
 │       ├── WheelOfLife.tsx      # Rueda de la Vida polar SVG
 │       ├── GoalsView.tsx · GoalModal.tsx · GoalProgress.tsx # Metas: por área, editor y progreso
+│       ├── ProjectsView.tsx · ProjectModal.tsx · ProjectProgress.tsx # Proyectos: lista, vista, editor y batería
+│       ├── DiscardChangesPrompt.tsx # «¿Descartar los cambios?»
 │       ├── TaskList.tsx · TaskCard.tsx · TaskActionsMenu.tsx # Top 10 y resto, tarjeta y menú «⋯»
 │       ├── TaskModal.tsx        # Captura con validación sintáctica, meta, sugerencias, fechas, alarma y repetición
 │       ├── DateField.tsx · TaskDates.tsx · TaskStatusSelect.tsx · ArchivedTasksModal.tsx
@@ -479,10 +493,25 @@ CREATE TABLE goal (
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
--- 3. Tareas (M2): una tarea vinculada a una meta toma su área al leerse
+-- Proyectos: tareas con fecha de fin dentro de una meta
+CREATE TYPE project_status_enum AS ENUM ('ACTIVE', 'FINISHED', 'ARCHIVED');
+
+CREATE TABLE project (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID NOT NULL,
+  title VARCHAR(100) NOT NULL,
+  goal_id UUID NOT NULL REFERENCES goal(id) ON DELETE RESTRICT,  -- una meta con proyectos no se elimina
+  end_date DATE NOT NULL,
+  description VARCHAR(280),
+  status project_status_enum NOT NULL DEFAULT 'ACTIVE',
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+-- 3. Tareas (M2): una tarea vinculada a una meta toma su área al leerse; la de un proyecto, la meta del proyecto
 CREATE TYPE list_context_enum AS ENUM ('WORK', 'PERSONAL');
 CREATE TYPE priority_enum AS ENUM ('CRITICAL', 'HIGH', 'MEDIUM', 'LOW');
-CREATE TYPE task_status_enum AS ENUM ('PENDING', 'IN_PROGRESS', 'BLOCKED', 'DONE');
+CREATE TYPE task_status_enum AS ENUM ('PENDING', 'IN_PROGRESS', 'BLOCKED', 'DONE', 'CANCELLED');
 
 CREATE TABLE task_item (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -492,9 +521,11 @@ CREATE TABLE task_item (
   description TEXT NOT NULL,
   priority priority_enum NOT NULL,
   status task_status_enum NOT NULL DEFAULT 'PENDING',
-  done_at TIMESTAMPTZ,
+  done_at TIMESTAMPTZ,                                 -- cuándo pasó a hecha o cancelada
   is_someday BOOLEAN NOT NULL DEFAULT FALSE,           -- «Algún día»
   goal_id UUID REFERENCES goal(id) ON DELETE SET NULL,
+  project_id UUID REFERENCES project(id) ON DELETE SET NULL,  -- sus tareas siguen en la meta
+  depends_on UUID REFERENCES task_item(id) ON DELETE SET NULL, -- bloqueada mientras esa siga abierta
   wheel_category wheel_area_enum,                      -- sin meta: elegida o sugerida (TF-IDF)
   wheel_category_confidence REAL,
   linked_by VARCHAR(16),                               -- MANUAL o AUTO_TFIDF
@@ -511,9 +542,9 @@ CREATE TABLE task_item (
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
--- Índice parcial: «Algún día» y las hechas no compiten por el Top 10
+-- Índice parcial: «Algún día», las hechas y las canceladas no compiten por el Top 10
 CREATE INDEX active_tasks_idx ON task_item(user_id, priority)
-  WHERE is_someday = FALSE AND status <> 'DONE';
+  WHERE is_someday = FALSE AND status NOT IN ('DONE', 'CANCELLED');
 
 -- 4. Tiempo protegido: reuniones (M5)
 CREATE TABLE meeting_guard (

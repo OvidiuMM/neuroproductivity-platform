@@ -5,6 +5,7 @@ import {
   CalendarClock,
   ChevronDown,
   Compass,
+  FileDown,
   FolderKanban,
   FolderPlus,
   Pencil,
@@ -33,6 +34,7 @@ interface GoalsViewProps {
   projects: Project[];
   onOpenProject: (project: Project) => void;
   onNewProject: (goal: Goal) => void;
+  onDownloadGoal: (goal: Goal) => void;
 }
 
 const iconButton = 'flex h-11 w-11 items-center justify-center rounded-xl text-slate-500';
@@ -50,7 +52,19 @@ const GoalCard: React.FC<{
   onEditTask: (task: TaskItem) => void;
   onOpenProject: (project: Project) => void;
   onNewProject: () => void;
-}> = ({ goal, tasks, projects, onEdit, onSetStatus, onAddTask, onEditTask, onOpenProject, onNewProject }) => {
+  onDownload: () => void;
+}> = ({
+  goal,
+  tasks,
+  projects,
+  onEdit,
+  onSetStatus,
+  onAddTask,
+  onEditTask,
+  onOpenProject,
+  onNewProject,
+  onDownload
+}) => {
   const active = goal.status === 'ACTIVE';
   const pending = active ? pendingGoalTasks(goal, tasks) : [];
   // Sus proyectos activos, con su avance
@@ -97,6 +111,15 @@ const GoalCard: React.FC<{
               <Undo2 className="h-5 w-5" aria-hidden="true" />
             </button>
           )}
+          <button
+            type="button"
+            onClick={onDownload}
+            aria-label={`Descargar la meta «${goal.title}» (JSON)`}
+            title="Descargar (JSON)"
+            className={`${iconButton} hover:bg-indigo-50 hover:text-indigo-700`}
+          >
+            <FileDown className="h-5 w-5" aria-hidden="true" />
+          </button>
           <button
             type="button"
             onClick={onEdit}
@@ -202,7 +225,8 @@ export const GoalsView: React.FC<GoalsViewProps> = ({
   onOpenWheel,
   projects,
   onOpenProject,
-  onNewProject
+  onNewProject,
+  onDownloadGoal
 }) => {
   const [showClosed, setShowClosed] = useState(false);
   // Botón «Nueva meta» de cada área: siempre está, así que es donde vuelve el foco al crear una meta desde «Necesitan
@@ -227,6 +251,7 @@ export const GoalsView: React.FC<GoalsViewProps> = ({
       onEditTask={onEditTask}
       onOpenProject={onOpenProject}
       onNewProject={() => onNewProject(goal)}
+      onDownload={() => onDownloadGoal(goal)}
     />
   );
 
