@@ -6,15 +6,13 @@ import { formatTaskDates } from '../services/tasks';
 
 interface AlarmAlertsProps {
   alarms: ScheduledAlarm[];
-  // Con otra ventana abierta no se ofrece «Ver tarea»: abrirla encima podría perder lo que se está editando
-  canOpenTask: boolean;
   onOpenTask: (task: TaskItem) => void;
   onDismiss: (key: string) => void;
 }
 
 // Avisos de alarma dentro de la app, arriba de la pantalla. Se quedan hasta cerrarlos. La región viva está siempre en
 // la página para que los lectores de pantalla anuncien al momento cada aviso nuevo.
-export const AlarmAlerts: React.FC<AlarmAlertsProps> = ({ alarms, canOpenTask, onOpenTask, onDismiss }) => (
+export const AlarmAlerts: React.FC<AlarmAlertsProps> = ({ alarms, onOpenTask, onDismiss }) => (
   <div
     aria-live="assertive"
     className="pointer-events-none fixed inset-x-0 top-[calc(0.75rem+env(safe-area-inset-top))] z-[60] flex flex-col items-center gap-2 px-3"
@@ -41,15 +39,13 @@ export const AlarmAlerts: React.FC<AlarmAlertsProps> = ({ alarms, canOpenTask, o
             <X className="h-5 w-5" aria-hidden="true" />
           </button>
         </div>
-        {canOpenTask && (
-          <button
-            type="button"
-            onClick={() => onOpenTask(task)}
-            className="mt-2 ml-8 min-h-11 rounded-xl bg-slate-900 px-4 text-sm font-bold text-white hover:bg-slate-800"
-          >
-            Ver tarea
-          </button>
-        )}
+        <button
+          type="button"
+          onClick={() => onOpenTask(task)}
+          className="mt-2 ml-8 min-h-11 rounded-xl bg-slate-900 px-4 text-sm font-bold text-white hover:bg-slate-800"
+        >
+          Ver tarea
+        </button>
       </section>
     ))}
   </div>
