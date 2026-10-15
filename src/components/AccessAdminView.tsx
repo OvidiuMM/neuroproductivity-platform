@@ -7,6 +7,8 @@ interface AccessAdminViewProps {
   currentUid: string;
   error: string | null;
   onDecide: (uid: string, status: DecisionStatus) => Promise<void>;
+  // Las cuentas que entraron solas después de esta fecha se señalan como nuevas
+  newSince?: string;
   // Aprobación de cuentas obligatoria (null mientras se carga) y cómo cambiarla
   approvalRequired: boolean | null;
   onSetApprovalRequired: (approvalRequired: boolean) => Promise<void>;
@@ -109,6 +111,7 @@ export const AccessAdminView: React.FC<AccessAdminViewProps> = ({
   currentUid,
   error,
   onDecide,
+  newSince,
   approvalRequired,
   onSetApprovalRequired
 }) => {
@@ -259,6 +262,11 @@ export const AccessAdminView: React.FC<AccessAdminViewProps> = ({
                         <div className="min-w-0 space-y-0.5">
                           <p className="text-sm font-semibold break-words text-slate-900">
                             {request.name || request.email}
+                            {newSince && request.status === 'approved' && request.requestedAt > newSince && (
+                              <span className="ml-2 rounded-full bg-red-600 px-1.5 py-0.5 align-middle text-[10px] font-bold text-white">
+                                Nueva
+                              </span>
+                            )}
                           </p>
                           <p className="text-xs break-all text-slate-600">{request.email}</p>
                           <p className="text-[11px] text-slate-500">
