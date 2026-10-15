@@ -270,3 +270,19 @@ test('admin access tab', async ({ page }) => {
   await expect(page.getByRole('heading', { name: 'Administración' })).toBeVisible();
   await expectNoViolations(page, 'accesos');
 });
+
+test('task alarm: the field in the form and the alert', async ({ page }) => {
+  await page.goto('/');
+  await signInWithGoogle(page);
+  const title = `Revisar el contrato ${Date.now().toString(36)}`;
+  await page.getByRole('button', { name: 'Nueva tarea', exact: true }).click();
+  await page.getByPlaceholder('ej. Llamar al proveedor para acordar el plazo de entrega').fill(title);
+  // Vence mañana a las 00:01; la alarma a la misma hora es 24 h antes, hoy a las 00:01: ya pasó y avisa al guardar
+  await page.getByLabel('Fecha límite', { exact: true }).fill(localDateFromToday(1));
+  await page.getByLabel('Hora límite').fill('00:01');
+  await page.getByLabel(/^Alarma/).fill('00:01');
+  await expectNoViolations(page, 'formulario con alarma');
+  await page.getByRole('button', { name: 'Guardar la tarea' }).click();
+  await expect(page.getByRole('region', { name: `Alarma: ${title}` })).toBeVisible();
+  await expectNoViolations(page, 'aviso de alarma');
+});

@@ -57,6 +57,8 @@ import {
   Target
 } from 'lucide-react';
 import { DateField } from './DateField';
+import { NotificationPermission } from './NotificationPermission';
+import { alarmUnavailableReason, describeAlarm } from '../services/alarms';
 import { suggestGoal } from '../services/goals';
 import { WHEEL_CATEGORIES } from '../services/wheel';
 
@@ -114,6 +116,7 @@ export const TaskModal: React.FC<TaskModalProps> = ({
   const [startTime, setStartTime] = useState('');
   const [dueDate, setDueDate] = useState('');
   const [dueTime, setDueTime] = useState('');
+  const [alarmTime, setAlarmTime] = useState('');
   const [estimateMinutes, setEstimateMinutes] = useState<number | undefined>();
   const [repeatFrequency, setRepeatFrequency] = useState<RecurrenceFrequency | ''>('');
   const [repeatInterval, setRepeatInterval] = useState(1);
@@ -168,6 +171,7 @@ export const TaskModal: React.FC<TaskModalProps> = ({
       setStartTime(editingTask.startTime ?? '');
       setDueDate((editingTask.recurrence ? editingTask.recurrence.until : editingTask.dueDate) ?? '');
       setDueTime(editingTask.dueTime ?? '');
+      setAlarmTime(editingTask.alarmTime ?? '');
       setEstimateMinutes(editingTask.estimateMinutes);
       setRepeatFrequency(editingTask.recurrence?.frequency ?? '');
       setRepeatInterval(editingTask.recurrence?.interval ?? 1);
@@ -186,6 +190,7 @@ export const TaskModal: React.FC<TaskModalProps> = ({
       setStartTime('');
       setDueDate('');
       setDueTime('');
+      setAlarmTime('');
       setEstimateMinutes(undefined);
       setRepeatFrequency('');
       setRepeatInterval(1);
@@ -337,6 +342,9 @@ export const TaskModal: React.FC<TaskModalProps> = ({
         dueTime: (dueDate && dueTime) || undefined
       };
   const datesError = isRepeating ? null : validateTaskDates(dates);
+  // ALARMA: necesita fecha límite (y hora, si la tarea se repite); si deja de poder tenerla, no se guarda
+  const alarmBlocked = alarmUnavailableReason({ ...dates, recurrence });
+  const alarmDescription = alarmTime && !alarmBlocked ? describeAlarm({ ...dates, recurrence, alarmTime }) : null;
 
   const isFormValid =
     !isTitleEmpty &&
@@ -364,6 +372,7 @@ export const TaskModal: React.FC<TaskModalProps> = ({
       isSomeday,
       // El vínculo se conserva aunque la meta aún no haya llegado (las metas y las tareas cargan por separado)
       goalId: goalId || undefined,
+      alarmTime: (!alarmBlocked && alarmTime) || undefined,
       wheelCategory: goal ? goal.area : wheelCategory,
       wheelCategoryConfidence,
       linkedBy,
@@ -624,6 +633,44 @@ export const TaskModal: React.FC<TaskModalProps> = ({
               <span className="font-semibold text-violet-600">violeta</span> cuando falta menos de una semana y{' '}
               <span className="font-semibold text-red-600">rojo</span> cuando ha vencido.
             </p>
+          </div>
+
+          {/* ALARMA: aviso antes del plazo, mientras CLAR está abierta */}
+          <div>
+            <label
+              htmlFor="task-alarm"
+              className="mb-1.5 block text-xs font-bold tracking-wider text-slate-600 uppercase"
+            >
+              Alarma <span className="font-normal tracking-normal text-slate-500 normal-case">(opcional)</span>
+            </label>
+            <div className="flex items-center gap-2">
+              <input
+                id="task-alarm"
+                type="time"
+                value={alarmBlocked ? '' : alarmTime}
+                onChange={(e) => setAlarmTime(e.target.value)}
+                disabled={Boolean(alarmBlocked)}
+                aria-describedby="task-alarm-help"
+                className="w-28 rounded-lg border border-slate-300 px-2 py-1.5 text-xs focus:ring-2 focus:ring-indigo-400 focus:outline-none disabled:bg-slate-100 disabled:text-slate-400"
+              />
+              {alarmTime && !alarmBlocked && (
+                <button
+                  type="button"
+                  onClick={() => setAlarmTime('')}
+                  aria-label="Quitar la alarma"
+                  className="min-h-9 rounded-lg px-2 text-xs font-semibold text-slate-600 hover:bg-slate-100 hover:text-slate-900"
+                >
+                  Quitar
+                </button>
+              )}
+            </div>
+            <p id="task-alarm-help" className="mt-1 text-[11px] leading-relaxed text-slate-500">
+              {alarmBlocked ??
+                alarmDescription ??
+                'Una hora dentro de las 24 h anteriores al plazo; sin hora límite, suena la víspera.'}{' '}
+              Avisa mientras CLAR esté abierta.
+            </p>
+            {alarmDescription && <NotificationPermission />}
           </div>
 
           {/* Prioridad: a la vista, cuenta para el orden del Top 10 */}
