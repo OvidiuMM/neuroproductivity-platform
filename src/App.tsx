@@ -58,9 +58,9 @@ import { PHONE_QUERY, useMediaQuery } from './hooks/useMediaQuery';
 import { MoreSheet } from './components/MoreSheet';
 // Va ya en el paquete principal: también la usa la pantalla de acceso
 import { FeedbackDialog } from './components/FeedbackDialog';
-import { AlarmAlerts } from './components/AlarmAlerts';
+import { AlarmAlerts, type AlarmAlert } from './components/AlarmAlerts';
 import { useTaskAlarms } from './hooks/useTaskAlarms';
-import type { ScheduledAlarm } from './services/alarms';
+import { alarmLateNote, formatClock } from './services/alarms';
 import { showSystemNotification } from './services/notifications';
 import { TOUR_STEPS } from './tourSteps';
 import {
@@ -770,11 +770,17 @@ export default function App({ user, services, isAdmin = false }: AppProps) {
 
   // ALARMAS: avisan mientras la app está abierta, dentro de ella (en todas las pestañas) y, con permiso, también con
   // una notificación del sistema. El aviso muestra la tarea tal como está ahora y desaparece si se marca como hecha.
-  const [alarmAlerts, setAlarmAlerts] = useState<ScheduledAlarm[]>([]);
+  // Cada aviso guarda cuándo se mostró: si llega tarde (CLAR estaba cerrada a la hora de la alarma), lo dice
+  const [alarmAlerts, setAlarmAlerts] = useState<AlarmAlert[]>([]);
   useTaskAlarms(uid, tasks, {
-    onAlert: (alarm) => setAlarmAlerts((list) => [...list.filter((a) => a.key !== alarm.key), alarm]),
+    onAlert: (alarm) =>
+      setAlarmAlerts((list) => [...list.filter((a) => a.key !== alarm.key), { ...alarm, raisedAt: new Date() }]),
     onNotify: (alarm) =>
-      showSystemNotification(`Alarma: ${alarm.task.title}`, formatTaskDates(alarm.task) ?? '', alarm.key)
+      showSystemNotification(
+        `Alarma de las ${formatClock(alarm.at)}: ${alarm.task.title}`,
+        [formatTaskDates(alarm.task), alarmLateNote(alarm.at, new Date())].filter(Boolean).join(' · '),
+        alarm.key
+      )
   });
   const visibleAlarms = alarmAlerts.flatMap((alarm) => {
     const task = tasks.find((t) => t.id === alarm.task.id);

@@ -74,7 +74,9 @@ test('an alarm warns in CLAR and with a system notification, only once', async (
   // cierre (fuera de la ventana no se llegaría a él con el teclado)
   await page.getByRole('button', { name: 'Nueva tarea', exact: true }).click();
   await page.clock.fastForward('03:00');
-  await expect.poll(() => notifications(page)).toEqual([expect.objectContaining({ title: `Alarma: ${title}` })]);
+  await expect
+    .poll(() => notifications(page))
+    .toEqual([expect.objectContaining({ title: `Alarma de las ${alarm.time}: ${title}` })]);
   await expect(alert).toHaveCount(0);
   await page.keyboard.press('Escape');
   await expect(alert).toBeVisible();
@@ -111,11 +113,15 @@ test('an alarm whose time already passed warns at once while the task is not due
   await signInWithGoogle(page);
   await openSection(page, 'Listas');
   const title = `Enviar el informe ${Date.now().toString(36)}`;
-  await newTaskWithAlarm(page, title, await fromNow(page, 20), (await fromNow(page, -1)).time);
+  const alarmTime = (await fromNow(page, -5)).time;
+  await newTaskWithAlarm(page, title, await fromNow(page, 20), alarmTime);
   await page.getByRole('button', { name: 'Guardar la tarea' }).click();
 
+  // El aviso dice su hora y, como llega tarde, cuándo era
   const alert = page.getByRole('region', { name: `Alarma: ${title}` });
   await expect(alert).toBeVisible();
+  await expect(alert).toContainText(`Alarma · ${alarmTime}`);
+  await expect(alert).toContainText(new RegExp(`Era (a las|el .+ a las) ${alarmTime}: CLAR no estaba abierta`));
   // Sin permiso de notificaciones, el aviso sale solo dentro de la app; se cierra con su botón
   await alert.getByRole('button', { name: `Cerrar la alarma de «${title}»` }).click();
   await expect(alert).toHaveCount(0);
@@ -172,5 +178,35 @@ test('with two tabs open, both show the alert and the system notification comes 
   for (const page of [first, second])
     await expect(page.getByRole('region', { name: `Alarma: ${title}` })).toBeVisible();
   const shown = [...(await notifications(first)), ...(await notifications(second))];
-  expect(shown.filter((n) => n.title === `Alarma: ${title}`)).toHaveLength(1);
+  expect(shown.filter((n) => n.title.endsWith(`: ${title}`))).toHaveLength(1);
+});
+
+test('times are written in 24 hours; half-written or impossible ones are not saved', async ({ page }) => {
+  await page.goto('/');
+  await signInWithGoogle(page);
+  await openSection(page, 'Listas');
+  const title = `Recoger el paquete ${Date.now().toString(36)}`;
+  await page.getByRole('button', { name: 'Nueva tarea', exact: true }).click();
+  const form = page.getByRole('dialog', { name: 'Nueva tarea' });
+  await page.getByPlaceholder('ej. Llamar al proveedor para acordar el plazo de entrega').fill(title);
+  await page.getByLabel('Fecha límite', { exact: true }).fill('2030-06-15');
+
+  // «7 pm» no es una hora en 24 h: se marca y no deja guardar
+  const dueTime = page.getByLabel('Hora límite');
+  await dueTime.fill('7 pm');
+  await expect(dueTime).toHaveAttribute('aria-invalid', 'true');
+  await form.getByRole('button', { name: 'Guardar la tarea' }).click();
+  await expect(form).toBeVisible();
+
+  // 930 se lee como 09:30, y una alarma a las 23:00 suena a las 23:00 (la víspera)
+  await dueTime.fill('930');
+  await dueTime.blur();
+  await expect(dueTime).toHaveValue('09:30');
+  const alarm = page.getByLabel(/^Alarma/);
+  await alarm.fill('23:00');
+  await expect(alarm).toHaveAccessibleDescription(/^Sonará la víspera, el 14 jun, a las 23:00\./);
+  await form.getByRole('button', { name: 'Guardar la tarea' }).click();
+  await expect(form).toBeHidden();
+  const card = page.getByRole('listitem').filter({ has: page.getByRole('heading', { name: title }) });
+  await expect(card).toContainText('Alarma:23:00');
 });
