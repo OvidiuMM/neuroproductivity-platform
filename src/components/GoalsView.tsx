@@ -5,16 +5,19 @@ import {
   CalendarClock,
   ChevronDown,
   Compass,
+  FolderKanban,
+  FolderPlus,
   Pencil,
   Plus,
   Target,
   Trophy,
   Undo2
 } from 'lucide-react';
-import { Goal, GoalStatus, TaskItem, WheelCategory } from '../types';
+import { Goal, GoalStatus, Project, TaskItem, WheelCategory } from '../types';
 import { WEAK_AREA_SCORE, areasWithGoals, pendingGoalTasks, sortGoals } from '../services/goals';
 import { formatDay, statusLabel } from '../services/tasks';
 import { GoalProgress } from './GoalProgress';
+import { projectProgress, projectsOfGoal, sortProjects } from '../services/projects';
 
 interface GoalsViewProps {
   goals: Goal[];
@@ -27,6 +30,9 @@ interface GoalsViewProps {
   onAddTask: (goal: Goal) => void;
   onEditTask: (task: TaskItem) => void;
   onOpenWheel: () => void;
+  projects: Project[];
+  onOpenProject: (project: Project) => void;
+  onNewProject: (goal: Goal) => void;
 }
 
 const iconButton = 'flex h-11 w-11 items-center justify-center rounded-xl text-slate-500';
@@ -37,13 +43,18 @@ const linkButton =
 const GoalCard: React.FC<{
   goal: Goal;
   tasks: TaskItem[];
+  projects: Project[];
   onEdit: () => void;
   onSetStatus: (status: GoalStatus) => void;
   onAddTask: () => void;
   onEditTask: (task: TaskItem) => void;
-}> = ({ goal, tasks, onEdit, onSetStatus, onAddTask, onEditTask }) => {
+  onOpenProject: (project: Project) => void;
+  onNewProject: () => void;
+}> = ({ goal, tasks, projects, onEdit, onSetStatus, onAddTask, onEditTask, onOpenProject, onNewProject }) => {
   const active = goal.status === 'ACTIVE';
   const pending = active ? pendingGoalTasks(goal, tasks) : [];
+  // Sus proyectos activos, con su avance
+  const goalProjects = sortProjects(projectsOfGoal(goal.id, projects)).filter((p) => p.status === 'ACTIVE');
   return (
     <li className="space-y-3 rounded-xl border border-slate-200 bg-white p-4">
       <div className="flex items-start justify-between gap-2">
@@ -100,6 +111,29 @@ const GoalCard: React.FC<{
 
       <GoalProgress goal={goal} tasks={tasks} />
 
+      {goalProjects.length > 0 && (
+        <ul aria-label={`Proyectos de «${goal.title}»`} className="space-y-1">
+          {goalProjects.map((project) => (
+            <li key={project.id}>
+              <button
+                type="button"
+                onClick={() => onOpenProject(project)}
+                aria-label={`Abrir el proyecto «${project.title}»`}
+                className="flex min-h-11 w-full items-center justify-between gap-2 rounded-lg px-2 text-left hover:bg-slate-50"
+              >
+                <span className="flex min-w-0 items-center gap-1.5 text-sm break-words text-slate-800">
+                  <FolderKanban className="h-4 w-4 shrink-0 text-indigo-600" aria-hidden="true" />
+                  {project.title}
+                </span>
+                <span className="shrink-0 font-mono text-xs font-bold text-slate-700">
+                  {projectProgress(project, tasks).percent} %
+                </span>
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
+
       {pending.length > 0 && (
         <ul aria-label={`Tareas por hacer de «${goal.title}»`} className="space-y-1">
           {pending.map((task) => (
@@ -134,6 +168,15 @@ const GoalCard: React.FC<{
           </button>
           <button
             type="button"
+            onClick={onNewProject}
+            aria-label={`Nuevo proyecto para «${goal.title}»`}
+            className={linkButton}
+          >
+            <FolderPlus className="h-4 w-4" aria-hidden="true" />
+            Nuevo proyecto
+          </button>
+          <button
+            type="button"
             onClick={() => onSetStatus('ARCHIVED')}
             className="min-h-11 rounded-lg px-2 text-xs font-semibold text-slate-600 hover:bg-slate-100 hover:text-slate-800"
           >
@@ -156,7 +199,10 @@ export const GoalsView: React.FC<GoalsViewProps> = ({
   onSetGoalStatus,
   onAddTask,
   onEditTask,
-  onOpenWheel
+  onOpenWheel,
+  projects,
+  onOpenProject,
+  onNewProject
 }) => {
   const [showClosed, setShowClosed] = useState(false);
   // Botón «Nueva meta» de cada área: siempre está, así que es donde vuelve el foco al crear una meta desde «Necesitan
@@ -174,10 +220,13 @@ export const GoalsView: React.FC<GoalsViewProps> = ({
       key={goal.id}
       goal={goal}
       tasks={tasks}
+      projects={projects}
       onEdit={() => onEditGoal(goal)}
       onSetStatus={(status) => onSetGoalStatus(goal, status)}
       onAddTask={() => onAddTask(goal)}
       onEditTask={onEditTask}
+      onOpenProject={onOpenProject}
+      onNewProject={() => onNewProject(goal)}
     />
   );
 

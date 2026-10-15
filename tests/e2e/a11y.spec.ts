@@ -220,6 +220,30 @@ test('goals: dialog, the Metas section and the card in Inicio', async ({ page })
   await expectNoViolations(page, 'inicio con metas');
 });
 
+test('projects: the list, the form and a project with its tasks', async ({ page }) => {
+  await page.goto('/');
+  await signInWithGoogle(page);
+  await openSection(page, 'Metas');
+  await page.getByRole('button', { name: 'Nueva meta en Familia' }).click();
+  await page.getByRole('dialog', { name: 'Nueva meta' }).getByLabel('Meta').fill('Tener la casa a punto');
+  await page.getByRole('button', { name: 'Crear la meta' }).click();
+  await openSection(page, 'Proyectos');
+  await expectNoViolations(page, 'proyectos sin proyectos');
+  await page.getByRole('button', { name: 'Nuevo proyecto' }).click();
+  const editor = page.getByRole('dialog', { name: 'Nuevo proyecto' });
+  await expectNoViolations(page, 'nuevo proyecto');
+  await editor.getByLabel('Proyecto').fill('Reformar la cocina');
+  await editor.getByLabel('Meta').selectOption({ label: 'Tener la casa a punto' });
+  await editor.getByLabel('Fecha de fin', { exact: true }).fill(localDateFromToday(-1));
+  await editor.getByRole('button', { name: 'Crear el proyecto' }).click();
+  await page.getByRole('button', { name: 'Añadir tarea' }).click();
+  await fillAndSaveTask(page, { title: 'Pedir presupuesto', dueDate: localDateFromToday(5) });
+  await expect(page.getByText(/^Fuera de plazo/)).toBeVisible();
+  await expectNoViolations(page, 'un proyecto fuera de plazo con sus tareas');
+  await page.getByRole('button', { name: 'Todos los proyectos' }).click();
+  await expectNoViolations(page, 'lista de proyectos');
+});
+
 test('welcome dialog, every step', async ({ page }) => {
   await page.goto('/');
   await signInWithGoogle(page, undefined, undefined, { onboarded: false });

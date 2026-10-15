@@ -43,7 +43,7 @@ export const TOUR_STEPS: TourStep[] = [
     id: 'goals',
     target: '[data-tour="nav-goals"]',
     title: 'Metas',
-    body: 'Lo que quieres conseguir en cada área, empezando por las más bajas. Añade tareas a cada meta y verás cómo avanza.'
+    body: 'Lo que quieres conseguir en cada área, empezando por las más bajas. Añade tareas a cada meta y verás cómo avanza; lo que tiene fecha de fin, agrúpalo en un proyecto («Proyectos»).'
   },
   {
     id: 'home',

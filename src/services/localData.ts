@@ -79,7 +79,8 @@ const readRecords = (storage: Storage): UserData => {
     meetings: keep<MeetingGuard>(KEYS.MEETINGS),
     emails: keep<EmailDraft>(KEYS.EMAILS),
     // Las versiones sin cuentas no tenían metas
-    goals: []
+    goals: [],
+    projects: []
   };
 };
 
@@ -134,7 +135,8 @@ export const buildImport = (profileIds: string[], storage: Storage = localStorag
     wheelLogs: pick(records.wheelLogs),
     meetings: pick(records.meetings),
     emails: pick(records.emails),
-    goals: []
+    goals: [],
+    projects: []
   };
 };
 
