@@ -105,7 +105,8 @@ export interface EmailDraft {
   userId: string;
   subject: string;
   body: string;
-  attachments: { name: string; size: string }[]; // solo nombre y tamaño: el archivo no sale del equipo
+  // Solo nombre y tamaño (legible, y en bytes para reconocer el mismo archivo): el archivo no sale del equipo
+  attachments: { name: string; size: string; bytes?: number }[];
   noAttachmentsDeclared: boolean;
   recipients: string[];
   sentAt?: string; // cuándo se guardó terminado

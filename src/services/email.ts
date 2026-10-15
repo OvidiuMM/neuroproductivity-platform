@@ -45,6 +45,12 @@ export const buildMailto = ({ recipients, subject, body }: Pick<EmailDraft, 'rec
   return `mailto:${to}${params.length ? `?${params.join('&')}` : ''}`;
 };
 
+// Mismo archivo: mismo nombre y mismos bytes. Los adjuntos de antes de 0.9.2 no tienen bytes: con ellos se compara
+// el tamaño legible (y el nombre)
+type Attachment = EmailDraft['attachments'][number];
+export const sameAttachment = (a: Attachment, b: Attachment) =>
+  a.name === b.name && (a.bytes !== undefined && b.bytes !== undefined ? a.bytes === b.bytes : a.size === b.size);
+
 // Sin estado: guardado (los de antes de 0.9.2)
 export const isDraft = (email: Pick<EmailDraft, 'status'>) => email.status === 'draft';
 
