@@ -121,16 +121,13 @@ export const publicAppUrl = (configured: string, projectId: string) => {
 // Avisos: a la administración por cada solicitud nueva y a la persona cuando se aprueba su acceso
 export type AccessEmail = 'new-request' | 'approved';
 
-// Correos solo en texto plano: el nombre y el mensaje los escribe la persona que pide acceso
+// Correos solo en texto plano. El aviso a la administración no lleva datos de quien pide acceso (minimización): se
+// leen en la app
 export const buildEmail = (kind: AccessEmail, record: AccessRecord, appUrl: string) =>
   kind === 'new-request'
     ? {
         subject: 'Nueva solicitud de acceso a CLAR',
-        text: [
-          `${record.name || 'Alguien'} (${record.email}) quiere acceder a CLAR.`,
-          record.message ? `\nMensaje:\n${record.message}` : '',
-          `\nRevísala en «Administración» → «Solicitudes»: ${appUrl}`
-        ].join('\n')
+        text: `Hay una solicitud de acceso nueva. Revísala en «Administración» → «Solicitudes»: ${appUrl}`
       }
     : {
         subject: 'Ya tienes acceso a CLAR',
