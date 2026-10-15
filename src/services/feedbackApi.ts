@@ -28,8 +28,6 @@ export interface FeedbackReply {
 // Id de una respuesta nueva: uno por formulario, el mismo en sus reintentos
 export const newReplyId = () => crypto.randomUUID().replace(/-/g, '');
 
-export const REPLY_MAX_LENGTH = 5000;
-
 // Al responder: la respuesta enviada y guardada, o por qué no se pudo
 export type ReplyResult = { reply: FeedbackReply } | { error: string };
 
