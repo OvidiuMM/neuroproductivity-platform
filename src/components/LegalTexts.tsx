@@ -113,8 +113,11 @@ export const PrivacyPolicy: React.FC = () => (
       <List>
         <li>Tú, desde cualquier dispositivo con tu cuenta.</li>
         <li>
-          La administración de CLAR (su titular) ve solo las solicitudes de acceso y los mensajes de «Escríbenos». Nunca
-          ve tus tareas, metas, evaluaciones, reuniones ni correos: las reglas de la base de datos no lo permiten.
+          Desde la app, la administración de CLAR (su titular) ve solo las solicitudes de acceso y los mensajes de
+          «Escríbenos»: las reglas de la base de datos no le dejan leer tus tareas, metas, evaluaciones, reuniones ni
+          correos. Como responsable del proyecto en Google Cloud, el titular podría acceder técnicamente a todos los
+          datos desde la consola; solo lo hará cuando sea imprescindible para mantener el servicio, resolver una
+          incidencia o atender una petición tuya.
         </li>
         <li>
           Encargados del tratamiento, que tratan los datos solo para prestar su servicio: Google, con Firebase
@@ -144,8 +147,10 @@ export const PrivacyPolicy: React.FC = () => (
         <li>Tu cuenta y lo que escribes: hasta que lo borres o elimines la cuenta.</li>
         <li>Solicitud de acceso y mensajes de «Escríbenos»: hasta que elimines la cuenta.</li>
         <li>
-          Horas de envío de los mensajes: una hora. Si eliminas la cuenta justo después de escribir, se conservan, sin
-          ningún otro dato tuyo, para que el límite se siga aplicando.
+          Horas de envío de los mensajes: cuentan una hora para el límite de cinco, pero no se borran solas. Se
+          descartan cuando envías otro mensaje pasada esa hora; si no envías ninguno más, o eliminas la cuenta justo
+          después de escribir, se conservan, ligadas solo al identificador interno de tu cuenta y sin ningún otro dato
+          tuyo, para que el límite se siga aplicando.
         </li>
         <li>Email de una cuenta bloqueada: mientras dure el bloqueo, también si la cuenta se elimina.</li>
         <li>
