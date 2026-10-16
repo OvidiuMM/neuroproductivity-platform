@@ -111,6 +111,8 @@ test('a blocked account sees it, and its email stays blocked even with a new acc
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ idToken })
   });
+  // La administración deja de verla antes de que llegue la nueva: con el mismo email no se distinguirían
+  await expect(blocked).toHaveCount(0, SERVER_CALL);
   const second = await createVerifiedAccount(undefined, email);
   await expect.poll(() => sync(second.idToken), SERVER_CALL).toBe('blocked');
 
