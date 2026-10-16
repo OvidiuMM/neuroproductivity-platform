@@ -82,6 +82,16 @@ test('a project of a goal holds its tasks, shows its progress as a battery and w
   await page.getByRole('button', { name: 'Todos los proyectos' }).click();
   await expect(page.getByRole('list', { name: 'Proyectos activos' })).toContainText('Fuera de plazo');
 
+  // Inicio lo muestra entre sus proyectos y lo recomienda
+  await page.getByRole('button', { name: 'Inicio', exact: true }).click();
+  const homeProjects = page.getByRole('region', { name: 'Proyectos' });
+  await expect(homeProjects).toContainText(projectTitle);
+  await expect(homeProjects).toContainText('1 fuera de plazo');
+  await expect(page.getByRole('region', { name: 'Recomendaciones' })).toContainText(
+    `El proyecto «${projectTitle}» va fuera de plazo`
+  );
+  await openSection(page, 'Proyectos');
+
   // Al eliminar el proyecto, sus tareas siguen en la meta
   await page.getByRole('button', { name: `Abrir el proyecto «${projectTitle}»` }).click();
   await page.getByRole('button', { name: 'Editar', exact: true }).click();
