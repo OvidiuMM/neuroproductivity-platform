@@ -38,7 +38,7 @@ export interface TaskItem {
   createdAt: string; // ISO / UTC timestamp
   updatedAt: string;
   observations: TaskObservation[];
-  isSomeday: boolean; // "Quizá" / "Algún día"
+  isSomeday: boolean; // «Algún día»: fuera del Top 10
   wheelCategory?: WheelCategory;
   wheelCategoryConfidence?: number;
   linkedBy?: 'MANUAL' | 'AUTO_TFIDF';

@@ -24,7 +24,7 @@ export default defineConfig({
       dependencies: ['chromium']
     }
   ],
-  // npm run dev arranca los emuladores de Auth y Firestore (proyecto demo) y la app conectada a ellos
+  // npm run dev arranca los emuladores de Auth, Firestore y Functions (proyecto demo) y la app conectada a ellos
   webServer: {
     command: 'npm run dev',
     url: 'http://127.0.0.1:3000',

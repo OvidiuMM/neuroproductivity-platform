@@ -147,7 +147,7 @@ jobs:
             "$ANDROID_PACKAGE_NAME" "$ANDROID_SHA256_FINGERPRINT" "$ADMIN_EMAIL" "$SMTP_USER" "${SMTP_HOST:-smtp.ionos.es}" "$APP_URL" \
             > functions/.env
 
-      # Los predeploy de firebase.json compilan la SPA y la función antes de subirlas.
+      # Los predeploy de firebase.json compilan la SPA y las Cloud Functions antes de subirlas.
       # firebase-tools sale de devDependencies (versión fijada en package.json).
       - name: Deploy Hosting, Cloud Functions and Firestore rules
         env:

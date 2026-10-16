@@ -15,7 +15,7 @@ import { TaskDates } from './TaskDates';
 import { TaskActionsMenu } from './TaskActionsMenu';
 import { useAreas } from '../hooks/useAreas';
 
-// top: Top 10 (elevada, con descripción) · peripheral: posición 11 en adelante (plana) · someday: «Quizá»
+// top: Top 10 (elevada, con descripción) · peripheral: posición 11 en adelante (plana) · someday: «Algún día»
 type Variant = 'top' | 'peripheral' | 'someday';
 
 interface TaskCardProps {

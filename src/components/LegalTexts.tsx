@@ -208,8 +208,9 @@ export const PrivacyPolicy: React.FC = () => (
     <Section id="privacy-security" title="Seguridad">
       <p>
         Las conexiones van cifradas (HTTPS) y Google cifra los datos guardados. Las reglas de la base de datos solo
-        dejan a cada cuenta acceder a lo suyo, y la app limita lo que el navegador puede cargar. Si hubiera una brecha
-        de seguridad que afecte a tus datos, se notificará a la AEPD y, si supone un riesgo alto para ti, también a ti.
+        dejan a cada cuenta acceder a lo suyo, y la app le pide al navegador que no le dé acceso a la cámara, el
+        micrófono ni la ubicación, que no usa. Si hubiera una brecha de seguridad que afecte a tus datos, se notificará
+        a la AEPD y, si supone un riesgo alto para ti, también a ti.
       </p>
     </Section>
 
