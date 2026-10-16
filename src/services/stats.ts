@@ -148,12 +148,15 @@ export const recommendationsFor = (
 ): Recommendation[] => {
   const list: Recommendation[] = [];
   // El proyecto que termina antes de los que ya van fuera de plazo
-  const [late] = sortProjects(projects).filter((p) => projectDeadline(p, allTasks, now).state === 'overdue');
+  const late = sortProjects(projects)
+    .map((project) => ({ project, deadline: projectDeadline(project, allTasks, now) }))
+    .find(({ deadline }) => deadline.state === 'overdue');
   if (late) {
-    const open = projectDeadline(late, allTasks, now).open;
+    const { project, deadline } = late;
+    const open = deadline.open;
     list.push({
       id: 'project-overdue',
-      text: `El proyecto «${late.title}» va fuera de plazo: terminaba el ${formatDay(late.endDate)} y le ${open === 1 ? 'queda 1 tarea' : `quedan ${open} tareas`}. Cambia la fecha de fin o reparte sus tareas.`,
+      text: `El proyecto «${project.title}» va fuera de plazo: terminaba el ${formatDay(project.endDate)} y le ${open === 1 ? 'queda 1 tarea' : `quedan ${open} tareas`}. Cambia la fecha de fin o reparte sus tareas.`,
       action: { label: 'Ver los proyectos', tab: 'projects' }
     });
   }
