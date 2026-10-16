@@ -23,7 +23,7 @@ test('Inicio shows the focus block, task statistics and recommendations for the 
   const done = page.getByRole('region', { name: 'Tareas hechas' });
   await expect(done.getByText('Hoy').locator('..')).toContainText('1');
   await expect(page.getByRole('region', { name: 'A tiempo o con retraso' })).toContainText('100 %');
-  await expect(page.getByRole('region', { name: 'Constancia y pendientes' })).toContainText('1 vencidas');
+  await expect(page.getByRole('region', { name: 'Constancia y pendientes' })).toContainText('1 vencida ·');
   await expect(page.getByRole('region', { name: 'Velocidad' })).toBeVisible();
   await expect(
     page.getByRole('img', { name: /Tareas hechas por día en los últimos 14 días: 1 en total/ })
