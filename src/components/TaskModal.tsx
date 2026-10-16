@@ -207,6 +207,8 @@ export const TaskModal: React.FC<TaskModalProps> = ({
   const [createdGoals, setCreatedGoals] = useState<Goal[]>([]);
   const goalSelectRef = useRef<HTMLSelectElement>(null);
   const newGoalButtonRef = useRef<HTMLButtonElement>(null);
+  // La última meta creada aquí: se confirma junto al campo (con la ventana abierta, los avisos de la app esperan)
+  const [createdGoalId, setCreatedGoalId] = useState<string | null>(null);
   const [dependsOn, setDependsOn] = useState('');
   const [description, setDescription] = useState('');
   // Identificador de la última inferencia NLP: invalida resultados que llegan tras cerrar o reiniciar el formulario
@@ -286,6 +288,7 @@ export const TaskModal: React.FC<TaskModalProps> = ({
     setRepeatMonthlyMode(form.repeatMonthlyMode);
     setNewGoalOpen(false);
     setCreatedGoals([]);
+    setCreatedGoalId(null);
     if (editingTask) {
       setShowMore(
         Boolean(
@@ -434,6 +437,7 @@ export const TaskModal: React.FC<TaskModalProps> = ({
     };
     onCreateGoal(created);
     setCreatedGoals((list) => [...list, created]);
+    setCreatedGoalId(created.id);
     linkGoal(created);
     setNewGoalOpen(false);
     requestAnimationFrame(() => goalSelectRef.current?.focus());
@@ -445,6 +449,8 @@ export const TaskModal: React.FC<TaskModalProps> = ({
   const projectOptions = projects.filter((p) => p.status === 'ACTIVE' || p.id === projectId);
   const chooseProject = (id: string) => {
     setProjectId(id);
+    // En un proyecto la meta es la suya: lo que se escribía para una meta nueva ya no aplica
+    setNewGoalOpen(false);
     const chosen = projects.find((p) => p.id === id);
     if (chosen) chooseGoal(chosen.goalId);
   };
@@ -857,6 +863,12 @@ export const TaskModal: React.FC<TaskModalProps> = ({
                   Nueva meta
                 </button>
               ))}
+            {/* Siempre presente, para que el lector de pantalla anuncie la confirmación */}
+            <p role="status" className="text-[11px] font-medium text-emerald-700">
+              {createdGoalId && goal?.id === createdGoalId
+                ? `Meta «${goal.title}» creada y vinculada a esta tarea.`
+                : ''}
+            </p>
           </div>
 
           {/* FECHA LÍMITE: a la vista; el inicio y la repetición están en «Más opciones» */}

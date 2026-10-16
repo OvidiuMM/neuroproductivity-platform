@@ -211,6 +211,9 @@ test('a goal can be created from the task form, and the task is linked to it', a
   const goalSelect = form.getByRole('combobox', { name: /^Meta/ });
   await expect(goalSelect).toBeFocused();
   await expect(goalSelect.locator('option:checked')).toHaveText(firstGoal);
+  await expect(form.getByRole('status').filter({ hasText: 'creada y vinculada' })).toHaveText(
+    `Meta «${firstGoal}» creada y vinculada a esta tarea.`
+  );
   await expect(form).toContainText('Área de la Rueda: Salud (la de la meta).');
   await fillAndSaveTask(page, { title: taskTitle });
 
@@ -222,9 +225,12 @@ test('a goal can be created from the task form, and the task is linked to it', a
   await expect(form.getByRole('button', { name: 'Nueva meta', exact: true })).toBeFocused();
   await form.getByRole('button', { name: 'Nueva meta', exact: true }).click();
   await goalName.fill(secondGoal);
-  await newGoal.getByLabel('Área de la nueva meta').selectOption({ label: 'Ocio' });
-  await newGoal.getByRole('button', { name: 'Crear la meta' }).click();
+  const goalArea = newGoal.getByLabel('Área de la nueva meta');
+  await goalArea.selectOption({ label: 'Ocio' });
+  // Enter en el área también crea la meta, sin guardar la tarea
+  await goalArea.press('Enter');
   await expect(goalSelect.locator('option:checked')).toHaveText(secondGoal);
+  await expect(form).toBeVisible();
   // Descartar la tarea no deshace la meta
   await page.keyboard.press('Escape');
   await page

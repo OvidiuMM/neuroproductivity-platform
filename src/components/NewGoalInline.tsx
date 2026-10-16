@@ -3,7 +3,7 @@ import { GOAL_TITLE_MAX, validateGoal } from '../services/goals';
 import { useAreas } from '../hooks/useAreas';
 
 // Crear una meta sin salir del formulario de la tarea: nombre y área (lo demás se completa luego en «Metas»). Enter
-// la crea y Escape cierra solo esta parte, no el formulario.
+// en el nombre o en el área la crea (no guarda la tarea) y Escape cierra solo esta parte, no el formulario.
 export const NewGoalInline: React.FC<{
   defaultArea?: string;
   onCreate: (goal: { title: string; area: string }) => void;
@@ -11,32 +11,37 @@ export const NewGoalInline: React.FC<{
 }> = ({ defaultArea, onCreate, onCancel }) => {
   const { visible, selectable } = useAreas();
   const [title, setTitle] = useState('');
-  const [area, setArea] = useState(defaultArea || visible[0]?.id || '');
+  // El área de la tarea, si está a la vista (una meta nueva no va a un área oculta); si no, la primera
+  const [area, setArea] = useState(visible.some((a) => a.id === defaultArea) ? defaultArea! : (visible[0]?.id ?? ''));
   const [error, setError] = useState<string | null>(null);
   const titleRef = useRef<HTMLInputElement>(null);
   const groupRef = useRef<HTMLDivElement>(null);
-  const cancelRef = useRef(onCancel);
-  useEffect(() => {
-    cancelRef.current = onCancel;
-  });
-  useEffect(() => {
-    titleRef.current?.focus();
-    // Escape desde cualquier control de aquí cierra solo esta parte: la ventana ignora las teclas ya gestionadas
-    const group = groupRef.current;
-    const onKeyDown = (e: KeyboardEvent) => {
-      if (e.key !== 'Escape') return;
-      e.preventDefault();
-      cancelRef.current();
-    };
-    group?.addEventListener('keydown', onKeyDown);
-    return () => group?.removeEventListener('keydown', onKeyDown);
-  }, []);
 
   const create = () => {
     const problem = validateGoal({ title, area });
     if (problem) return setError(problem);
     onCreate({ title: title.trim(), area });
   };
+  const keys = useRef({ create, cancel: onCancel });
+  useEffect(() => {
+    keys.current = { create, cancel: onCancel };
+  });
+  useEffect(() => {
+    titleRef.current?.focus();
+    // Las teclas ya gestionadas aquí no llegan a la ventana ni al formulario de la tarea
+    const group = groupRef.current;
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        e.preventDefault();
+        keys.current.cancel();
+      } else if (e.key === 'Enter' && (e.target instanceof HTMLInputElement || e.target instanceof HTMLSelectElement)) {
+        e.preventDefault();
+        keys.current.create();
+      }
+    };
+    group?.addEventListener('keydown', onKeyDown);
+    return () => group?.removeEventListener('keydown', onKeyDown);
+  }, []);
 
   return (
     <div
@@ -56,13 +61,6 @@ export const NewGoalInline: React.FC<{
           onChange={(e) => {
             setTitle(e.target.value);
             setError(null);
-          }}
-          onKeyDown={(e) => {
-            // Enter crea la meta, no envía el formulario de la tarea
-            if (e.key === 'Enter') {
-              e.preventDefault();
-              create();
-            }
           }}
           maxLength={GOAL_TITLE_MAX}
           aria-label="Nombre de la nueva meta"
