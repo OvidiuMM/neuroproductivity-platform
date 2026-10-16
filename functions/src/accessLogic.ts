@@ -86,6 +86,13 @@ export const canDecide = (from: AccessStatus, to: DecisionStatus) =>
 // - email en la lista negra: se bloquea la cuenta (si aún no lo está);
 // - aprobación libre: una cuenta sin solicitud o pendiente, con el email confirmado, entra sola. Las rechazadas,
 //   retiradas o bloqueadas siguen así: son decisiones de la administración.
+// Inicio de sesión reciente (auth_time del token, en segundos): lo pide eliminar la cuenta, como Firebase en el navegador
+export const RECENT_SIGN_IN_SECONDS = 5 * 60;
+export const isRecentSignIn = (authTime: unknown, now: Date) =>
+  typeof authTime === 'number' &&
+  authTime <= now.getTime() / 1000 + 60 &&
+  now.getTime() / 1000 - authTime <= RECENT_SIGN_IN_SECONDS;
+
 export type SyncAction = 'keep' | 'approve' | 'block';
 export const decideOnSync = ({
   current,
