@@ -53,6 +53,8 @@ Al volver a evaluar la Rueda se ve el efecto de las acciones, y las áreas cambi
 
 ## 🧠 Fundamentos y secciones
 
+La lista completa y numerada de lo que hace la app, con sus requisitos no funcionales, está en [docs/requisitos.md](docs/requisitos.md).
+
 ### 1. Rueda de la Vida
 
 - **Áreas de cada cuenta:** se empieza con 7 (_Salud, Carrera Profesional, Finanzas, Familia, Ocio, Relaciones, Espiritualidad_), que se pueden renombrar, ocultar y ampliar con áreas propias desde «Editar áreas» (entre 3 y 12 a la vista). Las 7 de partida conservan su nombre original como identificador y las nuevas tienen el suyo (`area-…`), así nada de lo guardado cambia; la lista va en el perfil (`wheelAreas`). Un área oculta sale de la Rueda, de las sugerencias y de las listas para elegir, pero conserva sus evaluaciones, sus metas (que siguen en «Metas») y sus tareas. Los nombres se muestran en toda la app y en las descargas; las sugerencias de área usan, para las nuevas, las palabras de su nombre (`src/services/wheel.ts`, `useAreas`).
@@ -362,6 +364,7 @@ El repositorio utiliza `package-lock.json` (en la raíz, en `functions/` y en `t
 ## 📂 Estructura del Proyecto
 
 ```text
+├── docs/requisitos.md           # Requisitos funcionales y no funcionales de la versión actual
 ├── index.html                   # Entrada HTML (lang="es")
 ├── LICENSE                      # Licencia MIT
 ├── package.json                 # Dependencias y scripts
