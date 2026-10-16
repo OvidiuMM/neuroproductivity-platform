@@ -1,4 +1,4 @@
-// Motor NLP de Enlace Cognitivo (Módulo 3: TF-IDF y Similitud de Coseno)
+// Motor de sugerencias de área (TF-IDF y similitud del coseno), en el navegador
 // Analiza el título y descripción de la tarea para sugerir automáticamente el área de la Rueda de la Vida
 
 import type { WheelArea, WheelCategory } from '../types';
@@ -413,7 +413,7 @@ export interface NLPSuggestionResult {
   confidenceScore: number;
   tokensFound: string[];
   allScores: Record<WheelCategory, number>;
-  isAboveThreshold: boolean; // Umbral empírico >= 0.65 (o adaptado si coincide léxicamente)
+  isAboveThreshold: boolean; // similitud de al menos 0,12 o alguna palabra clave en común
 }
 
 // Áreas candidatas de una cuenta: solo las visibles. Las de partida usan su corpus (más las palabras de su nombre si se
@@ -461,7 +461,7 @@ export function inferWheelCategory(
     }
   }
 
-  // Umbral empírico: 0.65 normalizado o >= 0.15 en similitud de coseno sobre textos cortos con palabras clave coincidentes
+  // Umbral: similitud del coseno de al menos 0,12 o alguna palabra clave en común (los textos son cortos)
   const normalizedConfidence = Math.min(1, Math.round(maxScore * 180) / 100);
   const isAboveThreshold = maxScore >= 0.12 || matchedTokens.length >= 1;
 

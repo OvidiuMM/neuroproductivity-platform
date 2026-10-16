@@ -1,4 +1,4 @@
-// Textos legales: páginas públicas que se ven sin iniciar sesión (main.tsx elige la página por la ruta)
+// Textos legales: páginas públicas que se ven sin iniciar sesión (Root.tsx elige la página por la ruta)
 
 export type LegalPageId = 'privacy' | 'terms' | 'notice';
 

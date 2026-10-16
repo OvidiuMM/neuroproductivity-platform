@@ -1,4 +1,4 @@
-// Analizador Sintáctico de la Tarea (Módulo 4)
+// Analizador de la acción siguiente: comprueba que la tarea empieza por un verbo de acción física
 // Mitiga la postergación sistemática originada por la ambigüedad en la corteza prefrontal
 
 const PHYSICAL_ACTION_VERBS = [
