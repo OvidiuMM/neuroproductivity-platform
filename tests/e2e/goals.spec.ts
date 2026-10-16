@@ -183,3 +183,58 @@ test('an impossible target date does not let the goal be saved', async ({ page }
   await expect(editor).toBeHidden();
   await expect(page.getByRole('list', { name: 'Metas de Ocio' })).toContainText('Para el 28 feb 2027');
 });
+
+test('a goal can be created from the task form, and the task is linked to it', async ({ page }) => {
+  test.slow(); // Dos formularios de tarea y «Metas»
+  await page.goto('/');
+  await signInWithGoogle(page);
+  const stamp = Date.now().toString(36);
+  const firstGoal = `Correr una media maratón ${stamp}`;
+  const secondGoal = `Aprender a nadar ${stamp}`;
+  const taskTitle = `Salir a correr cinco kilómetros ${stamp}`;
+
+  // Sin metas: el formulario ofrece crear una ahí mismo
+  await page.getByRole('button', { name: 'Nueva tarea', exact: true }).click();
+  const form = page.getByRole('dialog');
+  await expect(form).toContainText('Aún no tienes metas.');
+  await form.getByRole('button', { name: 'Nueva meta', exact: true }).click();
+  const newGoal = form.getByRole('group', { name: 'Nueva meta' });
+  const goalName = newGoal.getByLabel('Nombre de la nueva meta');
+  await expect(goalName).toBeFocused();
+  await newGoal.getByRole('button', { name: 'Crear la meta' }).click();
+  await expect(newGoal.getByRole('alert')).toHaveText('Ponle un nombre a la meta.');
+  await goalName.fill(firstGoal);
+  await newGoal.getByLabel('Área de la nueva meta').selectOption({ label: 'Salud' });
+  // Enter crea la meta, sin guardar la tarea; la meta queda elegida
+  await goalName.press('Enter');
+  await expect(newGoal).toBeHidden();
+  const goalSelect = form.getByRole('combobox', { name: /^Meta/ });
+  await expect(goalSelect).toBeFocused();
+  await expect(goalSelect.locator('option:checked')).toHaveText(firstGoal);
+  await expect(form).toContainText('Área de la Rueda: Salud (la de la meta).');
+  await fillAndSaveTask(page, { title: taskTitle });
+
+  // Con metas también se puede crear otra. Escape cierra solo esa parte, no el formulario
+  await page.getByRole('button', { name: 'Nueva tarea', exact: true }).click();
+  await form.getByRole('button', { name: 'Nueva meta', exact: true }).click();
+  await page.keyboard.press('Escape');
+  await expect(newGoal).toBeHidden();
+  await expect(form.getByRole('button', { name: 'Nueva meta', exact: true })).toBeFocused();
+  await form.getByRole('button', { name: 'Nueva meta', exact: true }).click();
+  await goalName.fill(secondGoal);
+  await newGoal.getByLabel('Área de la nueva meta').selectOption({ label: 'Ocio' });
+  await newGoal.getByRole('button', { name: 'Crear la meta' }).click();
+  await expect(goalSelect.locator('option:checked')).toHaveText(secondGoal);
+  // Descartar la tarea no deshace la meta
+  await page.keyboard.press('Escape');
+  await page
+    .getByRole('alertdialog', { name: '¿Descartar los cambios?' })
+    .getByRole('button', { name: 'Descartar' })
+    .click();
+  await expect(form).toBeHidden();
+
+  await openSection(page, 'Metas');
+  const health = page.getByRole('region', { name: 'Salud', exact: true });
+  await expect(health.getByRole('list', { name: `Tareas por hacer de «${firstGoal}»` })).toContainText(taskTitle);
+  await expect(page.getByRole('list', { name: 'Metas de Ocio' })).toContainText(secondGoal);
+});
