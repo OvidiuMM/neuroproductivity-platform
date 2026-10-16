@@ -890,6 +890,7 @@ export default function App({ user, services, isAdmin = false }: AppProps) {
               <HomeView
                 tasks={tasks}
                 goals={goals}
+                projects={projects}
                 activeContext={activeContext}
                 accountName={profile.name}
                 top10Count={top10Count}

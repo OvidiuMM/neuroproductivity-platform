@@ -30,8 +30,8 @@ const SCREENS: { tab: AppTab; title: string; icon: React.ReactNode; points: stri
     icon: <LayoutDashboard className="h-5 w-5 text-indigo-600" />,
     points: [
       'El foco de la lista activa (Profesional o Personal) y sus indicadores: Top 10, Rueda de la Vida y reuniones.',
-      'Tus estadísticas: tareas hechas por día, semana y mes, cuántas terminas antes o después del plazo, tu velocidad, tu racha y tus pendientes.',
-      'Tus metas activas con su progreso; «Gestionar las metas» te lleva a «Metas».',
+      'Tus estadísticas: tareas hechas por día, semana y mes (y las canceladas, que no cuentan como hechas), cuántas terminas antes o después del plazo, tu velocidad, tu racha y tus pendientes, con las vencidas y las bloqueadas.',
+      'Tus metas activas con su progreso, y tus proyectos activos con su batería y su plazo.',
       'Recomendaciones según tus datos, por ejemplo empezar por la tarea vencida más antigua.'
     ]
   },
