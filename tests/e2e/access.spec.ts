@@ -4,6 +4,7 @@ import {
   callFunction,
   createVerifiedAccount,
   expectNoHorizontalOverflow,
+  readDocument,
   signInWithGoogle,
   uniqueEmail
 } from './helpers';
@@ -81,6 +82,33 @@ test('a rejected account sees it and cannot ask again right away', async ({ brow
   await userPage.getByRole('button', { name: 'Volver a solicitar acceso' }).click();
   await expect(userPage.getByRole('alert')).toHaveText('Podrás volver a pedir acceso más adelante.');
   await expect(entryIn(adminPage, /^Rechazadas o retiradas/, email)).toContainText('Rechazada');
+});
+
+test('forgetting the access deletes the account, so a rejected account cannot clear its decision and stay', async ({
+  browser
+}) => {
+  const adminPage = await openPage(browser);
+  const password = 'clave-segura-1';
+  const { email, uid, idToken } = await createVerifiedAccount(password);
+  expect((await callFunction('requestAccess', idToken, { message: '' })).status).toBe(200);
+  await openAccessTab(adminPage);
+  await entryIn(adminPage, /^Pendientes/, email)
+    .getByRole('button', { name: /^Rechazar/ })
+    .click();
+  await expect(entryIn(adminPage, /^Rechazadas o retiradas/, email)).toContainText('Rechazada');
+
+  // Sin la cuenta no queda nada que vuelva a entrar o a pedir acceso: la contraseña ya no sirve
+  expect((await callFunction('forgetAccess', idToken, {})).status).toBe(200);
+  expect(await readDocument(`access/${uid}`)).toBeNull();
+  const signIn = await fetch(
+    'http://127.0.0.1:9399/identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key=demo-api-key',
+    {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, password, returnSecureToken: true })
+    }
+  );
+  expect(signIn.ok).toBe(false);
 });
 
 test('a blocked account sees it, and its email stays blocked even with a new account', async ({ browser }) => {
