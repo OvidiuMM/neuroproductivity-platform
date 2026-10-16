@@ -84,7 +84,7 @@ const SCREENS: { tab: AppTab; title: string; icon: React.ReactNode; points: stri
       'Meta: vincula la tarea a una de tus metas y tomará su área (si el título se parece a una meta, CLAR te propone vincularla). Sin meta, el motor de sugerencias te propone el área de la Rueda con la que se relaciona. El campo aparece cuando ya tienes metas.',
       'Tareas que dependen de otras: en «Más opciones», «Empieza después de» elige la tarea a la que espera. Mientras esa no esté hecha o cancelada, esta sale con un candado («Bloqueada: espera a…»), no entra en el Top 10 y no se puede marcar como hecha. Al terminar la otra se desbloquea sola. Varias tareas pueden esperar a la misma y avanzar en paralelo.',
       'Cada tarea tiene un estado: Pendiente, En progreso, Bloqueada, Hecha o Cancelada. Hecha y Cancelada la archivan; una cancelada no cuenta como hecha en las estadísticas ni en el avance de las metas. Desde «Archivadas» la reactivas cambiando su estado.',
-      'Si cierras el formulario de una tarea o de una meta con cambios sin guardar, CLAR te pregunta antes de descartarlos; si cierras la pestaña, te avisa el navegador.',
+      'Si cierras con cambios sin guardar el formulario de una tarea, una meta o un proyecto, o el editor de áreas, CLAR te pregunta antes de descartarlos; si cierras la pestaña, te avisa el navegador.',
       'Puedes darle una fecha límite o un intervalo, con hora opcional: el título se pone violeta cuando falta menos de una semana y rojo cuando ha vencido. Las fechas se escriben como dd/mm/aaaa o se eligen en el calendario, con la semana empezando en lunes.',
       'Pulsa el título de una tarea, o su lápiz, para editarla. El menú «⋯» tiene el estado, el calendario, la descarga y eliminar.',
       'Con fecha límite, «Añadir al calendario», en el menú «⋯» de la tarea, la lleva a Google Calendar, Outlook o cualquier calendario (archivo .ics).',
@@ -251,7 +251,7 @@ export const HowItWorks: React.FC<HowItWorksProps> = ({ onNavigate, onStartTour,
         </ul>
       </div>
 
-      {/* DATOS Y PERFILES */}
+      {/* TUS DATOS */}
       <div className="space-y-2 rounded-2xl border border-amber-200 bg-amber-50/70 p-6">
         <h3 className="flex items-center gap-1.5 text-xs font-bold tracking-wider text-amber-900 uppercase">
           <Database className="h-4 w-4" />

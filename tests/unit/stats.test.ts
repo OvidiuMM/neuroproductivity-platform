@@ -102,7 +102,7 @@ describe('computeStats', () => {
     assert.equal(computeStats([done('c', 11)], now).streak, 0);
   });
 
-  it('counts open, overdue and due-this-week tasks, leaving «Quizá» out', () => {
+  it('counts open, overdue and due-this-week tasks, leaving «Algún día» out', () => {
     const stats = computeStats(
       [
         task('overdue', { dueDate: '2026-10-13' }),
