@@ -92,7 +92,7 @@ export const TaskList: React.FC<TaskListProps> = ({
   // Filtrado por contexto estricto (Segregación Inquebrantable); las tareas hechas están archivadas
   const contextTasks = tasks.filter((t) => t.listContext === activeContext && !isArchived(t));
 
-  // Separación entre tareas activas y el sumidero cognitivo "Quizá" / "Algún día"
+  // Las activas y las de «Algún día», que no entran en el Top 10
   const activeTasks = contextTasks.filter((t) => !t.isSomeday);
   const somedayTasks = contextTasks.filter((t) => t.isSomeday);
 
@@ -241,7 +241,7 @@ export const TaskList: React.FC<TaskListProps> = ({
     <div className="space-y-6">
       {/* Barra de control y pestañas del Gestor Dual */}
       <div className="flex flex-col justify-between gap-4 rounded-2xl border border-slate-200 bg-white p-5 shadow-xs lg:flex-row lg:items-center">
-        {/* Pestañas: Top 10 Activo vs Opciones Futuras, y acceso al archivo */}
+        {/* Pestañas: Top 10 y «Algún día», y acceso al archivo */}
         <div className="flex flex-wrap items-center gap-2">
           <button
             onClick={() => setViewMode('active')}
@@ -502,7 +502,7 @@ export const TaskList: React.FC<TaskListProps> = ({
         </div>
       )}
 
-      {/* VISTA 2: SUMIDERO COGNITIVO "QUIZÁ" / "ALGÚN DÍA" (HU-03) */}
+      {/* VISTA 2: «ALGÚN DÍA» */}
       {viewMode === 'someday' && (
         <div className="space-y-4">
           <div className="space-y-1 rounded-2xl border border-indigo-200 bg-indigo-50/60 p-4 text-xs text-indigo-950">

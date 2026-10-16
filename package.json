@@ -1,5 +1,6 @@
 {
-  "name": "react-example",
+  "name": "clar",
+  "description": "CLAR: decide qué hacer ahora, con claridad. Rueda de la Vida, metas, proyectos y tareas con Top 10, agenda y tiempo protegido.",
   "private": true,
   "version": "0.9.4",
   "type": "module",
@@ -24,13 +25,10 @@
     "prepare": "simple-git-hooks"
   },
   "dependencies": {
-    "@google/genai": "^2.4.0",
     "@tailwindcss/vite": "^4.3.3",
     "@vitejs/plugin-react": "^6.1.1",
-    "dotenv": "^17.2.3",
     "firebase": "^13.0.0",
     "lucide-react": "^0.546.0",
-    "motion": "^12.23.24",
     "react": "^19.0.1",
     "react-dom": "^19.0.1",
     "vite": "^8.3.0"
@@ -42,7 +40,6 @@
     "@types/node": "^22.14.0",
     "@types/react": "^19.3.0",
     "@types/react-dom": "^19.3.0",
-    "autoprefixer": "^10.4.21",
     "esbuild": "^0.28.2",
     "firebase-tools": "15.33.0",
     "lint-staged": "16.4.0",

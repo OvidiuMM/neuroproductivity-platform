@@ -75,7 +75,7 @@ interface TaskModalProps {
   onClose: () => void;
   onSaveTask: (task: TaskFormData) => void;
   initialContext: ListContext;
-  // Al abrir desde "Opciones Futuras" la tarea nueva se marca como "Quizá"
+  // Al abrir desde «Algún día», la tarea nueva va a «Algún día»
   initialSomeday?: boolean;
   // Al abrir desde una meta («Añadir tarea»), la tarea nueva ya está vinculada a ella
   initialGoalId?: string;
@@ -223,7 +223,7 @@ export const TaskModal: React.FC<TaskModalProps> = ({
 
   // Estados de validación en tiempo real
   const [touched, setTouched] = useState<{ [key: string]: boolean }>({});
-  // Analizador Sintáctico de Acción Inmediata en tiempo real (Módulo 4)
+  // Analizador de la acción siguiente, en tiempo real
   const syntaxResult = useMemo<SyntaxAnalysisResult>(
     () =>
       title.trim()
@@ -234,7 +234,7 @@ export const TaskModal: React.FC<TaskModalProps> = ({
   const [nlpResult, setNlpResult] = useState<NLPSuggestionResult | null>(null);
   const [nlpLoading, setNlpLoading] = useState(false);
   const [overrideSyntaxWarning, setOverrideSyntaxWarning] = useState(false);
-  // «Más opciones» empieza abierto si la tarea ya usa alguno de sus campos (o si es una tarea «Quizá» nueva)
+  // «Más opciones» empieza abierto si la tarea ya usa alguno de sus campos (o si es una tarea nueva de «Algún día»)
   const [showMore, setShowMore] = useState(false);
 
   // Formulario tal como se abre (vacío o con la tarea): con él se sabe si hay cambios sin guardar
@@ -330,12 +330,12 @@ export const TaskModal: React.FC<TaskModalProps> = ({
     isOpen && (JSON.stringify(currentForm) !== JSON.stringify(initialForm) || Object.values(dateDrafts).some(Boolean));
   const guard = useDiscardGuard(isDirty, onClose);
 
-  // Disparador del Motor NLP TF-IDF (Módulo 3) en evento onBlur o cuando hay texto suficiente
+  // Sugerencia de área (TF-IDF, en el navegador) al salir de la descripción, si hay texto
   const triggerNLPInference = () => {
     if (!description.trim() && !title.trim()) return;
     setNlpLoading(true);
     const request = ++nlpRequest.current;
-    // Simulación del microservicio asíncrono (< 350ms según especificación)
+    // Un instante después, para no recalcular mientras se sigue escribiendo
     setTimeout(() => {
       // Si entretanto se guardó o se reinició el formulario, el resultado ya no corresponde a esta tarea
       if (request !== nlpRequest.current) return;
@@ -412,7 +412,7 @@ export const TaskModal: React.FC<TaskModalProps> = ({
     if (chosen) chooseGoal(chosen.goalId);
   };
 
-  // Reglas de Validación de Entrada (Estricto cumplimiento de especificaciones)
+  // Validación del formulario
   const isTitleEmpty = !title.trim();
   const isTitleTooLong = title.length > 100;
   const isSyntaxInvalid = !syntaxResult.isValid && !overrideSyntaxWarning;
@@ -570,7 +570,7 @@ export const TaskModal: React.FC<TaskModalProps> = ({
         </div>
 
         <form onSubmit={handleSubmit} inert={guard.confirming} className="space-y-5 p-6">
-          {/* CAMPO 1: Contexto de Lista (Segregación Estricta Módulo 2) */}
+          {/* CAMPO 1: lista (Profesional o Personal) */}
           <div>
             <p
               id="task-context-label"
@@ -606,7 +606,7 @@ export const TaskModal: React.FC<TaskModalProps> = ({
             </div>
           </div>
 
-          {/* CAMPO 2: Nombre de la Tarea + Analizador Sintáctico de Acción Inmediata (Módulo 4) */}
+          {/* CAMPO 2: nombre de la tarea, con el analizador de la acción siguiente */}
           <div>
             <div className="mb-1.5 flex items-center justify-between">
               <label htmlFor="task-title" className="text-xs font-bold tracking-wider text-slate-600 uppercase">
@@ -667,7 +667,7 @@ export const TaskModal: React.FC<TaskModalProps> = ({
               </p>
             )}
 
-            {/* ASISTENTE CONTEXTUAL DEL ANALIZADOR SINTÁCTICO (Módulo 4: Antídoto a Proyectos Amorfos) */}
+            {/* ASISTENTE DEL ANALIZADOR: convierte un tema abstracto en una acción concreta */}
             {!syntaxResult.isValid && title.trim().length > 0 && !overrideSyntaxWarning && (
               <div className="mt-2.5 rounded-xl border border-amber-200 bg-amber-50 p-3 text-xs text-amber-900">
                 <div className="flex items-start gap-2">
@@ -917,7 +917,7 @@ export const TaskModal: React.FC<TaskModalProps> = ({
               />
             </button>
             <div id="task-more-options" hidden={!showMore} className="space-y-5 border-t border-slate-100 p-3.5">
-              {/* CAMPO 3: Descripción Detallada + Motor NLP TF-IDF (Módulo 3) */}
+              {/* CAMPO 3: descripción, con la sugerencia de área */}
               <div>
                 <div className="mb-1.5 flex items-center justify-between">
                   <label
@@ -944,7 +944,7 @@ export const TaskModal: React.FC<TaskModalProps> = ({
                   className="w-full rounded-xl border border-slate-300 px-3.5 py-2.5 text-sm transition-all focus:ring-2 focus:ring-indigo-400 focus:outline-none"
                 />
 
-                {/* INSIGNIA INTERACTIVA DE PROPUESTA NLP TF-IDF (Módulo 3) */}
+                {/* SUGERENCIA DE ÁREA */}
                 {nlpLoading && (
                   <p className="mt-1 flex animate-pulse items-center gap-1 text-[11px] text-indigo-600">
                     <Sparkles className="h-3.5 w-3.5" /> Buscando el área de tu Rueda…
@@ -1266,7 +1266,7 @@ export const TaskModal: React.FC<TaskModalProps> = ({
                 </div>
               </fieldset>
 
-              {/* CAMPO 4: Sumidero Cognitivo ("Quizá" / "Algún día" - HU-03) */}
+              {/* CAMPO 4: «Algún día» */}
               <div className="rounded-xl border border-slate-200 bg-slate-50/60 p-3.5">
                 <label className="flex cursor-pointer items-start gap-3">
                   <input
@@ -1284,7 +1284,7 @@ export const TaskModal: React.FC<TaskModalProps> = ({
                 </label>
               </div>
 
-              {/* CAMPO 5: Observaciones Ricas (JSONB) */}
+              {/* CAMPO 5: notas, enlaces y listas de comprobación (observations) */}
               <div>
                 <label
                   htmlFor="task-note"

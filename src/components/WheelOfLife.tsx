@@ -138,7 +138,7 @@ export const WheelOfLife: React.FC<WheelOfLifeProps> = ({
           </p>
         </div>
 
-        {/* Conmutador de Comparativa Histórica (HU-01 Escenario 2) y edición de las áreas */}
+        {/* Comparar con una evaluación anterior y editar las áreas */}
         <div className="flex flex-wrap items-center gap-3">
           <button
             type="button"
@@ -321,7 +321,7 @@ export const WheelOfLife: React.FC<WheelOfLifeProps> = ({
               })}
             </div>
 
-            {/* FORMULARIO DE CONSOLIDACIÓN APPEND-ONLY (HU-01 Escenario 1) */}
+            {/* GUARDAR LA EVALUACIÓN: siempre una nueva, las anteriores no cambian */}
             <div className="space-y-2.5 border-t border-slate-100 pt-3">
               <label
                 htmlFor="wheel-snapshot-note"

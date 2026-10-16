@@ -2,10 +2,10 @@
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
 [![Version](https://img.shields.io/badge/Version-0.9.4-indigo.svg)](#)
-[![React](https://img.shields.io/badge/React-19.0-61dafb.svg?logo=react&logoColor=black)](https://react.dev/)
+[![React](https://img.shields.io/badge/React-19-61dafb.svg?logo=react&logoColor=black)](https://react.dev/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-7.x-3178c6.svg?logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
 [![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-4.x-38bdf8.svg?logo=tailwindcss&logoColor=white)](https://tailwindcss.com/)
-[![Architecture](https://img.shields.io/badge/Architecture-Offline--First-emerald.svg)](#arquitectura-técnica)
+[![Architecture](https://img.shields.io/badge/Architecture-Offline--First-emerald.svg)](#-arquitectura-y-modelo-de-datos)
 
 Plataforma web de **gestión del tiempo y neuroproductividad**, publicada en https://clar.life. Hasta la versión 0.7 se llamaba NeuroProductividad.
 
@@ -47,13 +47,13 @@ El sistema rechaza las restricciones coercitivas (como las rotaciones atencional
 
 Al volver a evaluar la Rueda se ve el efecto de las acciones, y las áreas cambian de orden en «Metas».
 
-**Navegación:** en tableta y escritorio, la cabecera lleva las secciones (Inicio, Listas, Agenda, Rueda de la Vida, Metas, Proyectos, Tiempo protegido, Ayuda y, para la administración, Administración), las dos listas, la sincronización y la cuenta. En el móvil, la barra inferior lleva Inicio, Listas, Agenda, Metas y «Más» (Rueda de la Vida, Proyectos, Tiempo protegido, Ayuda, Administración, la sincronización y la cuenta), con un botón flotante «Nueva tarea».
+**Navegación:** en tableta y escritorio, la cabecera lleva las secciones (Inicio, Listas, Agenda, Rueda de la Vida, Metas, Proyectos, Tiempo protegido, Administración solo para la administración, y Ayuda), las dos listas, la sincronización y la cuenta. En el móvil, la barra inferior lleva Inicio, Listas, Agenda, Metas y «Más» (Rueda de la Vida, Proyectos, Tiempo protegido, Ayuda, Administración, la sincronización y la cuenta), con un botón flotante «Nueva tarea».
 
 ---
 
-## 🧠 Fundamentos Metodológicos y Módulos del Sistema
+## 🧠 Fundamentos y secciones
 
-### 1. Rueda de la Vida y trazabilidad (`M1`)
+### 1. Rueda de la Vida
 
 - **Áreas de cada cuenta:** se empieza con 7 (_Salud, Carrera Profesional, Finanzas, Familia, Ocio, Relaciones, Espiritualidad_), que se pueden renombrar, ocultar y ampliar con áreas propias desde «Editar áreas» (entre 3 y 12 a la vista). Las 7 de partida conservan su nombre original como identificador y las nuevas tienen el suyo (`area-…`), así nada de lo guardado cambia; la lista va en el perfil (`wheelAreas`). Un área oculta sale de la Rueda, de las sugerencias y de las listas para elegir, pero conserva sus evaluaciones, sus metas (que siguen en «Metas») y sus tareas. Los nombres se muestran en toda la app y en las descargas; las sugerencias de área usan, para las nuevas, las palabras de su nombre (`src/services/wheel.ts`, `useAreas`).
 - **Gráfico polar SVG:** las áreas a la vista evaluadas del 0 al 10 con deslizadores; el gráfico se redibuja al momento. Cada área indica cuántas metas activas tiene, y la tarjeta «Metas» lleva al paso siguiente.
@@ -61,7 +61,7 @@ Al volver a evaluar la Rueda se ve el efecto de las acciones, y las áreas cambi
 - **Persistencia append-only:** cada evaluación se guarda como una nueva, con su fecha en UTC (ISO 8601); las anteriores no se modifican, y las reglas de Firestore lo impiden.
 - **Comparativa histórica:** superpone a la evaluación actual cualquiera de las anteriores para ver qué áreas han mejorado.
 
-### 2. Metas (`M6`)
+### 2. Metas
 
 - **Metas por área** (`users/{uid}/goals`): nombre, área de la Rueda, para qué y fecha objetivo; activas, logradas o archivadas.
 - **Sección «Metas»:** las áreas van de la puntuación más baja a la más alta según la última evaluación (sin evaluación, en el orden de la Rueda), cada una con sus metas activas, su progreso (tareas hechas sobre el total) y las tareas que les quedan. Las áreas con 5 o menos y sin metas salen en «Necesitan atención», con un botón que abre la meta con esa área elegida. «Añadir tarea» crea una tarea ya vinculada a la meta. Las logradas y archivadas quedan plegadas al final.
@@ -69,7 +69,7 @@ Al volver a evaluar la Rueda se ve el efecto de las acciones, y las áreas cambi
 - **Inicio:** una tarjeta con las metas activas y su progreso, y una recomendación cuando el área más baja de la última evaluación (5 o menos) no tiene metas.
 - **Proyectos** (`users/{uid}/projects`, sección «Proyectos»): nombre, meta (obligatoria), fecha de fin y descripción; activos, terminados o archivados. Las tareas de un proyecto (`projectId`) toman su meta al leerse (`applyProjectGoals`) y cuentan en el avance de la meta. Cada proyecto muestra su avance como una batería (tareas hechas sobre el total, sin las canceladas) y avisa si va fuera de plazo (pasó la fecha de fin con tareas abiertas), si termina en menos de una semana, si todas sus tareas están hechas y si alguna vence después del fin. En su vista, las tareas se manejan con las mismas tarjetas que en «Listas». Cada meta muestra sus proyectos activos; una meta con proyectos no se puede eliminar, y al eliminar un proyecto sus tareas siguen en la meta (`src/services/projects.ts`).
 
-### 3. Listas y jerarquía visual (`M2`)
+### 3. Listas y jerarquía visual
 
 - **Segregación Estricta:** Separación absoluta entre la **Lista Profesional** y la **Lista Personal** para erradicar el coste metabólico asociado al cambio de contexto (_context-switching_).
 - **Jerarquía visual (Top 10):** en lugar de limitar el inventario, las 10 primeras tareas se destacan con tipografía más marcada, elevación y más espacio; de la 11 en adelante se muestran planas y más discretas.
@@ -77,31 +77,31 @@ Al volver a evaluar la Rueda se ve el efecto de las acciones, y las áreas cambi
 - **Prioridad efectiva y estimación:** si la fecha límite está a más de una semana, la tarea cuenta un nivel menos de prioridad (las tareas sin fecha mantienen la suya). Cada tarea puede llevar una estimación de duración, visible en todas las listas.
 - **Verbo físico:** el campo de la acción indica encima que empiece por una acción concreta (Llamar, Enviar, Reservar…).
 - **Meta:** el formulario de la tarea permite vincularla a una meta activa (aparece cuando hay metas); la tarjeta muestra la meta en lugar del área.
-- **«Algún día» (HU-03):** las ideas sin urgencia van a su propia pestaña y no compiten con el Top 10.
+- **«Algún día»:** las ideas sin urgencia van a su propia pestaña y no compiten con el Top 10.
 - **Tareas dependientes:** una tarea puede esperar a otra (`dependsOn`, una sola; «Empieza después de», en «Más opciones»). Mientras esa siga abierta, la dependiente sale con un candado, no entra en el Top 10 (va con el resto) y no se puede marcar como hecha ni en progreso; al hacerse o cancelarse la otra se desbloquea sola, y el aviso lo dice. Varias tareas pueden esperar a la misma, en paralelo. No se pueden crear ciclos, una tarea eliminada no bloquea y la siguiente repetición de una recurrente no hereda la espera (`src/services/dependencies.ts`).
 - **Estado y archivo:** Cada tarea tiene un estado manual (Pendiente, En progreso, Bloqueada, Hecha, Cancelada). Marcarla como hecha es un toque, con «Deshacer»; el lápiz de la tarjeta, o pulsar su título, abre la edición. Las tareas hechas y las canceladas se archivan y se consultan en la ventana «Archivadas», desde donde se reactivan cambiando su estado. Una cancelada no cuenta como hecha: ni en las estadísticas ni en el avance de las metas.
-- **Cambios sin guardar:** cerrar el formulario de una tarea o de una meta con cambios pregunta antes de descartarlos («Seguir editando» o «Descartar»); cerrar o recargar la pestaña con un formulario cambiado, también el de un correo, lo avisa el navegador.
+- **Cambios sin guardar:** cerrar con cambios el formulario de una tarea, una meta o un proyecto, o el editor de áreas, pregunta antes de descartarlos («Seguir editando» o «Descartar»); cerrar o recargar la pestaña con un formulario cambiado, también el de un correo, lo avisa el navegador.
 - **Fechas y colores del plazo:** Fecha límite o intervalo opcional, con hora opcional. El título se pone violeta cuando falta menos de una semana y rojo cuando ha vencido. Los campos de fecha usan un calendario propio con la semana empezando en lunes (se escriben como dd/mm/aaaa y se manejan con el teclado), sea cual sea el idioma del navegador.
 - **Alarmas:** una hora para avisar antes del plazo (ver [Alarmas](#alarmas-092)).
 - **Tareas recurrentes:** cada día, semana (eligiendo los días), mes (día del mes, «el 2.º lunes» o «el último viernes») o año, cada N periodos. Al repetir, «Inicio» es desde cuándo se repite y la fecha límite hasta cuándo (opcional); cada repetición vence su propio día, nunca como un intervalo. Al marcar una repetición como Hecha o Cancelada se archiva y se crea la siguiente en la misma operación (cancelar una repetición no termina la serie) (sin duplicados aunque se marque desde dos dispositivos); las ya vencidas, hora límite incluida, se saltan si se completa con retraso.
 - **Calendario:** «Añadir al calendario», en el menú «⋯» de la tarea, la lleva a Google Calendar, Outlook.com, Outlook de Microsoft 365 o cualquier calendario (`.ics`, con la alarma), mediante enlaces y sin conectar cuentas. Las recurrentes exportan la serie (RRULE con semanas que empiezan en lunes y el último día del mes cuando el día no existe); las de un intervalo de varios días exportan solo la repetición actual.
 
-### 4. Motor de sugerencias (`M3`)
+### 4. Motor de sugerencias
 
 - **Vectorización TF-IDF:** limpieza léxica y frecuencia de término ponderada por frecuencia inversa de documento, al salir del campo Descripción (en «Más opciones»).
-- **Similitud del Coseno:** Comparación del vector resultante contra centroides pre-entrenados de las 7 áreas de la Rueda de la Vida.
-- **Sugerencia de área:** «Sugerencia: ¿Vincular a Finanzas? (82 % de confianza)», con «Usar esta área», si la confianza supera el umbral $\ge 0.65$ y la tarea no tiene meta.
+- **Similitud del coseno:** el vector resultante se compara con las áreas a la vista de la cuenta: las de partida con su vocabulario (más las palabras de su nombre si se renombraron) y las añadidas con las palabras de su nombre.
+- **Sugerencia de área:** «Sugerencia: ¿Vincular a Finanzas? (82 % de confianza)», con «Usar esta área», cuando la tarea no tiene meta y el texto se parece lo bastante a un área (similitud de al menos 0,12 o alguna palabra clave en común).
 - **Sugerencia de meta:** mientras se escribe el título, «Vincular a «meta»» propone la meta activa que más palabras comparte con él (`suggestGoal`).
 
-### 5. Analizador de la acción siguiente (`M4`)
+### 5. Analizador de la acción siguiente
 
 - **Filtro contra Proyectos Amorfos:** Intercepta descriptores abstractos como _"Marketing"_, _"Coche"_ o _"Finanzas"_.
 - **Asistente:** pregunta «¿Cuál es el primer paso? Conviértelo en algo que puedas hacer ya.» y propone una acción concreta (por ejemplo «Llamar al taller para pedir presupuesto»), con un verbo de acción física.
 
-### 6. Tiempo protegido: el triángulo de las Bermudas (`M5`)
+### 6. Tiempo protegido: el triángulo de las Bermudas
 
 - **Auditoría y Bloqueo de Reuniones Matutinas:** Bloqueo heurístico inquebrantable de reuniones convocadas antes de las 12:00 h (franja biológica de máxima demanda cognitiva y concentración profunda), sugiriendo su reubicación hacia las 13:00 h (hora valle).
-- **Triple Validación Obligatoria:** Toda reunión exige hora de inicio y fin inamovibles (`end_time > start_time`), orden del día cerrado no vacío y un moderador nominal responsable.
+- **Triple Validación Obligatoria:** Toda reunión exige hora de inicio y de fin (la de fin, posterior), orden del día cerrado no vacío y un moderador nominal responsable.
 - **Redacción Inversa de Correo Electrónico:** Secuencia contra-intuitiva donde los adjuntos y el cuerpo del mensaje deben redactarse primero, manteniendo bloqueado el campo de **Destinatarios** hasta que el contenido esté validado. Alerta en tiempo real si el texto supera la dimensión estándar libre de scroll (_no-scroll_).
 - **CLAR no envía correos:** los guarda (también a medias, como borradores), apunta de los adjuntos solo el nombre y el tamaño y, con «Abrir en mi correo», los pasa al programa de correo (ver [Borradores de correo](#borradores-de-correo-092)).
 
@@ -122,7 +122,7 @@ Al volver a evaluar la Rueda se ve el efecto de las acciones, y las áreas cambi
 
 - **Metas:** objetivos concretos dentro de un área de la Rueda (`users/{uid}/goals`). Las tareas se vinculan con `goalId` y toman el área de su meta al leerse; el progreso de cada meta son sus tareas hechas sobre el total.
 - **Sección «Metas» (0.9.1):** el paso entre la Rueda y las tareas. Las áreas van de la puntuación más baja a la más alta según la última evaluación, cada una con sus metas activas, su progreso y las tareas que les quedan. «Añadir tarea» crea una tarea ya vinculada a la meta. Las áreas con 5 o menos y sin metas salen en «Necesitan atención».
-- **Navegación móvil:** barra inferior (Inicio, Listas, Agenda, Metas y «Más», con la Rueda, Proyectos, Tiempo protegido, la Ayuda, la sincronización y la cuenta), botón flotante «Nueva tarea» y hojas inferiores para «Más» y para ordenar y filtrar.
+- **Navegación móvil:** barra inferior (Inicio, Listas, Agenda, Metas y «Más», con la Rueda, Tiempo protegido, la Ayuda, la sincronización y la cuenta), botón flotante «Nueva tarea» y hojas inferiores para «Más» y para ordenar y filtrar.
 - **Tareas:** completar de un toque con «Deshacer» (comprobado en una transacción), menú «⋯» y formulario en dos niveles.
 - **Bienvenida y recorrido guiado:** se muestran una vez por cuenta (`hasSeenOnboarding` en el perfil, con copia local) y se repiten desde Ayuda.
 - **Contacto:** «Escríbenos» envía el mensaje a la Cloud Function `submitFeedback` (email confirmado, 5 por hora), que lo guarda en `feedback_tickets` y avisa por email. La administración lo lee en «Administración» → «Mensajes».
@@ -148,13 +148,13 @@ Al volver a evaluar la Rueda se ve el efecto de las acciones, y las áreas cambi
 
 - **Estado «Cancelada»:** archiva la tarea como «Hecha», con su fecha y «Deshacer», pero no cuenta como hecha: ni en las estadísticas ni en el avance de metas y proyectos. Cancelar una repetición crea la siguiente.
 - **Cambios sin guardar:** cerrar el formulario de una tarea, una meta o un proyecto con cambios pregunta antes de descartarlos; cerrar la pestaña, lo avisa el navegador (`useDiscardGuard`).
-- **Tareas dependientes** (`dependsOn`): una tarea espera a otra y queda bloqueada hasta que esa esté hecha o cancelada; varias pueden esperar a la misma, en paralelo (ver [Listas](#3-listas-y-jerarquía-visual-m2)).
-- **Proyectos** (`users/{uid}/projects`): tareas con fecha de fin dentro de una meta, con su avance como una batería y avisos de plazo (ver [Metas](#2-metas-m6)).
+- **Tareas dependientes** (`dependsOn`): una tarea espera a otra y queda bloqueada hasta que esa esté hecha o cancelada; varias pueden esperar a la misma, en paralelo (ver [Listas](#3-listas-y-jerarquía-visual)).
+- **Proyectos** (`users/{uid}/projects`): tareas con fecha de fin dentro de una meta, con su avance como una batería y avisos de plazo (ver [Metas](#2-metas)).
 - **Descargas en JSON:** una tarea («⋯» → «Descargar (JSON)»), una meta o un proyecto, con todos sus datos y los nombres de lo relacionado (`src/services/exports.ts`).
 
 ### Áreas propias, horas en 24 h y avisos (0.9.4)
 
-- **Áreas de la Rueda propias:** renombrar las 7 de partida, añadir áreas y ocultar las que no se usan, por cuenta (ver [Rueda de la Vida](#1-rueda-de-la-vida-y-trazabilidad-m1)).
+- **Áreas de la Rueda propias:** renombrar las 7 de partida, añadir áreas y ocultar las que no se usan, por cuenta (ver [Rueda de la Vida](#1-rueda-de-la-vida)).
 - **Horas en 24 h:** un campo propio de `hh:mm` en todas las horas, en lugar del selector del navegador (que en sistemas en 12 h podía guardar 23:00 en lugar de 11:00). El aviso de una alarma dice su hora y, si llega tarde porque CLAR estaba cerrada, cuándo era.
 - **Editar una tarea:** con el lápiz de su tarjeta o pulsando su título.
 - **Avisos rojos de administración:** solicitudes pendientes, mensajes sin leer y cuentas nuevas que entraron solas.
@@ -163,14 +163,13 @@ Al volver a evaluar la Rueda se ve el efecto de las acciones, y las áreas cambi
 
 ## 🛠️ Stack Tecnológico
 
-| Capa                   | Tecnologías                                                                                                                                                                                      |
-| :--------------------- | :----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Frontend**           | React 19, TypeScript, Vite, Tailwind CSS v4, Lucide Icons                                                                                                                                        |
-| **Algoritmia**         | Motor TF-IDF & Cosine Similarity en TS, Parser sintáctico de verbos en español                                                                                                                   |
-| **Visualización**      | SVG interactivo polar / radar, Matemáticas polares de deformación poligonal                                                                                                                      |
-| **Cuentas y datos**    | Firebase Authentication (Google y email con contraseña) y Cloud Firestore (`europe-west1`) con caché persistente: funciona sin conexión y sincroniza entre dispositivos                          |
-| **Hosting y API**      | Firebase Hosting (SPA, en https://clar.life) y Cloud Functions for Firebase 2.ª gen (`europe-west1`): Express para la API y funciones de acceso y contacto, con avisos por email (SMTP de IONOS) |
-| **Referencia Backend** | PostgreSQL (Esquema DDL relacional con índices parciales B-Tree y tipos JSONB)                                                                                                                   |
+| Capa                    | Tecnologías                                                                                                                                                                                                                                                                                       |
+| :---------------------- | :------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| **Frontend**            | React 19, TypeScript, Vite, Tailwind CSS v4, Lucide Icons                                                                                                                                                                                                                                         |
+| **Algoritmia**          | Motor TF-IDF & Cosine Similarity en TS, Parser sintáctico de verbos en español                                                                                                                                                                                                                    |
+| **Visualización**       | SVG interactivo polar / radar, Matemáticas polares de deformación poligonal                                                                                                                                                                                                                       |
+| **Cuentas y datos**     | Firebase Authentication (Google y email con contraseña) y Cloud Firestore (`europe-west1`) con caché persistente: funciona sin conexión y sincroniza entre dispositivos                                                                                                                           |
+| **Hosting y funciones** | Firebase Hosting (SPA, en https://clar.life) y Cloud Functions for Firebase 2.ª gen (`europe-west1`): funciones invocables de acceso y contacto, con avisos por email (SMTP de IONOS, con nodemailer), y la función HTTP `api`, que solo sirve `/.well-known/assetlinks.json` para la APK Android |
 
 ---
 
@@ -209,7 +208,7 @@ npm run typecheck
 npm run lint
 npm run format:check
 
-# 6. Ejecutar pruebas unitarias, de integración, de reglas de Firestore y de la API
+# 6. Ejecutar pruebas unitarias, de integración, de reglas de Firestore y de las Cloud Functions
 npm run test:unit
 npm run test:integration
 npm run test:rules
@@ -224,15 +223,14 @@ La app estará disponible en `http://localhost:3000` y la interfaz de los emulad
 
 ### Pruebas automatizadas
 
-El banco de pruebas cubre lógica pura con el test runner de Node, la importación de datos locales, las reglas de seguridad de Firestore contra el emulador, flujos de extremo a extremo en Chromium con Playwright (inicio de sesión con el emulador de Auth, primer arranque, bienvenida y recorrido, importación, tareas y repeticiones, Top 10, agenda, metas, alarmas, borradores de correo, contacto y respuestas, aprobación de accesos, navegación móvil y tamaños de pantalla) y una auditoría automática de accesibilidad WCAG 2.1 A y AA con axe-core en cada pantalla, también con alto contraste y texto muy grande (`tests/e2e/a11y.spec.ts`). `npm test` ejecuta todos los niveles; las Cloud Functions (rutas de la API y lógica de accesos y contacto) se prueban aparte con `npm --prefix functions test`. GitHub Actions también valida tipos, compila la aplicación y la función, y ejecuta toda la suite en cada push y pull request.
+El banco de pruebas cubre lógica pura con el test runner de Node, la importación de datos locales, las reglas de seguridad de Firestore contra el emulador, flujos de extremo a extremo en Chromium con Playwright, uno por función de la app (`tests/e2e/*.spec.ts`), con el emulador de Auth para el inicio de sesión, y una auditoría automática de accesibilidad WCAG 2.1 A y AA con axe-core en cada pantalla, también con alto contraste y texto muy grande (`tests/e2e/a11y.spec.ts`). `npm test` ejecuta todos los niveles; las Cloud Functions (lógica de accesos y contacto, y `assetlinks.json`) se prueban aparte con `npm --prefix functions test`. GitHub Actions también valida tipos, compila la aplicación y las Cloud Functions, y ejecuta toda la suite en cada push y pull request.
 
 ### Despliegue en Firebase (Hosting + Cloud Functions + Firestore)
 
-Firebase Hosting sirve la SPA compilada (`dist/`), la función `api` (Cloud Functions 2.ª gen, región `europe-west1`) atiende el backend y Firestore guarda los datos de cada cuenta en `users/{uid}/…`. Las reglas (`firestore.rules`) solo permiten a cada persona acceder a sus propios datos (crear y modificar exige el acceso aprobado; leer y borrar no, para que una cuenta sin acceso pueda llevarse o eliminar lo suyo) y hacen las evaluaciones de la Rueda _append-only_. La app lee su configuración de Firebase de `/__/firebase/init.json`, que sirve el propio Hosting, así que el ID del proyecto no está en el código. Las rutas se definen en `firebase.json`:
+Firebase Hosting sirve la SPA compilada (`dist/`), la app lee y escribe directamente en Firestore (los datos de cada cuenta van en `users/{uid}/…`) y las Cloud Functions invocables (2.ª gen, región `europe-west1`) se ocupan de lo que no puede hacer el navegador: los accesos, el contacto y los avisos por email. Las reglas (`firestore.rules`) solo permiten a cada persona acceder a sus propios datos (crear y modificar exige el acceso aprobado; leer y borrar no, para que una cuenta sin acceso pueda llevarse o eliminar lo suyo) y hacen las evaluaciones de la Rueda _append-only_. La app lee su configuración de Firebase de `/__/firebase/init.json`, que sirve el propio Hosting, así que el ID del proyecto no está en el código. Las rutas se definen en `firebase.json`:
 
 | Ruta                           | Destino                                               |
 | :----------------------------- | :---------------------------------------------------- |
-| `/api/**`                      | Función `api` (`functions/src/app.ts`)                |
 | `/.well-known/assetlinks.json` | Función `api` (Digital Asset Links de la APK Android) |
 | `**`                           | `index.html` (fallback de la SPA)                     |
 
@@ -243,7 +241,7 @@ Requisitos: un proyecto de Firebase en plan Blaze (Cloud Functions lo exige), un
 El ID del proyecto no se versiona: `.firebaserc` está en `.gitignore`. En cada clon, selecciona el proyecto una vez:
 
 ```bash
-firebase use --add
+npx firebase use --add
 ```
 
 Las funciones usan los parámetros `ANDROID_PACKAGE_NAME` y `ANDROID_SHA256_FINGERPRINT` (la función `api`), `ADMIN_EMAIL` y `SMTP_USER` (accesos y contacto) y, opcionales, `SMTP_HOST` (el servidor SMTP; por defecto `smtp.ionos.es`) y `APP_URL` (la dirección de la app en los emails). `firebase deploy` pide los que faltan y los guarda en `functions/.env.<project-id>`, ignorado por git; en CI salen de las variables y los secretos del repositorio. Para los emuladores, defínelos en `functions/.env.local`.
@@ -279,7 +277,7 @@ gh variable set SMTP_USER --body "info@clar.life"
 # Emuladores locales (proyecto demo): Hosting en http://localhost:5002, Functions, Auth y Firestore
 npm run emulators
 
-# Despliegue: compila la SPA y la función antes de subirlas y publica las reglas de Firestore
+# Despliegue: compila la SPA y las Cloud Functions antes de subirlas y publica las reglas de Firestore
 npm run deploy
 ```
 
@@ -299,7 +297,7 @@ gh variable set APP_URL --body "https://clar.life"
 
 #### Despliegue automático desde GitHub Actions
 
-Cada push a `main` (por ejemplo, al mergear un pull request) despliega Hosting, la función y las reglas de Firestore si el job `validate` pasa. Los deploys se ejecutan de uno en uno. GitHub se autentica en Google Cloud con Workload Identity Federation: cada ejecución recibe un token temporal y no hay claves de cuenta de servicio guardadas.
+Cada push a `main` (por ejemplo, al mergear un pull request) despliega Hosting, las Cloud Functions y las reglas de Firestore si el job `validate` pasa. Los deploys se ejecutan de uno en uno. GitHub se autentica en Google Cloud con Workload Identity Federation: cada ejecución recibe un token temporal y no hay claves de cuenta de servicio guardadas.
 
 El workflow necesita estos valores en el repositorio. Los secrets se ocultan en los logs, así que el ID del proyecto tampoco aparece ahí.
 
@@ -355,14 +353,15 @@ gh variable set ANDROID_PACKAGE_NAME --body "<package-name>"
 gh variable set ANDROID_SHA256_FINGERPRINT --body "<huella-sha256>"
 ```
 
-El repositorio utiliza `package-lock.json` (en la raíz y en `functions/`) como únicos archivos de bloqueo; no añadas `bun.lock` ni `pnpm-lock.yaml`. Después de cambiar dependencias, actualiza y confirma `package.json` y `package-lock.json` juntos. Para comprobar la instalación reproducible, ejecuta `npm ci` y `npm ci --prefix functions` antes de compilar y probar.
+El repositorio utiliza `package-lock.json` (en la raíz, en `functions/` y en `tools/eslint/`) como únicos archivos de bloqueo; no añadas `bun.lock` ni `pnpm-lock.yaml`. Después de cambiar dependencias, actualiza y confirma `package.json` y `package-lock.json` juntos. Para comprobar la instalación reproducible, ejecuta `npm ci`, `npm ci --prefix functions` y `npm ci --prefix tools/eslint` antes de compilar y probar.
 
 ---
 
 ## 📂 Estructura del Proyecto
 
 ```text
-├── index.html                   # Entry point HTML (lang="es")
+├── index.html                   # Entrada HTML (lang="es")
+├── LICENSE                      # Licencia MIT
 ├── package.json                 # Dependencias y scripts
 ├── vite.config.ts               # Configuración de Vite y Tailwind
 ├── tsconfig.json                # Configuración de TypeScript estricto
@@ -376,7 +375,7 @@ El repositorio utiliza `package-lock.json` (en la raíz y en `functions/`) como 
 ├── functions/                   # Cloud Functions for Firebase (región europe-west1)
 │   ├── src/
 │   │   ├── index.ts             # Exporta la función HTTP `api`, las de acceso y las de contacto
-│   │   ├── app.ts               # Rutas Express: /api/health, /api/nlp/infer y assetlinks.json
+│   │   ├── app.ts               # Función HTTP `api`: solo /.well-known/assetlinks.json (APK Android)
 │   │   ├── adminApp.ts          # Firebase Admin compartido
 │   │   ├── access.ts            # syncAccess, requestAccess, setAccess, setAccessMode, forgetAccess, revokeSessions
 │   │   │                        #   y avisos por email (SMTP)
@@ -384,7 +383,7 @@ El repositorio utiliza `package-lock.json` (en la raíz y en `functions/`) como 
 │   │   ├── feedback.ts          # submitFeedback y replyToFeedback (mensajes de contacto y sus respuestas)
 │   │   ├── feedbackLogic.ts     # Validación, límite por hora y correos del contacto
 │   │   └── feedbackCleanup.ts   # Borrado de los mensajes al eliminar la cuenta
-│   └── test/                    # API, Admin, lógica de acceso y de contacto
+│   └── test/                    # assetlinks.json, Admin, lógica de acceso y de contacto
 ├── src/
 │   ├── main.tsx                 # Montaje de React y preferencias de accesibilidad antes del primer render
 │   ├── Root.tsx                 # Textos legales públicos según la ruta; si no, la app
@@ -395,10 +394,12 @@ El repositorio utiliza `package-lock.json` (en la raíz y en `functions/`) como 
 │   ├── tourSteps.ts             # Pasos del recorrido guiado
 │   ├── lazy.tsx                 # Carga bajo demanda con reintento
 │   ├── index.css                # Tailwind CSS y estilos de accesibilidad (texto, contraste, movimiento, foco)
-│   ├── types/index.ts           # Modelos de datos (TaskItem, Goal, Project, Recurrence, WheelOfLifeLog, EmailDraft…)
+│   ├── types/index.ts           # Modelos de datos (TaskItem, Goal, Project, WheelArea, WheelOfLifeLog, EmailDraft…)
+│   ├── env.d.ts                 # Tipos de Vite y la versión de la app (__APP_VERSION__)
 │   ├── hooks/
 │   │   ├── useModalFocus.ts     # Foco de los diálogos: entra, se queda dentro y vuelve al cerrar
 │   │   ├── useDiscardGuard.ts   # Preguntar antes de descartar cambios sin guardar (y al cerrar la pestaña)
+│   │   ├── useAreas.ts          # Áreas de la Rueda de la cuenta (contexto de React)
 │   │   ├── useMediaQuery.ts     # Tamaño de pantalla (móvil o no)
 │   │   ├── useNow.ts            # Reloj por minutos para plazos y prioridad efectiva
 │   │   └── useTaskAlarms.ts     # Alarmas de las tareas mientras la app está abierta
@@ -409,7 +410,7 @@ El repositorio utiliza `package-lock.json` (en la raíz y en `functions/`) como 
 │   │   ├── access.ts            # Solicitudes de acceso, modo de aprobación y llamadas a las Cloud Functions
 │   │   ├── auth.ts              # Email y contraseña: alta con verificación, acceso, recuperación y cambio
 │   │   ├── account.ts           # Descarga de los datos, eliminación de la cuenta y cierre de todas las sesiones
-│   │   ├── wheel.ts · goals.ts  # Áreas de la Rueda; metas, su orden por puntuación y su progreso
+│   │   ├── wheel.ts · goals.ts  # Áreas de la Rueda (propias de cada cuenta); metas, su orden y su progreso
 │   │   ├── projects.ts          # Proyectos: avance, plazo, meta de sus tareas y orden
 │   │   ├── dependencies.ts      # Tareas que esperan a otra: bloqueos, ciclos y candidatas
 │   │   ├── exports.ts · download.ts # Descargas en JSON de una tarea, una meta o un proyecto
@@ -420,10 +421,11 @@ El repositorio utiliza `package-lock.json` (en la raíz y en `functions/`) como 
 │   │   ├── agenda.ts            # Agenda por días: plazos, intervalos, repeticiones y reuniones
 │   │   ├── calendar.ts          # Enlaces de Google y Outlook y archivos .ics (con la alarma)
 │   │   ├── email.ts             # Correos: destinatarios, adjuntos, borradores y enlace mailto
-│   │   ├── dateInput.ts         # Fechas dd/mm/aaaa y meses de lunes a domingo
+│   │   ├── dateInput.ts · timeInput.ts # Fechas dd/mm/aaaa (semanas de lunes a domingo) y horas en 24 h
 │   │   ├── stats.ts             # Estadísticas y recomendaciones de la pantalla de Inicio
 │   │   ├── onboarding.ts        # Bienvenida vista, por cuenta
 │   │   ├── feedback.ts · feedbackApi.ts # Contacto: información técnica, envío, mensajes y respuestas
+│   │   ├── adminAlerts.ts       # Avisos rojos de la administración
 │   │   ├── a11yPrefs.ts         # Preferencias del panel de accesibilidad
 │   │   ├── legal.ts             # Textos legales: rutas, titular, edad mínima y fecha de la versión
 │   │   ├── nlpEngine.ts         # Motor TF-IDF y Similitud del Coseno
@@ -434,13 +436,13 @@ El repositorio utiliza `package-lock.json` (en la raíz y en `functions/`) como 
 │       │                        #   inferior y hojas del móvil
 │       ├── BrandMark.tsx        # Símbolo de CLAR (lente), nombre y lema
 │       ├── HomeView.tsx         # Inicio: foco de la lista, metas, estadísticas y recomendaciones
-│       ├── WheelOfLife.tsx      # Rueda de la Vida polar SVG
+│       ├── WheelOfLife.tsx · AreasModal.tsx # Rueda de la Vida (gráfico polar SVG) y editor de sus áreas
 │       ├── GoalsView.tsx · GoalModal.tsx · GoalProgress.tsx # Metas: por área, editor y progreso
 │       ├── ProjectsView.tsx · ProjectModal.tsx · ProjectProgress.tsx # Proyectos: lista, vista, editor y batería
 │       ├── DiscardChangesPrompt.tsx # «¿Descartar los cambios?»
 │       ├── TaskList.tsx · TaskCard.tsx · TaskActionsMenu.tsx # Top 10 y resto, tarjeta y menú «⋯»
 │       ├── TaskModal.tsx        # Captura con validación sintáctica, meta, sugerencias, fechas, alarma y repetición
-│       ├── DateField.tsx · TaskDates.tsx · TaskStatusSelect.tsx · ArchivedTasksModal.tsx
+│       ├── DateField.tsx · TimeField.tsx · TaskDates.tsx · TaskStatusSelect.tsx · ArchivedTasksModal.tsx
 │       ├── AlarmAlerts.tsx · NotificationPermission.tsx # Avisos de alarma y permiso de notificaciones
 │       ├── AgendaView.tsx       # Agenda semanal y por días
 │       ├── BermudasShield.tsx · MeetingModal.tsx · EmailModal.tsx # Tiempo protegido: reuniones y correos
@@ -464,127 +466,23 @@ El repositorio utiliza `package-lock.json` (en la raíz y en `functions/`) como 
 
 ---
 
-## 📜 Esquema de Base de Datos de Referencia (PostgreSQL)
+## 🧱 Arquitectura y modelo de datos
 
-Modelo relacional equivalente a lo que la app guarda en Firestore (`users/{uid}/wheelLogs`, `goals`, `tasks`, `meetings` y `emails`), como referencia para un backend propio.
+- **Sin servidor propio:** la SPA (React) habla directamente con Firebase: Authentication para las cuentas y Cloud Firestore (`europe-west1`) para los datos, con caché persistente para funcionar sin conexión y sincronizar entre dispositivos y pestañas. Las reglas de Firestore (`firestore.rules`) son la frontera de seguridad: cada cuenta solo lee y escribe lo suyo.
+- **Cloud Functions invocables** (2.ª gen, `europe-west1`) para lo que no puede hacer el navegador: los accesos (`syncAccess`, `requestAccess`, `setAccess`, `setAccessMode`, `forgetAccess`, `revokeSessions`) y el contacto (`submitFeedback`, `replyToFeedback`), con los avisos por email (SMTP de IONOS). La función HTTP `api` solo sirve `/.well-known/assetlinks.json` para la APK Android.
+- **En el navegador:** las sugerencias de área y de meta, el Top 10, las alarmas, las estadísticas, las descargas y los archivos de calendario.
 
-```sql
--- 1. Histórico append-only de la Rueda de la Vida (M1)
-CREATE TABLE wheel_of_life_log (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  user_id UUID NOT NULL,
-  timestamp TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-  label VARCHAR(100),
-  health_score SMALLINT NOT NULL CHECK (health_score BETWEEN 0 AND 10),
-  career_score SMALLINT NOT NULL CHECK (career_score BETWEEN 0 AND 10),
-  finance_score SMALLINT NOT NULL CHECK (finance_score BETWEEN 0 AND 10),
-  family_score SMALLINT NOT NULL CHECK (family_score BETWEEN 0 AND 10),
-  spirit_score SMALLINT NOT NULL CHECK (spirit_score BETWEEN 0 AND 10),
-  leisure_score SMALLINT NOT NULL CHECK (leisure_score BETWEEN 0 AND 10),
-  relationship_score SMALLINT NOT NULL CHECK (relationship_score BETWEEN 0 AND 10)
-);
-CREATE INDEX idx_wheel_user_time ON wheel_of_life_log(user_id, timestamp DESC);
+**Modelo de datos (Firestore).** Los tipos están en `src/types/index.ts`.
 
--- 2. Metas por área de la Rueda (M6)
-CREATE TYPE wheel_area_enum AS ENUM ('Salud', 'Carrera Profesional', 'Finanzas', 'Familia', 'Ocio', 'Relaciones', 'Espiritualidad');
-CREATE TYPE goal_status_enum AS ENUM ('ACTIVE', 'ACHIEVED', 'ARCHIVED');
-
-CREATE TABLE goal (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  user_id UUID NOT NULL,
-  title VARCHAR(100) NOT NULL,
-  area wheel_area_enum NOT NULL,
-  why VARCHAR(280),
-  target_date DATE,
-  status goal_status_enum NOT NULL DEFAULT 'ACTIVE',
-  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
-);
-
--- Proyectos: tareas con fecha de fin dentro de una meta
-CREATE TYPE project_status_enum AS ENUM ('ACTIVE', 'FINISHED', 'ARCHIVED');
-
-CREATE TABLE project (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  user_id UUID NOT NULL,
-  title VARCHAR(100) NOT NULL,
-  goal_id UUID NOT NULL REFERENCES goal(id) ON DELETE RESTRICT,  -- una meta con proyectos no se elimina
-  end_date DATE NOT NULL,
-  description VARCHAR(280),
-  status project_status_enum NOT NULL DEFAULT 'ACTIVE',
-  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
-);
-
--- 3. Tareas (M2): una tarea vinculada a una meta toma su área al leerse; la de un proyecto, la meta del proyecto
-CREATE TYPE list_context_enum AS ENUM ('WORK', 'PERSONAL');
-CREATE TYPE priority_enum AS ENUM ('CRITICAL', 'HIGH', 'MEDIUM', 'LOW');
-CREATE TYPE task_status_enum AS ENUM ('PENDING', 'IN_PROGRESS', 'BLOCKED', 'DONE', 'CANCELLED');
-
-CREATE TABLE task_item (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  user_id UUID NOT NULL,
-  list_context list_context_enum NOT NULL,
-  title VARCHAR(100) NOT NULL,
-  description TEXT NOT NULL,
-  priority priority_enum NOT NULL,
-  status task_status_enum NOT NULL DEFAULT 'PENDING',
-  done_at TIMESTAMPTZ,                                 -- cuándo pasó a hecha o cancelada
-  is_someday BOOLEAN NOT NULL DEFAULT FALSE,           -- «Algún día»
-  goal_id UUID REFERENCES goal(id) ON DELETE SET NULL,
-  project_id UUID REFERENCES project(id) ON DELETE SET NULL,  -- sus tareas siguen en la meta
-  depends_on UUID REFERENCES task_item(id) ON DELETE SET NULL, -- bloqueada mientras esa siga abierta
-  wheel_category wheel_area_enum,                      -- sin meta: elegida o sugerida (TF-IDF)
-  wheel_category_confidence REAL,
-  linked_by VARCHAR(16),                               -- MANUAL o AUTO_TFIDF
-  start_date DATE,
-  start_time TIME,
-  due_date DATE,                                       -- en una serie, la de la repetición actual
-  due_time TIME,
-  estimate_minutes INTEGER,
-  alarm_time TIME,                                     -- 24 h antes como mucho; sin hora límite, la víspera
-  recurrence JSONB,                                    -- frecuencia, intervalo, días, modo mensual y fin
-  next_occurrence_id UUID,
-  observations JSONB DEFAULT '[]'::jsonb,
-  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
-);
-
--- Índice parcial: «Algún día», las hechas y las canceladas no compiten por el Top 10
-CREATE INDEX active_tasks_idx ON task_item(user_id, priority)
-  WHERE is_someday = FALSE AND status NOT IN ('DONE', 'CANCELLED');
-
--- 4. Tiempo protegido: reuniones (M5)
-CREATE TABLE meeting_guard (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  user_id UUID NOT NULL,
-  title VARCHAR(100) NOT NULL,
-  start_time TIMESTAMPTZ NOT NULL,
-  end_time TIMESTAMPTZ NOT NULL,
-  agenda_points JSONB NOT NULL,
-  moderator_name VARCHAR(100) NOT NULL,
-  moderator_email VARCHAR(254),
-  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-  CONSTRAINT chk_time_order CHECK (end_time > start_time),
-  CONSTRAINT chk_deep_morning_block CHECK (EXTRACT(HOUR FROM start_time) >= 12)
-);
-
--- 5. Tiempo protegido: correos (M5). CLAR no los envía; de los adjuntos guarda solo nombre y tamaño
-CREATE TYPE email_status_enum AS ENUM ('draft', 'saved');
-
-CREATE TABLE email_draft (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  user_id UUID NOT NULL,
-  subject TEXT NOT NULL,
-  body TEXT NOT NULL,
-  attachments JSONB NOT NULL DEFAULT '[]'::jsonb,       -- [{ name, size, bytes }]
-  no_attachments_declared BOOLEAN NOT NULL DEFAULT FALSE,
-  recipients TEXT[] NOT NULL DEFAULT '{}',
-  status email_status_enum NOT NULL DEFAULT 'saved',
-  sent_at TIMESTAMPTZ,                                 -- cuándo se guardó terminado
-  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
-);
-```
+| Ruta                                                                   | Contenido                                                                                              | Quién la escribe                                          |
+| :--------------------------------------------------------------------- | :----------------------------------------------------------------------------------------------------- | :-------------------------------------------------------- |
+| `users/{uid}`                                                          | Perfil: nombre, email, foto, alta y último acceso, bienvenida vista y áreas de la Rueda (`wheelAreas`) | La app                                                    |
+| `users/{uid}/tasks`                                                    | Tareas: lista, estado, prioridad, fechas, alarma, repetición, meta, proyecto, dependencia y notas      | La app                                                    |
+| `users/{uid}/wheelLogs`                                                | Evaluaciones de la Rueda: una puntuación de 0 a 10 por área (solo se añaden)                           | La app                                                    |
+| `users/{uid}/goals` · `users/{uid}/projects`                           | Metas (área, para qué, fecha objetivo) y proyectos (meta, fecha de fin)                                | La app                                                    |
+| `users/{uid}/meetings` · `users/{uid}/emails`                          | Reuniones y correos de «Tiempo protegido»                                                              | La app                                                    |
+| `access/{uid}` · `admins/{uid}` · `settings/access` · `blocked_emails` | Solicitudes y estado del acceso, marca de administración, modo de aprobación y emails bloqueados       | Cloud Functions                                           |
+| `feedback_tickets` · `feedback_limits`                                 | Mensajes de «Escríbenos» con sus respuestas, y su límite por hora                                      | Cloud Functions (la administración solo cambia el estado) |
 
 ---
 
@@ -593,11 +491,11 @@ CREATE TABLE email_draft (
 Las contribuciones son bienvenidas. Para contribuir:
 
 1. Haz un Fork del repositorio.
-2. Crea una rama para tu funcionalidad (`git checkout -b feature/nueva-funcionalidad`).
-3. Realiza tus cambios y verifica la compilación (`npm run build && npm run typecheck && npm run lint && npm run format:check`).
+2. Crea una rama para tu funcionalidad (`git checkout -b feat/nueva-funcionalidad`).
+3. Realiza tus cambios y comprueba la compilación y las pruebas (`npm run build && npm run typecheck && npm run lint && npm run format:check && npm test && npm --prefix functions test`).
 4. Haz Commit de tus cambios (`git commit -m 'feat: añade nueva funcionalidad'`).
-5. Haz Push a tu rama (`git push origin feature/nueva-funcionalidad`).
-6. Abre un Pull Request describiendo el impacto metodológico y técnico.
+5. Haz Push a tu rama (`git push origin feat/nueva-funcionalidad`).
+6. Abre un Pull Request que explique qué cambia y cómo se ha probado.
 
 ---
 

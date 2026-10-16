@@ -4,7 +4,7 @@ import type { AddressInfo } from 'node:net';
 import { after, before, describe, it } from 'node:test';
 import { app } from '../src/app';
 
-describe('API de Cloud Functions', () => {
+describe('Función HTTP api', () => {
   let server: Server;
   let baseUrl: string;
 
@@ -20,34 +20,9 @@ describe('API de Cloud Functions', () => {
     server.close();
   });
 
-  it('GET /api/health responde ok', async () => {
-    const res = await fetch(`${baseUrl}/api/health`);
-    const body = (await res.json()) as { status: string; service: string; uptime: unknown };
-
-    assert.equal(res.status, 200);
-    assert.equal(body.status, 'ok');
-    assert.equal(body.service, 'CLAR API');
-    assert.equal(typeof body.uptime, 'number');
-  });
-
-  it('POST /api/nlp/infer devuelve el título y la descripción recibidos', async () => {
-    const res = await fetch(`${baseUrl}/api/nlp/infer`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ title: 'Llamar al dentista', description: 'Pedir cita' })
-    });
-    const body = (await res.json()) as { input: unknown };
-
-    assert.equal(res.status, 200);
-    assert.deepEqual(body.input, { title: 'Llamar al dentista', description: 'Pedir cita' });
-  });
-
-  it('POST /api/nlp/infer sin cuerpo no falla', async () => {
-    const res = await fetch(`${baseUrl}/api/nlp/infer`, { method: 'POST' });
-    const body = (await res.json()) as { input: unknown };
-
-    assert.equal(res.status, 200);
-    assert.deepEqual(body.input, {});
+  it('ya no expone las rutas /api de antes', async () => {
+    assert.equal((await fetch(`${baseUrl}/api/health`)).status, 404);
+    assert.equal((await fetch(`${baseUrl}/api/nlp/infer`, { method: 'POST' })).status, 404);
   });
 
   it('GET /.well-known/assetlinks.json usa los parámetros configurados', async () => {

@@ -5,10 +5,6 @@
     "predeploy": ["npm run build"],
     "rewrites": [
       {
-        "source": "/api/**",
-        "function": { "functionId": "api", "region": "europe-west1" }
-      },
-      {
         "source": "/.well-known/assetlinks.json",
         "function": { "functionId": "api", "region": "europe-west1" }
       },
