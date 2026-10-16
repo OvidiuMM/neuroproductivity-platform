@@ -265,7 +265,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
             <Metric
               label="Pendientes"
               value={String(stats.open)}
-              hint={`${stats.overdue} vencidas · ${stats.dueThisWeek} esta semana · ${stats.blocked} ${stats.blocked === 1 ? 'bloqueada' : 'bloqueadas'}`}
+              hint={`${stats.overdue} ${stats.overdue === 1 ? 'vencida' : 'vencidas'} · ${stats.dueThisWeek} esta semana · ${stats.blocked} ${stats.blocked === 1 ? 'bloqueada' : 'bloqueadas'}`}
             />
           </div>
         </Card>
@@ -373,7 +373,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
                   <li key={project.id} className="space-y-1.5">
                     <p className="text-sm font-semibold break-words text-slate-900">{project.title}</p>
                     <p className="text-[11px] text-slate-600">
-                      Termina el {formatDay(project.endDate)}
+                      {deadline === 'overdue' ? 'Terminaba' : 'Termina'} el {formatDay(project.endDate)}
                       {deadline === 'overdue' && <span className="font-semibold text-red-700"> · Fuera de plazo</span>}
                       {deadline === 'soon' && <span className="font-semibold text-violet-700"> · Termina pronto</span>}
                       {deadline === 'ready' && <span className="font-semibold text-emerald-700"> · Todo hecho</span>}
