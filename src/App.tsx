@@ -581,6 +581,11 @@ export default function App({ user, services, isAdmin = false }: AppProps) {
     saveGoal(db, uid, goal).catch(reportError('guardar la meta'));
     showToast(previous ? 'Meta guardada.' : 'Meta creada. Añádele tareas en «Metas».');
   };
+  // Desde el formulario de una tarea: la tarea queda vinculada a ella
+  const handleCreateGoalFromTask = (goal: Goal) => {
+    saveGoal(db, uid, goal).catch(reportError('guardar la meta'));
+    showToast('Meta creada.');
+  };
   const handleSetGoalStatus = (goal: Goal, status: GoalStatus) => {
     saveGoal(db, uid, { ...goal, status, updatedAt: new Date().toISOString() }).catch(reportError('guardar la meta'));
     showToast(
@@ -1152,6 +1157,7 @@ export default function App({ user, services, isAdmin = false }: AppProps) {
           goals={goals}
           projects={projects}
           tasks={tasks}
+          onCreateGoal={handleCreateGoalFromTask}
         />
 
         {/* VENTANA DE TAREAS ARCHIVADAS (ESTADO HECHA) */}

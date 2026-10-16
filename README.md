@@ -76,7 +76,7 @@ Al volver a evaluar la Rueda se ve el efecto de las acciones, y las áreas cambi
 - **Orden y filtros del Top 10:** por prioridad efectiva, fecha límite, estimación, actualización o área, y filtros por prioridad, estimación máxima, estado, plazo y área. Se guardan en cada dispositivo y el resumen «Top 10» cuenta lo mismo que muestra la lista.
 - **Prioridad efectiva y estimación:** si la fecha límite está a más de una semana, la tarea cuenta un nivel menos de prioridad (las tareas sin fecha mantienen la suya). Cada tarea puede llevar una estimación de duración, visible en todas las listas.
 - **Verbo físico:** el campo de la acción indica encima que empiece por una acción concreta (Llamar, Enviar, Reservar…).
-- **Meta:** el formulario de la tarea permite vincularla a una meta activa (aparece cuando hay metas); la tarjeta muestra la meta en lugar del área.
+- **Meta:** el formulario de la tarea permite vincularla a una meta activa o crearla ahí mismo con «Nueva meta» (nombre y área; el resto, en «Metas»); la tarjeta muestra la meta en lugar del área.
 - **«Algún día»:** las ideas sin urgencia van a su propia pestaña y no compiten con el Top 10.
 - **Tareas dependientes:** una tarea puede esperar a otra (`dependsOn`, una sola; «Empieza después de», en «Más opciones»). Mientras esa siga abierta, la dependiente sale con un candado, no entra en el Top 10 (va con el resto) y no se puede marcar como hecha ni en progreso; al hacerse o cancelarse la otra se desbloquea sola, y el aviso lo dice. Varias tareas pueden esperar a la misma, en paralelo. No se pueden crear ciclos, una tarea eliminada no bloquea y la siguiente repetición de una recurrente no hereda la espera (`src/services/dependencies.ts`).
 - **Estado y archivo:** Cada tarea tiene un estado manual (Pendiente, En progreso, Bloqueada, Hecha, Cancelada). Marcarla como hecha es un toque, con «Deshacer»; el lápiz de la tarjeta, o pulsar su título, abre la edición. Las tareas hechas y las canceladas se archivan y se consultan en la ventana «Archivadas», desde donde se reactivan cambiando su estado. Una cancelada no cuenta como hecha: ni en las estadísticas ni en el avance de las metas.
@@ -158,6 +158,7 @@ Al volver a evaluar la Rueda se ve el efecto de las acciones, y las áreas cambi
 - **Horas en 24 h:** un campo propio de `hh:mm` en todas las horas, en lugar del selector del navegador (que en sistemas en 12 h podía guardar 23:00 en lugar de 11:00). El aviso de una alarma dice su hora y, si llega tarde porque CLAR estaba cerrada, cuándo era.
 - **Editar una tarea:** con el lápiz de su tarjeta o pulsando su título.
 - **Avisos rojos de administración:** solicitudes pendientes, mensajes sin leer y cuentas nuevas que entraron solas.
+- **Crear una meta desde la tarea:** «Nueva meta» en el formulario de la tarea, con nombre y área. Se guarda al momento y la tarea queda vinculada a ella.
 - **Estadísticas de Inicio al día:** los proyectos activos (batería y plazo) y cuántos van fuera de plazo, las tareas canceladas en el mes y las bloqueadas, y una recomendación para el proyecto que va fuera de plazo.
 
 ---
