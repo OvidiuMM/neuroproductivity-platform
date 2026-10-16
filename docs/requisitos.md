@@ -25,7 +25,7 @@ Origen: `src/components/WheelOfLife.tsx`, `src/components/AreasModal.tsx`, `src/
 - **RF-RUE-02.** Cada cuenta empieza con 7 áreas: Salud, Carrera Profesional, Finanzas, Familia, Ocio, Relaciones y Espiritualidad.
 - **RF-RUE-03.** «Guardar la evaluación» guarda siempre una evaluación nueva, con su fecha en UTC y un nombre opcional. Sin nombre, se llama «Evaluación» seguida de la fecha y la hora.
 - **RF-RUE-04.** Una evaluación guarda solo las puntuaciones de las áreas a la vista. Las áreas ocultas conservan las de evaluaciones anteriores.
-- **RF-RUE-05.** Las evaluaciones guardadas no se pueden modificar: las reglas de Firestore solo admiten reescribir el mismo contenido. La app no ofrece borrarlas una a una.
+- **RF-RUE-05.** Las evaluaciones guardadas no se pueden modificar: las reglas de Firestore solo admiten reescribir el mismo contenido. Quien tiene la cuenta sí puede borrarlas (lo usa el borrado de la cuenta), pero la app no ofrece borrarlas una a una.
 - **RF-RUE-06.** «Tus evaluaciones» lista cada evaluación con su fecha y su promedio. El promedio es la media de las áreas que puntuó esa evaluación.
 - **RF-RUE-07.** «Comparar con una evaluación anterior» superpone en el gráfico la evaluación elegida y muestra la diferencia de cada área. Al abrir la sección está activada, con la evaluación más antigua elegida.
 - **RF-RUE-08.** Al abrir la Rueda, los deslizadores parten de la última evaluación. Un área sin puntuación previa empieza en 0.
@@ -57,8 +57,8 @@ Origen: `src/components/GoalsView.tsx`, `src/components/GoalModal.tsx`, `src/com
 - **RF-MET-13.** Eliminar una meta pide confirmación. Sus tareas se quedan sin meta y con el área que tenía la meta.
 - **RF-MET-14.** Una meta con proyectos no se puede eliminar: la app pide eliminar sus proyectos o pasarlos a otra meta antes.
 - **RF-MET-15.** El formulario de la tarea ofrece las metas activas, agrupadas por área, y la ya vinculada aunque esté lograda o archivada.
-- **RF-MET-16.** «Nueva meta», dentro del formulario de la tarea, crea una meta con nombre y área y la vincula a la tarea. La meta se guarda al momento, aunque luego no se guarde la tarea.
-- **RF-MET-17.** Mientras se escribe el título de una tarea sin meta ni proyecto, la app propone «Vincular a «meta»»: la meta activa que comparte más palabras con el título (de cuatro letras o más, sin tildes ni nexos). En empate gana la modificada más recientemente.
+- **RF-MET-16.** «Nueva meta», dentro del formulario de la tarea, crea una meta con nombre y área y la vincula a la tarea. El área propuesta es la de la tarea si está a la vista; si no, la primera. Enter en el nombre o en el área crea la meta sin guardar la tarea, y Escape cierra solo esa parte. La confirmación sale junto al campo «Meta». La meta se guarda al momento, aunque luego no se guarde la tarea. Con un proyecto elegido no se ofrece.
+- **RF-MET-17.** Mientras se escribe el título de una tarea sin meta ni proyecto, la app propone «Vincular a «meta»»: la meta activa cuyo nombre y «para qué» comparten más palabras con el título (de cuatro letras o más, sin tildes ni nexos). En empate gana la modificada más recientemente.
 
 ### 1.3 Proyectos (RF-PRO)
 
@@ -216,7 +216,7 @@ Origen: `src/components/HomeView.tsx`, `src/services/stats.ts`.
 - **RF-INI-08.** Una tarea cuenta como bloqueada si está en estado Bloqueada o espera a otra tarea abierta. Las tareas de «Algún día» no cuentan como pendientes.
 - **RF-INI-09.** «Por área (último mes)» reparte las tareas hechas en los últimos 30 días entre las áreas de la Rueda, con los nombres de la cuenta.
 - **RF-INI-10.** Inicio muestra hasta 6 metas activas con su progreso y hasta 6 proyectos activos con su batería y su fecha de fin, además de cuántos proyectos van fuera de plazo. Metas y proyectos incluyen las dos listas.
-- **RF-INI-11.** Inicio muestra como mucho 3 recomendaciones, de más a menos urgente, cada una con un botón a la sección que corresponde. Pueden ser, en este orden:
+- **RF-INI-11.** Inicio muestra como mucho 3 recomendaciones, de más a menos urgente. Todas salvo la de las tareas terminadas a tiempo llevan un botón a la sección que corresponde. Pueden ser, en este orden:
   - un proyecto fuera de plazo;
   - tareas vencidas, empezando por la más antigua;
   - 5 o más tareas que vencen esta semana;
@@ -267,7 +267,7 @@ Origen: `src/AuthGate.tsx`, `src/AccessGate.tsx`, `src/services/auth.ts`, `src/s
 **Gestión de la cuenta**
 
 - **RF-CUE-14.** El menú de la cuenta muestra el nombre, la foto o las iniciales y cómo se entra (Google o email). Da acceso a «Accesibilidad», «Descargar mis datos (JSON)», «Escríbenos», la seguridad, «Cerrar sesión» y la eliminación de la cuenta.
-- **RF-CUE-15.** «Descargar mis datos (JSON)» descarga todo lo de la cuenta: tareas, evaluaciones, reuniones, correos, metas, proyectos, áreas de la Rueda, nombre y email.
+- **RF-CUE-15.** «Descargar mis datos (JSON)» descarga los datos de la app: tareas, evaluaciones, reuniones, correos, metas, proyectos, áreas de la Rueda, nombre y email. No incluye el resto del perfil, la solicitud de acceso ni los mensajes de «Escríbenos».
 - **RF-CUE-16.** Una cuenta con contraseña puede «Cambiar la contraseña» escribiendo la actual y una nueva de al menos 8 caracteres.
 - **RF-CUE-17.** «Cerrar sesión en todos los dispositivos» invalida las sesiones de la cuenta y cierra la de este dispositivo. Los demás pierden el acceso en menos de una hora.
 - **RF-CUE-18.** «Cerrar sesión» borra la copia local de los datos del dispositivo. Si hay otras pestañas de la app abiertas, la copia se queda hasta cerrar sesión con una sola.
@@ -292,7 +292,7 @@ Origen: `src/components/AdminView.tsx`, `src/components/AccessAdminView.tsx`, `s
 - **RF-ADM-04.** Desactivarla pide confirmación y aprueba las solicitudes pendientes cuyo email no esté bloqueado. Cada persona aprobada recibe su email, y un aviso dice cuántas se aprobaron.
 - **RF-ADM-05.** Con la aprobación desactivada, una cuenta nueva o pendiente con el email confirmado entra sola. Las rechazadas, retiradas y bloqueadas siguen igual.
 - **RF-ADM-06.** «Solicitudes» agrupa las cuentas en «Pendientes», «Con acceso», «Rechazadas o retiradas» y «Bloqueadas». Cada una muestra nombre, email, foto, estado, fechas de solicitud y de decisión, y el mensaje.
-- **RF-ADM-07.** Las acciones dependen del estado: pendiente, «Aprobar», «Rechazar» y «Bloquear»; con acceso, «Retirar acceso» y «Bloquear»; rechazada o retirada, «Aprobar» y «Bloquear»; bloqueada, «Desbloquear», que la deja retirada. El servidor rechaza cualquier otro cambio.
+- **RF-ADM-07.** Las acciones dependen del estado: pendiente, «Aprobar», «Rechazar» y «Bloquear»; con acceso, «Retirar acceso» y «Bloquear»; rechazada o retirada, «Aprobar» y «Bloquear»; bloqueada, «Desbloquear», que la deja retirada. El servidor admite además aprobar una cuenta bloqueada, que la interfaz no ofrece, y rechaza cualquier otro cambio.
 - **RF-ADM-08.** La persona administradora no puede cambiar su propio acceso.
 - **RF-ADM-09.** «Bloquear» guarda también el email en una lista negra, que se conserva aunque la cuenta se elimine. Una cuenta nueva con ese email empieza bloqueada, y «Desbloquear» o «Aprobar» la cuenta bloqueada libera el email.
 - **RF-ADM-10.** Cada solicitud pendiente nueva genera un email a la persona administradora, sin datos de quien la envía.
@@ -346,7 +346,7 @@ Origen: `firestore.rules`, `firebase.json`, `functions/src/access.ts`, `function
 - **RNF-SEG-06.** Las reglas reconocen a la persona administradora solo si existe su marca y el email guardado en ella coincide con el del token de quien lee.
 - **RNF-SEG-07.** La persona administradora solo puede leer los mensajes de contacto y cambiar su estado a nuevo, leído o cerrado. No puede escribir su contenido ni sus respuestas desde la app.
 - **RNF-SEG-08.** Las funciones invocables exigen sesión iniciada. Las de administración comprueban además que el email verificado del token es el configurado.
-- **RNF-SEG-09.** Las funciones validan y recortan lo que reciben: estados permitidos, longitudes, formato de los identificadores y caracteres de control. Los cambios de acceso van en transacciones que leen también el modo de aprobación y la lista negra.
+- **RNF-SEG-09.** Las funciones validan y recortan lo que reciben: estados permitidos, longitudes, formato de los identificadores y caracteres de control. Los cambios de acceso van en transacciones: al entrar y al solicitar acceso se leen también el modo de aprobación y la lista negra; una decisión de la administración comprueba el estado actual.
 - **RNF-SEG-10.** Hosting añade a todas las respuestas `X-Content-Type-Options: nosniff`, `Referrer-Policy: strict-origin-when-cross-origin` y una `Permissions-Policy` que deniega cámara, micrófono, ubicación, pagos, USB y `browsing-topics`.
 - **RNF-SEG-11.** La política de seguridad de contenidos (CSP) y la `Cross-Origin-Opener-Policy` están en modo solo informar (`Report-Only`): avisan en la consola del navegador, pero no bloquean.
 - **RNF-SEG-12.** Eliminar la cuenta exige volver a autenticarse, y cambiar la contraseña exige la actual.
@@ -368,9 +368,9 @@ Origen: `functions/src/accessLogic.ts`, `functions/src/feedbackLogic.ts`, `funct
 - **RNF-PRI-08.** El Top 10, las sugerencias, las estadísticas y las recomendaciones se calculan en el navegador.
 - **RNF-PRI-09.** La app no carga fuentes externas: usa la tipografía del sistema. No incluye herramientas de analítica ni de seguimiento.
 - **RNF-PRI-10.** Las fotos de perfil se cargan sin enviar la página de origen (`referrerPolicy="no-referrer"`).
-- **RNF-PRI-11.** Al eliminar la cuenta se borran sus datos, su solicitud de acceso y sus mensajes. Solo se conservan el email, si estaba bloqueado, y las horas de los envíos de la última hora, ligadas solo al identificador interno de la cuenta, para que el límite de mensajes siga aplicándose.
+- **RNF-PRI-11.** Al eliminar la cuenta se borran sus datos, su solicitud de acceso y sus mensajes. Solo se conservan el email, si estaba bloqueado (con el identificador interno de la cuenta y la fecha del bloqueo), y las horas de los envíos de la última hora, ligadas solo al identificador interno, para que el límite de mensajes siga aplicándose. Ese registro de envíos no se borra después.
 - **RNF-PRI-12.** Al cerrar sesión se borra la copia local de los datos (RF-CUE-18).
-- **RNF-PRI-13.** Cada cuenta puede descargar todos sus datos en JSON en cualquier momento, también sin acceso aprobado.
+- **RNF-PRI-13.** Cada cuenta puede descargar sus datos de la app en JSON en cualquier momento, también sin acceso aprobado (ver RF-CUE-15).
 
 ### 2.3 Accesibilidad (RNF-ACC)
 
@@ -407,7 +407,7 @@ Origen: `src/App.tsx`, `src/Root.tsx`, `src/lazy.tsx`, `vite.config.ts`, `fireba
 - **RNF-REN-02.** Las páginas legales se cargan sin Firebase ni el resto de la app.
 - **RNF-REN-03.** Las librerías van en paquetes aparte (Firebase, React y el resto), que el navegador conserva entre versiones. Los archivos de `/assets/` se sirven con caché de un año, como inmutables.
 - **RNF-REN-04.** Los cálculos (Top 10, estadísticas, sugerencias, agenda y alarmas) se hacen en el navegador sobre los datos ya cargados. Los estados que dependen de la hora se recalculan cada minuto.
-- **RNF-REN-05.** Los mensajes cerrados de administración se cargan por páginas de unos 20; solo los abiertos llegan en vivo.
+- **RNF-REN-05.** Los mensajes cerrados de administración se cargan por páginas: se leen de 50 en 50 hasta reunir al menos 20 cerrados, así que una página trae entre 20 y 69 (o menos, al final). Solo los abiertos llegan en vivo.
 - **RNF-REN-06.** Las escrituras masivas (importación y borrado de la cuenta o de sus mensajes) van en lotes de hasta 450 operaciones. Las desvinculaciones y aprobaciones en bloque van de 10 en 10, y los emails en bloque comparten como mucho 3 conexiones.
 - **RNF-REN-07.** La función HTTP `api` admite como mucho 10 instancias. El cambio del modo de aprobación puede tardar hasta 300 s.
 
@@ -433,7 +433,7 @@ Origen: `package.json`, `tsconfig.json`, `.github/workflows/ci.yml`, `tests/`, `
 - **RNF-MAN-03.** Hay pruebas de integración de la importación de datos locales y pruebas de las reglas de Firestore contra el emulador.
 - **RNF-MAN-04.** Las pruebas de extremo a extremo (Playwright), un archivo por función de la app, usan los emuladores de Auth, Firestore y Functions con un proyecto de demostración.
 - **RNF-MAN-05.** En cada push y pull request, CI comprueba el formato, el linter, los tipos, la compilación de la app y de las funciones, y todas las pruebas. Solo despliega desde la rama principal, si todo pasa, y de un despliegue en uno.
-- **RNF-MAN-06.** La versión tiene una sola fuente, `package.json`. Se muestra en la cabecera, el inicio de sesión y el pie, y va en las descargas y en la información técnica del contacto.
+- **RNF-MAN-06.** La app toma la versión de `package.json`; `public/manifest.json` la repite y se actualiza a mano. Se muestra en la cabecera, el inicio de sesión y el pie, y va en las descargas y en la información técnica del contacto.
 - **RNF-MAN-07.** La app sigue leyendo los datos de versiones anteriores: tareas sin estado (con `completed`), correos sin estado, adjuntos sin bytes y repeticiones con fecha de inicio.
 
 ---
