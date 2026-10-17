@@ -16,6 +16,7 @@ import {
 } from 'lucide-react';
 import { DeleteAccountPanel } from './DeleteAccountPanel';
 import { LegalLink } from './LegalLinks';
+import { NotificationPermission } from './NotificationPermission';
 
 interface AccountMenuProps {
   isOpen: boolean;
@@ -237,6 +238,10 @@ export const AccountMenu: React.FC<AccountMenuProps> = ({
                 if (file) void run('import', () => onImportData(file));
               }}
             />
+            <div className="rounded-xl border border-slate-200 px-4 py-2.5">
+              <p className="text-xs font-bold text-slate-700">Notificaciones de las alarmas</p>
+              <NotificationPermission buttonLabel="Activar las notificaciones de las alarmas" />
+            </div>
             <button type="button" onClick={onContact} disabled={busy !== null} className={actionClass}>
               <MessageSquare className="h-4 w-4 text-indigo-600" aria-hidden="true" />
               Escríbenos: ideas, fallos o dudas
