@@ -584,6 +584,10 @@ export default function App({ user, services, isAdmin = false }: AppProps) {
     saveGoal(db, uid, goal).catch(reportError('guardar la meta'));
     showToast(previous ? 'Meta guardada.' : 'Meta creada. Añádele tareas en «Metas».');
   };
+  // Desde el formulario de una tarea, que la confirma él mismo (con la ventana abierta, los avisos esperan)
+  const handleCreateGoalFromTask = (goal: Goal) => {
+    saveGoal(db, uid, goal).catch(reportError('guardar la meta'));
+  };
   const handleSetGoalStatus = (goal: Goal, status: GoalStatus) => {
     saveGoal(db, uid, { ...goal, status, updatedAt: new Date().toISOString() }).catch(reportError('guardar la meta'));
     showToast(
@@ -893,6 +897,7 @@ export default function App({ user, services, isAdmin = false }: AppProps) {
               <HomeView
                 tasks={tasks}
                 goals={goals}
+                projects={projects}
                 activeContext={activeContext}
                 accountName={profile.name}
                 top10Count={top10Count}
@@ -1154,6 +1159,7 @@ export default function App({ user, services, isAdmin = false }: AppProps) {
           goals={goals}
           projects={projects}
           tasks={tasks}
+          onCreateGoal={handleCreateGoalFromTask}
         />
 
         {/* VENTANA DE TAREAS ARCHIVADAS (ESTADO HECHA) */}

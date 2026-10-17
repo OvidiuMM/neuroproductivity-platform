@@ -1,8 +1,10 @@
-import { AppTab, Goal, TaskItem, WheelArea, WheelCategory, WheelOfLifeLog } from '../types';
+import { AppTab, Goal, Project, TaskItem, WheelArea, WheelCategory, WheelOfLifeLog } from '../types';
 import { areasWithGoals, latestScores } from './goals';
 import { startOfWeek } from './agenda';
 import { toDateString } from './recurrence';
-import { dueMoment, isArchived, isDone } from './tasks';
+import { dueMoment, formatDay, isArchived, isCancelled, isDone } from './tasks';
+import { blockerOf, tasksById } from './dependencies';
+import { projectDeadline, sortProjects } from './projects';
 import { DEFAULT_AREAS, areaLabel } from './wheel';
 
 // Estadísticas de la pantalla de Inicio, a partir de las tareas de una lista (las hechas guardan doneAt)
@@ -19,6 +21,8 @@ export interface TaskStats {
   doneToday: number;
   doneThisWeek: number;
   doneThisMonth: number;
+  // Canceladas este mes: se archivan, pero no cuentan como hechas
+  cancelledThisMonth: number;
   // Hechas por día en los últimos 14 días (el último es hoy)
   daily: { date: string; count: number }[];
   // Hechas en los últimos 30 días con fecha límite: a tiempo o con retraso
@@ -35,12 +39,15 @@ export interface TaskStats {
   open: number;
   overdue: number;
   dueThisWeek: number;
+  // Pendientes que no se pueden hacer aún: esperan a otra tarea o están marcadas como bloqueadas
+  blocked: number;
   byArea: { area: WheelCategory; count: number }[];
 }
 
 const doneMoment = (task: TaskItem) => (task.doneAt ? new Date(task.doneAt) : null);
 
-export const computeStats = (tasks: TaskItem[], now = new Date()): TaskStats => {
+// `allTasks`: todas las tareas de la cuenta, para saber si una de esta lista espera a otra (puede estar en la otra)
+export const computeStats = (tasks: TaskItem[], now = new Date(), allTasks: TaskItem[] = tasks): TaskStats => {
   const today = startOfDay(now);
   const weekStart = startOfWeek(now);
   // Siete días de calendario (no 168 horas): con el cambio de hora la semana dura una hora más o menos
@@ -88,6 +95,10 @@ export const computeStats = (tasks: TaskItem[], now = new Date()): TaskStats => 
   }
 
   const open = tasks.filter((t) => !isArchived(t) && !t.isSomeday);
+  const byId = tasksById(allTasks);
+  const cancelledThisMonth = tasks.filter(
+    (t) => isCancelled(t) && t.doneAt && new Date(t.doneAt) >= monthStart && new Date(t.doneAt) <= now
+  ).length;
   const areaCounts = new Map<WheelCategory, number>();
   for (const task of recent) {
     if (task.wheelCategory) areaCounts.set(task.wheelCategory, (areaCounts.get(task.wheelCategory) ?? 0) + 1);
@@ -97,6 +108,7 @@ export const computeStats = (tasks: TaskItem[], now = new Date()): TaskStats => 
     doneToday: countsByDay.get(toDateString(today)) ?? 0,
     doneThisWeek: doneSince(weekStart).length,
     doneThisMonth: doneSince(monthStart).length,
+    cancelledThisMonth,
     daily,
     onTime,
     late,
@@ -111,6 +123,7 @@ export const computeStats = (tasks: TaskItem[], now = new Date()): TaskStats => 
       const due = dueMoment(t);
       return due && due >= now && due < nextWeekStart;
     }).length,
+    blocked: open.filter((t) => t.status === 'BLOCKED' || blockerOf(t, byId)).length,
     byArea: [...areaCounts.entries()].map(([area, count]) => ({ area, count })).sort((a, b) => b.count - a.count)
   };
 };
@@ -128,9 +141,25 @@ export const recommendationsFor = (
   wheelLogs: WheelOfLifeLog[],
   now = new Date(),
   goals: Goal[] = [],
-  areas: WheelArea[] = DEFAULT_AREAS
+  areas: WheelArea[] = DEFAULT_AREAS,
+  // Proyectos y todas las tareas de la cuenta (las de un proyecto pueden ser de las dos listas)
+  projects: Project[] = [],
+  allTasks: TaskItem[] = tasks
 ): Recommendation[] => {
   const list: Recommendation[] = [];
+  // El proyecto que termina antes de los que ya van fuera de plazo
+  const late = sortProjects(projects)
+    .map((project) => ({ project, deadline: projectDeadline(project, allTasks, now) }))
+    .find(({ deadline }) => deadline.state === 'overdue');
+  if (late) {
+    const { project, deadline } = late;
+    const open = deadline.open;
+    list.push({
+      id: 'project-overdue',
+      text: `El proyecto «${project.title}» va fuera de plazo: terminaba el ${formatDay(project.endDate)} y le ${open === 1 ? 'queda 1 tarea' : `quedan ${open} tareas`}. Cambia la fecha de fin o reparte sus tareas.`,
+      action: { label: 'Ver los proyectos', tab: 'projects' }
+    });
+  }
   if (stats.overdue > 0) {
     const oldest = tasks
       .filter((t) => !isArchived(t) && !t.isSomeday && dueMoment(t) && dueMoment(t)! < now)

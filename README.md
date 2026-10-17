@@ -53,6 +53,8 @@ Al volver a evaluar la Rueda se ve el efecto de las acciones, y las áreas cambi
 
 ## 🧠 Fundamentos y secciones
 
+La lista completa y numerada de lo que hace la app, con sus requisitos no funcionales, está en [docs/requisitos.md](docs/requisitos.md).
+
 ### 1. Rueda de la Vida
 
 - **Áreas de cada cuenta:** se empieza con 7 (_Salud, Carrera Profesional, Finanzas, Familia, Ocio, Relaciones, Espiritualidad_), que se pueden renombrar, ocultar y ampliar con áreas propias desde «Editar áreas» (entre 3 y 12 a la vista). Las 7 de partida conservan su nombre original como identificador y las nuevas tienen el suyo (`area-…`), así nada de lo guardado cambia; la lista va en el perfil (`wheelAreas`). Un área oculta sale de la Rueda, de las sugerencias y de las listas para elegir, pero conserva sus evaluaciones, sus metas (que siguen en «Metas») y sus tareas. Los nombres se muestran en toda la app y en las descargas; las sugerencias de área usan, para las nuevas, las palabras de su nombre (`src/services/wheel.ts`, `useAreas`).
@@ -76,7 +78,7 @@ Al volver a evaluar la Rueda se ve el efecto de las acciones, y las áreas cambi
 - **Orden y filtros del Top 10:** por prioridad efectiva, fecha límite, estimación, actualización o área, y filtros por prioridad, estimación máxima, estado, plazo y área. Se guardan en cada dispositivo y el resumen «Top 10» cuenta lo mismo que muestra la lista.
 - **Prioridad efectiva y estimación:** si la fecha límite está a más de una semana, la tarea cuenta un nivel menos de prioridad (las tareas sin fecha mantienen la suya). Cada tarea puede llevar una estimación de duración, visible en todas las listas.
 - **Verbo físico:** el campo de la acción indica encima que empiece por una acción concreta (Llamar, Enviar, Reservar…).
-- **Meta:** el formulario de la tarea permite vincularla a una meta activa (aparece cuando hay metas); la tarjeta muestra la meta en lugar del área.
+- **Meta:** el formulario de la tarea permite vincularla a una meta activa o crearla ahí mismo con «Nueva meta» (nombre y área; el resto, en «Metas»); la tarjeta muestra la meta en lugar del área.
 - **«Algún día»:** las ideas sin urgencia van a su propia pestaña y no compiten con el Top 10.
 - **Tareas dependientes:** una tarea puede esperar a otra (`dependsOn`, una sola; «Empieza después de», en «Más opciones»). Mientras esa siga abierta, la dependiente sale con un candado, no entra en el Top 10 (va con el resto) y no se puede marcar como hecha ni en progreso; al hacerse o cancelarse la otra se desbloquea sola, y el aviso lo dice. Varias tareas pueden esperar a la misma, en paralelo. No se pueden crear ciclos, una tarea eliminada no bloquea y la siguiente repetición de una recurrente no hereda la espera (`src/services/dependencies.ts`).
 - **Estado y archivo:** Cada tarea tiene un estado manual (Pendiente, En progreso, Bloqueada, Hecha, Cancelada). Marcarla como hecha es un toque, con «Deshacer»; el lápiz de la tarjeta, o pulsar su título, abre la edición. Las tareas hechas y las canceladas se archivan y se consultan en la ventana «Archivadas», desde donde se reactivan cambiando su estado. Una cancelada no cuenta como hecha: ni en las estadísticas ni en el avance de las metas.
@@ -111,7 +113,7 @@ Al volver a evaluar la Rueda se ve el efecto de las acciones, y las áreas cambi
 - **Cuenta autogestionada:** desde el menú de la cuenta se cambia la contraseña, se cierra la sesión en todos los dispositivos (los demás pierden el acceso en menos de una hora), se descargan los datos y se elimina la cuenta con todo su contenido, confirmándolo con la contraseña o con Google.
 - **Acceso:** la administración puede exigir la aprobación de cada cuenta (por defecto) o desactivarla; también puede retirar el acceso o bloquear una cuenta junto con su email. Sin acceso se ve una pantalla para solicitarlo con un mensaje opcional, desde la que también se pueden descargar o eliminar los datos guardados. La administración decide en **Administración** → **Solicitudes** y recibe un email por cada solicitud. Un aviso rojo, en «Administración» y en sus pestañas, cuenta las solicitudes pendientes, los mensajes sin leer y, con la aprobación desactivada, las cuentas que entraron solas desde la última vez que se miraron las solicitudes en ese dispositivo, que salen marcadas como «Nueva»; la persona recibe otro cuando se aprueba (detalles en [Aprobación de accesos](#aprobación-de-accesos)).
 - **Accesibilidad:** panel propio (menú de la cuenta y pantallas de inicio de sesión y acceso) con tamaño del texto, alto contraste, reducir animaciones y foco muy visible, guardados en cada dispositivo. Toda la app se usa con el teclado (los diálogos atrapan y devuelven el foco, enlace para saltar al contenido) y una auditoría automática WCAG 2.1 AA revisa cada pantalla en CI.
-- **Inicio:** el foco de la lista activa, las metas activas con su progreso y estadísticas de las tareas (hechas por día, semana y mes; antes o después del plazo; velocidad en tareas y horas estimadas por semana; tiempo medio hasta completarlas; racha; pendientes y vencidas; reparto por área), con recomendaciones según esos datos.
+- **Inicio:** el foco de la lista activa, las metas activas con su progreso, los proyectos activos con su batería y su plazo, y estadísticas de las tareas (hechas por día, semana y mes, y canceladas en el mes; antes o después del plazo; velocidad en tareas y horas estimadas por semana; tiempo medio hasta completarlas; racha; pendientes, vencidas y bloqueadas; reparto por área, con los nombres de la cuenta), con recomendaciones según esos datos (también si un proyecto va fuera de plazo).
 - **Agenda:** vista semanal (de lunes a domingo) y por días (14 días, también los vacíos) con las tareas con fecha de las dos listas, los intervalos, las repeticiones previstas de las tareas recurrentes y las reuniones. En la vista por días las tareas vencidas aparecen aparte; al pulsar una tarea se edita.
 - **Contacto:** «Escríbenos» (en la Ayuda, en «Tu cuenta» y en la pantalla de acceso) envía ideas, fallos o dudas; la administración los lee y los responde por email desde la app.
 - **Textos legales:** política de privacidad (`/privacidad`), condiciones de uso (`/condiciones`) y aviso legal (`/aviso-legal`), públicos y sin iniciar sesión (`src/Root.tsx` elige la página por la ruta, sin cargar Firebase). Están enlazados desde las pantallas de inicio de sesión y de acceso, el pie, el menú de la cuenta y la Ayuda; al entrar se acepta tener al menos 14 años y las condiciones. El contenido está en `src/components/LegalTexts.tsx`, y el titular, el email de contacto y la fecha de la versión, en `src/services/legal.ts`: al cambiar el contenido, cambia también la fecha. Una prueba unitaria falla si falta el titular o el email.
@@ -158,6 +160,8 @@ Al volver a evaluar la Rueda se ve el efecto de las acciones, y las áreas cambi
 - **Horas en 24 h:** un campo propio de `hh:mm` en todas las horas, en lugar del selector del navegador (que en sistemas en 12 h podía guardar 23:00 en lugar de 11:00). El aviso de una alarma dice su hora y, si llega tarde porque CLAR estaba cerrada, cuándo era.
 - **Editar una tarea:** con el lápiz de su tarjeta o pulsando su título.
 - **Avisos rojos de administración:** solicitudes pendientes, mensajes sin leer y cuentas nuevas que entraron solas.
+- **Crear una meta desde la tarea:** «Nueva meta» en el formulario de la tarea, con nombre y área. Se guarda al momento y la tarea queda vinculada a ella.
+- **Estadísticas de Inicio al día:** los proyectos activos (batería y plazo) y cuántos van fuera de plazo, las tareas canceladas en el mes y las bloqueadas, y una recomendación para el proyecto que va fuera de plazo.
 
 ---
 
@@ -360,6 +364,7 @@ El repositorio utiliza `package-lock.json` (en la raíz, en `functions/` y en `t
 ## 📂 Estructura del Proyecto
 
 ```text
+├── docs/requisitos.md           # Requisitos funcionales y no funcionales de la versión actual
 ├── index.html                   # Entrada HTML (lang="es")
 ├── LICENSE                      # Licencia MIT
 ├── package.json                 # Dependencias y scripts
