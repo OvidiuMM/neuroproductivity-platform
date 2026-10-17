@@ -62,6 +62,7 @@ import {
 } from 'lucide-react';
 import { DateField } from './DateField';
 import { NotificationPermission } from './NotificationPermission';
+import { pushAvailable } from '../services/push';
 import { DiscardChangesPrompt } from './DiscardChangesPrompt';
 import { TimeField } from './TimeField';
 import { NewGoalInline } from './NewGoalInline';
@@ -943,8 +944,9 @@ export const TaskModal: React.FC<TaskModalProps> = ({
               {alarmBlocked ??
                 alarmDescription ??
                 'Una hora dentro de las 24 h anteriores al plazo; sin hora límite, suena la víspera.'}{' '}
-              Suena mientras CLAR esté abierta, también en segundo plano. Con CLAR cerrada o el móvil bloqueado, el
-              aviso sale al abrirla: para no perderla, añade la tarea al calendario (.ics), que lleva la alarma.
+              {pushAvailable()
+                ? 'Con las notificaciones activadas en este dispositivo, suena aunque CLAR esté cerrada. Sin ellas, suena mientras CLAR esté abierta y, si no, el aviso sale al abrirla.'
+                : 'Suena mientras CLAR esté abierta, también en segundo plano. Con CLAR cerrada o el móvil bloqueado, el aviso sale al abrirla: para no perderla, añade la tarea al calendario (.ics), que lleva la alarma.'}
             </p>
             {alarmDescription && <NotificationPermission />}
           </div>

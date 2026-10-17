@@ -166,6 +166,7 @@ La lista completa y numerada de lo que hace la app, con sus requisitos no funcio
 ### Importar los datos, calendario y alarmas en Android (0.9.5)
 
 - **Importar datos (JSON):** en el menú de la cuenta, junto a «Descargar mis datos (JSON)». Acepta ese archivo (también los descargados antes de esta versión) y enseña antes qué entra: por cada tipo, lo nuevo, lo que ya está en la cuenta y lo que no es válido. Se añade solo lo que falta (mismo id: no se toca), así importar dos veces el mismo archivo no duplica nada; las áreas de la Rueda que falten se añaden (con un número si el nombre ya existe, y ocultas pasado el máximo a la vista). Cada registro se comprueba campo a campo y solo se guardan los campos conocidos (`src/services/importData.ts`); hace falta conexión, porque se mira en el servidor qué hay ya. La descarga lleva ahora `app`, `version` y `type: "account"`.
+- **Alarmas con CLAR cerrada (push):** con las notificaciones activadas, las alarmas llegan aunque la app esté cerrada o el móvil bloqueado, por Firebase Cloud Messaging y una Cloud Function que se ejecuta cada minuto (ver [Notificaciones push de las alarmas](#notificaciones-push-de-las-alarmas)).
 - **Notificaciones de las alarmas en Android:** CLAR registra un service worker (`public/sw.js`, solo para las notificaciones: no intercepta peticiones ni guarda caché) y muestra la notificación desde él, así sale también en Android y en la app instalada mientras CLAR esté viva. El permiso se ofrece también en el menú de la cuenta, y las alarmas se revisan al reanudarse la app, al volver a mostrarse la página y al recuperar la conexión. El formulario dice que con CLAR cerrada o el móvil bloqueado la alarma no suena y propone el .ics.
 - **Textos legales:** el responsable con su nombre completo y un domicilio a efectos de notificaciones (RGPD, art. 13.1.a); la edad mínima, 14 años o la del país de residencia si es mayor; una licencia técnica sobre el contenido para poder alojarlo y mostrarlo; el almacenamiento local del navegador (Local Storage e IndexedDB) y el service worker, explicados como técnicos (art. 22.2 de la LSSI), y en el aviso legal, la ausencia de afiliación con el autor del libro que inspira el método.
 - **Calendario:** una tarea con hora de inicio y sin hora límite se exporta como un evento de una hora (antes llegaba hasta el final del día límite; si la fecha límite es otro día, la descripción la dice), y las notas de la tarea van en la descripción del evento, las de lista con su casilla. Las series con hora se exportan en hora local con su zona horaria: antes iban en UTC, y una serie de los lunes a las 00:30 caía en domingo y se movía una hora con el cambio de horario.
@@ -291,6 +292,15 @@ npm run emulators
 # Despliegue: compila la SPA y las Cloud Functions antes de subirlas y publica las reglas de Firestore
 npm run deploy
 ```
+
+#### Notificaciones push de las alarmas
+
+Con CLAR cerrada, las alarmas llegan por Firebase Cloud Messaging. Al activar las notificaciones, cada dispositivo registra su token y su zona horaria (`registerPushDevice`). El trigger `queueTaskAlarm` calcula la próxima alarma de cada tarea en esa zona horaria, con el mismo resultado que la app (`functions/src/alarmLogic.ts`), y la guarda en `alarm_queue`. `sendDueAlarms`, cada minuto, envía las que tocan y las quita de la cola. El service worker (`public/sw.js`) las muestra con la misma etiqueta que la app, así no salen dos veces. Al cerrar sesión, el token del dispositivo deja de valer; «Cerrar todas las sesiones» y eliminar la cuenta borran los dispositivos y la cola. Ninguna de las dos colecciones se lee ni se escribe desde la app.
+
+1. **Clave VAPID:** Firebase → Configuración del proyecto → Cloud Messaging → Certificados web push → «Generar par de claves». La clave pública va en la variable del repositorio `FCM_VAPID_KEY` (`gh variable set FCM_VAPID_KEY`). La compilación la lee como `VITE_FCM_VAPID_KEY`; sin ella, la app no usa push.
+2. **APIs:** el primer despliegue activa Cloud Scheduler (para `sendDueAlarms`) y Eventarc (para el trigger) si el CLI no puede hacerlo solo.
+3. **APK (TWA):** generarla con la delegación de notificaciones (Bubblewrap: `enableNotifications: true`) y el permiso `POST_NOTIFICATIONS` de Android 13+.
+4. **Emuladores:** FCM no tiene emulador, así que con ellos no se usa push; el trigger funciona y la tarea programada no se ejecuta.
 
 #### Dominio propio (clar.life)
 
@@ -483,7 +493,7 @@ El repositorio utiliza `package-lock.json` (en la raíz, en `functions/` y en `t
 ## 🧱 Arquitectura y modelo de datos
 
 - **Sin servidor propio:** la SPA (React) habla directamente con Firebase: Authentication para las cuentas y Cloud Firestore (`europe-west1`) para los datos, con caché persistente para funcionar sin conexión y sincronizar entre dispositivos y pestañas. Las reglas de Firestore (`firestore.rules`) son la frontera de seguridad: cada cuenta solo lee y escribe lo suyo.
-- **Cloud Functions invocables** (2.ª gen, `europe-west1`) para lo que no puede hacer el navegador: los accesos (`syncAccess`, `requestAccess`, `setAccess`, `setAccessMode`, `forgetAccess`, `revokeSessions`) y el contacto (`submitFeedback`, `replyToFeedback`), con los avisos por email (SMTP de IONOS). La función HTTP `api` solo sirve `/.well-known/assetlinks.json` para la APK Android.
+- **Cloud Functions invocables** (2.ª gen, `europe-west1`) para lo que no puede hacer el navegador: los accesos (`syncAccess`, `requestAccess`, `setAccess`, `setAccessMode`, `forgetAccess`, `revokeSessions`) el contacto (`submitFeedback`, `replyToFeedback`), con los avisos por email (SMTP de IONOS), y las notificaciones push de las alarmas (`registerPushDevice`, el trigger `queueTaskAlarm` sobre las tareas y `sendDueAlarms`, programada cada minuto; `functions/src/push.ts`). La función HTTP `api` solo sirve `/.well-known/assetlinks.json` para la APK Android.
 - **En el navegador:** las sugerencias de área y de meta, el Top 10, las alarmas, las estadísticas, las descargas y los archivos de calendario.
 
 **Modelo de datos (Firestore).** Los tipos están en `src/types/index.ts`.
@@ -496,7 +506,8 @@ El repositorio utiliza `package-lock.json` (en la raíz, en `functions/` y en `t
 | `users/{uid}/goals` · `users/{uid}/projects`                           | Metas (área, para qué, fecha objetivo) y proyectos (meta, fecha de fin)                                | La app                                                    |
 | `users/{uid}/meetings` · `users/{uid}/emails`                          | Reuniones y correos de «Tiempo protegido»                                                              | La app                                                    |
 | `access/{uid}` · `admins/{uid}` · `settings/access` · `blocked_emails` | Solicitudes y estado del acceso, marca de administración, modo de aprobación y emails bloqueados       | Cloud Functions                                           |
-| `feedback_tickets` · `feedback_limits`                                 | Mensajes de «Escríbenos» con sus respuestas, y su límite por hora                                      | Cloud Functions (la administración solo cambia el estado) |
+| `feedback_tickets` · `feedback_limits`                                 | Mensajes de «Escríbenos» con sus respuestas, y su límite por hora                                      | Cloud Functions                                           |
+| `push_devices/{uid}` · `alarm_queue`                                   | Tokens de FCM y zona horaria de cada dispositivo, y la próxima alarma de cada tarea por enviar         | Cloud Functions (la administración solo cambia el estado) |
 
 ---
 
