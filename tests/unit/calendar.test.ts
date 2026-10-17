@@ -1,6 +1,12 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
-import { buildCalendarEvent, buildIcs, googleCalendarUrl, outlookCalendarUrl } from '../../src/services/calendar.ts';
+import {
+  buildCalendarEvent,
+  buildIcs,
+  buildVtimezone,
+  googleCalendarUrl,
+  outlookCalendarUrl
+} from '../../src/services/calendar.ts';
 import type { TaskItem } from '../../src/types';
 
 const APP = 'https://app.example.com';
@@ -196,6 +202,17 @@ describe('recurring tasks in calendars', () => {
       /\r\nDTSTART;TZID=Europe\/Madrid:20261019T003000\r\nDTEND;TZID=Europe\/Madrid:20261019T010000\r\n/
     );
     assert.match(file, /BYDAY=MO/);
+    // Con su VTIMEZONE: el paso al horario de verano del 28 de marzo de 2027 a las 02:00 (de +0100 a +0200)
+    assert.match(file, /BEGIN:VTIMEZONE\r\nTZID:Europe\/Madrid\r\n/);
+    assert.match(
+      file,
+      /BEGIN:DAYLIGHT\r\nDTSTART:20270328T020000\r\nTZOFFSETFROM:\+0100\r\nTZOFFSETTO:\+0200\r\nEND:DAYLIGHT/
+    );
+    assert.match(
+      file,
+      /BEGIN:STANDARD\r\nDTSTART:20261025T030000\r\nTZOFFSETFROM:\+0200\r\nTZOFFSETTO:\+0100\r\nEND:STANDARD/
+    );
+    assert.ok(file.indexOf('END:VTIMEZONE') < file.indexOf('BEGIN:VEVENT'));
     const google = new URL(googleCalendarUrl(event)).searchParams;
     assert.equal(google.get('dates'), '20261019T003000/20261019T010000');
     assert.equal(google.get('ctz'), 'Europe/Madrid');
@@ -248,5 +265,34 @@ describe('alarms in calendars', () => {
     assert.doesNotMatch(ics({ dueDate: '2030-06-15', dueTime: '11:00' }), /VALARM/);
     const recurrence = { frequency: 'WEEKLY' as const, interval: 1, weekdays: [6] };
     assert.doesNotMatch(ics({ dueDate: '2030-06-15', recurrence, alarmTime: '08:00' }), /VALARM/);
+  });
+});
+
+describe('time zones in the .ics', () => {
+  it('describes a zone without changes of time with a single observance', () => {
+    const lines = buildVtimezone('Asia/Kolkata', new Date(Date.UTC(2026, 9, 19)));
+    assert.deepEqual(lines, [
+      'BEGIN:VTIMEZONE',
+      'TZID:Asia/Kolkata',
+      'BEGIN:STANDARD',
+      'DTSTART:20260101T053000',
+      'TZOFFSETFROM:+0530',
+      'TZOFFSETTO:+0530',
+      'END:STANDARD',
+      'END:VTIMEZONE'
+    ]);
+  });
+
+  it('lists ten years of changes of time, two a year in Madrid', () => {
+    const lines = buildVtimezone('Europe/Madrid', new Date(Date.UTC(2026, 9, 19)));
+    assert.equal(lines.filter((l) => l === 'BEGIN:DAYLIGHT').length, 10);
+    assert.equal(lines.filter((l) => l === 'BEGIN:STANDARD').length, 11);
+  });
+
+  it('escapes a lone carriage return', () => {
+    assert.match(
+      buildIcs(buildCalendarEvent(task({ dueDate: '2026-10-15', title: 'Uno\rDos' }), APP)!),
+      /SUMMARY:Uno\\nDos/
+    );
   });
 });
