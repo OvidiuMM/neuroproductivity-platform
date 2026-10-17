@@ -173,6 +173,10 @@ export const PrivacyPolicy: React.FC = () => (
       <List>
         <li>Cambiar o borrar cualquier tarea, meta o correo.</li>
         <li>«Descargar mis datos», en el menú de tu cuenta: un archivo JSON con lo que has escrito.</li>
+        <li>
+          «Importar datos», en el mismo menú: vuelve a añadir a tu cuenta lo de una descarga anterior. El archivo se lee
+          en tu dispositivo y solo se guarda lo que falta en tu cuenta.
+        </li>
         <li>«Eliminar la cuenta», en el mismo menú: borra tu cuenta y todo su contenido.</li>
       </List>
       <p>

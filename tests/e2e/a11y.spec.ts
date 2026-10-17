@@ -1,3 +1,4 @@
+import { writeFile } from 'node:fs/promises';
 import AxeBuilder from '@axe-core/playwright';
 import { expect, test, type Page } from '@playwright/test';
 import {
@@ -249,6 +250,32 @@ test('projects: the list, the form and a project with its tasks', async ({ page 
   await expectNoViolations(page, 'un proyecto fuera de plazo con sus tareas');
   await page.getByRole('button', { name: 'Todos los proyectos' }).click();
   await expectNoViolations(page, 'lista de proyectos');
+});
+
+test('importing the account download: the preview', async ({ page }, testInfo) => {
+  await page.goto('/');
+  await signInWithGoogle(page);
+  const createdAt = new Date().toISOString();
+  const file = testInfo.outputPath('clar.json');
+  await writeFile(
+    file,
+    JSON.stringify({
+      app: 'CLAR',
+      type: 'account',
+      exportedAt: createdAt,
+      goals: [{ id: 'goal-a11y', title: 'Ahorrar', area: 'Finanzas', status: 'ACTIVE', createdAt }],
+      tasks: [{ id: 'task-a11y', title: 'Abrir una cuenta', listContext: 'WORK', createdAt }, { id: 'bad/id' }],
+      wheelAreas: [{ id: 'area-a11y', label: 'Viajes' }]
+    })
+  );
+  await page.getByRole('button', { name: 'Tu cuenta' }).click();
+  const chooser = page.waitForEvent('filechooser');
+  await page.getByRole('button', { name: 'Importar datos (JSON)' }).click();
+  await (await chooser).setFiles(file);
+  const preview = page.getByRole('dialog', { name: 'Importar datos' });
+  // Cuenta nueva, con las áreas de partida: se recupera la configuración de áreas del archivo
+  await expect(preview).toContainText('se recupera la del archivo');
+  await expectNoViolations(page, 'vista previa de la importación');
 });
 
 test('the Wheel area editor', async ({ page }) => {

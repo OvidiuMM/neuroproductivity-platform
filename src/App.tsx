@@ -105,6 +105,8 @@ import {
   subscribeToApprovalRequired
 } from './services/access';
 import { deleteAccount, downloadAccountData, signOutEverywhere } from './services/account';
+import { prepareAccountImport, runAccountImport } from './services/accountImport';
+import type { ImportPlan } from './services/importData';
 import { changePassword, hasPassword } from './services/auth';
 import { useReauthMethods } from './hooks/useReauthMethods';
 import { CheckCircle2, Plus } from 'lucide-react';
@@ -135,6 +137,9 @@ const GoalModal = retryableLazy(() => import('./components/GoalModal').then((m) 
 const ProjectsView = retryableLazy(() => import('./components/ProjectsView').then((m) => m.ProjectsView));
 const ProjectModal = retryableLazy(() => import('./components/ProjectModal').then((m) => m.ProjectModal));
 const AreasModal = retryableLazy(() => import('./components/AreasModal').then((m) => m.AreasModal));
+const ImportAccountDialog = retryableLazy(() =>
+  import('./components/ImportAccountDialog').then((m) => m.ImportAccountDialog)
+);
 const WelcomeDialog = retryableLazy(() => import('./components/WelcomeDialog').then((m) => m.WelcomeDialog));
 const ProductTour = retryableLazy(() => import('./components/ProductTour').then((m) => m.ProductTour));
 
@@ -692,6 +697,25 @@ export default function App({ user, services, isAdmin = false }: AppProps) {
 
   // CUENTA
   const handleExportData = () => downloadAccountData(services, user);
+  // IMPORTAR LA DESCARGA DE LA CUENTA: primero la vista previa (qué entra y qué ya está); al confirmar, se escribe
+  const [importPlan, setImportPlan] = useState<ImportPlan | null>(null);
+  const handleChooseImportFile = async (file: File) => {
+    const plan = await prepareAccountImport(db, uid, file, wheelAreas);
+    setIsAccountMenuOpen(false);
+    setImportPlan(plan);
+  };
+  const handleRunImport = async (plan: ImportPlan, onProgress: (done: number, total: number) => void) => {
+    await runAccountImport(db, uid, plan, onProgress);
+    // Solo cierra su propia ventana: una importación que se reanudó al volver la conexión no cierra la de otra nueva
+    setImportPlan((current) => (current === plan ? null : current));
+    const parts = [
+      plan.total > 0 && `${plan.total} ${plan.total === 1 ? 'elemento' : 'elementos'}`,
+      plan.restoredAreas
+        ? 'las áreas de tu Rueda'
+        : plan.addedAreas.length > 0 && `${plan.addedAreas.length} ${plan.addedAreas.length === 1 ? 'área' : 'áreas'}`
+    ].filter(Boolean);
+    showToast(`Importado: ${parts.join(' y ')}.`);
+  };
   const handleDeleteAccount = (password?: string) => deleteAccount(services, user, password);
 
   // IMPORTACIÓN DE DATOS DE LA VERSIÓN SIN CUENTAS
@@ -799,7 +823,8 @@ export default function App({ user, services, isAdmin = false }: AppProps) {
     emailEditor !== null ||
     isAccountMenuOpen ||
     isAccessibilityOpen ||
-    isImportOpen;
+    isImportOpen ||
+    importPlan !== null;
 
   // ALARMAS: avisan mientras la app está abierta, dentro de ella (en todas las pestañas) y, con permiso, también con
   // una notificación del sistema. El aviso muestra la tarea tal como está ahora y desaparece si se marca como hecha.
@@ -1192,6 +1217,7 @@ export default function App({ user, services, isAdmin = false }: AppProps) {
           hasPassword={hasPassword(user)}
           reauthMethods={reauthMethods}
           onExportData={handleExportData}
+          onImportData={handleChooseImportFile}
           onDeleteAccount={handleDeleteAccount}
           onChangePassword={(currentPassword, newPassword) => changePassword(user, currentPassword, newPassword)}
           onSignOutEverywhere={() => signOutEverywhere(services)}
@@ -1266,6 +1292,18 @@ export default function App({ user, services, isAdmin = false }: AppProps) {
         {isAreasEditorOpen && (
           <DeferredDialog retry={AreasModal.retry} onCancel={() => setIsAreasEditorOpen(false)}>
             <AreasModal areas={wheelAreas} onSave={handleSaveAreas} onClose={() => setIsAreasEditorOpen(false)} />
+          </DeferredDialog>
+        )}
+
+        {/* IMPORTAR LA DESCARGA DE LA CUENTA (se abre desde el menú de la cuenta, con el archivo ya comprobado) */}
+        {importPlan && (
+          <DeferredDialog retry={ImportAccountDialog.retry} onCancel={() => setImportPlan(null)}>
+            <ImportAccountDialog
+              plan={importPlan}
+              onImport={(onProgress) => handleRunImport(importPlan, onProgress)}
+              onClose={() => setImportPlan(null)}
+              returnFocusTo={accountButton}
+            />
           </DeferredDialog>
         )}
 
