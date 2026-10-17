@@ -1,6 +1,6 @@
 # Requisitos del sistema — CLAR
 
-- **Versión:** 0.9.5
+- **Versión:** 0.9.4
 - **Última revisión:** 2026-10-17
 
 Este documento describe qué hace CLAR en la versión 0.9.5: sus requisitos funcionales y no funcionales tal como están implementados en el código de esta versión (la SPA de `src/`, las Cloud Functions de `functions/src/`, las reglas de Firestore, la configuración de Firebase Hosting y las pruebas). No recoge planes ni funciones futuras. Donde el README y el código no coinciden, manda el código.
@@ -266,12 +266,12 @@ Origen: `src/AuthGate.tsx`, `src/AccessGate.tsx`, `src/services/auth.ts`, `src/s
 
 **Gestión de la cuenta**
 
-- **RF-CUE-14.** El menú de la cuenta muestra el nombre, la foto o las iniciales y cómo se entra (Google o email). Da acceso a «Accesibilidad», «Descargar mis datos (JSON)», «Importar datos (JSON)», «Escríbenos», la seguridad, «Cerrar sesión» y la eliminación de la cuenta.
+- **RF-CUE-14.** El menú de la cuenta muestra el nombre, la foto o las iniciales y cómo se entró en esta sesión (Google o email). Da acceso a «Accesibilidad», «Descargar mis datos (JSON)», «Escríbenos», la seguridad, «Cerrar sesión» y la eliminación de la cuenta.
 - **RF-CUE-15.** «Descargar mis datos (JSON)» descarga los datos de la app: tareas, evaluaciones, reuniones, correos, metas, proyectos, áreas de la Rueda, nombre y email. No incluye el resto del perfil, la solicitud de acceso ni los mensajes de «Escríbenos».
 - **RF-CUE-16.** Una cuenta con contraseña puede «Cambiar la contraseña» escribiendo la actual y una nueva de al menos 8 caracteres.
 - **RF-CUE-17.** «Cerrar sesión en todos los dispositivos» invalida las sesiones de la cuenta y cierra la de este dispositivo. Los demás pierden el acceso en menos de una hora.
 - **RF-CUE-18.** «Cerrar sesión» borra la copia local de los datos del dispositivo. Si hay otras pestañas de la app abiertas, la copia se queda hasta cerrar sesión con una sola.
-- **RF-CUE-19.** «Eliminar mi cuenta y todos mis datos» pide la contraseña o, en las cuentas de Google, volver a entrar con Google. Borra los datos de la cuenta, su perfil, su solicitud de acceso y sus mensajes de «Escríbenos», y después la cuenta.
+- **RF-CUE-19.** «Eliminar mi cuenta y todos mis datos» pide confirmarlo con el método con el que se entró en esta sesión: la contraseña o volver a entrar con Google. Una cuenta que tiene los dos puede cambiar al otro, y los errores de la ventana de Google (cerrada, otra cuenta, bloqueada) se explican en español. Borra los datos de la cuenta, su perfil, su solicitud de acceso y sus mensajes de «Escríbenos», y después la cuenta.
 
 **Primera vez**
 
