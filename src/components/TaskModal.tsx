@@ -943,7 +943,8 @@ export const TaskModal: React.FC<TaskModalProps> = ({
               {alarmBlocked ??
                 alarmDescription ??
                 'Una hora dentro de las 24 h anteriores al plazo; sin hora límite, suena la víspera.'}{' '}
-              Avisa mientras CLAR esté abierta.
+              Suena mientras CLAR esté abierta, también en segundo plano. Con CLAR cerrada o el móvil bloqueado, el
+              aviso sale al abrirla: para no perderla, añade la tarea al calendario (.ics), que lleva la alarma.
             </p>
             {alarmDescription && <NotificationPermission />}
           </div>

@@ -163,12 +163,12 @@ Origen: `src/services/alarms.ts`, `src/services/notifications.ts`, `src/hooks/us
 - **RF-ALA-02.** Con hora límite, la alarma suena dentro de las 24 h anteriores: el mismo día si su hora es anterior a la límite y, si no, la víspera. Sin hora límite, suena la víspera a esa hora.
 - **RF-ALA-03.** El momento de la alarma se calcula en la zona horaria del dispositivo. Si esa hora no existe por el cambio al horario de verano, se adelanta para mantener la antelación pedida.
 - **RF-ALA-04.** El formulario dice cuándo sonará («Sonará el … a las …» o «Sonará la víspera, …») y permite «Quitar» la alarma.
-- **RF-ALA-05.** La alarma avisa solo con CLAR abierta: con un aviso dentro de la app («Alarma · hh:mm», con «Ver tarea» y un botón para cerrarlo) y, si hay permiso, con una notificación del sistema.
-- **RF-ALA-06.** Con una alarma puesta, el formulario ofrece «Activar también las notificaciones del sistema» si el navegador las admite. En Android y en el iPhone sin la app instalada, el aviso sale solo dentro de CLAR.
+- **RF-ALA-05.** La alarma avisa solo con CLAR abierta (también en segundo plano mientras el sistema no la congele): con un aviso dentro de la app («Alarma · hh:mm», con «Ver tarea» y un botón para cerrarlo) y, si hay permiso, con una notificación del sistema, que se muestra desde el service worker de la app. Pulsarla vuelve a CLAR. El formulario avisa de que con CLAR cerrada o el móvil bloqueado no suena y propone el .ics.
+- **RF-ALA-06.** Con una alarma puesta, el formulario ofrece «Activar también las notificaciones del sistema» si el navegador las admite, y el menú de la cuenta, «Activar las notificaciones de las alarmas». Funcionan también en Android y en la app instalada; en el iPhone sin la app instalada, el aviso sale solo dentro de CLAR.
 - **RF-ALA-07.** Una alarma que pasó con la app cerrada avisa al abrirla, si la tarea aún no ha vencido. Si el aviso llega más de 2 minutos tarde, dice a qué hora era.
 - **RF-ALA-08.** Cada alarma avisa una sola vez aunque haya varias pestañas abiertas: una pestaña lanza la notificación del sistema y todas muestran el aviso. Cambiar la hora de la alarma o la fecha límite la vuelve a armar.
 - **RF-ALA-09.** Las tareas archivadas o en «Algún día» no avisan. Un aviso desaparece si su tarea se archiva, y espera mientras haya una ventana abierta.
-- **RF-ALA-10.** La app revisa las alarmas al menos una vez por minuto y al volver a la pestaña.
+- **RF-ALA-10.** La app revisa las alarmas al menos una vez por minuto, al volver a la pestaña, al reanudarse en el móvil y al recuperar la conexión.
 
 ### 1.6 Agenda (RF-AGE)
 
@@ -399,7 +399,7 @@ Origen: `src/services/firebase.ts`, `src/services/repository.ts`, `src/lazy.tsx`
 - **RNF-OFF-02.** Las escrituras se aplican al momento en la copia local y se envían al servidor en segundo plano. Al volver la conexión, se sincronizan con el servidor y con los demás dispositivos y pestañas.
 - **RNF-OFF-03.** Los datos llegan en tiempo real: un cambio hecho en otro dispositivo aparece sin recargar.
 - **RNF-OFF-04.** Necesitan conexión: iniciar sesión, comprobar un acceso que aún no está en la caché, «Deshacer», las funciones del servidor (solicitar acceso, contacto y administración) y eliminar la cuenta.
-- **RNF-OFF-05.** La app no registra un service worker. Al arrancar descarga su configuración de Firebase del Hosting; si no puede, muestra un error en lugar de la app.
+- **RNF-OFF-05.** El service worker de la app (`public/sw.js`) solo muestra notificaciones: no guarda la app en caché ni intercepta peticiones, y se sirve sin caché para que se actualice. Al arrancar, la app descarga su configuración de Firebase del Hosting; si no puede, muestra un error en lugar de la app.
 - **RNF-OFF-06.** Si sin conexión falla la descarga de una parte de la app, la app no se recarga: sigue en pie con los datos y ofrece «Reintentar».
 - **RNF-OFF-07.** Los cambios simultáneos desde varios dispositivos no duplican ni pisan datos. La siguiente repetición tiene un identificador fijo, «Deshacer» comprueba en una transacción que nada cambió, y al eliminar una meta o un proyecto cada tarea se desvincula en su propia transacción, solo si sigue vinculada.
 
@@ -448,7 +448,7 @@ Lo que el código no hace y un lector podría esperar:
 
 - CLAR no envía correos ni sube adjuntos: los guarda y los pasa al programa de correo.
 - No se conecta a cuentas de calendario: solo exporta con enlaces y archivos .ics.
-- No avisa con la app cerrada: no hay notificaciones push ni service worker.
+- No avisa con la app cerrada: no hay notificaciones push.
 - «Tiempo protegido» no tiene herramienta para la tercera fuga de tiempo, los mensajes.
 - Las reuniones no se pueden editar ni eliminar desde la app.
 - Las evaluaciones de la Rueda no se editan ni se borran una a una, y las áreas no se eliminan ni se reordenan.
