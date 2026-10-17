@@ -5,6 +5,7 @@ import {
   doc,
   getDoc,
   getDocs,
+  getDocsFromServer,
   onSnapshot,
   query,
   where,
@@ -249,13 +250,50 @@ export const markOnboardingSeen = (db: Firestore, uid: string, outcome: Onboardi
 // Firestore admite como máximo 500 operaciones por lote
 const BATCH_LIMIT = 450;
 
-const commitInBatches = async (db: Firestore, ops: ((batch: ReturnType<typeof writeBatch>) => void)[]) => {
-  for (let i = 0; i < ops.length; i += BATCH_LIMIT) {
+const commitInBatches = async (
+  db: Firestore,
+  ops: ((batch: ReturnType<typeof writeBatch>) => void)[],
+  { size = BATCH_LIMIT, onProgress }: { size?: number; onProgress?: (done: number, total: number) => void } = {}
+) => {
+  for (let i = 0; i < ops.length; i += size) {
     const batch = writeBatch(db);
-    ops.slice(i, i + BATCH_LIMIT).forEach((op) => op(batch));
+    const chunk = ops.slice(i, i + size);
+    chunk.forEach((op) => op(batch));
     await batch.commit();
+    onProgress?.(i + chunk.length, ops.length);
   }
 };
+
+// Ids de lo que ya hay en la cuenta, leídos del servidor (la caché local podría no tenerlo todo). Sin conexión falla.
+export const existingIds = async (db: Firestore, uid: string) =>
+  Object.fromEntries(
+    await Promise.all(
+      USER_COLLECTIONS.map(async (name) => {
+        const snapshot = await getDocsFromServer(userCollection(db, uid, name));
+        return [name, new Set(snapshot.docs.map((d) => d.id))] as const;
+      })
+    )
+  ) as Record<UserCollection, Set<string>>;
+
+// Escribe los registros en el orden de las colecciones, en lotes pequeños para ir contando el avance
+const IMPORT_BATCH = 100;
+export const importRecords = (
+  db: Firestore,
+  uid: string,
+  data: UserData,
+  order: UserCollection[],
+  onProgress?: (done: number, total: number) => void
+) =>
+  commitInBatches(
+    db,
+    order.flatMap((name) =>
+      (data[name] as { id: string }[]).map(
+        (item) => (batch: ReturnType<typeof writeBatch>) =>
+          batch.set(doc(userCollection(db, uid, name), item.id), { ...item, userId: uid })
+      )
+    ),
+    { size: IMPORT_BATCH, onProgress }
+  );
 
 export const importUserData = (db: Firestore, uid: string, data: UserData) =>
   commitInBatches(

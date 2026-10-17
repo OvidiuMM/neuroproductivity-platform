@@ -6,6 +6,7 @@ import {
   X,
   LogOut,
   Download,
+  Upload,
   Trash2,
   Cloud,
   Accessibility,
@@ -26,6 +27,8 @@ interface AccountMenuProps {
   reauthMethods: ReauthMethod[];
   onSignOut: () => void;
   onExportData: () => Promise<void>;
+  // Lee y comprueba el archivo elegido; si vale, se abre la vista previa (y este menú se cierra)
+  onImportData: (file: File) => Promise<void>;
   onDeleteAccount: (password?: string) => Promise<void>;
   onChangePassword: (currentPassword: string, newPassword: string) => Promise<void>;
   onSignOutEverywhere: () => Promise<void>;
@@ -35,7 +38,7 @@ interface AccountMenuProps {
   returnFocusTo?: () => HTMLElement | null;
 }
 
-type Busy = 'export' | 'delete' | 'password' | 'everywhere' | null;
+type Busy = 'export' | 'import' | 'delete' | 'password' | 'everywhere' | null;
 type Panel = 'password' | 'everywhere' | 'delete' | null;
 
 const actionClass =
@@ -52,6 +55,7 @@ export const AccountMenu: React.FC<AccountMenuProps> = ({
   reauthMethods,
   onSignOut,
   onExportData,
+  onImportData,
   onDeleteAccount,
   onChangePassword,
   onSignOutEverywhere,
@@ -67,6 +71,7 @@ export const AccountMenu: React.FC<AccountMenuProps> = ({
   const [newPassword, setNewPassword] = useState('');
 
   const dialogRef = useRef<HTMLDivElement>(null);
+  const importInput = useRef<HTMLInputElement>(null);
   const deleteButtonRef = useRef<HTMLButtonElement>(null);
   useModalFocus(isOpen, dialogRef, onClose, returnFocusTo);
 
@@ -209,6 +214,33 @@ export const AccountMenu: React.FC<AccountMenuProps> = ({
               <Download className="h-4 w-4 text-indigo-600" aria-hidden="true" />
               {busy === 'export' ? 'Preparando descarga…' : 'Descargar mis datos (JSON)'}
             </button>
+            <button
+              type="button"
+              onClick={() => importInput.current?.click()}
+              disabled={busy !== null}
+              aria-describedby="account-import-help"
+              className={actionClass}
+            >
+              <Upload className="h-4 w-4 text-indigo-600" aria-hidden="true" />
+              {busy === 'import' ? 'Leyendo el archivo…' : 'Importar datos (JSON)'}
+            </button>
+            <p id="account-import-help" className="px-1 text-[11px] text-slate-600">
+              El archivo de «Descargar mis datos». Se añade lo que falta; lo que ya tienes no se toca.
+            </p>
+            <input
+              ref={importInput}
+              type="file"
+              accept="application/json,.json"
+              tabIndex={-1}
+              aria-hidden="true"
+              className="hidden"
+              onChange={(e) => {
+                const file = e.target.files?.[0];
+                // Para poder elegir otra vez el mismo archivo
+                e.target.value = '';
+                if (file) void run('import', () => onImportData(file));
+              }}
+            />
             <button type="button" onClick={onContact} disabled={busy !== null} className={actionClass}>
               <MessageSquare className="h-4 w-4 text-indigo-600" aria-hidden="true" />
               Escríbenos: ideas, fallos o dudas

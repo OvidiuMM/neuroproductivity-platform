@@ -1,7 +1,7 @@
 # CLAR — Plataforma de Gestión del Tiempo y Neurociencia Aplicada
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
-[![Version](https://img.shields.io/badge/Version-0.9.4-indigo.svg)](#)
+[![Version](https://img.shields.io/badge/Version-0.9.5-indigo.svg)](#)
 [![React](https://img.shields.io/badge/React-19-61dafb.svg?logo=react&logoColor=black)](https://react.dev/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-7.x-3178c6.svg?logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
 [![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-4.x-38bdf8.svg?logo=tailwindcss&logoColor=white)](https://tailwindcss.com/)
@@ -110,7 +110,7 @@ La lista completa y numerada de lo que hace la app, con sus requisitos no funcio
 ### Cuentas, Inicio, Agenda y accesibilidad
 
 - **Cuentas y sincronización:** Inicio de sesión con Google o con email y contraseña (con verificación del email antes de solicitar acceso y recuperación de la contraseña por email); los datos de cada cuenta se guardan en Firestore (UE), funcionan sin conexión y se sincronizan entre dispositivos. En el primer inicio de sesión se ofrece importar los datos que la versión anterior guardaba solo en el navegador. Un indicador en la cabecera está verde cuando todo está guardado en el servidor y naranja cuando hay cambios pendientes o no hay conexión; al pulsarlo se fuerza la sincronización.
-- **Cuenta autogestionada:** desde el menú de la cuenta se cambia la contraseña, se cierra la sesión en todos los dispositivos (los demás pierden el acceso en menos de una hora), se descargan los datos y se elimina la cuenta con todo su contenido, confirmándolo con la contraseña o con Google.
+- **Cuenta autogestionada:** desde el menú de la cuenta se cambia la contraseña, se cierra la sesión en todos los dispositivos (los demás pierden el acceso en menos de una hora), se descargan los datos, se importa una descarga anterior (se añade lo que falta y lo que ya está no se toca) y se elimina la cuenta con todo su contenido, confirmándolo con la contraseña o con Google.
 - **Acceso:** la administración puede exigir la aprobación de cada cuenta (por defecto) o desactivarla; también puede retirar el acceso o bloquear una cuenta junto con su email. Sin acceso se ve una pantalla para solicitarlo con un mensaje opcional, desde la que también se pueden descargar o eliminar los datos guardados. La administración decide en **Administración** → **Solicitudes** y recibe un email por cada solicitud. Un aviso rojo, en «Administración» y en sus pestañas, cuenta las solicitudes pendientes, los mensajes sin leer y, con la aprobación desactivada, las cuentas que entraron solas desde la última vez que se miraron las solicitudes en ese dispositivo, que salen marcadas como «Nueva»; la persona recibe otro cuando se aprueba (detalles en [Aprobación de accesos](#aprobación-de-accesos)).
 - **Accesibilidad:** panel propio (menú de la cuenta y pantallas de inicio de sesión y acceso) con tamaño del texto, alto contraste, reducir animaciones y foco muy visible, guardados en cada dispositivo. Toda la app se usa con el teclado (los diálogos atrapan y devuelven el foco, enlace para saltar al contenido) y una auditoría automática WCAG 2.1 AA revisa cada pantalla en CI.
 - **Inicio:** el foco de la lista activa, las metas activas con su progreso, los proyectos activos con su batería y su plazo, y estadísticas de las tareas (hechas por día, semana y mes, y canceladas en el mes; antes o después del plazo; velocidad en tareas y horas estimadas por semana; tiempo medio hasta completarlas; racha; pendientes, vencidas y bloqueadas; reparto por área, con los nombres de la cuenta), con recomendaciones según esos datos (también si un proyecto va fuera de plazo).
@@ -162,6 +162,10 @@ La lista completa y numerada de lo que hace la app, con sus requisitos no funcio
 - **Avisos rojos de administración:** solicitudes pendientes, mensajes sin leer y cuentas nuevas que entraron solas.
 - **Crear una meta desde la tarea:** «Nueva meta» en el formulario de la tarea, con nombre y área. Se guarda al momento y la tarea queda vinculada a ella.
 - **Estadísticas de Inicio al día:** los proyectos activos (batería y plazo) y cuántos van fuera de plazo, las tareas canceladas en el mes y las bloqueadas, y una recomendación para el proyecto que va fuera de plazo.
+
+### Importar los datos (0.9.5)
+
+- **Importar datos (JSON):** en el menú de la cuenta, junto a «Descargar mis datos (JSON)». Acepta ese archivo (también los descargados antes de esta versión) y enseña antes qué entra: por cada tipo, lo nuevo, lo que ya está en la cuenta y lo que no es válido. Se añade solo lo que falta (mismo id: no se toca), así importar dos veces el mismo archivo no duplica nada. Si la cuenta aún tiene las áreas de partida, se recupera la configuración de áreas del archivo; si no, las que falten se añaden (con un número si el nombre ya existe, y ocultas pasado el máximo a la vista). Un texto desmesurado o un proyecto sin su meta cuentan como no válidos: nunca se recorta nada sin avisar. Cada registro se comprueba campo a campo y solo se guardan los campos conocidos (`src/services/importData.ts`); hace falta conexión, porque se mira en el servidor qué hay ya. La descarga lleva ahora `app`, `version` y `type: "account"`.
 
 ---
 
@@ -415,6 +419,8 @@ El repositorio utiliza `package-lock.json` (en la raíz, en `functions/` y en `t
 │   │   ├── access.ts            # Solicitudes de acceso, modo de aprobación y llamadas a las Cloud Functions
 │   │   ├── auth.ts              # Email y contraseña: alta con verificación, acceso, recuperación y cambio
 │   │   ├── account.ts           # Descarga de los datos, eliminación de la cuenta y cierre de todas las sesiones
+│   │   ├── importData.ts        # Importar la descarga: validación campo a campo, qué entra y fusión de áreas
+│   │   ├── accountImport.ts     # Importar la descarga: lectura del archivo y escritura por lotes
 │   │   ├── wheel.ts · goals.ts  # Áreas de la Rueda (propias de cada cuenta); metas, su orden y su progreso
 │   │   ├── projects.ts          # Proyectos: avance, plazo, meta de sus tareas y orden
 │   │   ├── dependencies.ts      # Tareas que esperan a otra: bloqueos, ciclos y candidatas

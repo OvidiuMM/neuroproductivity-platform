@@ -266,8 +266,9 @@ export const HowItWorks: React.FC<HowItWorksProps> = ({ onNavigate, onStartTour,
           por email. Se sincroniza entre tus dispositivos y la app sigue funcionando sin conexión: los cambios se envían
           al recuperarla. El indicador de la cabecera está verde cuando todo está guardado en el servidor y naranja
           cuando hay cambios pendientes o no hay conexión; púlsalo para forzar la sincronización. Desde el menú de tu
-          cuenta puedes descargar tus datos, cambiar la contraseña (si entras con email), cerrar la sesión en todos tus
-          dispositivos o eliminar la cuenta con todo su contenido. Todo el detalle, en la{' '}
+          cuenta puedes descargar tus datos e importar una descarga anterior (se añade lo que falta; lo que ya tienes no
+          se toca), cambiar la contraseña (si entras con email), cerrar la sesión en todos tus dispositivos o eliminar
+          la cuenta con todo su contenido. Todo el detalle, en la{' '}
           <LegalLink to="privacy" newTab>
             política de privacidad
           </LegalLink>

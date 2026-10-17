@@ -3,7 +3,7 @@
 - **Versión:** 0.9.4
 - **Última revisión:** 2026-10-17
 
-Este documento describe qué hace CLAR en la versión 0.9.4: sus requisitos funcionales y no funcionales tal como están implementados en el código de esta versión (la SPA de `src/`, las Cloud Functions de `functions/src/`, las reglas de Firestore, la configuración de Firebase Hosting y las pruebas). No recoge planes ni funciones futuras. Donde el README y el código no coinciden, manda el código.
+Este documento describe qué hace CLAR en la versión 0.9.5: sus requisitos funcionales y no funcionales tal como están implementados en el código de esta versión (la SPA de `src/`, las Cloud Functions de `functions/src/`, las reglas de Firestore, la configuración de Firebase Hosting y las pruebas). No recoge planes ni funciones futuras. Donde el README y el código no coinciden, manda el código.
 
 **Convenciones.** RF: requisito funcional. RNF: requisito no funcional. Los identificadores son estables: un requisito nuevo toma el siguiente número libre de su sección y uno retirado no se reutiliza. Los textos entre «» son etiquetas de la interfaz. «Origen» señala los archivos principales de cada sección.
 
@@ -281,6 +281,10 @@ Origen: `src/AuthGate.tsx`, `src/AccessGate.tsx`, `src/services/auth.ts`, `src/s
 - **RF-CUE-23.** Al acabar el recorrido de la primera vez, la app abre la Rueda si la cuenta aún no tiene evaluaciones.
 - **RF-CUE-24.** Si el navegador guarda datos de la versión anterior sin cuentas, la app ofrece importarlos en el primer inicio de sesión, antes de la bienvenida. Se eligen los perfiles que importar (con sus tareas, evaluaciones, reuniones y correos); los datos de demostración nunca se importan.
 - **RF-CUE-25.** Importar borra del navegador todos los datos locales antiguos, también los de los perfiles no marcados. «Descartar» los borra sin importar, previa confirmación, y «Más tarde» deja la decisión para otro momento.
+- **RF-CUE-26.** «Importar datos (JSON)», en el menú de la cuenta, acepta el archivo de «Descargar mis datos (JSON)» (de hasta 5 MB, también de versiones anteriores) y rechaza, con el motivo, cualquier otro, incluidas las descargas de una sola tarea, meta o proyecto. Pide conexión.
+- **RF-CUE-27.** Antes de importar, la app muestra la fecha de la descarga y, por cada tipo de dato, cuántos registros son nuevos, cuántos ya están en la cuenta (mismo identificador) y cuántos no son válidos, y qué áreas de la Rueda se añadirán.
+- **RF-CUE-28.** Solo se guarda lo que falta: lo que ya está en la cuenta no se modifica, así importar dos veces el mismo archivo no duplica nada. Cada registro se comprueba campo a campo y se guardan solo los campos conocidos, con la cuenta actual como propietaria; un registro con un texto desmesurado (más de 100.000 caracteres de descripción o 20.000 en una nota) o un proyecto cuya meta no está ni en la cuenta ni en el archivo cuentan como no válidos, nunca se recortan. Si la cuenta aún tiene las áreas de partida tal cual, se recupera la configuración de áreas del archivo (nombres, orden, ocultas y propias); si no, las que faltan se añaden al final, un nombre repetido lleva un número y, pasado el máximo de áreas a la vista, entran ocultas.
+- **RF-CUE-29.** La importación muestra su avance y no se puede cerrar mientras escribe. Sin conexión no empieza. Si la conexión se pierde o la importación lleva un minuto sin avanzar, lo dice y deja cerrar la ventana: sigue sola al volver la conexión, y si se cierra CLAR antes, volver a importar el archivo completa el resto. Si falla, dice cuántos registros entraron.
 
 ### 1.11 Administración (RF-ADM)
 
