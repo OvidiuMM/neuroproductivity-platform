@@ -9,3 +9,6 @@ export const api = onRequest({ region: 'europe-west1', maxInstances: 10 }, app);
 // respuestas
 export { forgetAccess, requestAccess, revokeSessions, setAccess, setAccessMode, syncAccess } from './access';
 export { replyToFeedback, submitFeedback } from './feedback';
+
+// Notificaciones push de las alarmas: registro de dispositivos, cola de alarmas y envío cada minuto
+export { queueTaskAlarm, registerPushDevice, sendDueAlarms, unregisterPushDevice } from './push';

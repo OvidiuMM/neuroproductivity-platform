@@ -19,6 +19,12 @@ export default defineConfig(() => {
           // secciones que no se ven al arrancar se cargan al abrirlas (React.lazy en App)
           codeSplitting: {
             groups: [
+              // Las notificaciones push solo hacen falta en los dispositivos que las activan: en un trozo aparte
+              {
+                name: 'firebase-messaging',
+                test: /node_modules[\\/](@firebase[\\/](messaging|installations)|firebase[\\/]messaging)[\\/]/,
+                priority: 10
+              },
               { name: 'firebase', test: /node_modules[\\/](@firebase|firebase)[\\/]/ },
               { name: 'react', test: /node_modules[\\/](react|react-dom|scheduler)[\\/]/ },
               { name: 'vendor', test: /node_modules/ }
