@@ -329,10 +329,11 @@ Origen: `src/Root.tsx`, `src/components/LegalPage.tsx`, `src/components/LegalTex
 - **RF-LEG-01.** La política de privacidad (`/privacidad`), las condiciones de uso (`/condiciones`) y el aviso legal (`/aviso-legal`) son páginas públicas. Se ven sin iniciar sesión y sin cargar Firebase.
 - **RF-LEG-02.** Las rutas admiten barra final y mayúsculas. Cada página muestra su título, enlaces a las otras dos, la fecha de su última actualización y «Volver a CLAR».
 - **RF-LEG-03.** Los textos legales se enlazan desde las pantallas de inicio de sesión, confirmación del email y solicitud de acceso, el pie, el menú de la cuenta y la Ayuda.
-- **RF-LEG-04.** La pantalla de inicio de sesión indica que, al continuar, se confirma tener al menos 14 años y se aceptan las condiciones de uso. La app no pide ni comprueba la edad.
+- **RF-LEG-04.** La pantalla de inicio de sesión indica que, al continuar, se confirma tener al menos 14 años (o la edad mínima del país de residencia, si es mayor) y se aceptan las condiciones de uso. La app no pide ni comprueba la edad.
 - **RF-LEG-05.** La política de privacidad trata el responsable, los datos y sus fines, la base jurídica, los destinatarios, la ubicación y las transferencias, la conservación, los derechos, los menores, las decisiones automatizadas, la seguridad y los cambios.
-- **RF-LEG-06.** Las condiciones de uso tratan el servicio, la edad mínima, la cuenta, el uso aceptable, el contenido, la disponibilidad, la baja, los cambios, el contacto y la ley aplicable. El aviso legal trata el titular, la propiedad intelectual y los enlaces.
-- **RF-LEG-07.** Una prueba unitaria falla si los textos legales no tienen titular o email de contacto.
+- **RF-LEG-06.** Las condiciones de uso tratan el servicio, la edad mínima, la cuenta, el uso aceptable, el contenido (con la licencia técnica para alojarlo, procesarlo y mostrarlo), la disponibilidad, la baja, los cambios, el contacto y la ley aplicable. El aviso legal trata el titular, la propiedad intelectual, los enlaces y la ausencia de afiliación con el autor del libro que inspira el método.
+- **RF-LEG-07.** Una prueba unitaria falla si los textos legales no tienen titular, domicilio a efectos de notificaciones o email de contacto.
+- **RF-LEG-08.** El responsable se identifica con su nombre completo, un domicilio a efectos de notificaciones y un email (RGPD, art. 13.1.a), en la política de privacidad y en el aviso legal. La política explica el almacenamiento local del navegador (Local Storage e IndexedDB) y el service worker, todos técnicos (art. 22.2 de la LSSI).
 
 ---
 
