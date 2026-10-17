@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useRef, useState } from 'react';
 import { Ban, Clock, Download, LogOut, Send, ShieldAlert, Trash2, WifiOff } from 'lucide-react';
 import { BRAND_NAME, BrandMark } from './BrandMark';
 import { ACCESS_MESSAGE_MAX_LENGTH, type OwnAccessStatus } from '../services/access';
@@ -72,6 +72,7 @@ export const AccessRequestScreen: React.FC<AccessRequestScreenProps> = ({
   const [message, setMessage] = useState('');
   const [isSending, setIsSending] = useState(false);
   const [dataBusy, setDataBusy] = useState<'download' | 'delete' | null>(null);
+  const deleteButtonRef = useRef<HTMLButtonElement>(null);
   const [isDeleting, setIsDeleting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -203,6 +204,7 @@ export const AccessRequestScreen: React.FC<AccessRequestScreenProps> = ({
                   <button
                     type="button"
                     disabled={dataBusy !== null}
+                    ref={deleteButtonRef}
                     onClick={() => setIsDeleting(true)}
                     aria-expanded={isDeleting}
                     className="flex flex-1 items-center justify-center gap-1.5 rounded-xl border border-red-300 px-3 py-2 text-xs font-semibold text-red-700 hover:bg-red-50 disabled:opacity-60"
@@ -216,7 +218,10 @@ export const AccessRequestScreen: React.FC<AccessRequestScreenProps> = ({
                     methods={reauthMethods}
                     busy={dataBusy === 'delete'}
                     onConfirm={(password) => runDataAction('delete', () => onDeleteAccount(password))}
-                    onCancel={() => setIsDeleting(false)}
+                    onCancel={() => {
+                      setIsDeleting(false);
+                      requestAnimationFrame(() => deleteButtonRef.current?.focus());
+                    }}
                   />
                 )}
               </section>
