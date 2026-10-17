@@ -81,6 +81,12 @@ const AUTH_ERRORS: Record<string, string> = {
   'auth/too-many-requests': 'Demasiados intentos. Espera un momento o recupera la contraseña.',
   'auth/network-request-failed': 'No hay conexión. Inténtalo de nuevo cuando vuelvas a tenerla.',
   'auth/requires-recent-login': 'Por seguridad, vuelve a entrar y repite la acción.',
+  // Confirmar con Google (p. ej. al eliminar la cuenta)
+  'auth/popup-closed-by-user': 'Se cerró la ventana de Google sin confirmar. Vuelve a intentarlo.',
+  'auth/cancelled-popup-request': 'Se cerró la ventana de Google sin confirmar. Vuelve a intentarlo.',
+  'auth/popup-blocked':
+    'El navegador bloqueó la ventana de Google: permite las ventanas emergentes de CLAR y vuelve a intentarlo.',
+  'auth/user-mismatch': 'Esa no es la cuenta de Google con la que has entrado: elige la misma para confirmar.',
   'auth/operation-not-allowed': 'El acceso con email y contraseña no está activado en este proyecto.'
 };
 

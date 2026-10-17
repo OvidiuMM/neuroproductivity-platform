@@ -67,6 +67,7 @@ export const AccountMenu: React.FC<AccountMenuProps> = ({
   const [newPassword, setNewPassword] = useState('');
 
   const dialogRef = useRef<HTMLDivElement>(null);
+  const deleteButtonRef = useRef<HTMLButtonElement>(null);
   useModalFocus(isOpen, dialogRef, onClose, returnFocusTo);
 
   // El menú sigue montado cerrado: lo escrito (contraseñas incluidas) no debe verse al volver a abrirlo
@@ -314,10 +315,15 @@ export const AccountMenu: React.FC<AccountMenuProps> = ({
               methods={reauthMethods}
               busy={busy === 'delete'}
               onConfirm={(password) => run('delete', () => onDeleteAccount(password))}
-              onCancel={() => setPanel(null)}
+              onCancel={() => {
+                setPanel(null);
+                // El botón que lo abrió vuelve a estar: el foco vuelve a él
+                requestAnimationFrame(() => deleteButtonRef.current?.focus());
+              }}
             />
           ) : (
             <button
+              ref={deleteButtonRef}
               type="button"
               onClick={() => toggle('delete')}
               disabled={busy !== null}

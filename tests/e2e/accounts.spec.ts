@@ -195,8 +195,13 @@ test('an account that also has a password is not asked for it to delete itself a
   await expect(panel).toContainText('Para confirmarlo, Google te pedirá que vuelvas a entrar.');
   await expect(panel.getByLabel('Contraseña', { exact: true })).toHaveCount(0);
   // Puede confirmar con su contraseña si lo prefiere
+  // Al abrir, el foco va a confirmar; al cambiar a la contraseña, a su campo
+  await expect(panel.getByRole('button', { name: 'Eliminar definitivamente' })).toBeFocused();
   await panel.getByRole('button', { name: 'Confirmar con mi contraseña en su lugar' }).click();
-  await expect(panel.getByLabel('Contraseña', { exact: true })).toBeVisible();
+  await expect(panel.getByLabel('Contraseña', { exact: true })).toBeFocused();
   await panel.getByRole('button', { name: 'Confirmar con Google en su lugar' }).click();
   await expect(panel.getByLabel('Contraseña', { exact: true })).toHaveCount(0);
+  // Cancelar devuelve el foco al botón que abrió el panel
+  await panel.getByRole('button', { name: 'Cancelar' }).click();
+  await expect(page.getByRole('button', { name: 'Eliminar mi cuenta y mis datos' })).toBeFocused();
 });
