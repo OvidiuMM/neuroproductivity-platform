@@ -40,14 +40,19 @@ const ID = /^[A-Za-z0-9_-]{1,128}$/;
 const DAY = /^\d{4}-\d{2}-\d{2}$/;
 const TIME = /^([01]\d|2[0-3]):[0-5]\d$/;
 
-const id = (value: unknown) => (typeof value === 'string' && ID.test(value) ? value : undefined);
+// Firestore reserva los ids con dos guiones bajos al principio y al final (__x__): con uno así fallaría todo el lote
+const id = (value: unknown) =>
+  typeof value === 'string' && ID.test(value) && !/^__.*__$/.test(value) ? value : undefined;
 const str = (value: unknown, max: number) => (typeof value === 'string' && value.length <= max ? value : undefined);
 const text = (value: unknown, max: number) => {
   const s = str(value, max);
   return s?.trim() ? s : undefined;
 };
+// Un instante en ISO 8601, como los que guarda la app (2026-10-16T08:00:00.000Z); no vale cualquier texto que Date
+// sepa leer («1», «2024»)
+const ISO_INSTANT = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(:\d{2}(\.\d{1,3})?)?(Z|[+-]\d{2}:\d{2})$/;
 const instant = (value: unknown) =>
-  typeof value === 'string' && value.length <= 40 && !Number.isNaN(Date.parse(value)) ? value : undefined;
+  typeof value === 'string' && ISO_INSTANT.test(value) && !Number.isNaN(Date.parse(value)) ? value : undefined;
 const day = (value: unknown) => (typeof value === 'string' && DAY.test(value) ? value : undefined);
 const time = (value: unknown) => (typeof value === 'string' && TIME.test(value) ? value : undefined);
 const bool = (value: unknown) => (typeof value === 'boolean' ? value : undefined);

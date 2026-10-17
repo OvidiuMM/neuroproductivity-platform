@@ -92,3 +92,30 @@ test('a file that is not the account download is refused with the reason', async
   await expect(account.getByRole('alert')).toHaveText('El archivo no es un JSON válido.');
   await expect(page.getByRole('dialog', { name: 'Importar datos' })).toHaveCount(0);
 });
+
+test('without a connection the import does not start and says why', async ({ page, context }, testInfo) => {
+  await page.goto('/');
+  await signInWithGoogle(page);
+  const createdAt = new Date().toISOString();
+  const file = testInfo.outputPath('clar.json');
+  await writeFile(
+    file,
+    JSON.stringify({
+      app: 'CLAR',
+      type: 'account',
+      tasks: [{ id: 'task-offline', title: 'Revisar el contrato', listContext: 'WORK', createdAt }]
+    })
+  );
+  await importFile(page, file);
+  const preview = page.getByRole('dialog', { name: 'Importar datos' });
+  // La ventana se descarga al abrirse: se corta la conexión cuando ya está
+  await expect(preview.getByRole('button', { name: 'Importar 1 elemento' })).toBeVisible();
+  await context.setOffline(true);
+  await preview.getByRole('button', { name: 'Importar 1 elemento' }).click();
+  await expect(preview.getByRole('alert')).toHaveText(
+    'Sin conexión no se puede importar. Vuelve a intentarlo cuando tengas conexión.'
+  );
+  await context.setOffline(false);
+  await preview.getByRole('button', { name: 'Importar 1 elemento' }).click();
+  await expect(preview).toBeHidden();
+});
