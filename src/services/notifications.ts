@@ -22,8 +22,9 @@ export const showSystemNotification = (title: string, body: string, tag: string)
   if (notificationState() !== 'granted') return;
   void (async () => {
     try {
+      // Solo con el service worker ya activo (recién registrado puede estar aún instalándose)
       const registration = await navigator.serviceWorker?.getRegistration();
-      if (registration) {
+      if (registration?.active) {
         await registration.showNotification(title, { body, tag, icon: '/icon-192.png', badge: '/icon-192.png' });
         return;
       }

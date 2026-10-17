@@ -147,7 +147,11 @@ export const outlookCalendarUrl = (event: CalendarEvent, account: 'personal' | '
 };
 
 const escapeIcsText = (text: string) =>
-  text.replace(/\\/g, '\\\\').replace(/;/g, '\\;').replace(/,/g, '\\,').replace(/\r?\n/g, '\\n');
+  text
+    .replace(/\\/g, '\\\\')
+    .replace(/;/g, '\\;')
+    .replace(/,/g, '\\,')
+    .replace(/\r\n|\r|\n/g, '\\n');
 
 // RFC 5545: líneas de 75 octetos como máximo; las continuaciones empiezan por un espacio
 const foldIcsLine = (line: string) => {
@@ -167,6 +171,71 @@ const foldIcsLine = (line: string) => {
   return parts.join('\r\n ');
 };
 
+// ZONA HORARIA DEL .ics (RFC 5545 exige un VTIMEZONE para cada TZID): sus cambios de hora desde el año del evento y
+// durante los diez siguientes, leídos del propio navegador, cada uno con la hora local en que ocurre
+const TIMEZONE_YEARS = 10;
+const DAY_MS = 24 * 60 * 60 * 1000;
+const offsetFormatters = new Map<string, Intl.DateTimeFormat>();
+const offsetMinutes = (instant: number, timeZone: string) => {
+  let format = offsetFormatters.get(timeZone);
+  if (!format) {
+    format = new Intl.DateTimeFormat('en-US', {
+      timeZone,
+      hourCycle: 'h23',
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+    offsetFormatters.set(timeZone, format);
+  }
+  const parts = format.formatToParts(new Date(instant));
+  const get = (type: string) => Number(parts.find((p) => p.type === type)?.value);
+  const local = Date.UTC(get('year'), get('month') - 1, get('day'), get('hour'), get('minute'));
+  return Math.round((local - Math.floor(instant / 60_000) * 60_000) / 60_000);
+};
+const formatOffset = (minutes: number) => {
+  const abs = Math.abs(minutes);
+  return `${minutes < 0 ? '-' : '+'}${pad(Math.floor(abs / 60))}${pad(abs % 60)}`;
+};
+// Fecha y hora «de pared» (sin zona) de un instante con un desfase dado
+const wallStamp = (instant: number, offset: number) =>
+  new Date(instant + offset * 60_000)
+    .toISOString()
+    .replace(/[-:]/g, '')
+    .replace(/\.\d{3}Z$/, '');
+
+export const buildVtimezone = (timeZone: string, from: Date) => {
+  const start = Date.UTC(from.getUTCFullYear(), 0, 1);
+  const end = Date.UTC(from.getUTCFullYear() + TIMEZONE_YEARS, 0, 1);
+  const initial = offsetMinutes(start, timeZone);
+  const observance = (at: number, offsetFrom: number, offsetTo: number) => [
+    `BEGIN:${offsetTo > offsetFrom ? 'DAYLIGHT' : 'STANDARD'}`,
+    `DTSTART:${wallStamp(at, offsetFrom)}`,
+    `TZOFFSETFROM:${formatOffset(offsetFrom)}`,
+    `TZOFFSETTO:${formatOffset(offsetTo)}`,
+    `END:${offsetTo > offsetFrom ? 'DAYLIGHT' : 'STANDARD'}`
+  ];
+  const lines = ['BEGIN:VTIMEZONE', `TZID:${timeZone}`, ...observance(start, initial, initial)];
+  let previous = initial;
+  for (let day = start; day < end; day += DAY_MS) {
+    const next = offsetMinutes(day + DAY_MS, timeZone);
+    if (next === previous) continue;
+    // El minuto exacto del cambio, dentro de ese día
+    let low = day;
+    let high = day + DAY_MS;
+    while (high - low > 60_000) {
+      const middle = Math.floor((low + high) / 120_000) * 60_000;
+      if (offsetMinutes(middle, timeZone) === previous) low = middle;
+      else high = middle;
+    }
+    lines.push(...observance(high, previous, next));
+    previous = next;
+  }
+  return [...lines, 'END:VTIMEZONE'];
+};
+
 export const buildIcs = (event: CalendarEvent, now = new Date()) => {
   const timing = event.allDay
     ? [`DTSTART;VALUE=DATE:${localDay(event.start)}`, `DTEND;VALUE=DATE:${localDay(event.end)}`]
@@ -182,6 +251,7 @@ export const buildIcs = (event: CalendarEvent, now = new Date()) => {
     'PRODID:-//CLAR//ES',
     'CALSCALE:GREGORIAN',
     'METHOD:PUBLISH',
+    ...(event.timeZone && !event.allDay ? buildVtimezone(event.timeZone, event.start) : []),
     'BEGIN:VEVENT',
     `UID:${event.uid}`,
     `DTSTAMP:${utcStamp(now)}`,
