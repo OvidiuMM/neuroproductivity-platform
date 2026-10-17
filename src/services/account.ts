@@ -17,7 +17,11 @@ import { downloadJson } from './download';
 
 export const downloadAccountData = async ({ db }: FirebaseServices, user: User) => {
   const [data, wheelAreas] = await Promise.all([exportUserData(db, user.uid), readWheelAreas(db, user.uid)]);
+  // Con app, versión y tipo, como las descargas de una tarea, una meta o un proyecto: así se reconoce al importarla
   downloadJson(`clar-${new Date().toISOString().slice(0, 10)}.json`, {
+    app: 'CLAR',
+    version: __APP_VERSION__,
+    type: 'account',
     exportedAt: new Date().toISOString(),
     account: { name: user.displayName, email: user.email },
     ...(wheelAreas ? { wheelAreas } : {}),
