@@ -57,7 +57,8 @@ export const zonedInstant = (date: string, time: string, timeZone: string, gap: 
   const [y, m, d] = date.split('-').map(Number);
   const [hours, minutes] = time.split(':').map(Number);
   const wall = Date.UTC(y, m - 1, d, hours, minutes);
-  const offsets = [offsetAt(wall - 12 * 60 * MINUTE_MS, timeZone), offsetAt(wall + 12 * 60 * MINUTE_MS, timeZone)];
+  // Los desfases de un día antes y uno después (a ±12 h, las zonas de más de 12 h, como Chatham, quedaban dentro)
+  const offsets = [offsetAt(wall - 24 * 60 * MINUTE_MS, timeZone), offsetAt(wall + 24 * 60 * MINUTE_MS, timeZone)];
   const valid = offsets.map((o) => wall - o).filter((instant) => offsetAt(instant, timeZone) === wall - instant);
   if (valid.length) return Math.min(...valid);
   return gap === 'earlier' ? wall - offsets[1] : wall - offsets[0];
@@ -96,9 +97,18 @@ export interface QueuedAlarm {
   due: number;
   // Igual que en la app: `${id}@${momento ISO}`. Es la etiqueta de la notificación
   key: string;
-  title: string;
+  // Hora de la alarma (HH:mm, en la zona del dispositivo), nombre de la tarea y cuándo vence. La notificación solo lleva
+  // el nombre en los dispositivos que lo piden (ver notificationText)
+  clock: string;
+  taskTitle: string;
   body: string;
 }
+
+// Texto de la notificación: por defecto sin el nombre de la tarea (se ve con el móvil bloqueado y pasa por FCM)
+export const notificationText = (alarm: Pick<QueuedAlarm, 'clock' | 'taskTitle'>, showTitle: boolean) =>
+  showTitle && alarm.taskTitle
+    ? `Alarma de las ${alarm.clock}: ${alarm.taskTitle}`
+    : `Tienes una alarma de CLAR a las ${alarm.clock}`;
 
 const clock = (instant: number, timeZone: string) =>
   new Intl.DateTimeFormat('es-ES', { timeZone, hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }).format(instant);
@@ -111,13 +121,13 @@ export const queuedAlarm = (taskId: string, task: AlarmTask, timeZone: string, n
   const at = alarmInstant(task, timeZone);
   const due = dueInstant(task, timeZone);
   if (at === null || due === null || due <= now) return null;
-  const title = typeof task.title === 'string' ? task.title.slice(0, 200) : '';
   const hasDueTime = typeof task.dueTime === 'string' && ALARM_TIME.test(task.dueTime);
   return {
     at,
     due,
     key: `${taskId}@${new Date(at).toISOString()}`,
-    title: `Alarma de las ${clock(at, timeZone)}: ${title}`,
+    clock: clock(at, timeZone),
+    taskTitle: typeof task.title === 'string' ? task.title.slice(0, 200) : '',
     body: hasDueTime ? `Vence el ${day(due, timeZone)} a las ${clock(due, timeZone)}` : `Vence el ${day(due, timeZone)}`
   };
 };

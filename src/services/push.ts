@@ -3,15 +3,21 @@ import { usingEmulators, type FirebaseServices } from './firebase';
 
 // NOTIFICACIONES PUSH de las alarmas, para que suenen con CLAR cerrada. Se activan en cada dispositivo («Avisarme
 // también con CLAR cerrada», en el menú de la cuenta): el dispositivo se registra con su token de Firebase Cloud
-// Messaging y su zona horaria, y el servidor (functions/src/push.ts) envía cada alarma a su hora. El service worker
-// (public/sw.js) la muestra. Sin la clave pública VAPID en la compilación (VITE_FCM_VAPID_KEY) o con los emuladores,
-// no se ofrece: las alarmas siguen avisando con CLAR abierta.
+// Messaging, su zona horaria y si quiere ver el nombre de la tarea, y el servidor (functions/src/push.ts) envía cada
+// alarma a su hora. El service worker (public/sw.js) la muestra. Sin la clave pública VAPID en la compilación
+// (VITE_FCM_VAPID_KEY) o con los emuladores, no se ofrece: las alarmas siguen avisando con CLAR abierta.
 const VAPID_KEY = import.meta.env.VITE_FCM_VAPID_KEY;
-// El registro se renueva una vez al día como mucho (FCM cambia el token de vez en cuando)
+// El registro se renueva una vez al día como mucho (FCM cambia el token de vez en cuando; el servidor borra los que no
+// se renuevan en 30 días)
 const REFRESH_MS = 24 * 60 * 60 * 1000;
+// Lo que se espera al servidor al darse de baja (p. ej. al cerrar sesión con mala conexión)
+const UNREGISTER_TIMEOUT_MS = 5_000;
 const REGISTERED_PREFIX = 'clar_push_registered:';
 const registeredKey = (uid: string) => `${REGISTERED_PREFIX}${uid}`;
 const enabledKey = (uid: string) => `clar_push_enabled:${uid}`;
+const showTitleKey = (uid: string) => `clar_push_show_title:${uid}`;
+const timeZoneKey = (uid: string) => `clar_push_time_zone:${uid}`;
+const currentTimeZone = () => Intl.DateTimeFormat().resolvedOptions().timeZone;
 
 export const pushAvailable = () =>
   Boolean(VAPID_KEY) &&
@@ -37,8 +43,9 @@ const write = (key: string, value: string | null) => {
   }
 };
 
-// Si este dispositivo tiene activadas las alarmas con CLAR cerrada para esta cuenta
+// Si este dispositivo tiene activadas las alarmas con CLAR cerrada para esta cuenta, y si muestran el nombre de la tarea
 export const isPushEnabled = (uid: string) => pushAvailable() && read(enabledKey(uid)) === '1';
+export const isPushTitleShown = (uid: string) => read(showTitleKey(uid)) === '1';
 
 const currentToken = async ({ app }: FirebaseServices) => {
   const { getMessaging, getToken, isSupported } = await import('firebase/messaging');
@@ -48,10 +55,20 @@ const currentToken = async ({ app }: FirebaseServices) => {
   return (await getToken(getMessaging(app), { vapidKey: VAPID_KEY, serviceWorkerRegistration: registration })) || null;
 };
 
-// Registra este dispositivo si las tiene activadas y hay permiso. `force`: al momento (acaban de activarse)
+// Corta la suscripción push de este navegador: funciona sin conexión y, desde ese momento, no llega ninguna alarma.
+// El servidor borra el token al intentar el siguiente envío (o a los 30 días sin renovarse).
+const unsubscribeHere = async () => {
+  const registration = await navigator.serviceWorker?.getRegistration();
+  const subscription = await registration?.pushManager?.getSubscription();
+  await subscription?.unsubscribe();
+};
+
+// Registra este dispositivo si las tiene activadas y hay permiso. `force`: al momento (acaban de activarse o de
+// cambiar). También al momento si cambió la zona horaria del dispositivo (p. ej. de viaje).
 export const registerPushDevice = async (services: FirebaseServices, uid: string, force = false) => {
   if (!isPushEnabled(uid) || Notification.permission !== 'granted') return false;
-  if (!force && Date.now() - Number(read(registeredKey(uid)) ?? 0) < REFRESH_MS) return true;
+  const sameZone = read(timeZoneKey(uid)) === currentTimeZone();
+  if (!force && sameZone && Date.now() - Number(read(registeredKey(uid)) ?? 0) < REFRESH_MS) return true;
   const token = await currentToken(services);
   if (!token) return false;
   await httpsCallable(
@@ -59,29 +76,39 @@ export const registerPushDevice = async (services: FirebaseServices, uid: string
     'registerPushDevice'
   )({
     token,
-    timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone
+    timeZone: currentTimeZone(),
+    showTitle: isPushTitleShown(uid)
   });
   write(registeredKey(uid), String(Date.now()));
+  write(timeZoneKey(uid), currentTimeZone());
   return true;
 };
 
-// Este dispositivo deja de recibir las alarmas de la cuenta: el servidor borra su token y FCM lo anula. Al desactivarlas
-// y al cerrar sesión (así un dispositivo compartido no recibe las de una cuenta que ya no está abierta en él).
+const withTimeout = <T>(promise: Promise<T>, ms: number) =>
+  Promise.race([promise, new Promise<never>((_, reject) => setTimeout(() => reject(new Error('timeout')), ms))]);
+
+// Este dispositivo deja de recibir las alarmas de la cuenta: al desactivarlas y al cerrar sesión (así un dispositivo
+// compartido no recibe las de una cuenta que ya no está abierta en él). Primero se corta la suscripción aquí, que no
+// necesita conexión; después se pide al servidor que borre el token, sin esperar más de unos segundos.
 export const unregisterPushDevice = async (services: FirebaseServices, uid: string) => {
   if (!pushAvailable() || !read(registeredKey(uid))) return;
   write(registeredKey(uid), null);
-  if (Notification.permission !== 'granted') return;
-  const token = await currentToken(services);
+  write(timeZoneKey(uid), null);
+  let token: string | null = null;
+  if (Notification.permission === 'granted')
+    token = await withTimeout(currentToken(services), UNREGISTER_TIMEOUT_MS).catch(() => null);
+  await unsubscribeHere().catch(() => undefined);
   if (!token) return;
-  await httpsCallable(services.functions, 'unregisterPushDevice')({ token });
-  const { deleteToken, getMessaging } = await import('firebase/messaging');
-  await deleteToken(getMessaging(services.app));
+  await withTimeout(httpsCallable(services.functions, 'unregisterPushDevice')({ token }), UNREGISTER_TIMEOUT_MS).catch(
+    () => undefined
+  );
 };
 
 export const enablePush = async (services: FirebaseServices, uid: string) => {
   write(enabledKey(uid), '1');
   try {
-    if (!(await registerPushDevice(services, uid, true))) throw new Error('unsupported');
+    if (!(await registerPushDevice(services, uid, true)))
+      throw new Error('Este navegador no permite recibir las alarmas con CLAR cerrada.');
   } catch (e) {
     write(enabledKey(uid), null);
     throw e;
@@ -93,12 +120,19 @@ export const disablePush = async (services: FirebaseServices, uid: string) => {
   await unregisterPushDevice(services, uid);
 };
 
+// Mostrar o no el nombre de la tarea en las notificaciones de este dispositivo (se ve con el móvil bloqueado)
+export const setPushTitleShown = async (services: FirebaseServices, uid: string, show: boolean) => {
+  write(showTitleKey(uid), show ? '1' : null);
+  await registerPushDevice(services, uid, true);
+};
+
 // Sin sesión (también si se cerró desde otro dispositivo con «Cerrar todas las sesiones», que borra los dispositivos
-// en el servidor): al volver a entrar, el dispositivo se registra de nuevo al momento
+// en el servidor): este navegador deja de recibir alarmas al momento y, al volver a entrar, se registra de nuevo
 export const forgetPushRegistrations = () => {
   try {
     for (const key of Object.keys(localStorage)) if (key.startsWith(REGISTERED_PREFIX)) localStorage.removeItem(key);
   } catch {
     // Nada que hacer
   }
+  if (pushAvailable()) void unsubscribeHere().catch(() => undefined);
 };
