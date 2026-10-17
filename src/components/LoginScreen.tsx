@@ -102,7 +102,8 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
           <EmailAuthForm onSignIn={onEmailSignIn} onSignUp={onEmailSignUp} onReset={onPasswordReset} />
 
           <p className="text-[11px] leading-relaxed text-slate-600">
-            Al continuar, con Google o con tu email, confirmas que tienes al menos {MIN_AGE} años y aceptas las{' '}
+            Al continuar, con Google o con tu email, confirmas que tienes al menos {MIN_AGE} años (o la edad mínima
+            legal para dar tu consentimiento en tu país de residencia, si es mayor) y aceptas las{' '}
             <LegalLink to="terms">condiciones de uso</LegalLink>. Cómo tratamos tus datos:{' '}
             <LegalLink to="privacy">política de privacidad</LegalLink>.
           </p>

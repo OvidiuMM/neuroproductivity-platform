@@ -16,14 +16,17 @@ export const legalPageFor = (pathname: string) => {
 
 export const legalPath = (id: LegalPageId) => LEGAL_PAGES.find((page) => page.id === id)!.path;
 
-// Titular de CLAR: una persona física, sin actividad económica. Sus datos aparecen en los textos legales y una
+// Titular de CLAR: una persona física, sin actividad económica. El RGPD (art. 13.1.a) pide su identidad y sus datos de
+// contacto: nombre completo, domicilio a efectos de notificaciones y email. Aparecen en los textos legales y una
 // prueba unitaria falla mientras falten: no se publica una política de privacidad sin responsable
 export const OWNER = {
-  name: 'Ovidiu M.',
+  name: 'Ovidiu Mircea Moldovan Goloman',
+  address: 'OneCoWork Recoletos, Calle de Prim 12, 28004 Madrid (España)',
   email: 'info@clar.life'
 };
 
-// Edad mínima para usar CLAR: la que fija el art. 7 de la LOPDGDD para consentir el tratamiento de datos
+// Edad mínima para usar CLAR: la que fija el art. 7 de la LOPDGDD para consentir el tratamiento de datos. Fuera de
+// España vale la de cada país si es mayor (el RGPD la fija en 16 años y deja a cada Estado bajarla hasta 13)
 export const MIN_AGE = 14;
 
 // Fecha de la versión vigente de los textos legales: cámbiala con cada cambio de contenido
