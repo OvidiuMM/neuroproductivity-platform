@@ -69,6 +69,8 @@ test('counts invalid records and repeated ids, and drops invalid optional fields
         { ...task }, // id repetido
         { ...task, id: 'task-2', title: '   ' },
         { ...task, id: 'a/b' },
+        { ...task, id: '__reserved__' },
+        { ...task, id: 'task-5', createdAt: '2024' },
         { ...task, id: 'task-3', listContext: 'OTHER' },
         { ...task, id: 'task-4', dueDate: '31/12/2026', dueTime: '24:00', estimateMinutes: -5, goalId: '../x' },
         'not a task'
@@ -78,7 +80,7 @@ test('counts invalid records and repeated ids, and drops invalid optional fields
     })
   );
   assert.equal(parsed.data.tasks.length, 2);
-  assert.equal(parsed.invalid.tasks, 5);
+  assert.equal(parsed.invalid.tasks, 7);
   const loose = parsed.data.tasks[1];
   assert.equal(loose.id, 'task-4');
   assert.equal(loose.dueDate, undefined);
