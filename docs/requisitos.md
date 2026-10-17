@@ -169,9 +169,9 @@ Origen: `src/services/alarms.ts`, `src/services/notifications.ts`, `src/hooks/us
 - **RF-ALA-08.** Cada alarma avisa una sola vez aunque haya varias pestañas abiertas: una pestaña lanza la notificación del sistema y todas muestran el aviso. Cambiar la hora de la alarma o la fecha límite la vuelve a armar.
 - **RF-ALA-09.** Las tareas archivadas o en «Algún día» no avisan. Un aviso desaparece si su tarea se archiva, y espera mientras haya una ventana abierta.
 - **RF-ALA-10.** La app revisa las alarmas al menos una vez por minuto, al volver a la pestaña, al reanudarse en el móvil y al recuperar la conexión.
-- **RF-ALA-11.** Con las notificaciones activadas, cada dispositivo se registra para las notificaciones push (token de Firebase Cloud Messaging y zona horaria) y la alarma le llega aunque CLAR esté cerrada o el móvil bloqueado. El servidor calcula su momento en la zona horaria del dispositivo, con el mismo resultado que la app, y la envía en el minuto siguiente. Una alarma cuyo plazo ya venció no se envía.
-- **RF-ALA-12.** La notificación push y la de la app llevan la misma etiqueta, así no salen dos veces. Cambiar, completar o borrar la tarea actualiza o quita su alarma pendiente.
-- **RF-ALA-13.** Al cerrar sesión en un dispositivo, su token deja de valer. «Cerrar todas las sesiones» y eliminar la cuenta borran los dispositivos registrados y las alarmas pendientes. Sin la clave pública de push en la compilación, o con los emuladores, no se usa push.
+- **RF-ALA-11.** «Avisarme también con CLAR cerrada», en el menú de la cuenta, se activa en cada dispositivo (pide el permiso de notificaciones si falta). Con él, el dispositivo se registra para las notificaciones push (token de Firebase Cloud Messaging y zona horaria) y la alarma le llega aunque CLAR esté cerrada o el móvil bloqueado. El servidor calcula su momento en la zona horaria del dispositivo, con el mismo resultado que la app, y la envía en el minuto siguiente. Una alarma cuyo plazo ya venció no se envía, y una ya enviada no se repite al editar la tarea. La casilla explica que el nombre de la tarea y su hora pasan por Firebase Cloud Messaging.
+- **RF-ALA-12.** La notificación push y la de la app llevan la misma etiqueta, así no salen dos veces. Cambiar, completar o borrar la tarea actualiza o quita su alarma pendiente. Si ningún dispositivo recibe una alarma por un fallo pasajero, se reintenta el minuto siguiente.
+- **RF-ALA-13.** Desactivarlas o cerrar sesión en un dispositivo borra su token. «Cerrar todas las sesiones» y eliminar la cuenta borran los dispositivos registrados y las alarmas pendientes; al volver a entrar, el dispositivo se registra de nuevo. Una cuenta tiene como mucho diez dispositivos, y un dispositivo solo recibe las alarmas de la última cuenta que se registró en él. Sin la clave pública de push en la compilación, o con los emuladores, la opción no aparece.
 
 ### 1.6 Agenda (RF-AGE)
 
@@ -361,7 +361,7 @@ Origen: `firestore.rules`, `firebase.json`, `functions/src/access.ts`, `function
 - **RNF-SEG-13.** La app descarga su configuración de Firebase del propio Hosting al arrancar, así que el identificador del proyecto no está en el código. La contraseña del buzón de correo está en Secret Manager.
 - **RNF-SEG-14.** Los correos salen por SMTP con TLS (puerto 465).
 - **RNF-SEG-15.** El despliegue desde CI se autentica con Workload Identity Federation, sin claves de cuenta de servicio guardadas.
-- **RNF-SEG-16.** Los dispositivos de las notificaciones push (`push_devices`) y la cola de alarmas (`alarm_queue`) solo los usan las Cloud Functions: las reglas no dejan leerlos ni escribirlos desde la app, tampoco a su dueño. Registrar un dispositivo exige sesión iniciada y acceso aprobado, y valida el token y la zona horaria.
+- **RNF-SEG-16.** Los dispositivos de las notificaciones push (`push_devices`, `push_tokens`) y las alarmas pendientes y enviadas (`alarm_queue`, `alarm_sent`) solo los usan las Cloud Functions: las reglas no dejan leerlos ni escribirlos desde la app, tampoco a su dueño. Registrar un dispositivo exige sesión iniciada y acceso aprobado, y valida el token y la zona horaria.
 
 ### 2.2 Privacidad (RNF-PRI)
 
@@ -380,7 +380,7 @@ Origen: `functions/src/accessLogic.ts`, `functions/src/feedbackLogic.ts`, `funct
 - **RNF-PRI-11.** Al eliminar la cuenta se borran sus datos, su solicitud de acceso y sus mensajes. Solo se conservan el email, si estaba bloqueado (con el identificador interno de la cuenta y la fecha del bloqueo), y las horas de los envíos de la última hora, ligadas solo al identificador interno, para que el límite de mensajes siga aplicándose. Ese registro de envíos no se borra después.
 - **RNF-PRI-12.** Al cerrar sesión se borra la copia local de los datos (RF-CUE-18).
 - **RNF-PRI-13.** Cada cuenta puede descargar sus datos de la app en JSON en cualquier momento, también sin acceso aprobado (ver RF-CUE-15).
-- **RNF-PRI-14.** Para las notificaciones push solo se guardan el token de cada dispositivo y su zona horaria y, de cada alarma pendiente, su hora, el nombre de la tarea y cuándo vence. Viajan por Firebase Cloud Messaging; los registros del servidor no llevan datos de la persona, solo recuentos.
+- **RNF-PRI-14.** Las alarmas con CLAR cerrada son opcionales en cada dispositivo (consentimiento). Solo se guardan el token de cada dispositivo y su zona horaria y, de cada alarma pendiente, su hora, el nombre de la tarea y cuándo vence; de las enviadas, cuál fue. Viajan por Firebase Cloud Messaging y el servicio push del navegador; los registros del servidor no llevan datos de la persona, solo recuentos y códigos de error.
 
 ### 2.3 Accesibilidad (RNF-ACC)
 

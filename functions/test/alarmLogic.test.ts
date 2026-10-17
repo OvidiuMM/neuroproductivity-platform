@@ -38,6 +38,35 @@ describe('zonedInstant', () => {
   });
 });
 
+// El plazo, como new Date(y, m, d, h, min) en un equipo con esa zona (sin la corrección de la alarma)
+const appDue = (timeZone: string, date: string, time: string) => {
+  const previous = process.env.TZ;
+  process.env.TZ = timeZone;
+  try {
+    const [y, m, d] = date.split('-').map(Number);
+    const [h, min] = time.split(':').map(Number);
+    return new Date(y, m - 1, d, h, min).getTime();
+  } finally {
+    process.env.TZ = previous;
+  }
+};
+
+describe('dueInstant', () => {
+  it('matches the app also when the due time falls in the jump to summer time', () => {
+    for (const [zone, date, time] of [
+      [MADRID, '2027-03-28', '02:30'],
+      [MADRID, '2026-10-25', '02:30'],
+      ['America/New_York', '2027-03-14', '02:15'],
+      [MADRID, '2026-10-17', '11:00']
+    ] as const)
+      assert.equal(
+        iso(dueInstant({ dueDate: date, dueTime: time }, zone)),
+        iso(appDue(zone, date, time)),
+        `${zone} ${date}`
+      );
+  });
+});
+
 describe('alarmInstant', () => {
   it('rings the same day before the due time, otherwise the day before', () => {
     assert.equal(
