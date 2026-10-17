@@ -102,16 +102,23 @@ export const useTaskAlarms = (uid: string, tasks: TaskItem[], handlers: AlarmHan
     return () => window.clearTimeout(timer);
   }, [uid, tasks, check]);
 
-  // Al volver a la pestaña o al despertar el equipo, se revisa al momento
+  // Al volver a la pestaña, al despertar el equipo, al reanudarse la app en el móvil (Android la congela en segundo
+  // plano: «resume» y «pageshow») o al recuperar la conexión, se revisa al momento
   useEffect(() => {
     const recheck = () => {
       if (document.visibilityState === 'visible') setCheck((n) => n + 1);
     };
     document.addEventListener('visibilitychange', recheck);
+    document.addEventListener('resume', recheck);
     window.addEventListener('focus', recheck);
+    window.addEventListener('pageshow', recheck);
+    window.addEventListener('online', recheck);
     return () => {
       document.removeEventListener('visibilitychange', recheck);
+      document.removeEventListener('resume', recheck);
       window.removeEventListener('focus', recheck);
+      window.removeEventListener('pageshow', recheck);
+      window.removeEventListener('online', recheck);
     };
   }, []);
 };

@@ -132,7 +132,7 @@ La lista completa y numerada de lo que hace la app, con sus requisitos no funcio
 ### Alarmas (0.9.2)
 
 - **Una hora por tarea** (`alarmTime`, HH:mm). Todas las horas de la app se escriben en 24 h con un campo propio (`TimeField`, `src/services/timeInput.ts`: 9:30, 0930, 21:45), no con el selector del navegador, que en sistemas en 12 h muestra a. m./p. m. y podía guardar 23:00 en lugar de 11:00. El momento en que suena se calcula al leer, en la zona horaria del dispositivo (`src/services/alarms.ts`): con hora límite, dentro de las 24 h anteriores (el mismo día si es antes; si no, la víspera); solo con fecha, la víspera a esa hora. Una tarea que se repite necesita hora límite, y cada repetición hereda la alarma.
-- **Avisa con la app abierta** (`useTaskAlarms`): un aviso dentro de CLAR con «Ver tarea» y, con permiso, una notificación del sistema (sin service worker; en Android y en Safari del iPhone sin instalar, solo el aviso dentro de la app). Las alarmas que pasaron con la app cerrada avisan al abrirla si la tarea aún no ha vencido, y el aviso dice a qué hora era. El aviso y la notificación llevan la hora de la alarma. Cada alarma avisa una sola vez, también con varias pestañas (`localStorage` y Web Locks).
+- **Avisa con la app abierta** (`useTaskAlarms`): un aviso dentro de CLAR con «Ver tarea» y, con permiso, una notificación del sistema (desde el service worker `public/sw.js` desde 0.9.5, que es lo que permite mostrarlas en Android, también en la app instalada; en Safari del iPhone sin instalar, solo el aviso dentro de la app). Con la app cerrada, o congelada en segundo plano por Android, no puede sonar: avisa al volver. Las alarmas que pasaron con la app cerrada avisan al abrirla si la tarea aún no ha vencido, y el aviso dice a qué hora era. El aviso y la notificación llevan la hora de la alarma. Cada alarma avisa una sola vez, también con varias pestañas (`localStorage` y Web Locks).
 - **Calendario:** el archivo .ics incluye la alarma (`VALARM`).
 
 ### Borradores de correo (0.9.2)
@@ -163,9 +163,10 @@ La lista completa y numerada de lo que hace la app, con sus requisitos no funcio
 - **Crear una meta desde la tarea:** «Nueva meta» en el formulario de la tarea, con nombre y área. Se guarda al momento y la tarea queda vinculada a ella.
 - **Estadísticas de Inicio al día:** los proyectos activos (batería y plazo) y cuántos van fuera de plazo, las tareas canceladas en el mes y las bloqueadas, y una recomendación para el proyecto que va fuera de plazo.
 
-### Importar los datos y calendario (0.9.5)
+### Importar los datos, calendario y alarmas en Android (0.9.5)
 
 - **Importar datos (JSON):** en el menú de la cuenta, junto a «Descargar mis datos (JSON)». Acepta ese archivo (también los descargados antes de esta versión) y enseña antes qué entra: por cada tipo, lo nuevo, lo que ya está en la cuenta y lo que no es válido. Se añade solo lo que falta (mismo id: no se toca), así importar dos veces el mismo archivo no duplica nada. Si la cuenta aún tiene las áreas de partida, se recupera la configuración de áreas del archivo; si no, las que falten se añaden (con un número si el nombre ya existe, y ocultas pasado el máximo a la vista). Un texto desmesurado o un proyecto sin su meta cuentan como no válidos: nunca se recorta nada sin avisar. Cada registro se comprueba campo a campo y solo se guardan los campos conocidos (`src/services/importData.ts`); hace falta conexión, porque se mira en el servidor qué hay ya. La descarga lleva ahora `app`, `version` y `type: "account"`.
+- **Notificaciones de las alarmas en Android:** CLAR registra un service worker (`public/sw.js`, solo para las notificaciones: no intercepta peticiones ni guarda caché) y muestra la notificación desde él, así sale también en Android y en la app instalada mientras CLAR esté viva. El permiso se ofrece también en el menú de la cuenta, y las alarmas se revisan al reanudarse la app, al volver a mostrarse la página y al recuperar la conexión. El formulario dice que con CLAR cerrada o el móvil bloqueado la alarma no suena y propone el .ics.
 - **Calendario:** una tarea con hora de inicio y sin hora límite se exporta como un evento de una hora (antes llegaba hasta el final del día límite; si la fecha límite es otro día, la descripción la dice), y las notas de la tarea van en la descripción del evento, las de lista con su casilla (en los enlaces de Google y Outlook, recortada a 1.500 caracteres; el .ics la lleva entera). Las series con hora se exportan en hora local con su zona horaria: antes iban en UTC, y una serie de los lunes a las 00:30 caía en domingo y se movía una hora con el cambio de horario.
 
 ---
@@ -429,7 +430,7 @@ El repositorio utiliza `package-lock.json` (en la raíz, en `functions/` y en `t
 │   │   ├── tasks.ts             # Estados, plazos y prioridad efectiva
 │   │   ├── taskListing.ts       # Orden, filtros y estimación del Top 10
 │   │   ├── recurrence.ts        # Tareas recurrentes y su exportación RRULE
-│   │   ├── alarms.ts · notifications.ts # Cuándo suena cada alarma; notificaciones del sistema
+│   │   ├── alarms.ts · notifications.ts # Cuándo suena cada alarma; notificaciones del sistema (con public/sw.js)
 │   │   ├── agenda.ts            # Agenda por días: plazos, intervalos, repeticiones y reuniones
 │   │   ├── calendar.ts          # Enlaces de Google y Outlook y archivos .ics (con la alarma)
 │   │   ├── email.ts             # Correos: destinatarios, adjuntos, borradores y enlace mailto

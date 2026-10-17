@@ -2,8 +2,11 @@ import React, { useState } from 'react';
 import { Bell } from 'lucide-react';
 import { notificationState, requestNotifications } from '../services/notifications';
 
-// Con una alarma puesta: si el navegador lo permite, ofrece activar también las notificaciones del sistema
-export const NotificationPermission: React.FC = () => {
+// Si el navegador lo permite, ofrece activar las notificaciones del sistema de las alarmas (en el formulario de una
+// tarea con alarma y en el menú de la cuenta)
+export const NotificationPermission: React.FC<{ buttonLabel?: string }> = ({
+  buttonLabel = 'Activar también las notificaciones del sistema'
+}) => {
   const [state, setState] = useState(notificationState);
   if (state === 'default') {
     return (
@@ -13,7 +16,7 @@ export const NotificationPermission: React.FC = () => {
         className="mt-1.5 inline-flex min-h-9 items-center gap-1.5 rounded-lg border border-indigo-200 bg-indigo-50 px-2.5 text-xs font-semibold text-indigo-800 hover:bg-indigo-100"
       >
         <Bell className="h-3.5 w-3.5" aria-hidden="true" />
-        Activar también las notificaciones del sistema
+        {buttonLabel}
       </button>
     );
   }

@@ -65,7 +65,7 @@ import { FeedbackDialog } from './components/FeedbackDialog';
 import { AlarmAlerts, type AlarmAlert } from './components/AlarmAlerts';
 import { useTaskAlarms } from './hooks/useTaskAlarms';
 import { alarmLateNote, formatClock } from './services/alarms';
-import { showSystemNotification } from './services/notifications';
+import { registerNotificationWorker, showSystemNotification } from './services/notifications';
 import { TOUR_STEPS } from './tourSteps';
 import { hasSeenLocally, hasSeenOnboarding, rememberLocally, type OnboardingOutcome } from './services/onboarding';
 import { applyGoalAreas, latestScores } from './services/goals';
@@ -825,6 +825,11 @@ export default function App({ user, services, isAdmin = false }: AppProps) {
     isAccessibilityOpen ||
     isImportOpen ||
     importPlan !== null;
+
+  // El service worker de las notificaciones (Android solo las muestra desde él)
+  useEffect(() => {
+    registerNotificationWorker();
+  }, []);
 
   // ALARMAS: avisan mientras la app está abierta, dentro de ella (en todas las pestañas) y, con permiso, también con
   // una notificación del sistema. El aviso muestra la tarea tal como está ahora y desaparece si se marca como hecha.
