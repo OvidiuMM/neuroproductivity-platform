@@ -6,7 +6,7 @@ import {
   initializeTestEnvironment,
   type RulesTestEnvironment
 } from '@firebase/rules-unit-testing';
-import { collection, deleteDoc, doc, getDoc, getDocs, setDoc, updateDoc } from 'firebase/firestore';
+import { collection, deleteDoc, doc, getDoc, getDocs, setDoc, updateDoc, writeBatch } from 'firebase/firestore';
 
 // Se ejecuta contra el emulador de Firestore: npm run test:rules
 describe('firestore.rules', () => {
@@ -65,6 +65,15 @@ describe('firestore.rules', () => {
 
     await assertFails(getDoc(doc(anonymous, 'users/ana/tasks/task-1')));
     await assertFails(setDoc(doc(anonymous, 'users/ana/tasks/task-1'), task));
+  });
+
+  // Cada escritura comprueba el acceso (exists y get de access/{uid}): un lote grande, como el de una importación,
+  // tiene que caber en el límite de llamadas de las reglas
+  it('accepts a large batch of creates, as an import writes them', async () => {
+    const ana = env.authenticatedContext('ana').firestore();
+    const batch = writeBatch(ana);
+    for (let i = 0; i < 450; i++) batch.set(doc(ana, `users/ana/tasks/task-${i}`), { ...task, id: `task-${i}` });
+    await assertSucceeds(batch.commit());
   });
 
   it('keeps wheel evaluations append-only, allowing identical rewrites and deletion', async () => {
