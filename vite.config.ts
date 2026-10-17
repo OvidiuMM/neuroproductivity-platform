@@ -34,6 +34,11 @@ export default defineConfig(() => {
       alias: {
         '@': path.resolve(__dirname, '.')
       }
+    },
+    // En desarrollo, Vite busca las dependencias en todo src al arrancar (también las de las secciones que se cargan
+    // al abrirlas): si las descubriera a mitad de uso, recargaría la página (y una prueba e2e perdería lo que hacía)
+    optimizeDeps: {
+      entries: ['index.html', 'src/**/*.{ts,tsx}']
     }
   };
 });
