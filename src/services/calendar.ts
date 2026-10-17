@@ -119,13 +119,26 @@ const utcIso = (d: Date) => d.toISOString().replace(/\.\d{3}/, '');
 // Hora local del dispositivo (para las series, con su zona horaria)
 const localStamp = (d: Date) => `${localDay(d)}T${pad(d.getHours())}${pad(d.getMinutes())}${pad(d.getSeconds())}`;
 
+// En los enlaces, la descripción va recortada: una URL de muchos KB la rechazan los proveedores. El archivo .ics la
+// lleva entera
+export const LINK_DESCRIPTION_MAX = 1500;
+const linkDescription = (description: string) =>
+  description.length > LINK_DESCRIPTION_MAX
+    ? `${description.slice(0, LINK_DESCRIPTION_MAX).trimEnd()}… (completa en CLAR)`
+    : description;
+
 export const googleCalendarUrl = (event: CalendarEvent) => {
   const dates = event.allDay
     ? `${localDay(event.start)}/${localDay(event.end)}`
     : event.timeZone
       ? `${localStamp(event.start)}/${localStamp(event.end)}`
       : `${utcStamp(event.start)}/${utcStamp(event.end)}`;
-  const params = new URLSearchParams({ action: 'TEMPLATE', text: event.title, dates, details: event.description });
+  const params = new URLSearchParams({
+    action: 'TEMPLATE',
+    text: event.title,
+    dates,
+    details: linkDescription(event.description)
+  });
   if (event.rrule) params.set('recur', event.rrule);
   if (event.timeZone && !event.allDay) params.set('ctz', event.timeZone);
   return `https://calendar.google.com/calendar/render?${params}`;
@@ -138,7 +151,7 @@ export const outlookCalendarUrl = (event: CalendarEvent, account: 'personal' | '
     path: '/calendar/action/compose',
     rru: 'addevent',
     subject: event.title,
-    body: event.description,
+    body: linkDescription(event.description),
     allday: String(event.allDay),
     startdt: event.allDay ? localDayIso(event.start) : utcIso(event.start),
     enddt: event.allDay ? localDayIso(event.end) : utcIso(event.end)
@@ -210,14 +223,16 @@ export const buildVtimezone = (timeZone: string, from: Date) => {
   const start = Date.UTC(from.getUTCFullYear(), 0, 1);
   const end = Date.UTC(from.getUTCFullYear() + TIMEZONE_YEARS, 0, 1);
   const initial = offsetMinutes(start, timeZone);
-  const observance = (at: number, offsetFrom: number, offsetTo: number) => [
-    `BEGIN:${offsetTo > offsetFrom ? 'DAYLIGHT' : 'STANDARD'}`,
+  const observance = (at: number, offsetFrom: number, offsetTo: number, daylight = offsetTo > offsetFrom) => [
+    `BEGIN:${daylight ? 'DAYLIGHT' : 'STANDARD'}`,
     `DTSTART:${wallStamp(at, offsetFrom)}`,
     `TZOFFSETFROM:${formatOffset(offsetFrom)}`,
     `TZOFFSETTO:${formatOffset(offsetTo)}`,
-    `END:${offsetTo > offsetFrom ? 'DAYLIGHT' : 'STANDARD'}`
+    `END:${daylight ? 'DAYLIGHT' : 'STANDARD'}`
   ];
-  const lines = ['BEGIN:VTIMEZONE', `TZID:${timeZone}`, ...observance(start, initial, initial)];
+  // El 1 de enero es horario de verano en el hemisferio sur: lo es si su desfase es el mayor del año
+  const midYear = offsetMinutes(Date.UTC(from.getUTCFullYear(), 6, 1), timeZone);
+  const lines = ['BEGIN:VTIMEZONE', `TZID:${timeZone}`, ...observance(start, initial, initial, initial > midYear)];
   let previous = initial;
   for (let day = start; day < end; day += DAY_MS) {
     const next = offsetMinutes(day + DAY_MS, timeZone);
