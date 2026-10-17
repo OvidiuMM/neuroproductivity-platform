@@ -1,4 +1,4 @@
-import React, { useRef, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Upload, X } from 'lucide-react';
 import { useModalFocus } from '../hooks/useModalFocus';
 import { IMPORT_LABELS, IMPORT_ORDER, type ImportPlan } from '../services/importData';
@@ -20,6 +20,8 @@ export const ImportAccountDialog: React.FC<ImportAccountDialogProps> = ({ plan, 
   const [progress, setProgress] = useState<{ done: number; total: number } | null>(null);
   const [error, setError] = useState<string | null>(null);
   const importing = progress !== null && error === null;
+  // Falló una importación ya empezada (no un aviso antes de empezar, que deja volver a intentarlo)
+  const failed = progress !== null && error !== null;
   const dialogRef = useRef<HTMLDivElement>(null);
   const closeRef = useRef<HTMLButtonElement>(null);
   useModalFocus(
@@ -43,8 +45,26 @@ export const ImportAccountDialog: React.FC<ImportAccountDialogProps> = ({ plan, 
         ? 'Añadir el área'
         : 'Añadir las áreas';
 
+  // Sin conexión, las escrituras esperan a que vuelva y el avance se pararía sin decir nada: se explica y se puede
+  // cerrar (lo ya enviado se guarda al volver la conexión)
+  useEffect(() => {
+    if (!importing) return;
+    const onOffline = () => {
+      setError(
+        'Se perdió la conexión. Lo que ya se envió se guardará al volver; después, importa otra vez el archivo para completar el resto: lo que ya entró no se repite.'
+      );
+      requestAnimationFrame(() => closeRef.current?.focus());
+    };
+    window.addEventListener('offline', onOffline);
+    return () => window.removeEventListener('offline', onOffline);
+  }, [importing]);
+
   const handleImport = async () => {
     if (importing) return;
+    if (!navigator.onLine) {
+      setError('Sin conexión no se puede importar. Vuelve a intentarlo cuando tengas conexión.');
+      return;
+    }
     setError(null);
     setProgress({ done: 0, total: plan.total });
     try {
@@ -168,9 +188,9 @@ export const ImportAccountDialog: React.FC<ImportAccountDialogProps> = ({ plan, 
               data-autofocus={!hasWork || error ? true : undefined}
               className="min-h-11 rounded-xl px-4 text-xs font-semibold text-slate-600 hover:bg-slate-100 disabled:opacity-60"
             >
-              {error || !hasWork ? 'Cerrar' : 'Cancelar'}
+              {failed || !hasWork ? 'Cerrar' : 'Cancelar'}
             </button>
-            {hasWork && !error && (
+            {hasWork && !failed && (
               <button
                 type="button"
                 onClick={handleImport}
