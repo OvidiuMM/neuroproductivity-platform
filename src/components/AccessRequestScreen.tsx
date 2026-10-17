@@ -4,6 +4,7 @@ import { BRAND_NAME, BrandMark } from './BrandMark';
 import { ACCESS_MESSAGE_MAX_LENGTH, type OwnAccessStatus } from '../services/access';
 import { describeAuthError } from '../services/auth';
 import { DeleteAccountPanel } from './DeleteAccountPanel';
+import type { ReauthMethod } from '../services/auth';
 import { AccessibilityTrigger, AccessibleScreen } from './AccessibilityPanel';
 import { LegalLinks } from './LegalLinks';
 
@@ -16,7 +17,8 @@ interface AccessRequestScreenProps {
   onContact: () => void;
   onDownloadData: () => Promise<void>;
   onDeleteAccount: (password?: string) => Promise<void>;
-  hasPassword: boolean;
+  // Cómo confirmar la eliminación, primero el método de la sesión actual
+  reauthMethods: ReauthMethod[];
 }
 
 const COPY: Record<AccessRequestScreenProps['status'], { title: string; text: string }> = {
@@ -65,7 +67,7 @@ export const AccessRequestScreen: React.FC<AccessRequestScreenProps> = ({
   onContact,
   onDownloadData,
   onDeleteAccount,
-  hasPassword
+  reauthMethods
 }) => {
   const [message, setMessage] = useState('');
   const [isSending, setIsSending] = useState(false);
@@ -211,7 +213,7 @@ export const AccessRequestScreen: React.FC<AccessRequestScreenProps> = ({
                 </div>
                 {isDeleting && (
                   <DeleteAccountPanel
-                    needsPassword={hasPassword}
+                    methods={reauthMethods}
                     busy={dataBusy === 'delete'}
                     onConfirm={(password) => runDataAction('delete', () => onDeleteAccount(password))}
                     onCancel={() => setIsDeleting(false)}

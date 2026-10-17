@@ -106,6 +106,7 @@ import {
 } from './services/access';
 import { deleteAccount, downloadAccountData, signOutEverywhere } from './services/account';
 import { changePassword, hasPassword } from './services/auth';
+import { useReauthMethods } from './hooks/useReauthMethods';
 import { CheckCircle2, Plus } from 'lucide-react';
 
 interface AppProps {
@@ -149,6 +150,8 @@ const REPLY_ERRORS: Record<string, string> = {
 };
 
 export default function App({ user, services, isAdmin = false }: AppProps) {
+  // Cómo confirmar la eliminación de la cuenta: primero el método con el que se entró (Google o la contraseña)
+  const reauthMethods = useReauthMethods(user);
   const { db } = services;
   const uid = user.uid;
 
@@ -1181,6 +1184,7 @@ export default function App({ user, services, isAdmin = false }: AppProps) {
           user={profile}
           onSignOut={() => signOutAndClearCache(services)}
           hasPassword={hasPassword(user)}
+          reauthMethods={reauthMethods}
           onExportData={handleExportData}
           onDeleteAccount={handleDeleteAccount}
           onChangePassword={(currentPassword, newPassword) => changePassword(user, currentPassword, newPassword)}
