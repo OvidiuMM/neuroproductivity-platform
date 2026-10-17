@@ -15,6 +15,8 @@ import {
   type Firestore
 } from 'firebase/firestore';
 import { connectFunctionsEmulator, getFunctions, type Functions } from 'firebase/functions';
+// push.ts usa usingEmulators solo dentro de sus funciones: la importación circular no da problemas al cargar
+import { unregisterPushDevice } from './push';
 import { withAuthDomain } from './authDomain';
 
 // En desarrollo y en los tests e2e la app habla con los emuladores de Auth, Firestore y Functions (proyecto demo)
@@ -92,9 +94,7 @@ export const signOutAndClearCache = async (services: FirebaseServices) => {
   const { auth, db } = services;
   const uid = auth.currentUser?.uid;
   if (uid)
-    await import('./push')
-      .then(({ unregisterPushDevice }) => unregisterPushDevice(services, uid))
-      .catch((e) => console.warn('Could not stop push notifications:', e));
+    await unregisterPushDevice(services, uid).catch((e) => console.warn('Could not stop push notifications:', e));
   await signOut(auth);
   await terminate(db);
   // Falla si hay otras pestañas abiertas con la app; en ese caso la caché se queda hasta que se cierren

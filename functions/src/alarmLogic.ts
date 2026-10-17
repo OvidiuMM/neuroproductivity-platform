@@ -48,16 +48,19 @@ const offsetAt = (instant: number, timeZone: string) => {
   );
 };
 
-// El instante de una hora local en la zona, como hace la app con `new Date(y, m, d, h, min)` y su corrección de la
-// alarma: si la hora existe dos veces (cambio al horario de invierno), la primera; si no existe (salto al de verano),
-// la anterior al salto con el desfase nuevo (las 02:30 que no existen pasan a la 01:30 de antes del salto).
-export const zonedInstant = (date: string, time: string, timeZone: string) => {
+// El instante de una hora local en la zona, como lo calcula la app. Si la hora existe dos veces (cambio al horario de
+// invierno), la primera. Si no existe (salto al de verano), depende:
+// - 'earlier' (la alarma, con su corrección): la anterior al salto con el desfase nuevo (las 02:30 que no existen
+//   pasan a la 01:30 de antes del salto), para no quedar después del plazo;
+// - 'later' (el plazo, como `new Date(y, m, d, h, min)`): con el desfase de antes del salto (pasan a las 03:30).
+export const zonedInstant = (date: string, time: string, timeZone: string, gap: 'earlier' | 'later' = 'earlier') => {
   const [y, m, d] = date.split('-').map(Number);
   const [hours, minutes] = time.split(':').map(Number);
   const wall = Date.UTC(y, m - 1, d, hours, minutes);
   const offsets = [offsetAt(wall - 12 * 60 * MINUTE_MS, timeZone), offsetAt(wall + 12 * 60 * MINUTE_MS, timeZone)];
   const valid = offsets.map((o) => wall - o).filter((instant) => offsetAt(instant, timeZone) === wall - instant);
-  return valid.length ? Math.min(...valid) : wall - Math.max(...offsets);
+  if (valid.length) return Math.min(...valid);
+  return gap === 'earlier' ? wall - offsets[1] : wall - offsets[0];
 };
 
 const previousDay = (date: string) => {
@@ -81,8 +84,8 @@ export const alarmInstant = (task: AlarmTask, timeZone: string): number | null =
 export const dueInstant = (task: AlarmTask, timeZone: string): number | null => {
   const { dueDate, dueTime } = task;
   if (typeof dueDate !== 'string' || !DAY.test(dueDate)) return null;
-  if (typeof dueTime === 'string' && ALARM_TIME.test(dueTime)) return zonedInstant(dueDate, dueTime, timeZone);
-  return zonedInstant(dueDate, '23:59', timeZone) + 59_999;
+  if (typeof dueTime === 'string' && ALARM_TIME.test(dueTime)) return zonedInstant(dueDate, dueTime, timeZone, 'later');
+  return zonedInstant(dueDate, '23:59', timeZone, 'later') + 59_999;
 };
 
 const isArchived = (task: AlarmTask) =>

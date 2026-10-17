@@ -28,6 +28,8 @@ interface AccountMenuProps {
   onExportData: () => Promise<void>;
   // Lee y comprueba el archivo elegido; si vale, se abre la vista previa (y este menú se cierra)
   onImportData: (file: File) => Promise<void>;
+  // Alarmas con CLAR cerrada en este dispositivo (notificaciones push); null si esta instalación no las ofrece
+  push: { enabled: boolean; onChange: (on: boolean) => Promise<void> } | null;
   onDeleteAccount: (password?: string) => Promise<void>;
   onChangePassword: (currentPassword: string, newPassword: string) => Promise<void>;
   onSignOutEverywhere: () => Promise<void>;
@@ -37,7 +39,7 @@ interface AccountMenuProps {
   returnFocusTo?: () => HTMLElement | null;
 }
 
-type Busy = 'export' | 'import' | 'delete' | 'password' | 'everywhere' | null;
+type Busy = 'export' | 'import' | 'push' | 'delete' | 'password' | 'everywhere' | null;
 type Panel = 'password' | 'everywhere' | 'delete' | null;
 
 const actionClass =
@@ -54,6 +56,7 @@ export const AccountMenu: React.FC<AccountMenuProps> = ({
   onSignOut,
   onExportData,
   onImportData,
+  push,
   onDeleteAccount,
   onChangePassword,
   onSignOutEverywhere,
@@ -241,6 +244,34 @@ export const AccountMenu: React.FC<AccountMenuProps> = ({
             <div className="rounded-xl border border-slate-200 px-4 py-2.5">
               <p className="text-xs font-bold text-slate-700">Notificaciones de las alarmas</p>
               <NotificationPermission buttonLabel="Activar las notificaciones de las alarmas" />
+              {push && (
+                <div className="mt-2 space-y-1">
+                  <label className="flex min-h-9 cursor-pointer items-center gap-2 text-xs font-semibold text-slate-800">
+                    <input
+                      type="checkbox"
+                      checked={push.enabled}
+                      disabled={busy !== null}
+                      onChange={(e) => {
+                        const on = e.target.checked;
+                        void run(
+                          'push',
+                          () => push.onChange(on),
+                          on
+                            ? 'Listo: en este dispositivo, las alarmas te llegarán aunque CLAR esté cerrada.'
+                            : 'En este dispositivo, las alarmas solo avisarán con CLAR abierta.'
+                        );
+                      }}
+                      aria-describedby="account-push-help"
+                      className="h-4 w-4 rounded border-slate-300 text-indigo-600"
+                    />
+                    {busy === 'push' ? 'Guardando…' : 'Avisarme también con CLAR cerrada (en este dispositivo)'}
+                  </label>
+                  <p id="account-push-help" className="text-[11px] text-slate-600">
+                    El nombre de la tarea y la hora de la alarma pasan por Firebase Cloud Messaging (Google) hasta este
+                    dispositivo.
+                  </p>
+                </div>
+              )}
             </div>
             <button type="button" onClick={onContact} disabled={busy !== null} className={actionClass}>
               <MessageSquare className="h-4 w-4 text-indigo-600" aria-hidden="true" />

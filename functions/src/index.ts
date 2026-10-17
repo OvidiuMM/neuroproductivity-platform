@@ -11,4 +11,4 @@ export { forgetAccess, requestAccess, revokeSessions, setAccess, setAccessMode, 
 export { replyToFeedback, submitFeedback } from './feedback';
 
 // Notificaciones push de las alarmas: registro de dispositivos, cola de alarmas y envío cada minuto
-export { queueTaskAlarm, registerPushDevice, sendDueAlarms } from './push';
+export { queueTaskAlarm, registerPushDevice, sendDueAlarms, unregisterPushDevice } from './push';

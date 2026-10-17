@@ -79,9 +79,12 @@ export const PrivacyPolicy: React.FC = () => (
           registrarse.
         </li>
         <li>
-          <strong>Notificaciones de las alarmas:</strong> si las activas, el identificador de notificaciones de cada
-          dispositivo (de Firebase Cloud Messaging) y su zona horaria, y para cada alarma pendiente su hora, el nombre
-          de la tarea y cuándo vence. Sirven para avisarte a la hora de la alarma aunque CLAR esté cerrada.
+          <strong>Alarmas con CLAR cerrada:</strong> si activas «Avisarme también con CLAR cerrada» en un dispositivo,
+          su identificador de notificaciones (de Firebase Cloud Messaging) y su zona horaria y, de cada alarma
+          pendiente, su hora, el nombre de la tarea y cuándo vence. Sirven para avisarte a la hora de la alarma aunque
+          CLAR esté cerrada. El aviso llega a tu dispositivo por Firebase Cloud Messaging y por el servicio push de tu
+          navegador (el de Google en Chrome y Android; el de Mozilla, Apple o Microsoft en sus navegadores), que lo
+          recibe cifrado.
         </li>
         <li>
           <strong>En tu dispositivo:</strong> CLAR usa el almacenamiento local de tu navegador (Local Storage e
@@ -114,6 +117,10 @@ export const PrivacyPolicy: React.FC = () => (
         <li>
           <strong>Consentimiento</strong> (art. 6.1.a RGPD): la información técnica opcional de tus mensajes. Puedes
           retirarlo escribiendo a <Contact />.
+        </li>
+        <li>
+          <strong>Consentimiento</strong> (art. 6.1.a RGPD): las alarmas con CLAR cerrada, que activas en cada
+          dispositivo. Lo retiras desactivándolas en el menú de tu cuenta.
         </li>
       </List>
     </Section>
@@ -164,9 +171,11 @@ export const PrivacyPolicy: React.FC = () => (
         </li>
         <li>Email de una cuenta bloqueada: mientras dure el bloqueo, también si la cuenta se elimina.</li>
         <li>
-          Notificaciones de las alarmas: el identificador de un dispositivo deja de valer al cerrar sesión en él y se
-          borra al cerrar la sesión en todos los dispositivos o al eliminar la cuenta; cada alarma pendiente, cuando se
-          envía, cuando cambia o se borra su tarea, o cuando vence.
+          Alarmas con CLAR cerrada: el identificador de un dispositivo y su zona horaria se borran al desactivarlas o al
+          cerrar sesión en él (si en ese momento no hay conexión, cuando falle el siguiente envío), al cerrar la sesión
+          en todos los dispositivos y al eliminar la cuenta. Cada alarma pendiente se borra cuando se envía, cuando
+          cambia o se borra su tarea, o cuando vence; de las enviadas solo se guarda cuál fue, para no repetirla, hasta
+          que se borre la tarea.
         </li>
         <li>
           Lo que contestes por email a nuestras respuestas: llega al buzón de <Contact /> y se guarda el tiempo

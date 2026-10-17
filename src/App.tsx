@@ -67,10 +67,12 @@ import { useTaskAlarms } from './hooks/useTaskAlarms';
 import { alarmLateNote, formatClock } from './services/alarms';
 import {
   NOTIFICATIONS_GRANTED_EVENT,
+  notificationState,
   registerNotificationWorker,
+  requestNotifications,
   showSystemNotification
 } from './services/notifications';
-import { registerPushDevice } from './services/push';
+import { disablePush, enablePush, isPushEnabled, pushAvailable, registerPushDevice } from './services/push';
 import { TOUR_STEPS } from './tourSteps';
 import { hasSeenLocally, hasSeenOnboarding, rememberLocally, type OnboardingOutcome } from './services/onboarding';
 import { applyGoalAreas, latestScores } from './services/goals';
@@ -830,7 +832,9 @@ export default function App({ user, services, isAdmin = false }: AppProps) {
   useEffect(() => {
     registerNotificationWorker();
   }, []);
+  const [pushEnabled, setPushEnabled] = useState(() => isPushEnabled(uid));
   useEffect(() => {
+    // Solo en los dispositivos donde se activó «Avisarme también con CLAR cerrada»
     const register = (force: boolean) =>
       registerPushDevice(services, uid, force).catch((e) => console.warn('Could not register for push:', e));
     void register(false);
@@ -838,6 +842,16 @@ export default function App({ user, services, isAdmin = false }: AppProps) {
     window.addEventListener(NOTIFICATIONS_GRANTED_EVENT, onGranted);
     return () => window.removeEventListener(NOTIFICATIONS_GRANTED_EVENT, onGranted);
   }, [services, uid]);
+  const handleTogglePush = async (on: boolean) => {
+    if (on) {
+      if (notificationState() !== 'granted' && (await requestNotifications()) !== 'granted')
+        throw new Error('Para recibirlas, permite las notificaciones de CLAR en este navegador.');
+      await enablePush(services, uid);
+    } else {
+      await disablePush(services, uid);
+    }
+    setPushEnabled(on);
+  };
 
   // ALARMAS: avisan mientras la app está abierta, dentro de ella (en todas las pestañas) y, con permiso, también con
   // una notificación del sistema. El aviso muestra la tarea tal como está ahora y desaparece si se marca como hecha.
@@ -1230,6 +1244,7 @@ export default function App({ user, services, isAdmin = false }: AppProps) {
           hasPassword={hasPassword(user)}
           onExportData={handleExportData}
           onImportData={handleChooseImportFile}
+          push={pushAvailable() ? { enabled: pushEnabled, onChange: handleTogglePush } : null}
           onDeleteAccount={handleDeleteAccount}
           onChangePassword={(currentPassword, newPassword) => changePassword(user, currentPassword, newPassword)}
           onSignOutEverywhere={() => signOutEverywhere(services)}
