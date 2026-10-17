@@ -43,6 +43,18 @@ const patchDocument = async (path: string, fields: Record<string, unknown>) => {
   expect(res.ok, await res.text()).toBe(true);
 };
 
+// Escribe o borra un documento del emulador de Firestore saltando las reglas (campos de texto). Para preparar estados
+// que solo escriben las Cloud Functions
+export const writeTextDocument = (path: string, fields: Record<string, string>) =>
+  patchDocument(path, Object.fromEntries(Object.entries(fields).map(([key, value]) => [key, text(value)])));
+export const deleteDocument = async (path: string) => {
+  const res = await fetch(
+    `http://127.0.0.1:8281/v1/projects/${EMULATOR_PROJECT}/databases/(default)/documents/${path}`,
+    { method: 'DELETE', headers: OWNER_HEADERS }
+  );
+  expect(res.ok, await res.text()).toBe(true);
+};
+
 // Campos de un documento del emulador de Firestore, como texto, número o booleano (null si no existe)
 export const readDocument = async (path: string) => {
   const res = await fetch(

@@ -65,7 +65,22 @@ import { FeedbackDialog } from './components/FeedbackDialog';
 import { AlarmAlerts, type AlarmAlert } from './components/AlarmAlerts';
 import { useTaskAlarms } from './hooks/useTaskAlarms';
 import { alarmLateNote, formatClock } from './services/alarms';
-import { registerNotificationWorker, showSystemNotification } from './services/notifications';
+import {
+  NOTIFICATIONS_GRANTED_EVENT,
+  notificationState,
+  registerNotificationWorker,
+  requestNotifications,
+  showSystemNotification
+} from './services/notifications';
+import {
+  disablePush,
+  enablePush,
+  isPushEnabled,
+  isPushTitleShown,
+  pushAvailable,
+  registerPushDevice,
+  setPushTitleShown
+} from './services/push';
 import { TOUR_STEPS } from './tourSteps';
 import { hasSeenLocally, hasSeenOnboarding, rememberLocally, type OnboardingOutcome } from './services/onboarding';
 import { applyGoalAreas, latestScores } from './services/goals';
@@ -826,10 +841,36 @@ export default function App({ user, services, isAdmin = false }: AppProps) {
     isImportOpen ||
     importPlan !== null;
 
-  // El service worker de las notificaciones (Android solo las muestra desde él)
+  // El service worker de las notificaciones (Android solo las muestra desde él) y, con permiso, el registro de este
+  // dispositivo para las notificaciones push (las alarmas suenan aunque CLAR esté cerrada)
   useEffect(() => {
     registerNotificationWorker();
   }, []);
+  const [pushEnabled, setPushEnabled] = useState(() => isPushEnabled(uid));
+  useEffect(() => {
+    // Solo en los dispositivos donde se activó «Avisarme también con CLAR cerrada»
+    const register = (force: boolean) =>
+      registerPushDevice(services, uid, force).catch((e) => console.warn('Could not register for push:', e));
+    void register(false);
+    const onGranted = () => void register(true);
+    window.addEventListener(NOTIFICATIONS_GRANTED_EVENT, onGranted);
+    return () => window.removeEventListener(NOTIFICATIONS_GRANTED_EVENT, onGranted);
+  }, [services, uid]);
+  const handleTogglePush = async (on: boolean) => {
+    if (on) {
+      if (notificationState() !== 'granted' && (await requestNotifications()) !== 'granted')
+        throw new Error('Para recibirlas, permite las notificaciones de CLAR en este navegador.');
+      await enablePush(services, uid);
+    } else {
+      await disablePush(services, uid);
+    }
+    setPushEnabled(on);
+  };
+  const [pushShowsTitle, setPushShowsTitle] = useState(() => isPushTitleShown(uid));
+  const handlePushTitle = async (show: boolean) => {
+    await setPushTitleShown(services, uid, show);
+    setPushShowsTitle(show);
+  };
 
   // ALARMAS: avisan mientras la app está abierta, dentro de ella (en todas las pestañas) y, con permiso, también con
   // una notificación del sistema. El aviso muestra la tarea tal como está ahora y desaparece si se marca como hecha.
@@ -1223,6 +1264,16 @@ export default function App({ user, services, isAdmin = false }: AppProps) {
           reauthMethods={reauthMethods}
           onExportData={handleExportData}
           onImportData={handleChooseImportFile}
+          push={
+            pushAvailable()
+              ? {
+                  enabled: pushEnabled,
+                  onChange: handleTogglePush,
+                  showTitle: pushShowsTitle,
+                  onShowTitleChange: handlePushTitle
+                }
+              : null
+          }
           onDeleteAccount={handleDeleteAccount}
           onChangePassword={(currentPassword, newPassword) => changePassword(user, currentPassword, newPassword)}
           onSignOutEverywhere={() => signOutEverywhere(services)}

@@ -1,4 +1,5 @@
 import { forgetFeedback } from './feedbackCleanup';
+import { forgetPushData, forgetPushDevices } from './pushCleanup';
 import { adminAuth, adminDb } from './adminApp';
 import { HttpsError, onCall, type CallableRequest } from 'firebase-functions/https';
 import * as logger from 'firebase-functions/logger';
@@ -259,6 +260,8 @@ export const setAccess = onCall({ region: REGION, secrets: emailSecrets }, async
     return { ...data, status: status as DecisionStatus, decidedAt };
   });
   logger.info('Access decided', { status });
+  // Sin acceso, tampoco recibe alarmas push en sus dispositivos
+  if (status !== 'approved') await forgetPushDevices(uid);
   // La persona recibe un aviso cuando se aprueba su acceso (rechazos y retiradas se ven al entrar)
   if (record.status === 'approved' && normalizeEmail(record.email) !== normalizeEmail(adminEmail())) {
     await sendAccessEmail('approved', record);
@@ -321,7 +324,8 @@ export const setAccessMode = onCall({ region: REGION, secrets: emailSecrets, tim
 });
 
 // Último paso para eliminar la cuenta: la borra de Auth y después sus datos, su solicitud de acceso, su marca de
-// administración y sus mensajes (la lista negra por email se conserva). Borrar la solicitud sin borrar la cuenta
+// administración, sus mensajes y sus dispositivos y alarmas de las notificaciones push (la lista negra por email se
+// conserva). Borrar la solicitud sin borrar la cuenta
 // dejaría a una cuenta rechazada o retirada volver a entrar o a pedir acceso al momento, sin decisión de nadie: por
 // eso la cuenta va primero y si falla no se borra nada. Pide un inicio de sesión reciente, como Firebase para borrar
 // la cuenta desde el navegador.
@@ -335,7 +339,8 @@ export const forgetAccess = onCall({ region: REGION, timeoutSeconds: 300 }, asyn
     db().recursiveDelete(db().doc(`users/${auth.uid}`)),
     db().doc(`access/${auth.uid}`).delete(),
     db().doc(`admins/${auth.uid}`).delete(),
-    forgetFeedback(auth.uid)
+    forgetFeedback(auth.uid),
+    forgetPushData(auth.uid)
   ]);
   logger.info('Account deleted');
   return { ok: true };
@@ -345,6 +350,8 @@ export const forgetAccess = onCall({ region: REGION, timeoutSeconds: 300 }, asyn
 export const revokeSessions = onCall({ region: REGION }, async (request) => {
   const auth = requireAuth(request);
   await adminAuth().revokeRefreshTokens(auth.uid);
+  // Los dispositivos tampoco reciben ya sus alarmas (p. ej. un móvil perdido); cada uno vuelve a registrarse al entrar
+  await forgetPushDevices(auth.uid);
   logger.info('Sessions revoked');
   return { ok: true };
 });

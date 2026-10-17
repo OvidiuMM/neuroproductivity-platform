@@ -1,4 +1,5 @@
 import React from 'react';
+import { pushAvailable } from '../services/push';
 import { AppTab } from '../types';
 import { LegalLink } from './LegalLinks';
 import {
@@ -90,7 +91,9 @@ const SCREENS: { tab: AppTab; title: string; icon: React.ReactNode; points: stri
       'Con fecha límite, «Añadir al calendario», en el menú «⋯» de la tarea, la lleva a Google Calendar, Outlook o cualquier calendario (archivo .ics), con su descripción y sus notas. Si tiene hora de inicio y no hora límite, el evento dura una hora.',
       '«Descargar (JSON)», en el menú «⋯», guarda la tarea con todos sus datos (y los nombres de su meta, su proyecto y las tareas de las que depende). Las metas y los proyectos también se descargan, con sus tareas.',
       'Alarma: una hora para que CLAR te avise antes del plazo, dentro de las 24 h anteriores (con la tarea a las 11:00, una alarma a las 10:57 suena 3 minutos antes). Sin hora límite, suena la víspera a esa hora; una tarea que se repite necesita hora límite para llevarla.',
-      'La alarma avisa mientras CLAR esté abierta, también en segundo plano: dentro de la app y, si lo permites (en el formulario o en el menú de tu cuenta), con una notificación del sistema (en el iPhone, solo si instalas CLAR en la pantalla de inicio). Con CLAR cerrada o el móvil bloqueado no puede sonar: si abres CLAR después de la hora de la alarma pero antes del plazo, avisa al momento y dice a qué hora era. Para no perderla, añade la tarea al calendario con el archivo .ics, que lleva la alarma.',
+      pushAvailable()
+        ? 'La alarma avisa mientras CLAR esté abierta, también en segundo plano: dentro de la app y, si lo permites (en el formulario o en el menú de tu cuenta), con una notificación del sistema (en el iPhone, solo si instalas CLAR en la pantalla de inicio). Con «Avisarme también con CLAR cerrada», en el menú de tu cuenta, te llega aunque CLAR esté cerrada o el móvil bloqueado. Si no llegó y abres CLAR después de su hora pero antes del plazo, avisa al momento y dice a qué hora era. El archivo .ics del calendario también la lleva.'
+        : 'La alarma avisa mientras CLAR esté abierta, también en segundo plano: dentro de la app y, si lo permites (en el formulario o en el menú de tu cuenta), con una notificación del sistema (en el iPhone, solo si instalas CLAR en la pantalla de inicio). Con CLAR cerrada o el móvil bloqueado no puede sonar: si abres CLAR después de su hora pero antes del plazo, avisa al momento y dice a qué hora era. Para no perderla, añade la tarea al calendario con el archivo .ics, que lleva la alarma.',
       'Las horas (límite, de inicio, de la alarma y de las reuniones) se escriben en 24 h, de 00:00 a 23:59: 9:30, 0930 o 21:45. Lo que no es una hora no se guarda.',
       'Las tareas pueden repetirse (cada día, semana, mes o año; por ejemplo, «cada mes, el 2.º lunes»). Al repetir, «Inicio» es desde cuándo se repite y la fecha límite hasta cuándo; cada repetición vence su propio día. Al marcarla Hecha o Cancelada se archiva y se crea la siguiente.',
       'Las ideas sin urgencia van a «Algún día» y no compiten con el Top 10.'

@@ -7,8 +7,14 @@ export type NotificationState = NotificationPermission | 'unsupported';
 export const notificationState = (): NotificationState =>
   typeof window !== 'undefined' && 'Notification' in window ? Notification.permission : 'unsupported';
 
-export const requestNotifications = async (): Promise<NotificationState> =>
-  notificationState() === 'unsupported' ? 'unsupported' : Notification.requestPermission();
+// Se avisa a la app al darse el permiso: así registra el dispositivo para las alarmas con CLAR cerrada
+export const NOTIFICATIONS_GRANTED_EVENT = 'clar:notifications-granted';
+export const requestNotifications = async (): Promise<NotificationState> => {
+  if (notificationState() === 'unsupported') return 'unsupported';
+  const state = await Notification.requestPermission();
+  if (state === 'granted') window.dispatchEvent(new Event(NOTIFICATIONS_GRANTED_EVENT));
+  return state;
+};
 
 // Registra el service worker de las notificaciones (una vez por carga; si falla, se usan las de la página)
 export const registerNotificationWorker = () => {

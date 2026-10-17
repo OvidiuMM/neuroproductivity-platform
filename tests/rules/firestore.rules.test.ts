@@ -260,6 +260,27 @@ describe('firestore.rules', () => {
     await assertFails(getDocs(collection(noEmail, 'access')));
   });
 
+  // Los dispositivos y la cola de las notificaciones push solo los usan las Cloud Functions
+  it('keeps push devices and the alarm queue out of reach of every client, their owner included', async () => {
+    await env.withSecurityRulesDisabled(async (ctx) => {
+      await setDoc(doc(ctx.firestore(), 'push_devices/ana'), { timeZone: 'Europe/Madrid' });
+      await setDoc(doc(ctx.firestore(), 'push_devices/ana/tokens/t1'), { token: 'x', timeZone: 'Europe/Madrid' });
+      await setDoc(doc(ctx.firestore(), 'alarm_queue/ana__task-1'), { uid: 'ana', taskId: 'task-1' });
+      await setDoc(doc(ctx.firestore(), 'alarm_sent/ana__task-1'), { uid: 'ana', taskId: 'task-1' });
+      await setDoc(doc(ctx.firestore(), 'push_tokens/t1'), { uid: 'ana' });
+    });
+    const ana = env.authenticatedContext('ana').firestore();
+    await assertFails(getDoc(doc(ana, 'push_devices/ana')));
+    await assertFails(getDocs(collection(ana, 'push_devices/ana/tokens')));
+    await assertFails(setDoc(doc(ana, 'push_devices/ana/tokens/t2'), { token: 'y' }));
+    await assertFails(getDoc(doc(ana, 'alarm_queue/ana__task-1')));
+    await assertFails(setDoc(doc(ana, 'alarm_queue/ana__task-2'), { uid: 'ana' }));
+    await assertFails(deleteDoc(doc(ana, 'alarm_queue/ana__task-1')));
+    await assertFails(getDoc(doc(ana, 'alarm_sent/ana__task-1')));
+    await assertFails(getDoc(doc(ana, 'push_tokens/t1')));
+    await assertFails(setDoc(doc(ana, 'push_tokens/t2'), { uid: 'ana' }));
+  });
+
   it('never lets a client write access requests or the admin list, not even the admin', async () => {
     await env.withSecurityRulesDisabled(async (ctx) => {
       await setDoc(doc(ctx.firestore(), 'admins/admin'), {

@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { forgetPushRegistrations } from './services/push';
 import {
   GoogleAuthProvider,
   getRedirectResult,
@@ -43,6 +44,8 @@ export const AuthGate: React.FC = () => {
           if (user) {
             setState({ status: 'signed-in', services, user });
           } else {
+            // Sin sesión: al volver a entrar, el dispositivo se registra de nuevo para las alarmas con CLAR cerrada
+            forgetPushRegistrations();
             setState({ status: 'signed-out', services });
           }
           setIsSigningIn(false);

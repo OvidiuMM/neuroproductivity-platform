@@ -79,6 +79,15 @@ export const PrivacyPolicy: React.FC = () => (
           registrarse.
         </li>
         <li>
+          <strong>Alarmas con CLAR cerrada:</strong> si activas «Avisarme también con CLAR cerrada» en un dispositivo,
+          su identificador de notificaciones (de Firebase Cloud Messaging), su zona horaria y si quieres ver el nombre
+          de la tarea y, de cada alarma pendiente, su hora, el nombre de la tarea y cuándo vence. Sirven para avisarte a
+          la hora de la alarma aunque CLAR esté cerrada. La notificación lleva solo la hora de la alarma y cuándo vence,
+          salvo que elijas ver también el nombre de la tarea (se vería con el móvil bloqueado). Llega a tu dispositivo
+          por Firebase Cloud Messaging y por el servicio push de tu navegador (el de Google en Chrome y Android; el de
+          Mozilla, Apple o Microsoft en sus navegadores), que la recibe cifrada.
+        </li>
+        <li>
           <strong>En tu dispositivo:</strong> CLAR usa el almacenamiento local de tu navegador (Local Storage e
           IndexedDB) y la sesión de Firebase exclusivamente por motivos técnicos. Guarda la sesión, una copia de tus
           datos para usar la app sin conexión (se borra al cerrar sesión; ver «Cuánto tiempo se guardan») y algunas
@@ -110,6 +119,10 @@ export const PrivacyPolicy: React.FC = () => (
           <strong>Consentimiento</strong> (art. 6.1.a RGPD): la información técnica opcional de tus mensajes. Puedes
           retirarlo escribiendo a <Contact />.
         </li>
+        <li>
+          <strong>Consentimiento</strong> (art. 6.1.a RGPD): las alarmas con CLAR cerrada, que activas en cada
+          dispositivo. Lo retiras desactivándolas en el menú de tu cuenta.
+        </li>
       </List>
     </Section>
 
@@ -125,7 +138,8 @@ export const PrivacyPolicy: React.FC = () => (
         </li>
         <li>
           Encargados del tratamiento, que tratan los datos solo para prestar su servicio: Google, con Firebase
-          (Authentication, Firestore, Cloud Functions y Hosting), y {EMAIL_PROVIDER}, en la UE, para los emails de CLAR.
+          (Authentication, Firestore, Cloud Functions, Cloud Messaging y Hosting), y {EMAIL_PROVIDER}, en la UE, para
+          los emails de CLAR.
         </li>
         <li>
           Otros servicios, solo cuando tú lo decides: al usar «Añadir al calendario» con Google Calendar u Outlook, el
@@ -139,10 +153,10 @@ export const PrivacyPolicy: React.FC = () => (
     <Section id="privacy-location" title="Dónde se guardan y transferencias internacionales">
       <p>
         Lo que escribes en CLAR se guarda en servidores de Google Cloud en la Unión Europea (Bélgica), y los emails
-        salen de {EMAIL_PROVIDER}, también en la UE. Firebase Authentication (tu cuenta: nombre, email y foto) puede
-        tratar datos fuera de la UE, en Estados Unidos, con las garantías del Marco de Privacidad de Datos UE-EE. UU.
-        (decisión de adecuación de la Comisión Europea de 10 de julio de 2023) y de las cláusulas contractuales tipo de
-        la Comisión.
+        salen de {EMAIL_PROVIDER}, también en la UE. Firebase Authentication (tu cuenta: nombre, email y foto) y
+        Firebase Cloud Messaging (las notificaciones de las alarmas, si las activas) pueden tratar datos fuera de la UE,
+        en Estados Unidos, con las garantías del Marco de Privacidad de Datos UE-EE. UU. (decisión de adecuación de la
+        Comisión Europea de 10 de julio de 2023) y de las cláusulas contractuales tipo de la Comisión.
       </p>
     </Section>
 
@@ -157,6 +171,15 @@ export const PrivacyPolicy: React.FC = () => (
           tuyo, para que el límite se siga aplicando.
         </li>
         <li>Email de una cuenta bloqueada: mientras dure el bloqueo, también si la cuenta se elimina.</li>
+        <li>
+          Alarmas con CLAR cerrada: al desactivarlas o cerrar sesión en un dispositivo, deja de recibirlas al momento,
+          también sin conexión; su identificador y su zona horaria se borran del servidor entonces o, si no hay
+          conexión, al intentar el siguiente envío. También se borran al cerrar la sesión en todos los dispositivos, si
+          la administración retira el acceso, al eliminar la cuenta y, en cualquier caso, cuando el dispositivo lleva 30
+          días sin abrir CLAR. Cada alarma pendiente se borra cuando se envía, cuando cambia o se borra su tarea, o
+          cuando vence; de las enviadas solo se guarda cuál fue, para no repetirla, hasta que se borre la tarea o la
+          cuenta.
+        </li>
         <li>
           Lo que contestes por email a nuestras respuestas: llega al buzón de <Contact /> y se guarda el tiempo
           necesario para atenderte.
