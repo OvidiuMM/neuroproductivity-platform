@@ -10,10 +10,14 @@ export default defineConfig({
     screenshot: 'only-on-failure'
   },
   projects: [
+    // Antes de todo, una carga de la app y una llamada a cada emulador: el arranque en frío (compilar la app y despertar
+    // los emuladores) no se lo come el tiempo de la primera prueba de cada proceso
+    { name: 'warm-up', testMatch: /warm-up\.setup\.ts/, use: { ...devices['Desktop Chrome'] } },
     {
       name: 'chromium',
       use: { ...devices['Desktop Chrome'] },
-      testIgnore: /global-settings\.spec\.ts/
+      testIgnore: /global-settings\.spec\.ts/,
+      dependencies: ['warm-up']
     },
     // Pruebas que cambian la configuración global (p. ej. desactivar la aprobación de cuentas): van después de todas
     // las demás, para no cambiarles las reglas a mitad
