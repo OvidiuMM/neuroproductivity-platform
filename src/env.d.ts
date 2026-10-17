@@ -3,4 +3,6 @@ declare const __APP_VERSION__: string;
 
 interface ImportMetaEnv {
   readonly VITE_USE_FIREBASE_EMULATORS?: string;
+  // Clave pública VAPID de Firebase Cloud Messaging (notificaciones push de las alarmas); sin ella no se usan
+  readonly VITE_FCM_VAPID_KEY?: string;
 }

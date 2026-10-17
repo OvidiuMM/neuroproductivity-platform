@@ -152,4 +152,8 @@ jobs:
       - name: Deploy Hosting, Cloud Functions and Firestore rules
         env:
           FIREBASE_PROJECT_ID: ${{ secrets.FIREBASE_PROJECT_ID }}
+          # Clave pública VAPID de Firebase Cloud Messaging (Configuración del proyecto → Cloud Messaging → Certificados
+          # web push), para las notificaciones push de las alarmas. Es pública: va en una variable, no en un secreto.
+          # Sin ella, la app se compila sin push y las alarmas avisan solo con CLAR abierta.
+          VITE_FCM_VAPID_KEY: ${{ vars.FCM_VAPID_KEY }}
         run: npx firebase deploy --only hosting,functions,firestore --project "$FIREBASE_PROJECT_ID" --non-interactive

@@ -79,6 +79,11 @@ export const PrivacyPolicy: React.FC = () => (
           registrarse.
         </li>
         <li>
+          <strong>Notificaciones de las alarmas:</strong> si las activas, el identificador de notificaciones de cada
+          dispositivo (de Firebase Cloud Messaging) y su zona horaria, y para cada alarma pendiente su hora, el nombre
+          de la tarea y cuándo vence. Sirven para avisarte a la hora de la alarma aunque CLAR esté cerrada.
+        </li>
+        <li>
           <strong>En tu dispositivo:</strong> CLAR usa el almacenamiento local de tu navegador (Local Storage e
           IndexedDB) y la sesión de Firebase exclusivamente por motivos técnicos. Guarda la sesión, una copia de tus
           datos para usar la app sin conexión (se borra al cerrar sesión; ver «Cuánto tiempo se guardan») y algunas
@@ -125,7 +130,8 @@ export const PrivacyPolicy: React.FC = () => (
         </li>
         <li>
           Encargados del tratamiento, que tratan los datos solo para prestar su servicio: Google, con Firebase
-          (Authentication, Firestore, Cloud Functions y Hosting), y {EMAIL_PROVIDER}, en la UE, para los emails de CLAR.
+          (Authentication, Firestore, Cloud Functions, Cloud Messaging y Hosting), y {EMAIL_PROVIDER}, en la UE, para
+          los emails de CLAR.
         </li>
         <li>
           Otros servicios, solo cuando tú lo decides: al usar «Añadir al calendario» con Google Calendar u Outlook, el
@@ -139,10 +145,10 @@ export const PrivacyPolicy: React.FC = () => (
     <Section id="privacy-location" title="Dónde se guardan y transferencias internacionales">
       <p>
         Lo que escribes en CLAR se guarda en servidores de Google Cloud en la Unión Europea (Bélgica), y los emails
-        salen de {EMAIL_PROVIDER}, también en la UE. Firebase Authentication (tu cuenta: nombre, email y foto) puede
-        tratar datos fuera de la UE, en Estados Unidos, con las garantías del Marco de Privacidad de Datos UE-EE. UU.
-        (decisión de adecuación de la Comisión Europea de 10 de julio de 2023) y de las cláusulas contractuales tipo de
-        la Comisión.
+        salen de {EMAIL_PROVIDER}, también en la UE. Firebase Authentication (tu cuenta: nombre, email y foto) y
+        Firebase Cloud Messaging (las notificaciones de las alarmas, si las activas) pueden tratar datos fuera de la UE,
+        en Estados Unidos, con las garantías del Marco de Privacidad de Datos UE-EE. UU. (decisión de adecuación de la
+        Comisión Europea de 10 de julio de 2023) y de las cláusulas contractuales tipo de la Comisión.
       </p>
     </Section>
 
@@ -157,6 +163,11 @@ export const PrivacyPolicy: React.FC = () => (
           tuyo, para que el límite se siga aplicando.
         </li>
         <li>Email de una cuenta bloqueada: mientras dure el bloqueo, también si la cuenta se elimina.</li>
+        <li>
+          Notificaciones de las alarmas: el identificador de un dispositivo deja de valer al cerrar sesión en él y se
+          borra al cerrar la sesión en todos los dispositivos o al eliminar la cuenta; cada alarma pendiente, cuando se
+          envía, cuando cambia o se borra su tarea, o cuando vence.
+        </li>
         <li>
           Lo que contestes por email a nuestras respuestas: llega al buzón de <Contact /> y se guarda el tiempo
           necesario para atenderte.
