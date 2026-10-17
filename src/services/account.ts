@@ -1,7 +1,6 @@
 import {
   EmailAuthProvider,
   GoogleAuthProvider,
-  deleteUser,
   reauthenticateWithCredential,
   reauthenticateWithPopup,
   type User
@@ -39,9 +38,8 @@ const reauthenticate = (user: User, password?: string) =>
 export const deleteAccount = async (services: FirebaseServices, user: User, password?: string) => {
   await reauthenticate(user, password);
   await deleteAllUserData(services.db, user.uid);
-  // La solicitud de acceso se borra al final, con la sesión aún abierta para llamar a la función
+  // La función borra la cuenta y, después, lo que queda en el servidor (la solicitud de acceso y los mensajes)
   await forgetAccess(services.functions);
-  await deleteUser(user);
   await signOutAndClearCache(services);
 };
 
