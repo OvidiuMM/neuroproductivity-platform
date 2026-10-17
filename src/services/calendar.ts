@@ -13,6 +13,9 @@ export interface CalendarEvent {
   start: Date; // día completo: medianoche local del primer día
   end: Date; // día completo: medianoche local del día siguiente al último (exclusivo)
   rrule?: string; // tareas recurrentes: la serie completa (Google Calendar y .ics; los enlaces de Outlook no lo admiten)
+  // Series con hora: zona horaria del dispositivo. Sus horas van en hora local con esta zona, no en UTC: así la regla
+  // (p. ej. los lunes) se aplica al día local y la hora no se mueve con el cambio de horario
+  timeZone?: string;
   // Alarma de la tarea (solo en el .ics): minutos antes del inicio o del final del evento (negativos: después)
   alarm?: { minutesBefore: number; related: 'START' | 'END' };
 }
@@ -39,7 +42,11 @@ const addDays = (date: Date, days: number) => {
   return next;
 };
 
-export const buildCalendarEvent = (source: TaskItem, appUrl: string): CalendarEvent | null => {
+export const buildCalendarEvent = (
+  source: TaskItem,
+  appUrl: string,
+  timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone
+): CalendarEvent | null => {
   if (!source.dueDate) return null;
   // Una tarea repetida no es un intervalo: cada repetición ocupa su día, de la hora de inicio a la límite.
   // Así el evento empieza el mismo día en que se ancla la regla (las de antes de 0.8 podían tener inicio).
@@ -57,7 +64,9 @@ export const buildCalendarEvent = (source: TaskItem, appUrl: string): CalendarEv
     uid: `${task.id}@neuroproductividad`,
     title: task.title,
     description,
-    ...(task.recurrence ? { rrule: toRRule(task.recurrence, allDay, dueDate) } : {})
+    ...(task.recurrence
+      ? { rrule: toRRule(task.recurrence, allDay, dueDate), ...(allDay || !timeZone ? {} : { timeZone }) }
+      : {})
   };
 
   // La alarma se cuenta desde un borde del evento (en una serie, la misma para cada repetición): el que marca el plazo
@@ -107,13 +116,18 @@ const utcStamp = (d: Date) =>
     .replace(/[-:]/g, '')
     .replace(/\.\d{3}/, '');
 const utcIso = (d: Date) => d.toISOString().replace(/\.\d{3}/, '');
+// Hora local del dispositivo (para las series, con su zona horaria)
+const localStamp = (d: Date) => `${localDay(d)}T${pad(d.getHours())}${pad(d.getMinutes())}${pad(d.getSeconds())}`;
 
 export const googleCalendarUrl = (event: CalendarEvent) => {
   const dates = event.allDay
     ? `${localDay(event.start)}/${localDay(event.end)}`
-    : `${utcStamp(event.start)}/${utcStamp(event.end)}`;
+    : event.timeZone
+      ? `${localStamp(event.start)}/${localStamp(event.end)}`
+      : `${utcStamp(event.start)}/${utcStamp(event.end)}`;
   const params = new URLSearchParams({ action: 'TEMPLATE', text: event.title, dates, details: event.description });
   if (event.rrule) params.set('recur', event.rrule);
+  if (event.timeZone && !event.allDay) params.set('ctz', event.timeZone);
   return `https://calendar.google.com/calendar/render?${params}`;
 };
 
@@ -156,7 +170,12 @@ const foldIcsLine = (line: string) => {
 export const buildIcs = (event: CalendarEvent, now = new Date()) => {
   const timing = event.allDay
     ? [`DTSTART;VALUE=DATE:${localDay(event.start)}`, `DTEND;VALUE=DATE:${localDay(event.end)}`]
-    : [`DTSTART:${utcStamp(event.start)}`, `DTEND:${utcStamp(event.end)}`];
+    : event.timeZone
+      ? [
+          `DTSTART;TZID=${event.timeZone}:${localStamp(event.start)}`,
+          `DTEND;TZID=${event.timeZone}:${localStamp(event.end)}`
+        ]
+      : [`DTSTART:${utcStamp(event.start)}`, `DTEND:${utcStamp(event.end)}`];
   return [
     'BEGIN:VCALENDAR',
     'VERSION:2.0',
