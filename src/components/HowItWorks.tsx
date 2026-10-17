@@ -30,8 +30,8 @@ const SCREENS: { tab: AppTab; title: string; icon: React.ReactNode; points: stri
     icon: <LayoutDashboard className="h-5 w-5 text-indigo-600" />,
     points: [
       'El foco de la lista activa (Profesional o Personal) y sus indicadores: Top 10, Rueda de la Vida y reuniones.',
-      'Tus estadísticas: tareas hechas por día, semana y mes, cuántas terminas antes o después del plazo, tu velocidad, tu racha y tus pendientes.',
-      'Tus metas activas con su progreso; «Gestionar las metas» te lleva a «Metas».',
+      'Tus estadísticas: tareas hechas por día, semana y mes (y las canceladas, que no cuentan como hechas), cuántas terminas antes o después del plazo, tu velocidad, tu racha y tus pendientes, con las vencidas y las bloqueadas.',
+      'Tus metas activas con su progreso, y tus proyectos activos con su batería y su plazo.',
       'Recomendaciones según tus datos, por ejemplo empezar por la tarea vencida más antigua.'
     ]
   },
@@ -55,7 +55,7 @@ const SCREENS: { tab: AppTab; title: string; icon: React.ReactNode; points: stri
       'Una meta es lo que quieres conseguir en un área de tu Rueda, por ejemplo «Correr una media maratón» en Salud. Puede llevar un para qué y una fecha objetivo.',
       'Las áreas aparecen de la puntuación más baja a la más alta, según tu última evaluación. Las que tienen 5 o menos y aún no tienen metas salen en «Necesitan atención».',
       'Cada meta muestra su progreso (tareas hechas sobre el total) y las tareas que le quedan. Pulsa una para editarla.',
-      '«Añadir tarea» crea una tarea ya vinculada a la meta. También puedes vincularla desde el formulario de la tarea; la tarea toma el área de su meta.',
+      '«Añadir tarea» crea una tarea ya vinculada a la meta. También puedes vincularla, o crear la meta, desde el formulario de la tarea; la tarea toma el área de su meta.',
       'Cuando la consigas, márcala como lograda; si deja de interesarte, archívala. Las logradas y archivadas quedan plegadas al final.',
       'Cada meta muestra también sus proyectos activos, con su avance; «Nuevo proyecto» crea uno ya en esa meta.'
     ]
@@ -81,7 +81,7 @@ const SCREENS: { tab: AppTab; title: string; icon: React.ReactNode; points: stri
       'Las 10 primeras tareas, según el orden y los filtros que elijas (prioridad, fecha límite, estimación, estado o área), forman tu Top 10; el resto queda en segundo plano.',
       'Si la fecha límite está a más de una semana, la tarea cuenta un nivel menos de prioridad. También puedes indicar cuánto te llevará (estimación).',
       'Al crear una tarea, el analizador te pide una acción física concreta (por ejemplo «Llamar al taller…») en lugar de un tema abstracto.',
-      'Meta: vincula la tarea a una de tus metas y tomará su área (si el título se parece a una meta, CLAR te propone vincularla). Sin meta, el motor de sugerencias te propone el área de la Rueda con la que se relaciona. El campo aparece cuando ya tienes metas.',
+      'Meta: vincula la tarea a una de tus metas y tomará su área (si el título se parece a una meta, CLAR te propone vincularla). Sin meta, el motor de sugerencias te propone el área de la Rueda con la que se relaciona. Si la meta aún no existe, «Nueva meta» la crea ahí mismo con su nombre y su área.',
       'Tareas que dependen de otras: en «Más opciones», «Empieza después de» elige la tarea a la que espera. Mientras esa no esté hecha o cancelada, esta sale con un candado («Bloqueada: espera a…»), no entra en el Top 10 y no se puede marcar como hecha. Al terminar la otra se desbloquea sola. Varias tareas pueden esperar a la misma y avanzar en paralelo.',
       'Cada tarea tiene un estado: Pendiente, En progreso, Bloqueada, Hecha o Cancelada. Hecha y Cancelada la archivan; una cancelada no cuenta como hecha en las estadísticas ni en el avance de las metas. Desde «Archivadas» la reactivas cambiando su estado.',
       'Si cierras con cambios sin guardar el formulario de una tarea, una meta o un proyecto, o el editor de áreas, CLAR te pregunta antes de descartarlos; si cierras la pestaña, te avisa el navegador.',

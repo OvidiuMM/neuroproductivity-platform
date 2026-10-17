@@ -1,15 +1,29 @@
 import React from 'react';
-import { ArrowRight, Brain, CalendarCheck, Flame, Gauge, Lightbulb, ListChecks, Target, Timer } from 'lucide-react';
-import { AppTab, Goal, ListContext, MeetingGuard, TaskItem, WheelOfLifeLog } from '../types';
+import {
+  ArrowRight,
+  Brain,
+  CalendarCheck,
+  Flame,
+  FolderKanban,
+  Gauge,
+  Lightbulb,
+  ListChecks,
+  Target,
+  Timer
+} from 'lucide-react';
+import { AppTab, Goal, ListContext, MeetingGuard, Project, TaskItem, WheelOfLifeLog } from '../types';
 import { sortGoals } from '../services/goals';
 import { GoalProgress } from './GoalProgress';
 import { computeStats, recommendationsFor } from '../services/stats';
-import { toLocalDate } from '../services/tasks';
+import { formatDay, toLocalDate } from '../services/tasks';
 import { useAreas } from '../hooks/useAreas';
+import { projectDeadline, sortProjects } from '../services/projects';
+import { ProjectProgress } from './ProjectProgress';
 
 interface HomeViewProps {
   tasks: TaskItem[];
   goals: Goal[];
+  projects: Project[];
   activeContext: ListContext;
   accountName: string;
   top10Count: number;
@@ -55,6 +69,7 @@ const Metric: React.FC<{ label: string; value: string; hint?: string }> = ({ lab
 export const HomeView: React.FC<HomeViewProps> = ({
   tasks,
   goals,
+  projects,
   activeContext,
   accountName,
   top10Count,
@@ -70,10 +85,15 @@ export const HomeView: React.FC<HomeViewProps> = ({
   // tarea recién hecha quedaría fuera hasta el minuto siguiente (las estadísticas solo cuentan lo hecho hasta ahora)
   // eslint-disable-next-line react-hooks/purity
   const at = new Date(Math.max(now.getTime(), Date.now()));
-  const stats = computeStats(contextTasks, at);
+  const stats = computeStats(contextTasks, at, tasks);
   const activeGoals = sortGoals(goals).filter((g) => g.status === 'ACTIVE');
   const { areas, label: areaName } = useAreas();
-  const recommendations = recommendationsFor(stats, contextTasks, wheelLogs, at, goals, areas);
+  const recommendations = recommendationsFor(stats, contextTasks, wheelLogs, at, goals, areas, projects, tasks);
+  // PROYECTOS activos (de las dos listas), del que termina antes al que termina después, con su plazo
+  const activeProjects = sortProjects(projects)
+    .filter((p) => p.status === 'ACTIVE')
+    .map((project) => ({ project, deadline: projectDeadline(project, tasks, at).state }));
+  const lateProjects = activeProjects.filter((p) => p.deadline === 'overdue').length;
   const maxDaily = Math.max(1, ...stats.daily.map((d) => d.count));
   const datedDone = stats.onTime + stats.late;
   const maxArea = Math.max(1, ...stats.byArea.map((a) => a.count));
@@ -157,6 +177,13 @@ export const HomeView: React.FC<HomeViewProps> = ({
             <Metric label="Esta semana" value={String(stats.doneThisWeek)} />
             <Metric label="Este mes" value={String(stats.doneThisMonth)} />
           </div>
+          {stats.cancelledThisMonth > 0 && (
+            <p className="text-[11px] text-slate-600">
+              Este mes también{' '}
+              {stats.cancelledThisMonth === 1 ? 'cancelaste 1 tarea' : `cancelaste ${stats.cancelledThisMonth} tareas`},
+              que no cuentan como hechas.
+            </p>
+          )}
         </Card>
 
         <Card
@@ -238,7 +265,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
             <Metric
               label="Pendientes"
               value={String(stats.open)}
-              hint={`${stats.overdue} vencidas · ${stats.dueThisWeek} esta semana`}
+              hint={`${stats.overdue} ${stats.overdue === 1 ? 'vencida' : 'vencidas'} · ${stats.dueThisWeek} esta semana · ${stats.blocked} ${stats.blocked === 1 ? 'bloqueada' : 'bloqueadas'}`}
             />
           </div>
         </Card>
@@ -308,6 +335,59 @@ export const HomeView: React.FC<HomeViewProps> = ({
                 className="inline-flex min-h-11 items-center gap-1.5 text-xs font-semibold text-indigo-700 hover:text-indigo-900"
               >
                 {activeGoals.length > 6 ? `Ver las ${activeGoals.length} metas` : 'Gestionar las metas'}
+                <ArrowRight className="h-3.5 w-3.5" aria-hidden="true" />
+              </button>
+            </>
+          )}
+        </Card>
+
+        {/* PROYECTOS: los activos con su avance y su plazo; se gestionan en «Proyectos» */}
+        <Card
+          title="Proyectos"
+          icon={<FolderKanban className="h-4 w-4 text-indigo-600" aria-hidden="true" />}
+          className="md:col-span-2 lg:col-span-3"
+        >
+          {activeProjects.length === 0 ? (
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <p className="text-xs text-slate-600">
+                No tienes proyectos activos. Un proyecto agrupa las tareas de algo con fecha de fin dentro de una meta.
+              </p>
+              <button
+                type="button"
+                onClick={() => onNavigate('projects')}
+                className="inline-flex min-h-11 items-center gap-1.5 text-xs font-semibold text-indigo-700 hover:text-indigo-900"
+              >
+                Ir a Proyectos <ArrowRight className="h-3.5 w-3.5" aria-hidden="true" />
+              </button>
+            </div>
+          ) : (
+            <>
+              <p className="text-xs text-slate-600">
+                {activeProjects.length === 1 ? '1 activo' : `${activeProjects.length} activos`}
+                {lateProjects > 0 && (
+                  <span className="font-semibold text-red-700"> · {lateProjects} fuera de plazo</span>
+                )}
+              </p>
+              <ul className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                {activeProjects.slice(0, 6).map(({ project, deadline }) => (
+                  <li key={project.id} className="space-y-1.5">
+                    <p className="text-sm font-semibold break-words text-slate-900">{project.title}</p>
+                    <p className="text-[11px] text-slate-600">
+                      {deadline === 'overdue' ? 'Terminaba' : 'Termina'} el {formatDay(project.endDate)}
+                      {deadline === 'overdue' && <span className="font-semibold text-red-700"> · Fuera de plazo</span>}
+                      {deadline === 'soon' && <span className="font-semibold text-violet-700"> · Termina pronto</span>}
+                      {deadline === 'ready' && <span className="font-semibold text-emerald-700"> · Todo hecho</span>}
+                    </p>
+                    <ProjectProgress project={project} tasks={tasks} compact />
+                  </li>
+                ))}
+              </ul>
+              <button
+                type="button"
+                onClick={() => onNavigate('projects')}
+                className="inline-flex min-h-11 items-center gap-1.5 text-xs font-semibold text-indigo-700 hover:text-indigo-900"
+              >
+                {activeProjects.length > 6 ? `Ver los ${activeProjects.length} proyectos` : 'Ver los proyectos'}
                 <ArrowRight className="h-3.5 w-3.5" aria-hidden="true" />
               </button>
             </>

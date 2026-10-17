@@ -218,6 +218,13 @@ test('goals: dialog, the Metas section and the card in Inicio', async ({ page })
   await expectNoViolations(page, 'rueda con el acceso a metas');
   await page.getByRole('button', { name: 'Inicio', exact: true }).click();
   await expectNoViolations(page, 'inicio con metas');
+  // Crear una meta desde el formulario de tarea, también con el error de nombre vacío
+  await page.getByRole('button', { name: 'Nueva tarea', exact: true }).click();
+  const form = page.getByRole('dialog');
+  await form.getByRole('button', { name: 'Nueva meta', exact: true }).click();
+  await form.getByRole('group', { name: 'Nueva meta' }).getByRole('button', { name: 'Crear la meta' }).click();
+  await expect(form.getByRole('alert')).toBeVisible();
+  await expectNoViolations(page, 'nueva meta desde el formulario de tarea');
 });
 
 test('projects: the list, the form and a project with its tasks', async ({ page }) => {

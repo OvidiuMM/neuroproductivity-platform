@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 import { computeStats, recommendationsFor } from '../../src/services/stats.ts';
-import type { Goal, TaskItem, WheelOfLifeLog } from '../../src/types';
+import type { Goal, Project, TaskItem, WheelOfLifeLog } from '../../src/types';
 
 const now = new Date(2026, 9, 14, 12, 0); // miércoles 14 oct 2026, 12:00
 const at = (day: number, hour = 10) => new Date(2026, 9, day, hour, 0).toISOString();
@@ -230,5 +230,51 @@ describe('the goal recommendation', () => {
     assert.ok(!recs([log({ Finanzas: 3 })], [goal('Finanzas')]).includes('goal'));
     assert.ok(!recs([log({ Finanzas: 6 })], []).includes('goal'));
     assert.ok(!recs([], []).includes('goal'));
+  });
+});
+
+describe('cancelled, blocked and projects', () => {
+  it('counts the tasks cancelled this month and the ones that cannot be done yet', () => {
+    const tasks = [
+      task('cancelled', { status: 'CANCELLED', doneAt: at(10) }),
+      task('old-cancel', { status: 'CANCELLED', doneAt: new Date(2026, 8, 20).toISOString() }),
+      task('manual', { status: 'BLOCKED' }),
+      task('waiting', { dependsOn: 'other-list' }),
+      task('free', { dependsOn: 'finished' })
+    ];
+    // La tarea a la que espera puede estar en la otra lista
+    const all = [
+      ...tasks,
+      task('other-list', { listContext: 'PERSONAL' }),
+      task('finished', { status: 'DONE', doneAt: at(9) })
+    ];
+    const stats = computeStats(tasks, now, all);
+    assert.equal(stats.cancelledThisMonth, 1);
+    assert.equal(stats.blocked, 2);
+    assert.equal(stats.open, 3);
+  });
+
+  it('recommends looking at a project that runs late first', () => {
+    const project = (id: string, endDate: string): Project => ({
+      id,
+      userId: 'uid',
+      title: id,
+      goalId: 'g1',
+      endDate,
+      status: 'ACTIVE',
+      createdAt: at(1),
+      updatedAt: at(1)
+    });
+    const tasks = [task('t1', { projectId: 'cocina' }), task('t2', { projectId: 'cocina' })];
+    const [first] = recommendationsFor(computeStats(tasks, now), tasks, [], now, [], undefined, [
+      project('cocina', '2026-10-10'),
+      project('jardín', '2026-12-01')
+    ]);
+    assert.equal(first.id, 'project-overdue');
+    assert.match(
+      first.text,
+      /^El proyecto «cocina» va fuera de plazo: terminaba el 10 oct 2026 y le quedan 2 tareas\./
+    );
+    assert.deepEqual(first.action, { label: 'Ver los proyectos', tab: 'projects' });
   });
 });

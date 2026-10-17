@@ -57,12 +57,14 @@ import {
   CalendarClock,
   ChevronDown,
   Repeat,
-  Target
+  Target,
+  Plus
 } from 'lucide-react';
 import { DateField } from './DateField';
 import { NotificationPermission } from './NotificationPermission';
 import { DiscardChangesPrompt } from './DiscardChangesPrompt';
 import { TimeField } from './TimeField';
+import { NewGoalInline } from './NewGoalInline';
 import { alarmUnavailableReason, describeAlarm } from '../services/alarms';
 import { suggestGoal } from '../services/goals';
 import { areasInUse } from '../services/wheel';
@@ -88,6 +90,8 @@ interface TaskModalProps {
   tasks: TaskItem[];
   // Proyectos a los que puede pertenecer (la meta se hereda del proyecto)
   projects: Project[];
+  // Guarda una meta creada desde el formulario (sin él, no se ofrece crearla aquí)
+  onCreateGoal?: (goal: Goal) => void;
 }
 
 // Valores del formulario: los que escribe o elige la persona (lo demás es estado de la interfaz)
@@ -190,13 +194,21 @@ export const TaskModal: React.FC<TaskModalProps> = ({
   editingTask,
   goals,
   tasks,
-  projects
+  projects,
+  onCreateGoal
 }) => {
   const [title, setTitle] = useState('');
   // Áreas de la Rueda de la cuenta (con su nombre y las que se pueden elegir)
   const { areas: wheelAreas, label: areaName, selectable: selectableAreas } = useAreas();
   const [projectId, setProjectId] = useState('');
   const [goalId, setGoalId] = useState('');
+  // Meta nueva desde el formulario: si está abierta y las creadas aquí (se pueden elegir antes de que lleguen en `goals`)
+  const [newGoalOpen, setNewGoalOpen] = useState(false);
+  const [createdGoals, setCreatedGoals] = useState<Goal[]>([]);
+  const goalSelectRef = useRef<HTMLSelectElement>(null);
+  const newGoalButtonRef = useRef<HTMLButtonElement>(null);
+  // La última meta creada aquí: se confirma junto al campo (con la ventana abierta, los avisos de la app esperan)
+  const [createdGoalId, setCreatedGoalId] = useState<string | null>(null);
   const [dependsOn, setDependsOn] = useState('');
   const [description, setDescription] = useState('');
   // Identificador de la última inferencia NLP: invalida resultados que llegan tras cerrar o reiniciar el formulario
@@ -274,6 +286,9 @@ export const TaskModal: React.FC<TaskModalProps> = ({
     setRepeatInterval(form.repeatInterval);
     setRepeatWeekdays(form.repeatWeekdays);
     setRepeatMonthlyMode(form.repeatMonthlyMode);
+    setNewGoalOpen(false);
+    setCreatedGoals([]);
+    setCreatedGoalId(null);
     if (editingTask) {
       setShowMore(
         Boolean(
@@ -379,7 +394,11 @@ export const TaskModal: React.FC<TaskModalProps> = ({
 
   // METAS: la elegida, las que se pueden elegir (activas, y la ya vinculada aunque esté lograda o archivada) y la
   // sugerida por las palabras del título mientras no haya ninguna elegida
-  const goal = goals.find((g) => g.id === goalId);
+  const knownGoals = useMemo(
+    () => [...goals, ...createdGoals.filter((c) => !goals.some((g) => g.id === c.id))],
+    [goals, createdGoals]
+  );
+  const goal = knownGoals.find((g) => g.id === goalId);
   // DEPENDENCIA: tareas a las que puede esperar (sin ciclos), la elegida y las que esperan a esta
   const dependencyOptions = useMemo(() => dependencyCandidates(editingTask?.id, tasks), [editingTask, tasks]);
   const waitingFor = tasks.find((t) => t.id === dependsOn);
@@ -390,16 +409,38 @@ export const TaskModal: React.FC<TaskModalProps> = ({
       ? 'Esa tarea ya espera a esta (directa o indirectamente): elige otra o ninguna.'
       : null;
   const waitingForThis = editingTask ? dependentsOf(editingTask, tasks) : [];
-  const goalOptions = goals.filter((g) => g.status === 'ACTIVE' || g.id === goalId);
-  const suggestedGoal = useMemo(() => (goalId ? null : suggestGoal(title, goals)), [goalId, title, goals]);
+  const goalOptions = knownGoals.filter((g) => g.status === 'ACTIVE' || g.id === goalId);
+  const suggestedGoal = useMemo(() => (goalId ? null : suggestGoal(title, knownGoals)), [goalId, title, knownGoals]);
+  const linkGoal = (chosen: Goal) => {
+    setGoalId(chosen.id);
+    setWheelCategory(chosen.area);
+    setLinkedBy('MANUAL');
+    setNlpResult(null);
+  };
   const chooseGoal = (id: string) => {
-    setGoalId(id);
-    const chosen = goals.find((g) => g.id === id);
-    if (chosen) {
-      setWheelCategory(chosen.area);
-      setLinkedBy('MANUAL');
-      setNlpResult(null);
-    }
+    const chosen = knownGoals.find((g) => g.id === id);
+    if (chosen) linkGoal(chosen);
+    else setGoalId(id);
+  };
+  // La meta se guarda al momento (aunque luego no se guarde la tarea) y queda elegida
+  const createGoal = (draft: { title: string; area: string }) => {
+    if (!onCreateGoal) return;
+    const now = new Date().toISOString();
+    const created: Goal = {
+      id: `goal-${Date.now()}`,
+      userId: '',
+      title: draft.title,
+      area: draft.area,
+      status: 'ACTIVE',
+      createdAt: now,
+      updatedAt: now
+    };
+    onCreateGoal(created);
+    setCreatedGoals((list) => [...list, created]);
+    setCreatedGoalId(created.id);
+    linkGoal(created);
+    setNewGoalOpen(false);
+    requestAnimationFrame(() => goalSelectRef.current?.focus());
   };
 
   // PROYECTO: el elegido y los que se pueden elegir (activos, y el ya elegido aunque esté terminado o archivado). En
@@ -408,6 +449,8 @@ export const TaskModal: React.FC<TaskModalProps> = ({
   const projectOptions = projects.filter((p) => p.status === 'ACTIVE' || p.id === projectId);
   const chooseProject = (id: string) => {
     setProjectId(id);
+    // En un proyecto la meta es la suya: lo que se escribía para una meta nueva ya no aplica
+    setNewGoalOpen(false);
     const chosen = projects.find((p) => p.id === id);
     if (chosen) chooseGoal(chosen.goalId);
   };
@@ -732,68 +775,101 @@ export const TaskModal: React.FC<TaskModalProps> = ({
             </div>
           )}
 
-          {/* META: a qué meta contribuye la tarea (solo si hay metas) */}
-          {goalOptions.length > 0 ? (
-            <div>
-              <label
-                htmlFor="task-goal"
-                className="mb-1.5 block text-xs font-bold tracking-wider text-slate-600 uppercase"
-              >
-                Meta <span className="font-normal tracking-normal text-slate-500 normal-case">(opcional)</span>
-              </label>
-              <select
-                id="task-goal"
-                value={goalId}
-                disabled={Boolean(project)}
-                onChange={(e) => chooseGoal(e.target.value)}
-                className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-400 focus:outline-none"
-              >
-                <option value="">(Sin meta)</option>
-                {goalId && !goal && <option value={goalId}>(Meta no disponible ahora)</option>}
-                {areasInUse(
-                  wheelAreas,
-                  goalOptions.map((g) => g.area)
-                ).map((area) => (
-                  <optgroup key={area} label={areaName(area)}>
-                    {goalOptions
-                      .filter((g) => g.area === area)
-                      .map((g) => (
-                        <option key={g.id} value={g.id}>
-                          {g.title}
-                          {g.status === 'ACHIEVED' ? ' (lograda)' : g.status === 'ARCHIVED' ? ' (archivada)' : ''}
-                        </option>
-                      ))}
-                  </optgroup>
-                ))}
-              </select>
-              {project ? (
-                <p className="mt-1 text-[11px] text-slate-500">
-                  La del proyecto «{project.title}»: para cambiarla, cambia el proyecto o quítalo.
-                </p>
-              ) : (
-                goal && (
-                  <p className="mt-1 text-[11px] text-slate-500">
-                    Área de la Rueda: {areaName(goal.area)} (la de la meta).
-                  </p>
-                )
-              )}
-              {suggestedGoal && !project && (
-                <button
-                  type="button"
-                  onClick={() => chooseGoal(suggestedGoal.id)}
-                  className="mt-1.5 inline-flex min-h-9 items-center gap-1.5 rounded-lg border border-indigo-200 bg-indigo-50 px-2.5 text-left text-xs font-semibold text-indigo-800 hover:bg-indigo-100"
+          {/* META: a qué meta contribuye la tarea; si aún no está, se puede crear aquí */}
+          <div>
+            {goalOptions.length > 0 ? (
+              <>
+                <label
+                  htmlFor="task-goal"
+                  className="mb-1.5 block text-xs font-bold tracking-wider text-slate-600 uppercase"
                 >
-                  <Target className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
-                  Vincular a «{suggestedGoal.title}»
+                  Meta <span className="font-normal tracking-normal text-slate-500 normal-case">(opcional)</span>
+                </label>
+                <select
+                  ref={goalSelectRef}
+                  id="task-goal"
+                  value={goalId}
+                  disabled={Boolean(project)}
+                  onChange={(e) => chooseGoal(e.target.value)}
+                  className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-400 focus:outline-none"
+                >
+                  <option value="">(Sin meta)</option>
+                  {goalId && !goal && <option value={goalId}>(Meta no disponible ahora)</option>}
+                  {areasInUse(
+                    wheelAreas,
+                    goalOptions.map((g) => g.area)
+                  ).map((area) => (
+                    <optgroup key={area} label={areaName(area)}>
+                      {goalOptions
+                        .filter((g) => g.area === area)
+                        .map((g) => (
+                          <option key={g.id} value={g.id}>
+                            {g.title}
+                            {g.status === 'ACHIEVED' ? ' (lograda)' : g.status === 'ARCHIVED' ? ' (archivada)' : ''}
+                          </option>
+                        ))}
+                    </optgroup>
+                  ))}
+                </select>
+                {project ? (
+                  <p className="mt-1 text-[11px] text-slate-500">
+                    La del proyecto «{project.title}»: para cambiarla, cambia el proyecto o quítalo.
+                  </p>
+                ) : (
+                  goal && (
+                    <p className="mt-1 text-[11px] text-slate-500">
+                      Área de la Rueda: {areaName(goal.area)} (la de la meta).
+                    </p>
+                  )
+                )}
+                {suggestedGoal && !project && (
+                  <button
+                    type="button"
+                    onClick={() => chooseGoal(suggestedGoal.id)}
+                    className="mt-1.5 inline-flex min-h-9 items-center gap-1.5 rounded-lg border border-indigo-200 bg-indigo-50 px-2.5 text-left text-xs font-semibold text-indigo-800 hover:bg-indigo-100"
+                  >
+                    <Target className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+                    Vincular a «{suggestedGoal.title}»
+                  </button>
+                )}
+              </>
+            ) : (
+              <p className="text-[11px] text-slate-500">
+                <Target className="mr-1 inline h-3.5 w-3.5 align-[-2px] text-indigo-500" aria-hidden="true" />
+                {onCreateGoal
+                  ? 'Aún no tienes metas. Vincula la tarea a una para ver cómo avanza.'
+                  : 'Puedes vincular la tarea a una meta cuando la crees en «Metas».'}
+              </p>
+            )}
+            {onCreateGoal &&
+              !project &&
+              (newGoalOpen ? (
+                <NewGoalInline
+                  defaultArea={wheelCategory}
+                  onCreate={createGoal}
+                  onCancel={() => {
+                    setNewGoalOpen(false);
+                    requestAnimationFrame(() => newGoalButtonRef.current?.focus());
+                  }}
+                />
+              ) : (
+                <button
+                  ref={newGoalButtonRef}
+                  type="button"
+                  onClick={() => setNewGoalOpen(true)}
+                  className="mt-1.5 inline-flex min-h-9 items-center gap-1.5 rounded-lg px-2 text-xs font-semibold text-indigo-700 hover:bg-indigo-50 hover:text-indigo-900"
+                >
+                  <Plus className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+                  Nueva meta
                 </button>
-              )}
-            </div>
-          ) : (
-            <p className="text-[11px] text-slate-500">
-              <Target className="mr-1 inline h-3.5 w-3.5 align-[-2px] text-indigo-500" aria-hidden="true" />
-              Puedes vincular la tarea a una meta cuando la crees en «Metas».
+              ))}
+            {/* Siempre presente, para que el lector de pantalla anuncie la confirmación */}
+            <p role="status" className="text-[11px] font-medium text-emerald-700">
+              {createdGoalId && goal?.id === createdGoalId
+                ? `Meta «${goal.title}» creada y vinculada a esta tarea.`
+                : ''}
             </p>
-          )}
+          </div>
 
           {/* FECHA LÍMITE: a la vista; el inicio y la repetición están en «Más opciones» */}
           <div className="space-y-1.5">
