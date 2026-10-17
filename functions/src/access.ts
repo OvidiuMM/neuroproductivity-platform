@@ -1,5 +1,5 @@
 import { forgetFeedback } from './feedbackCleanup';
-import { forgetPushData } from './pushCleanup';
+import { forgetPushData, forgetPushDevices } from './pushCleanup';
 import { adminAuth, adminDb } from './adminApp';
 import { HttpsError, onCall, type CallableRequest } from 'firebase-functions/https';
 import * as logger from 'firebase-functions/logger';
@@ -260,6 +260,8 @@ export const setAccess = onCall({ region: REGION, secrets: emailSecrets }, async
     return { ...data, status: status as DecisionStatus, decidedAt };
   });
   logger.info('Access decided', { status });
+  // Sin acceso, tampoco recibe alarmas push en sus dispositivos
+  if (status !== 'approved') await forgetPushDevices(uid);
   // La persona recibe un aviso cuando se aprueba su acceso (rechazos y retiradas se ven al entrar)
   if (record.status === 'approved' && normalizeEmail(record.email) !== normalizeEmail(adminEmail())) {
     await sendAccessEmail('approved', record);
@@ -349,7 +351,7 @@ export const revokeSessions = onCall({ region: REGION }, async (request) => {
   const auth = requireAuth(request);
   await adminAuth().revokeRefreshTokens(auth.uid);
   // Los dispositivos tampoco reciben ya sus alarmas (p. ej. un móvil perdido); cada uno vuelve a registrarse al entrar
-  await forgetPushData(auth.uid);
+  await forgetPushDevices(auth.uid);
   logger.info('Sessions revoked');
   return { ok: true };
 });

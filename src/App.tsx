@@ -72,7 +72,15 @@ import {
   requestNotifications,
   showSystemNotification
 } from './services/notifications';
-import { disablePush, enablePush, isPushEnabled, pushAvailable, registerPushDevice } from './services/push';
+import {
+  disablePush,
+  enablePush,
+  isPushEnabled,
+  isPushTitleShown,
+  pushAvailable,
+  registerPushDevice,
+  setPushTitleShown
+} from './services/push';
 import { TOUR_STEPS } from './tourSteps';
 import { hasSeenLocally, hasSeenOnboarding, rememberLocally, type OnboardingOutcome } from './services/onboarding';
 import { applyGoalAreas, latestScores } from './services/goals';
@@ -858,6 +866,11 @@ export default function App({ user, services, isAdmin = false }: AppProps) {
     }
     setPushEnabled(on);
   };
+  const [pushShowsTitle, setPushShowsTitle] = useState(() => isPushTitleShown(uid));
+  const handlePushTitle = async (show: boolean) => {
+    await setPushTitleShown(services, uid, show);
+    setPushShowsTitle(show);
+  };
 
   // ALARMAS: avisan mientras la app está abierta, dentro de ella (en todas las pestañas) y, con permiso, también con
   // una notificación del sistema. El aviso muestra la tarea tal como está ahora y desaparece si se marca como hecha.
@@ -1251,7 +1264,16 @@ export default function App({ user, services, isAdmin = false }: AppProps) {
           reauthMethods={reauthMethods}
           onExportData={handleExportData}
           onImportData={handleChooseImportFile}
-          push={pushAvailable() ? { enabled: pushEnabled, onChange: handleTogglePush } : null}
+          push={
+            pushAvailable()
+              ? {
+                  enabled: pushEnabled,
+                  onChange: handleTogglePush,
+                  showTitle: pushShowsTitle,
+                  onShowTitleChange: handlePushTitle
+                }
+              : null
+          }
           onDeleteAccount={handleDeleteAccount}
           onChangePassword={(currentPassword, newPassword) => changePassword(user, currentPassword, newPassword)}
           onSignOutEverywhere={() => signOutEverywhere(services)}

@@ -73,6 +73,10 @@ jobs:
       - name: Run Firestore security rules tests
         run: npm run test:rules
 
+      # La cola de alarmas push y su envío (con un FCM simulado), contra el emulador de Firestore
+      - name: Run push alarm tests
+        run: npm run test:push
+
       - name: Install Playwright browser
         run: npx playwright install --with-deps chromium
 

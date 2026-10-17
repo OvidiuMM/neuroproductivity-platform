@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
-import { alarmInstant, dueInstant, isTimeZone, queuedAlarm, zonedInstant } from '../src/alarmLogic';
+import { alarmInstant, dueInstant, isTimeZone, notificationText, queuedAlarm, zonedInstant } from '../src/alarmLogic';
 
 const MADRID = 'Europe/Madrid';
 const iso = (instant: number | null) => (instant === null ? null : new Date(instant).toISOString());
@@ -31,7 +31,12 @@ describe('zonedInstant', () => {
       ['America/New_York', '2027-03-14', '02:15'],
       ['America/New_York', '2026-11-01', '01:30'],
       ['Australia/Sydney', '2026-10-04', '02:30'],
-      ['Asia/Kolkata', '2026-10-16', '09:45']
+      ['Asia/Kolkata', '2026-10-16', '09:45'],
+      // Desfases de más de 12 h, con cambio de hora
+      ['Pacific/Chatham', '2026-04-05', '02:30'],
+      ['Pacific/Chatham', '2026-09-27', '02:50'],
+      ['Pacific/Auckland', '2026-04-05', '02:30'],
+      ['Pacific/Auckland', '2026-09-27', '02:30']
     ];
     for (const [zone, date, time] of cases)
       assert.equal(iso(zonedInstant(date, time, zone)), iso(appInstant(zone, date, time)), `${zone} ${date} ${time}`);
@@ -107,7 +112,11 @@ describe('queuedAlarm', () => {
   it('builds the same key as the app, with the title and when it is due', () => {
     const alarm = queuedAlarm('task-1', task, MADRID, now)!;
     assert.equal(alarm.key, 'task-1@2026-10-17T08:30:00.000Z');
-    assert.equal(alarm.title, 'Alarma de las 10:30: Llamar al banco');
+    assert.equal(alarm.clock, '10:30');
+    assert.equal(alarm.taskTitle, 'Llamar al banco');
+    // Por defecto sin el nombre de la tarea; con él, si el dispositivo lo pide
+    assert.equal(notificationText(alarm, false), 'Tienes una alarma de CLAR a las 10:30');
+    assert.equal(notificationText(alarm, true), 'Alarma de las 10:30: Llamar al banco');
     assert.match(alarm.body, /^Vence el 17 oct\.? a las 11:00$/);
   });
 

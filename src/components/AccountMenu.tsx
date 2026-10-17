@@ -31,7 +31,13 @@ interface AccountMenuProps {
   // Lee y comprueba el archivo elegido; si vale, se abre la vista previa (y este menú se cierra)
   onImportData: (file: File) => Promise<void>;
   // Alarmas con CLAR cerrada en este dispositivo (notificaciones push); null si esta instalación no las ofrece
-  push: { enabled: boolean; onChange: (on: boolean) => Promise<void> } | null;
+  push: {
+    enabled: boolean;
+    onChange: (on: boolean) => Promise<void>;
+    // Si la notificación lleva el nombre de la tarea (por defecto no: se vería con el móvil bloqueado)
+    showTitle: boolean;
+    onShowTitleChange: (show: boolean) => Promise<void>;
+  } | null;
   onDeleteAccount: (password?: string) => Promise<void>;
   onChangePassword: (currentPassword: string, newPassword: string) => Promise<void>;
   onSignOutEverywhere: () => Promise<void>;
@@ -271,9 +277,24 @@ export const AccountMenu: React.FC<AccountMenuProps> = ({
                     {busy === 'push' ? 'Guardando…' : 'Avisarme también con CLAR cerrada (en este dispositivo)'}
                   </label>
                   <p id="account-push-help" className="text-[11px] text-slate-600">
-                    El nombre de la tarea y la hora de la alarma pasan por Firebase Cloud Messaging (Google) hasta este
-                    dispositivo.
+                    La hora de la alarma (y el nombre de la tarea, si lo muestras) pasa por Firebase Cloud Messaging
+                    (Google) hasta este dispositivo.
                   </p>
+                  {push.enabled && (
+                    <label className="flex min-h-9 cursor-pointer items-center gap-2 pl-6 text-xs text-slate-800">
+                      <input
+                        type="checkbox"
+                        checked={push.showTitle}
+                        disabled={busy !== null}
+                        onChange={(e) => {
+                          const show = e.target.checked;
+                          void run('push', () => push.onShowTitleChange(show));
+                        }}
+                        className="h-4 w-4 rounded border-slate-300 text-indigo-600"
+                      />
+                      Mostrar el nombre de la tarea (también con el móvil bloqueado)
+                    </label>
+                  )}
                 </div>
               )}
             </div>
