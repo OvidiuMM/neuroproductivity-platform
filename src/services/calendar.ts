@@ -1,5 +1,5 @@
-import { TaskItem } from '../types';
-import { dueMoment, toLocalDate } from './tasks';
+import { TaskItem, TaskObservation } from '../types';
+import { dueMoment, formatDay, toLocalDate } from './tasks';
 import { toRRule } from './recurrence';
 import { alarmMoment } from './alarms';
 
@@ -13,11 +13,25 @@ export interface CalendarEvent {
   start: Date; // día completo: medianoche local del primer día
   end: Date; // día completo: medianoche local del día siguiente al último (exclusivo)
   rrule?: string; // tareas recurrentes: la serie completa (Google Calendar y .ics; los enlaces de Outlook no lo admiten)
-  // Alarma de la tarea (solo en el .ics): minutos antes del inicio o del final del evento, el borde que es el plazo
+  // Alarma de la tarea (solo en el .ics): minutos antes del inicio o del final del evento (negativos: después)
   alarm?: { minutesBefore: number; related: 'START' | 'END' };
 }
 
 const DEADLINE_EVENT_MS = 30 * 60 * 1000;
+// Con hora de inicio y sin hora límite, el evento dura una hora (no hasta el final del día límite)
+const DEFAULT_EVENT_MS = 60 * 60 * 1000;
+
+// Las notas de la tarea, una por línea; las de lista, con su casilla
+const notesText = (observations: TaskObservation[] = []) => {
+  const lines = observations
+    .filter((o) => o.text.trim() || o.url)
+    .map((o) => {
+      const box = o.type === 'checklist' ? (o.completed ? '[x] ' : '[ ] ') : '';
+      const link = o.url && o.url !== o.text ? ` (${o.url})` : '';
+      return `- ${box}${o.text.trim()}${link}`;
+    });
+  return lines.length ? `Notas:\n${lines.join('\n')}` : '';
+};
 
 const addDays = (date: Date, days: number) => {
   const next = new Date(date);
@@ -32,7 +46,12 @@ export const buildCalendarEvent = (source: TaskItem, appUrl: string): CalendarEv
   const dueDate = source.dueDate;
   const task = source.recurrence ? { ...source, startDate: source.startTime ? dueDate : undefined } : source;
   const allDay = !task.startTime && !task.dueTime;
-  const description = [task.description, `Tarea de CLAR: ${appUrl}`].filter(Boolean).join('\n\n');
+  // Con inicio y sin hora límite, el evento (de una hora) no llega al día límite: se dice en la descripción
+  const oneHour = Boolean(task.startTime && !task.dueTime);
+  const deadlineNote = oneHour && (task.startDate ?? dueDate) !== dueDate ? `Fecha límite: ${formatDay(dueDate)}` : '';
+  const description = [task.description, notesText(task.observations), deadlineNote, `Tarea de CLAR: ${appUrl}`]
+    .filter(Boolean)
+    .join('\n\n');
   const base = {
     // Dominio del UID sin cambiar (nombre anterior de la app): así reexportar actualiza el mismo evento
     uid: `${task.id}@neuroproductividad`,
@@ -41,17 +60,27 @@ export const buildCalendarEvent = (source: TaskItem, appUrl: string): CalendarEv
     ...(task.recurrence ? { rrule: toRRule(task.recurrence, allDay, dueDate) } : {})
   };
 
-  // La alarma se cuenta desde el borde del evento que marca el plazo (en una serie, la misma para cada repetición)
+  // La alarma se cuenta desde un borde del evento (en una serie, la misma para cada repetición): el que marca el plazo
+  // o, en un evento de una hora, su inicio (la alarma puede caer después)
   const alarmAt = alarmMoment(source);
-  const alarm = (deadline: Date, related: 'START' | 'END') => {
-    const minutesBefore = alarmAt ? Math.round((deadline.getTime() - alarmAt.getTime()) / 60_000) : 0;
-    return minutesBefore > 0 ? { alarm: { related, minutesBefore } } : {};
-  };
+  const alarm = (edge: Date, related: 'START' | 'END') =>
+    alarmAt ? { alarm: { related, minutesBefore: Math.round((edge.getTime() - alarmAt.getTime()) / 60_000) } } : {};
 
   // Sin horas: evento de día completo (de varios días si la tarea tiene intervalo)
   if (allDay) {
     const end = addDays(toLocalDate(dueDate), 1);
     return { ...base, allDay: true, start: toLocalDate(task.startDate ?? dueDate), end, ...alarm(end, 'END') };
+  }
+
+  if (oneHour) {
+    const start = toLocalDate(task.startDate ?? dueDate, task.startTime);
+    return {
+      ...base,
+      allDay: false,
+      start,
+      end: new Date(start.getTime() + DEFAULT_EVENT_MS),
+      ...alarm(start, 'START')
+    };
   }
 
   const due = dueMoment(task)!;
@@ -146,7 +175,7 @@ export const buildIcs = (event: CalendarEvent, now = new Date()) => {
           'BEGIN:VALARM',
           'ACTION:DISPLAY',
           `DESCRIPTION:${escapeIcsText(event.title)}`,
-          `TRIGGER${event.alarm.related === 'END' ? ';RELATED=END' : ''}:-PT${event.alarm.minutesBefore}M`,
+          `TRIGGER${event.alarm.related === 'END' ? ';RELATED=END' : ''}:${event.alarm.minutesBefore >= 0 ? '-' : ''}PT${Math.abs(event.alarm.minutesBefore)}M`,
           'END:VALARM'
         ]
       : []),

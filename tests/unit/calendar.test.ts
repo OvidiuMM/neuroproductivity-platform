@@ -54,6 +54,50 @@ describe('buildCalendarEvent', () => {
     const event = buildCalendarEvent(task({ dueDate: '2026-10-15' }), APP)!;
     assert.equal(event.description, `Enviarlo al equipo\n\nTarea de CLAR: ${APP}`);
   });
+
+  it('lasts one hour when there is a start time but no due time', () => {
+    const sameDay = buildCalendarEvent(
+      task({ startDate: '2026-10-15', startTime: '09:30', dueDate: '2026-10-15' }),
+      APP
+    )!;
+    assert.equal(sameDay.allDay, false);
+    assert.deepEqual(sameDay.start, new Date(2026, 9, 15, 9, 30));
+    assert.deepEqual(sameDay.end, new Date(2026, 9, 15, 10, 30));
+    assert.doesNotMatch(sameDay.description, /Fecha límite/);
+    // Si la fecha límite es otro día, el evento no llega a ella: la descripción la dice
+    const later = buildCalendarEvent(
+      task({ startDate: '2026-10-15', startTime: '09:30', dueDate: '2026-10-17' }),
+      APP
+    )!;
+    assert.deepEqual(later.end, new Date(2026, 9, 15, 10, 30));
+    assert.match(later.description, /Fecha límite: .*17.*oct/);
+  });
+
+  it('lists the task notes in the description, with checklist boxes and links', () => {
+    const createdAt = '2026-10-01T09:00:00.000Z';
+    const event = buildCalendarEvent(
+      task({
+        dueDate: '2026-10-15',
+        observations: [
+          { id: 'obs-1', type: 'note', text: 'Llevar la memoria USB', createdAt },
+          { id: 'obs-2', type: 'checklist', text: 'Revisar las cifras', completed: true, createdAt },
+          { id: 'obs-3', type: 'checklist', text: 'Pedir la firma', createdAt },
+          { id: 'obs-4', type: 'link', text: 'Plantilla', url: 'https://example.com/plantilla', createdAt },
+          { id: 'obs-5', type: 'note', text: '   ', createdAt }
+        ]
+      }),
+      APP
+    )!;
+    assert.equal(
+      event.description,
+      [
+        'Enviarlo al equipo',
+        'Notas:\n- Llevar la memoria USB\n- [x] Revisar las cifras\n- [ ] Pedir la firma\n- Plantilla (https://example.com/plantilla)',
+        `Tarea de CLAR: ${APP}`
+      ].join('\n\n')
+    );
+    assert.match(googleCalendarUrl(event), /details=.*Notas%3A/);
+  });
 });
 
 describe('calendar links', () => {
@@ -164,6 +208,13 @@ describe('alarms in calendars', () => {
     assert.match(interval, /TRIGGER;RELATED=END:-PT720M/);
     // Solo fecha: la víspera a las 20:00, contada desde el final del día límite (28 h antes)
     assert.match(ics({ dueDate: '2030-06-15', alarmTime: '20:00' }), /TRIGGER;RELATED=END:-PT1680M/);
+  });
+
+  it('counts the alarm of a one-hour event from its start, also when it comes after it', () => {
+    // Plazo sin hora el 15: la alarma de las 18:00 es la víspera, 9 h después del inicio del 14 a las 09:00
+    const file = ics({ startDate: '2030-06-14', startTime: '09:00', dueDate: '2030-06-15', alarmTime: '18:00' });
+    assert.match(file, /DTSTART:\d{8}T\d{6}Z\r\nDTEND:/);
+    assert.match(file, /TRIGGER:PT540M/);
   });
 
   it('has no alarm without one, or when the task cannot have it', () => {

@@ -86,7 +86,7 @@ La lista completa y numerada de lo que hace la app, con sus requisitos no funcio
 - **Fechas y colores del plazo:** Fecha límite o intervalo opcional, con hora opcional. El título se pone violeta cuando falta menos de una semana y rojo cuando ha vencido. Los campos de fecha usan un calendario propio con la semana empezando en lunes (se escriben como dd/mm/aaaa y se manejan con el teclado), sea cual sea el idioma del navegador.
 - **Alarmas:** una hora para avisar antes del plazo (ver [Alarmas](#alarmas-092)).
 - **Tareas recurrentes:** cada día, semana (eligiendo los días), mes (día del mes, «el 2.º lunes» o «el último viernes») o año, cada N periodos. Al repetir, «Inicio» es desde cuándo se repite y la fecha límite hasta cuándo (opcional); cada repetición vence su propio día, nunca como un intervalo. Al marcar una repetición como Hecha o Cancelada se archiva y se crea la siguiente en la misma operación (cancelar una repetición no termina la serie) (sin duplicados aunque se marque desde dos dispositivos); las ya vencidas, hora límite incluida, se saltan si se completa con retraso.
-- **Calendario:** «Añadir al calendario», en el menú «⋯» de la tarea, la lleva a Google Calendar, Outlook.com, Outlook de Microsoft 365 o cualquier calendario (`.ics`, con la alarma), mediante enlaces y sin conectar cuentas. Las recurrentes exportan la serie (RRULE con semanas que empiezan en lunes y el último día del mes cuando el día no existe); las de un intervalo de varios días exportan solo la repetición actual.
+- **Calendario:** «Añadir al calendario», en el menú «⋯» de la tarea, la lleva a Google Calendar, Outlook.com, Outlook de Microsoft 365 o cualquier calendario (`.ics`, con la alarma), mediante enlaces y sin conectar cuentas. La descripción lleva la de la tarea y sus notas; con hora de inicio y sin hora límite, el evento dura una hora. Las recurrentes exportan la serie (RRULE con semanas que empiezan en lunes y el último día del mes cuando el día no existe); las de un intervalo de varios días exportan solo la repetición actual.
 
 ### 4. Motor de sugerencias
 
@@ -163,9 +163,10 @@ La lista completa y numerada de lo que hace la app, con sus requisitos no funcio
 - **Crear una meta desde la tarea:** «Nueva meta» en el formulario de la tarea, con nombre y área. Se guarda al momento y la tarea queda vinculada a ella.
 - **Estadísticas de Inicio al día:** los proyectos activos (batería y plazo) y cuántos van fuera de plazo, las tareas canceladas en el mes y las bloqueadas, y una recomendación para el proyecto que va fuera de plazo.
 
-### Importar los datos (0.9.5)
+### Importar los datos y calendario (0.9.5)
 
 - **Importar datos (JSON):** en el menú de la cuenta, junto a «Descargar mis datos (JSON)». Acepta ese archivo (también los descargados antes de esta versión) y enseña antes qué entra: por cada tipo, lo nuevo, lo que ya está en la cuenta y lo que no es válido. Se añade solo lo que falta (mismo id: no se toca), así importar dos veces el mismo archivo no duplica nada; las áreas de la Rueda que falten se añaden (con un número si el nombre ya existe, y ocultas pasado el máximo a la vista). Cada registro se comprueba campo a campo y solo se guardan los campos conocidos (`src/services/importData.ts`); hace falta conexión, porque se mira en el servidor qué hay ya. La descarga lleva ahora `app`, `version` y `type: "account"`.
+- **Calendario:** una tarea con hora de inicio y sin hora límite se exporta como un evento de una hora (antes llegaba hasta el final del día límite; si la fecha límite es otro día, la descripción la dice), y las notas de la tarea van en la descripción del evento, las de lista con su casilla.
 
 ---
 

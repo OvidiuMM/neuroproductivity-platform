@@ -150,7 +150,7 @@ Origen: `src/components/TaskList.tsx`, `src/components/TaskCard.tsx`, `src/compo
 **Calendario y descargas**
 
 - **RF-TAR-50.** «Añadir al calendario», en el menú «⋯», ofrece Google Calendar, Outlook.com, Outlook / Microsoft 365 y un archivo .ics. Funciona con enlaces, sin conectar ninguna cuenta, y exige fecha límite.
-- **RF-TAR-51.** Sin horas, el evento es de día completo (de varios días si la tarea es un intervalo). Con solo hora límite, el evento dura 30 minutos desde esa hora.
+- **RF-TAR-51.** Sin horas, el evento es de día completo (de varios días si la tarea es un intervalo). Con solo hora límite, el evento dura 30 minutos desde esa hora. Con hora de inicio y sin hora límite, dura una hora desde la de inicio; si la fecha límite es otro día, la descripción la indica. La descripción del evento lleva la de la tarea, sus notas (las de lista, con su casilla marcada o no) y el enlace a CLAR.
 - **RF-TAR-52.** Una tarea recurrente se exporta como serie (RRULE, con la semana empezando en lunes) a Google Calendar y al .ics; los enlaces de Outlook no la admiten. El .ics incluye la alarma de la tarea.
 - **RF-TAR-53.** «Descargar (JSON)» descarga una tarea, una meta o un proyecto con todos sus datos y los nombres de lo relacionado. La tarea incluye su área, su meta, su proyecto y las tareas a las que espera o que esperan a ella; la meta, su avance, sus proyectos y sus tareas; el proyecto, su avance, el estado de su plazo y sus tareas.
 - **RF-TAR-54.** El archivo se genera en el navegador y se llama `clar-<tipo>-<nombre>-<fecha>.json`. Incluye la versión de la app y la fecha de la descarga.
