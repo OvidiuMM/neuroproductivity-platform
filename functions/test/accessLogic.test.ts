@@ -10,6 +10,8 @@ import {
   publicAppUrl,
   REQUEST_COOLDOWN_MS,
   decideOnSync,
+  isRecentSignIn,
+  RECENT_SIGN_IN_SECONDS,
   type AccessRecord
 } from '../src/accessLogic';
 
@@ -176,5 +178,20 @@ describe('publicAppUrl', () => {
 
   it('keeps a valid port or path', () => {
     assert.equal(publicAppUrl('https://clar.life:8443/app/', 'my-project'), 'https://clar.life:8443/app');
+  });
+});
+
+describe('isRecentSignIn', () => {
+  const now = new Date('2026-10-16T12:00:00Z');
+  const seconds = now.getTime() / 1000;
+  it('accepts a sign-in within the last five minutes', () => {
+    assert.equal(isRecentSignIn(seconds, now), true);
+    assert.equal(isRecentSignIn(seconds - RECENT_SIGN_IN_SECONDS, now), true);
+  });
+  it('rejects an older sign-in, a missing time and one far in the future', () => {
+    assert.equal(isRecentSignIn(seconds - RECENT_SIGN_IN_SECONDS - 1, now), false);
+    assert.equal(isRecentSignIn(undefined, now), false);
+    assert.equal(isRecentSignIn(String(seconds), now), false);
+    assert.equal(isRecentSignIn(seconds + 3600, now), false);
   });
 });

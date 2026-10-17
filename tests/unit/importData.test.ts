@@ -145,3 +145,64 @@ test('a plan includes the areas from the file that the account lacks', () => {
   assert.deepEqual(plan.addedAreas, [{ id: 'area-x1', label: 'Viajes' }]);
   assert.equal(plan.areas?.length, 8);
 });
+
+test('a text too long makes the whole record not valid, so nothing is lost without a warning', () => {
+  const longDescription = 'x'.repeat(100_001);
+  const longNote = { id: 'obs-1', type: 'note', text: 'y'.repeat(20_001), createdAt };
+  const fine = {
+    ...task,
+    id: 'task-ok',
+    description: 'z'.repeat(7_600),
+    observations: [{ ...longNote, text: 'n'.repeat(3_000) }]
+  };
+  const parsed = parseAccountExport(
+    file({
+      tasks: [
+        fine,
+        { ...task, id: 'task-long', description: longDescription },
+        { ...task, id: 'task-note', observations: [longNote] }
+      ]
+    })
+  );
+  assert.equal(parsed.data.tasks.length, 1);
+  assert.equal(parsed.data.tasks[0].description.length, 7_600);
+  assert.equal(parsed.data.tasks[0].observations[0].text.length, 3_000);
+  assert.equal(parsed.invalid.tasks, 2);
+});
+
+test('a project whose goal is neither in the account nor in the file is not valid', () => {
+  const orphan = { ...project, id: 'project-2', goalId: 'goal-missing' };
+  const plan = planImport(parseAccountExport(file({ projects: [project, orphan] })), none(), DEFAULT_AREAS);
+  assert.deepEqual(plan.counts.projects, { new: 1, existing: 0, invalid: 1 });
+  // Con su meta ya en la cuenta, sí vale
+  const existing = none();
+  existing.goals.add('goal-missing');
+  assert.equal(
+    planImport(parseAccountExport(file({ projects: [orphan] })), existing, DEFAULT_AREAS).counts.projects.new,
+    1
+  );
+});
+
+test('an account with the starting areas untouched gets the configuration of the file back', () => {
+  const fromFile = DEFAULT_AREAS.map((a) =>
+    a.id === 'Salud'
+      ? { id: 'Salud', label: 'Salud y deporte' }
+      : a.id === 'Espiritualidad'
+        ? { ...a, hidden: true }
+        : a
+  );
+  const plan = planImport(
+    parseAccountExport(file({ wheelAreas: [...fromFile, { id: 'area-x1', label: 'Viajes' }] })),
+    none(),
+    DEFAULT_AREAS
+  );
+  assert.equal(plan.restoredAreas, true);
+  assert.equal(plan.areas?.find((a) => a.id === 'Salud')?.label, 'Salud y deporte');
+  assert.equal(plan.areas?.find((a) => a.id === 'Espiritualidad')?.hidden, true);
+  assert.deepEqual(plan.addedAreas, [{ id: 'area-x1', label: 'Viajes' }]);
+  // Una cuenta que ya cambió sus áreas las conserva y solo recibe las que faltan
+  const customized = DEFAULT_AREAS.map((a) => (a.id === 'Ocio' ? { ...a, label: 'Tiempo libre' } : a));
+  const merged = planImport(parseAccountExport(file({ wheelAreas: fromFile })), none(), customized);
+  assert.equal(merged.restoredAreas, false);
+  assert.equal(merged.areas, null);
+});
