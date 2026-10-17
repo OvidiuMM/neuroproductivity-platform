@@ -180,6 +180,33 @@ describe('recurring tasks in calendars', () => {
     assert.equal(timed.start.getDate(), 12);
   });
 
+  it('exports a timed series in local time with its time zone, so the weekday and the hour do not move', () => {
+    // Los lunes a las 00:30: en UTC sería domingo
+    const weekly = task({
+      startTime: '00:30',
+      dueDate: '2026-10-19',
+      dueTime: '01:00',
+      recurrence: { frequency: 'WEEKLY', interval: 1, weekdays: [1] }
+    });
+    const event = buildCalendarEvent(weekly, APP, 'Europe/Madrid')!;
+    assert.equal(event.timeZone, 'Europe/Madrid');
+    const file = buildIcs(event);
+    assert.match(
+      file,
+      /\r\nDTSTART;TZID=Europe\/Madrid:20261019T003000\r\nDTEND;TZID=Europe\/Madrid:20261019T010000\r\n/
+    );
+    assert.match(file, /BYDAY=MO/);
+    const google = new URL(googleCalendarUrl(event)).searchParams;
+    assert.equal(google.get('dates'), '20261019T003000/20261019T010000');
+    assert.equal(google.get('ctz'), 'Europe/Madrid');
+    // Las de día completo y las que no se repiten siguen igual
+    assert.equal(
+      buildCalendarEvent(task({ dueDate: '2026-10-19', recurrence: weekly.recurrence }), APP)!.timeZone,
+      undefined
+    );
+    assert.equal(buildCalendarEvent(task({ dueDate: '2026-10-19', dueTime: '10:00' }), APP)!.timeZone, undefined);
+  });
+
   it('has no series for one-off tasks', () => {
     const event = buildCalendarEvent(task({ dueDate: '2026-10-12' }), APP)!;
     assert.equal(event.rrule, undefined);
