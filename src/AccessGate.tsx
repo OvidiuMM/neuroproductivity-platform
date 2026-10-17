@@ -5,7 +5,8 @@ import App from './App';
 import { AccessRequestScreen } from './components/AccessRequestScreen';
 import { FeedbackDialog } from './components/FeedbackDialog';
 import { EmailVerificationScreen } from './components/EmailVerificationScreen';
-import { hasPassword, needsEmailVerification } from './services/auth';
+import { needsEmailVerification } from './services/auth';
+import { useReauthMethods } from './hooks/useReauthMethods';
 import {
   requestAccess,
   subscribeToIsAdmin,
@@ -39,6 +40,7 @@ export const AccessGate: React.FC<AccessGateProps> = ({ user, services }) => {
   const [checkedStatus, setCheckedStatus] = useState<OwnAccessStatus>('unknown');
   // Contacto también sin acceso aprobado (p. ej. para preguntar por la solicitud)
   const [isFeedbackOpen, setIsFeedbackOpen] = useState(false);
+  const reauthMethods = useReauthMethods(user);
   const effectiveStatus = status === 'unknown' ? checkedStatus : status;
   const isApproved = effectiveStatus === 'approved';
 
@@ -117,7 +119,7 @@ export const AccessGate: React.FC<AccessGateProps> = ({ user, services }) => {
           onContact={() => setIsFeedbackOpen(true)}
           onDownloadData={() => downloadAccountData(services, user)}
           onDeleteAccount={(password) => deleteAccount(services, user, password)}
-          hasPassword={hasPassword(user)}
+          reauthMethods={reauthMethods}
         />
       </div>
       {isFeedbackOpen && <FeedbackDialog functions={services.functions} onClose={() => setIsFeedbackOpen(false)} />}
