@@ -1,5 +1,13 @@
 import { expect, test, type Locator, type Page } from '@playwright/test';
-import { approveAccess, callFunction, EMULATOR_PROJECT, emulatorOobCode, uniqueEmail } from './helpers';
+import {
+  approveAccess,
+  callFunction,
+  createVerifiedAccount,
+  EMULATOR_PROJECT,
+  emulatorOobCode,
+  signInWithGoogle,
+  uniqueEmail
+} from './helpers';
 
 // Esperas que pasan por una Cloud Function del emulador: con la suite en paralelo su arranque puede tardar
 const SERVER_CALL = { timeout: 15_000 };
@@ -160,4 +168,35 @@ test('the account changes its password, closes every session and deletes itself 
   await expect(page.getByRole('button', { name: 'Continuar con Google' })).toBeVisible();
   await signIn(page, email, 'otra-clave-333');
   await expect(page.getByRole('alert')).toHaveText('Email o contraseña incorrectos.');
+});
+
+test('an account that also has a password is not asked for it to delete itself after signing in with Google', async ({
+  page
+}) => {
+  // Creada con email y contraseña; después se entra con Google con el mismo email (Firebase une las dos)
+  const { email, idToken } = await createVerifiedAccount(PASSWORD);
+  await page.goto('/');
+  await signInWithGoogle(page, email, 'Lucía Prueba', { approve: false });
+  await expect(page.getByRole('heading', { name: 'Solicita acceso' })).toBeVisible(SERVER_CALL);
+  // La cuenta tiene las dos formas de entrar
+  const lookup = await fetch(
+    'http://127.0.0.1:9399/identitytoolkit.googleapis.com/v1/accounts:lookup?key=demo-api-key',
+    {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ idToken })
+    }
+  );
+  const { users } = (await lookup.json()) as { users: { providerUserInfo: { providerId: string }[] }[] };
+  expect(users[0].providerUserInfo.map((p) => p.providerId).sort()).toEqual(['google.com', 'password']);
+
+  await page.getByRole('button', { name: 'Eliminar mi cuenta y mis datos' }).click();
+  const panel = page.getByRole('form', { name: 'Eliminar tu cuenta' });
+  await expect(panel).toContainText('Para confirmarlo, Google te pedirá que vuelvas a entrar.');
+  await expect(panel.getByLabel('Contraseña', { exact: true })).toHaveCount(0);
+  // Puede confirmar con su contraseña si lo prefiere
+  await panel.getByRole('button', { name: 'Confirmar con mi contraseña en su lugar' }).click();
+  await expect(panel.getByLabel('Contraseña', { exact: true })).toBeVisible();
+  await panel.getByRole('button', { name: 'Confirmar con Google en su lugar' }).click();
+  await expect(panel.getByLabel('Contraseña', { exact: true })).toHaveCount(0);
 });

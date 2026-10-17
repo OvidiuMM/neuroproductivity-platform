@@ -1,17 +1,23 @@
 import React, { useState } from 'react';
 import { Trash2 } from 'lucide-react';
+import type { ReauthMethod } from '../services/auth';
 
 interface DeleteAccountPanelProps {
-  // Cuentas con contraseña: se pide para confirmar; las de Google confirman en la ventana de Google
-  needsPassword: boolean;
+  // Cómo se puede confirmar, primero el de la sesión actual: con la contraseña o en la ventana de Google
+  methods: ReauthMethod[];
   busy: boolean;
   onConfirm: (password?: string) => void;
   onCancel: () => void;
 }
 
 // Confirmación para eliminar la cuenta y todos sus datos (sustituye al window.confirm del navegador)
-export const DeleteAccountPanel: React.FC<DeleteAccountPanelProps> = ({ needsPassword, busy, onConfirm, onCancel }) => {
+export const DeleteAccountPanel: React.FC<DeleteAccountPanelProps> = ({ methods, busy, onConfirm, onCancel }) => {
   const [password, setPassword] = useState('');
+  // El método elegido aquí; si no se cambia, el de la sesión (puede llegar después de abrir el panel)
+  const [choice, setChoice] = useState<ReauthMethod | null>(null);
+  const method = choice && methods.includes(choice) ? choice : methods[0];
+  const needsPassword = method === 'password';
+  const other = methods.find((m) => m !== method);
   return (
     <form
       onSubmit={(e) => {
@@ -46,6 +52,16 @@ export const DeleteAccountPanel: React.FC<DeleteAccountPanelProps> = ({ needsPas
             className="w-full rounded-xl border border-red-300 bg-white px-3 py-2 text-sm focus:ring-2 focus:ring-red-400 focus:outline-none"
           />
         </div>
+      )}
+      {other && (
+        <button
+          type="button"
+          onClick={() => setChoice(other)}
+          disabled={busy}
+          className="min-h-9 text-xs font-semibold text-red-800 underline underline-offset-2 hover:text-red-950"
+        >
+          {other === 'google' ? 'Confirmar con Google en su lugar' : 'Confirmar con mi contraseña en su lugar'}
+        </button>
       )}
       <div className="flex flex-wrap gap-2">
         <button

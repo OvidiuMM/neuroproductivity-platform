@@ -1,6 +1,6 @@
 import React, { useRef, useState } from 'react';
 import { useModalFocus } from '../hooks/useModalFocus';
-import { describeAuthError, MIN_PASSWORD_LENGTH } from '../services/auth';
+import { describeAuthError, MIN_PASSWORD_LENGTH, type ReauthMethod } from '../services/auth';
 import { UserProfile } from '../types';
 import {
   X,
@@ -20,8 +20,10 @@ interface AccountMenuProps {
   isOpen: boolean;
   onClose: () => void;
   user: UserProfile;
-  // La cuenta entra con email y contraseña (puede cambiarla y la usa para confirmar el borrado)
+  // La cuenta tiene contraseña (puede cambiarla)
   hasPassword: boolean;
+  // Cómo confirmar la eliminación, primero el método con el que se entró en esta sesión
+  reauthMethods: ReauthMethod[];
   onSignOut: () => void;
   onExportData: () => Promise<void>;
   onDeleteAccount: (password?: string) => Promise<void>;
@@ -47,6 +49,7 @@ export const AccountMenu: React.FC<AccountMenuProps> = ({
   onClose,
   user,
   hasPassword,
+  reauthMethods,
   onSignOut,
   onExportData,
   onDeleteAccount,
@@ -161,7 +164,7 @@ export const AccountMenu: React.FC<AccountMenuProps> = ({
               <h3 className="truncate text-sm font-bold text-slate-900">{user.name}</h3>
               {user.email && <p className="truncate text-xs text-slate-500">{user.email}</p>}
               <p className="text-[11px] text-slate-600">
-                {hasPassword ? 'Entras con email y contraseña' : 'Entras con Google'}
+                {reauthMethods[0] === 'password' ? 'Entras con email y contraseña' : 'Entras con Google'}
               </p>
             </div>
           </div>
@@ -308,7 +311,7 @@ export const AccountMenu: React.FC<AccountMenuProps> = ({
 
           {panel === 'delete' ? (
             <DeleteAccountPanel
-              needsPassword={hasPassword}
+              methods={reauthMethods}
               busy={busy === 'delete'}
               onConfirm={(password) => run('delete', () => onDeleteAccount(password))}
               onCancel={() => setPanel(null)}

@@ -18,6 +18,19 @@ export const MIN_PASSWORD_LENGTH = 8;
 
 export const hasPassword = (user: User) => user.providerData.some((p) => p.providerId === 'password');
 
+// Cómo confirmar una acción delicada (eliminar la cuenta) con un inicio de sesión reciente: con los métodos de la
+// cuenta, primero el de la sesión actual. Una cuenta creada con email y contraseña a la que después se entró con Google
+// tiene los dos: si se entró con Google, no se le pide la contraseña (puede no recordarla).
+export type ReauthMethod = 'google' | 'password';
+export const reauthMethods = (providerIds: string[], signInProvider?: string | null): ReauthMethod[] => {
+  const methods: ReauthMethod[] = [];
+  if (providerIds.includes('google.com')) methods.push('google');
+  if (providerIds.includes('password')) methods.push('password');
+  if (methods.length === 0) return ['google'];
+  const current = signInProvider === 'password' ? 'password' : signInProvider === 'google.com' ? 'google' : null;
+  return current && methods.includes(current) ? [current, ...methods.filter((m) => m !== current)] : methods;
+};
+
 // Las cuentas con contraseña deben confirmar su email antes de solicitar acceso; las de Google ya vienen verificadas
 export const needsEmailVerification = (user: User) => hasPassword(user) && !user.emailVerified;
 
