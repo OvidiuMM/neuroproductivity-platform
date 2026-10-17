@@ -6,7 +6,8 @@ test.use({ timezoneId: 'Europe/Madrid' });
 // Notificaciones del sistema de prueba: se apuntan en window.__notifications. El permiso empieza sin decidir.
 const fakeNotifications = (target: Page | BrowserContext, initial: NotificationPermission = 'default') =>
   target.addInitScript((start) => {
-    const shown: { title: string; body?: string }[] = [];
+    // `source`: de la página (new Notification) o del service worker (registration.showNotification)
+    const shown: { title: string; body?: string; source: 'page' | 'sw' }[] = [];
     let permission = start;
     class FakeNotification {
       static get permission() {
@@ -18,7 +19,7 @@ const fakeNotifications = (target: Page | BrowserContext, initial: NotificationP
       }
       onclick: (() => void) | null = null;
       constructor(title: string, options?: NotificationOptions) {
-        shown.push({ title, body: options?.body });
+        shown.push({ title, body: options?.body, source: 'page' });
       }
       close() {}
     }
@@ -27,12 +28,16 @@ const fakeNotifications = (target: Page | BrowserContext, initial: NotificationP
     // Las del service worker (las que usa CLAR cuando lo tiene registrado), también apuntadas
     if ('ServiceWorkerRegistration' in window)
       ServiceWorkerRegistration.prototype.showNotification = function (title: string, options?: NotificationOptions) {
-        shown.push({ title, body: options?.body });
+        shown.push({ title, body: options?.body, source: 'sw' });
         return Promise.resolve();
       };
   }, initial);
 const notifications = (page: Page) =>
-  page.evaluate(() => (window as unknown as { __notifications: { title: string; body?: string }[] }).__notifications);
+  page.evaluate(
+    () =>
+      (window as unknown as { __notifications: { title: string; body?: string; source: 'page' | 'sw' }[] })
+        .__notifications
+  );
 
 // Fecha y horas locales a N minutos de ahora (en el reloj de la página)
 const fromNow = (page: Page, minutes: number) =>
@@ -218,7 +223,9 @@ test('on Android the notification comes from the service worker, and the account
   await page.getByRole('button', { name: 'Guardar la tarea' }).click();
   await page.clock.fastForward('03:00');
   await expect(page.getByRole('region', { name: `Alarma: ${title}` })).toBeVisible();
-  expect((await notifications(page)).filter((n) => n.title.endsWith(`: ${title}`))).toHaveLength(1);
+  // Una sola, y desde el service worker: Chrome en Android no admite las de la página
+  const alarm = (await notifications(page)).filter((n) => n.title.endsWith(`: ${title}`));
+  expect(alarm.map((n) => n.source)).toEqual(['sw']);
   await context.close();
 });
 
