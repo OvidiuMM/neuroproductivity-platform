@@ -289,6 +289,20 @@ describe('time zones in the .ics', () => {
     assert.equal(lines.filter((l) => l === 'BEGIN:STANDARD').length, 11);
   });
 
+  it('marks the first observance as summer time in the southern hemisphere', () => {
+    const lines = buildVtimezone('Australia/Sydney', new Date(Date.UTC(2026, 9, 19)));
+    assert.deepEqual(lines.slice(2, 4), ['BEGIN:DAYLIGHT', 'DTSTART:20260101T110000']);
+  });
+
+  it('cuts a very long description in the links, but not in the .ics', () => {
+    const event = buildCalendarEvent(task({ dueDate: '2026-10-15', description: 'd'.repeat(7600) }), APP)!;
+    const details = new URL(googleCalendarUrl(event)).searchParams.get('details')!;
+    assert.ok(details.length < 1600);
+    assert.match(details, /… \(completa en CLAR\)$/);
+    assert.ok(new URL(outlookCalendarUrl(event, 'personal')).searchParams.get('body')!.length < 1600);
+    assert.match(buildIcs(event), /d{60}/);
+  });
+
   it('escapes a lone carriage return', () => {
     assert.match(
       buildIcs(buildCalendarEvent(task({ dueDate: '2026-10-15', title: 'Uno\rDos' }), APP)!),

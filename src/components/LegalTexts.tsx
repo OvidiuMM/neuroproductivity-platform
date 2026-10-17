@@ -142,8 +142,8 @@ export const PrivacyPolicy: React.FC = () => (
         </li>
         <li>
           Otros servicios, solo cuando tú lo decides: al usar «Añadir al calendario» con Google Calendar u Outlook, el
-          título y la descripción de la tarea van en el enlace; «Abrir en mi correo» pasa el correo a tu programa de
-          correo.
+          título, la descripción y las notas de la tarea van en el enlace; «Abrir en mi correo» pasa el correo a tu
+          programa de correo.
         </li>
       </List>
       <p>CLAR no vende ni cede tus datos a nadie.</p>

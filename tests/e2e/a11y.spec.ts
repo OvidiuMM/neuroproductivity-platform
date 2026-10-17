@@ -273,7 +273,8 @@ test('importing the account download: the preview', async ({ page }, testInfo) =
   await page.getByRole('button', { name: 'Importar datos (JSON)' }).click();
   await (await chooser).setFiles(file);
   const preview = page.getByRole('dialog', { name: 'Importar datos' });
-  await expect(preview).toContainText('Se añaden a tu Rueda el área «Viajes».');
+  // Cuenta nueva, con las áreas de partida: se recupera la configuración de áreas del archivo
+  await expect(preview).toContainText('se recupera la del archivo');
   await expectNoViolations(page, 'vista previa de la importación');
 });
 
