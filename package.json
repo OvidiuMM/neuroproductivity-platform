@@ -17,7 +17,7 @@
     "lint:fix": "npm run lint -- --fix",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
-    "test:unit": "tsx --test tests/unit/*.test.ts",
+    "test:unit": "tsx --test tests/unit/*.test.ts && TZ=Europe/Madrid tsx --test tests/unit/calendar.test.ts && TZ=America/New_York tsx --test tests/unit/calendar.test.ts",
     "test:integration": "tsx --test tests/integration/*.test.ts",
     "test:rules": "firebase emulators:exec --only firestore --project demo-neuroproductivity \"tsx --test tests/rules/*.test.ts\"",
     "test:e2e": "playwright test",
