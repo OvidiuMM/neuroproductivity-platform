@@ -37,13 +37,15 @@ export const ImportAccountDialog: React.FC<ImportAccountDialogProps> = ({ plan, 
     const { new: fresh, existing, invalid } = plan.counts[name];
     return fresh + existing + invalid > 0;
   });
-  const hasWork = plan.total > 0 || plan.addedAreas.length > 0;
+  const hasWork = plan.total > 0 || plan.areas !== null;
   const importLabel =
     plan.total > 0
       ? `Importar ${plan.total} ${plan.total === 1 ? 'elemento' : 'elementos'}`
-      : plan.addedAreas.length === 1
-        ? 'Añadir el área'
-        : 'Añadir las áreas';
+      : plan.restoredAreas
+        ? 'Recuperar las áreas'
+        : plan.addedAreas.length === 1
+          ? 'Añadir el área'
+          : 'Añadir las áreas';
 
   // Sin conexión, las escrituras esperan a que vuelva y el avance se pararía sin decir nada: se explica y se puede
   // cerrar (lo ya enviado se guarda al volver la conexión)
@@ -51,13 +53,27 @@ export const ImportAccountDialog: React.FC<ImportAccountDialogProps> = ({ plan, 
     if (!importing) return;
     const onOffline = () => {
       setError(
-        'Se perdió la conexión. Lo que ya se envió se guardará al volver; después, importa otra vez el archivo para completar el resto: lo que ya entró no se repite.'
+        'Se perdió la conexión: la importación seguirá sola cuando vuelva y puedes cerrar esta ventana. Si cierras CLAR antes, importa otra vez el archivo para completar el resto: lo que ya entró no se repite.'
       );
       requestAnimationFrame(() => closeRef.current?.focus());
     };
     window.addEventListener('offline', onOffline);
     return () => window.removeEventListener('offline', onOffline);
   }, [importing]);
+
+  // Si lleva un minuto sin avanzar (p. ej. el navegador cree que hay conexión y no la hay), se dice y se puede cerrar
+  const STALL_MS = 60_000;
+  const done = progress?.done;
+  useEffect(() => {
+    if (!importing) return;
+    const timer = window.setTimeout(() => {
+      setError(
+        'La importación no avanza: puede que no haya conexión. Seguirá sola cuando vuelva y puedes cerrar esta ventana. Si cierras CLAR antes, importa otra vez el archivo para completar el resto: lo que ya entró no se repite.'
+      );
+      requestAnimationFrame(() => closeRef.current?.focus());
+    }, STALL_MS);
+    return () => window.clearTimeout(timer);
+  }, [importing, done]);
 
   const handleImport = async () => {
     if (importing) return;
@@ -150,7 +166,12 @@ export const ImportAccountDialog: React.FC<ImportAccountDialogProps> = ({ plan, 
             <p className="text-xs text-slate-600">El archivo no tiene tareas, metas ni otros datos.</p>
           )}
 
-          {plan.addedAreas.length > 0 && (
+          {plan.restoredAreas && (
+            <p className="text-xs text-slate-700">
+              Tu Rueda aún tiene las áreas de partida: se recupera la del archivo, con sus nombres y sus áreas ocultas.
+            </p>
+          )}
+          {!plan.restoredAreas && plan.addedAreas.length > 0 && (
             <p className="text-xs text-slate-700">
               Se añaden a tu Rueda {plan.addedAreas.length === 1 ? 'el área' : 'las áreas'}{' '}
               {plan.addedAreas.map((a) => `«${a.label}»${a.hidden ? ' (oculta)' : ''}`).join(', ')}.

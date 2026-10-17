@@ -10,6 +10,7 @@ import {
   decideOnSync,
   decideRequest,
   DECISIONS,
+  isRecentSignIn,
   DEMO_ADMIN_EMAIL,
   buildEmail,
   isAdminToken,
@@ -319,14 +320,24 @@ export const setAccessMode = onCall({ region: REGION, secrets: emailSecrets, tim
   return { approvalRequired, approved: approved.length };
 });
 
-// Al eliminar la cuenta se borra también la solicitud de acceso (la lista negra por email se conserva)
-export const forgetAccess = onCall({ region: REGION }, async (request) => {
+// Último paso para eliminar la cuenta: la borra de Auth y después sus datos, su solicitud de acceso, su marca de
+// administración y sus mensajes (la lista negra por email se conserva). Borrar la solicitud sin borrar la cuenta
+// dejaría a una cuenta rechazada o retirada volver a entrar o a pedir acceso al momento, sin decisión de nadie: por
+// eso la cuenta va primero y si falla no se borra nada. Pide un inicio de sesión reciente, como Firebase para borrar
+// la cuenta desde el navegador.
+export const forgetAccess = onCall({ region: REGION, timeoutSeconds: 300 }, async (request) => {
   const auth = requireAuth(request);
+  if (!isRecentSignIn(auth.token.auth_time, new Date())) {
+    throw new HttpsError('failed-precondition', 'Vuelve a iniciar sesión para eliminar la cuenta.');
+  }
+  await adminAuth().deleteUser(auth.uid);
   await Promise.all([
+    db().recursiveDelete(db().doc(`users/${auth.uid}`)),
     db().doc(`access/${auth.uid}`).delete(),
     db().doc(`admins/${auth.uid}`).delete(),
     forgetFeedback(auth.uid)
   ]);
+  logger.info('Account deleted');
   return { ok: true };
 });
 
