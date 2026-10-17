@@ -703,10 +703,13 @@ export default function App({ user, services, isAdmin = false }: AppProps) {
   };
   const handleRunImport = async (plan: ImportPlan, onProgress: (done: number, total: number) => void) => {
     await runAccountImport(db, uid, plan, onProgress);
-    setImportPlan(null);
+    // Solo cierra su propia ventana: una importación que se reanudó al volver la conexión no cierra la de otra nueva
+    setImportPlan((current) => (current === plan ? null : current));
     const parts = [
       plan.total > 0 && `${plan.total} ${plan.total === 1 ? 'elemento' : 'elementos'}`,
-      plan.addedAreas.length > 0 && `${plan.addedAreas.length} ${plan.addedAreas.length === 1 ? 'área' : 'áreas'}`
+      plan.restoredAreas
+        ? 'las áreas de tu Rueda'
+        : plan.addedAreas.length > 0 && `${plan.addedAreas.length} ${plan.addedAreas.length === 1 ? 'área' : 'áreas'}`
     ].filter(Boolean);
     showToast(`Importado: ${parts.join(' y ')}.`);
   };
