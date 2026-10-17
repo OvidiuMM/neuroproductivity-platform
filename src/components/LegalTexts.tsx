@@ -43,8 +43,8 @@ export const PrivacyPolicy: React.FC = () => (
 
     <Section id="privacy-owner" title="Quién es el responsable">
       <p>
-        {ownerName()}, persona física y titular de CLAR, sin actividad económica. Para cualquier cuestión sobre tus
-        datos: <Contact />.
+        {ownerName()}, persona física y titular de CLAR, con domicilio a efectos de notificaciones en {OWNER.address}.
+        Proyecto sin actividad económica. Para cualquier cuestión sobre tus datos: <Contact />.
       </p>
     </Section>
 
@@ -79,10 +79,13 @@ export const PrivacyPolicy: React.FC = () => (
           registrarse.
         </li>
         <li>
-          <strong>En tu dispositivo:</strong> la sesión de Firebase, una copia de tus datos para usar la app sin
-          conexión (se borra al cerrar sesión; ver «Cuánto tiempo se guardan») y algunas preferencias: accesibilidad,
-          orden y filtros de las listas, alarmas ya avisadas y si viste la bienvenida. Todo es necesario para que la app
-          funcione: CLAR no usa cookies de seguimiento, analítica ni publicidad.
+          <strong>En tu dispositivo:</strong> CLAR usa el almacenamiento local de tu navegador (Local Storage e
+          IndexedDB) y la sesión de Firebase exclusivamente por motivos técnicos. Guarda la sesión, una copia de tus
+          datos para usar la app sin conexión (se borra al cerrar sesión; ver «Cuánto tiempo se guardan») y algunas
+          preferencias: accesibilidad, orden y filtros de las listas, alarmas ya avisadas y si viste la bienvenida.
+          También registra un service worker, que solo muestra las notificaciones de las alarmas. Todo es necesario para
+          que la app funcione (art. 22.2 de la LSSI), por eso no se pide consentimiento: CLAR no usa cookies de
+          seguimiento, analítica ni publicidad.
         </li>
       </List>
       <p>
@@ -196,8 +199,9 @@ export const PrivacyPolicy: React.FC = () => (
 
     <Section id="privacy-minors" title="Menores">
       <p>
-        CLAR es para personas de {MIN_AGE} años o más. Si tienes menos, no la uses. Si sabemos que una cuenta es de
-        alguien menor de {MIN_AGE} años, la eliminaremos.
+        CLAR es para personas de {MIN_AGE} años o más (o de la edad mínima legal para dar tu consentimiento en tu país
+        de residencia, si es mayor). Si tienes menos, no la uses. Si sabemos que una cuenta es de alguien por debajo de
+        esa edad, la eliminaremos.
       </p>
     </Section>
 
@@ -244,8 +248,9 @@ export const TermsOfUse: React.FC = () => (
 
     <Section id="terms-age" title="Quién puede usarla">
       <p>
-        Personas de {MIN_AGE} años o más. Si la administración aprueba las cuentas una a una, necesitas su aprobación
-        para empezar a usarla.
+        Personas de {MIN_AGE} años o más (o de la edad mínima legal para dar tu consentimiento en tu país de residencia,
+        si es mayor). Si tienes menos, no la uses. Si la administración aprueba las cuentas una a una, necesitas su
+        aprobación para empezar a usarla.
       </p>
     </Section>
 
@@ -274,7 +279,11 @@ export const TermsOfUse: React.FC = () => (
     </Section>
 
     <Section id="terms-content" title="Tu contenido">
-      <p>Lo que escribes en CLAR es tuyo. Solo se guarda y se procesa para mostrártelo y hacer funcionar la app.</p>
+      <p>
+        Lo que escribes en CLAR es tuyo. Al guardarlo en la app, nos concedes una licencia mundial, gratuita y
+        estrictamente técnica para alojar, procesar y mostrar esos datos en tus dispositivos con el único fin de hacer
+        funcionar el servicio.
+      </p>
     </Section>
 
     <Section id="terms-availability" title="Disponibilidad y responsabilidad">
@@ -317,8 +326,8 @@ export const LegalNotice: React.FC = () => (
   <>
     <Section id="notice-owner" title="Titular">
       <p>
-        CLAR (clar.life) es un proyecto personal de {ownerName()}, persona física, gratuito, sin publicidad y sin
-        actividad económica. Contacto: <Contact />.
+        CLAR (clar.life) es un proyecto personal de {ownerName()}, persona física, con domicilio a efectos de
+        notificaciones en {OWNER.address}. Es gratuito, sin publicidad y sin actividad económica. Contacto: <Contact />.
       </p>
     </Section>
 
@@ -340,6 +349,14 @@ export const LegalNotice: React.FC = () => (
       <p>
         Cómo se tratan tus datos: <PageLink to="privacy">política de privacidad</PageLink>. Normas de uso:{' '}
         <PageLink to="terms">condiciones de uso</PageLink>.
+      </p>
+    </Section>
+
+    <Section id="notice-affiliation" title="Inspiración y ausencia de afiliación">
+      <p>
+        CLAR es una herramienta independiente inspirada en metodologías de gestión del tiempo de dominio público y en
+        obras literarias como <cite>Gestiona tu tiempo, disfruta de la vida</cite>, de Jonathan Benito Sipos. CLAR no
+        tiene ninguna afiliación, patrocinio ni vinculación comercial u oficial con el autor.
       </p>
     </Section>
   </>
