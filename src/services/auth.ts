@@ -18,6 +18,19 @@ export const MIN_PASSWORD_LENGTH = 8;
 
 export const hasPassword = (user: User) => user.providerData.some((p) => p.providerId === 'password');
 
+// Cómo confirmar una acción delicada (eliminar la cuenta) con un inicio de sesión reciente: con los métodos de la
+// cuenta, primero el de la sesión actual. Una cuenta creada con email y contraseña a la que después se entró con Google
+// tiene los dos: si se entró con Google, no se le pide la contraseña (puede no recordarla).
+export type ReauthMethod = 'google' | 'password';
+export const reauthMethods = (providerIds: string[], signInProvider?: string | null): ReauthMethod[] => {
+  const methods: ReauthMethod[] = [];
+  if (providerIds.includes('google.com')) methods.push('google');
+  if (providerIds.includes('password')) methods.push('password');
+  if (methods.length === 0) return ['google'];
+  const current = signInProvider === 'password' ? 'password' : signInProvider === 'google.com' ? 'google' : null;
+  return current && methods.includes(current) ? [current, ...methods.filter((m) => m !== current)] : methods;
+};
+
 // Las cuentas con contraseña deben confirmar su email antes de solicitar acceso; las de Google ya vienen verificadas
 export const needsEmailVerification = (user: User) => hasPassword(user) && !user.emailVerified;
 
@@ -68,6 +81,12 @@ const AUTH_ERRORS: Record<string, string> = {
   'auth/too-many-requests': 'Demasiados intentos. Espera un momento o recupera la contraseña.',
   'auth/network-request-failed': 'No hay conexión. Inténtalo de nuevo cuando vuelvas a tenerla.',
   'auth/requires-recent-login': 'Por seguridad, vuelve a entrar y repite la acción.',
+  // Confirmar con Google (p. ej. al eliminar la cuenta)
+  'auth/popup-closed-by-user': 'Se cerró la ventana de Google sin confirmar. Vuelve a intentarlo.',
+  'auth/cancelled-popup-request': 'Se cerró la ventana de Google sin confirmar. Vuelve a intentarlo.',
+  'auth/popup-blocked':
+    'El navegador bloqueó la ventana de Google: permite las ventanas emergentes de CLAR y vuelve a intentarlo.',
+  'auth/user-mismatch': 'Esa no es la cuenta de Google con la que has entrado: elige la misma para confirmar.',
   'auth/operation-not-allowed': 'El acceso con email y contraseña no está activado en este proyecto.'
 };
 
