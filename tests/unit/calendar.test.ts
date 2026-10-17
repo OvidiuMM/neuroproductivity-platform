@@ -1,6 +1,12 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
-import { buildCalendarEvent, buildIcs, googleCalendarUrl, outlookCalendarUrl } from '../../src/services/calendar.ts';
+import {
+  buildCalendarEvent,
+  buildIcs,
+  buildVtimezone,
+  googleCalendarUrl,
+  outlookCalendarUrl
+} from '../../src/services/calendar.ts';
 import type { TaskItem } from '../../src/types';
 
 const APP = 'https://app.example.com';
@@ -53,6 +59,50 @@ describe('buildCalendarEvent', () => {
   it('includes the task description and a link to the app', () => {
     const event = buildCalendarEvent(task({ dueDate: '2026-10-15' }), APP)!;
     assert.equal(event.description, `Enviarlo al equipo\n\nTarea de CLAR: ${APP}`);
+  });
+
+  it('lasts one hour when there is a start time but no due time', () => {
+    const sameDay = buildCalendarEvent(
+      task({ startDate: '2026-10-15', startTime: '09:30', dueDate: '2026-10-15' }),
+      APP
+    )!;
+    assert.equal(sameDay.allDay, false);
+    assert.deepEqual(sameDay.start, new Date(2026, 9, 15, 9, 30));
+    assert.deepEqual(sameDay.end, new Date(2026, 9, 15, 10, 30));
+    assert.doesNotMatch(sameDay.description, /Fecha límite/);
+    // Si la fecha límite es otro día, el evento no llega a ella: la descripción la dice
+    const later = buildCalendarEvent(
+      task({ startDate: '2026-10-15', startTime: '09:30', dueDate: '2026-10-17' }),
+      APP
+    )!;
+    assert.deepEqual(later.end, new Date(2026, 9, 15, 10, 30));
+    assert.match(later.description, /Fecha límite: .*17.*oct/);
+  });
+
+  it('lists the task notes in the description, with checklist boxes and links', () => {
+    const createdAt = '2026-10-01T09:00:00.000Z';
+    const event = buildCalendarEvent(
+      task({
+        dueDate: '2026-10-15',
+        observations: [
+          { id: 'obs-1', type: 'note', text: 'Llevar la memoria USB', createdAt },
+          { id: 'obs-2', type: 'checklist', text: 'Revisar las cifras', completed: true, createdAt },
+          { id: 'obs-3', type: 'checklist', text: 'Pedir la firma', createdAt },
+          { id: 'obs-4', type: 'link', text: 'Plantilla', url: 'https://example.com/plantilla', createdAt },
+          { id: 'obs-5', type: 'note', text: '   ', createdAt }
+        ]
+      }),
+      APP
+    )!;
+    assert.equal(
+      event.description,
+      [
+        'Enviarlo al equipo',
+        'Notas:\n- Llevar la memoria USB\n- [x] Revisar las cifras\n- [ ] Pedir la firma\n- Plantilla (https://example.com/plantilla)',
+        `Tarea de CLAR: ${APP}`
+      ].join('\n\n')
+    );
+    assert.match(googleCalendarUrl(event), /details=.*Notas%3A/);
   });
 });
 
@@ -136,6 +186,44 @@ describe('recurring tasks in calendars', () => {
     assert.equal(timed.start.getDate(), 12);
   });
 
+  it('exports a timed series in local time with its time zone, so the weekday and the hour do not move', () => {
+    // Los lunes a las 00:30: en UTC sería domingo
+    const weekly = task({
+      startTime: '00:30',
+      dueDate: '2026-10-19',
+      dueTime: '01:00',
+      recurrence: { frequency: 'WEEKLY', interval: 1, weekdays: [1] }
+    });
+    const event = buildCalendarEvent(weekly, APP, 'Europe/Madrid')!;
+    assert.equal(event.timeZone, 'Europe/Madrid');
+    const file = buildIcs(event);
+    assert.match(
+      file,
+      /\r\nDTSTART;TZID=Europe\/Madrid:20261019T003000\r\nDTEND;TZID=Europe\/Madrid:20261019T010000\r\n/
+    );
+    assert.match(file, /BYDAY=MO/);
+    // Con su VTIMEZONE: el paso al horario de verano del 28 de marzo de 2027 a las 02:00 (de +0100 a +0200)
+    assert.match(file, /BEGIN:VTIMEZONE\r\nTZID:Europe\/Madrid\r\n/);
+    assert.match(
+      file,
+      /BEGIN:DAYLIGHT\r\nDTSTART:20270328T020000\r\nTZOFFSETFROM:\+0100\r\nTZOFFSETTO:\+0200\r\nEND:DAYLIGHT/
+    );
+    assert.match(
+      file,
+      /BEGIN:STANDARD\r\nDTSTART:20261025T030000\r\nTZOFFSETFROM:\+0200\r\nTZOFFSETTO:\+0100\r\nEND:STANDARD/
+    );
+    assert.ok(file.indexOf('END:VTIMEZONE') < file.indexOf('BEGIN:VEVENT'));
+    const google = new URL(googleCalendarUrl(event)).searchParams;
+    assert.equal(google.get('dates'), '20261019T003000/20261019T010000');
+    assert.equal(google.get('ctz'), 'Europe/Madrid');
+    // Las de día completo y las que no se repiten siguen igual
+    assert.equal(
+      buildCalendarEvent(task({ dueDate: '2026-10-19', recurrence: weekly.recurrence }), APP)!.timeZone,
+      undefined
+    );
+    assert.equal(buildCalendarEvent(task({ dueDate: '2026-10-19', dueTime: '10:00' }), APP)!.timeZone, undefined);
+  });
+
   it('has no series for one-off tasks', () => {
     const event = buildCalendarEvent(task({ dueDate: '2026-10-12' }), APP)!;
     assert.equal(event.rrule, undefined);
@@ -166,9 +254,59 @@ describe('alarms in calendars', () => {
     assert.match(ics({ dueDate: '2030-06-15', alarmTime: '20:00' }), /TRIGGER;RELATED=END:-PT1680M/);
   });
 
+  it('counts the alarm of a one-hour event from its start, also when it comes after it', () => {
+    // Plazo sin hora el 15: la alarma de las 18:00 es la víspera, 9 h después del inicio del 14 a las 09:00
+    const file = ics({ startDate: '2030-06-14', startTime: '09:00', dueDate: '2030-06-15', alarmTime: '18:00' });
+    assert.match(file, /DTSTART:\d{8}T\d{6}Z\r\nDTEND:/);
+    assert.match(file, /TRIGGER:PT540M/);
+  });
+
   it('has no alarm without one, or when the task cannot have it', () => {
     assert.doesNotMatch(ics({ dueDate: '2030-06-15', dueTime: '11:00' }), /VALARM/);
     const recurrence = { frequency: 'WEEKLY' as const, interval: 1, weekdays: [6] };
     assert.doesNotMatch(ics({ dueDate: '2030-06-15', recurrence, alarmTime: '08:00' }), /VALARM/);
+  });
+});
+
+describe('time zones in the .ics', () => {
+  it('describes a zone without changes of time with a single observance', () => {
+    const lines = buildVtimezone('Asia/Kolkata', new Date(Date.UTC(2026, 9, 19)));
+    assert.deepEqual(lines, [
+      'BEGIN:VTIMEZONE',
+      'TZID:Asia/Kolkata',
+      'BEGIN:STANDARD',
+      'DTSTART:20260101T053000',
+      'TZOFFSETFROM:+0530',
+      'TZOFFSETTO:+0530',
+      'END:STANDARD',
+      'END:VTIMEZONE'
+    ]);
+  });
+
+  it('lists ten years of changes of time, two a year in Madrid', () => {
+    const lines = buildVtimezone('Europe/Madrid', new Date(Date.UTC(2026, 9, 19)));
+    assert.equal(lines.filter((l) => l === 'BEGIN:DAYLIGHT').length, 10);
+    assert.equal(lines.filter((l) => l === 'BEGIN:STANDARD').length, 11);
+  });
+
+  it('marks the first observance as summer time in the southern hemisphere', () => {
+    const lines = buildVtimezone('Australia/Sydney', new Date(Date.UTC(2026, 9, 19)));
+    assert.deepEqual(lines.slice(2, 4), ['BEGIN:DAYLIGHT', 'DTSTART:20260101T110000']);
+  });
+
+  it('cuts a very long description in the links, but not in the .ics', () => {
+    const event = buildCalendarEvent(task({ dueDate: '2026-10-15', description: 'd'.repeat(7600) }), APP)!;
+    const details = new URL(googleCalendarUrl(event)).searchParams.get('details')!;
+    assert.ok(details.length < 1600);
+    assert.match(details, /… \(completa en CLAR\)$/);
+    assert.ok(new URL(outlookCalendarUrl(event, 'personal')).searchParams.get('body')!.length < 1600);
+    assert.match(buildIcs(event), /d{60}/);
+  });
+
+  it('escapes a lone carriage return', () => {
+    assert.match(
+      buildIcs(buildCalendarEvent(task({ dueDate: '2026-10-15', title: 'Uno\rDos' }), APP)!),
+      /SUMMARY:Uno\\nDos/
+    );
   });
 });
