@@ -165,7 +165,7 @@ La lista completa y numerada de lo que hace la app, con sus requisitos no funcio
 
 ### Importar los datos (0.9.5)
 
-- **Importar datos (JSON):** en el menú de la cuenta, junto a «Descargar mis datos (JSON)». Acepta ese archivo (también los descargados antes de esta versión) y enseña antes qué entra: por cada tipo, lo nuevo, lo que ya está en la cuenta y lo que no es válido. Se añade solo lo que falta (mismo id: no se toca), así importar dos veces el mismo archivo no duplica nada; las áreas de la Rueda que falten se añaden (con un número si el nombre ya existe, y ocultas pasado el máximo a la vista). Cada registro se comprueba campo a campo y solo se guardan los campos conocidos (`src/services/importData.ts`); hace falta conexión, porque se mira en el servidor qué hay ya. La descarga lleva ahora `app`, `version` y `type: "account"`.
+- **Importar datos (JSON):** en el menú de la cuenta, junto a «Descargar mis datos (JSON)». Acepta ese archivo (también los descargados antes de esta versión) y enseña antes qué entra: por cada tipo, lo nuevo, lo que ya está en la cuenta y lo que no es válido. Se añade solo lo que falta (mismo id: no se toca), así importar dos veces el mismo archivo no duplica nada. Si la cuenta aún tiene las áreas de partida, se recupera la configuración de áreas del archivo; si no, las que falten se añaden (con un número si el nombre ya existe, y ocultas pasado el máximo a la vista). Un texto desmesurado o un proyecto sin su meta cuentan como no válidos: nunca se recorta nada sin avisar. Cada registro se comprueba campo a campo y solo se guardan los campos conocidos (`src/services/importData.ts`); hace falta conexión, porque se mira en el servidor qué hay ya. La descarga lleva ahora `app`, `version` y `type: "account"`.
 
 ---
 
