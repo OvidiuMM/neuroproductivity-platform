@@ -43,7 +43,13 @@ export const TOUR_STEPS: TourStep[] = [
     id: 'goals',
     target: '[data-tour="nav-goals"]',
     title: 'Metas',
-    body: 'Lo que quieres conseguir en cada área, empezando por las más bajas. Añade tareas a cada meta y verás cómo avanza; lo que tiene fecha de fin, agrúpalo en un proyecto («Proyectos»).'
+    body: 'Lo que quieres conseguir en cada área, empezando por las más bajas. Añade tareas a cada meta y verás cómo avanza; si quieres, agrupa las relacionadas en proyectos.'
+  },
+  {
+    id: 'projects',
+    target: '[data-tour="nav-projects"], [data-tour="nav-more"]',
+    title: 'Proyectos (opcional)',
+    body: 'Agrupan tareas relacionadas, con fecha de fin, para cumplir una meta o una parte de ella. Una meta puede tener uno o varios, o ninguno. La batería muestra cuánto llevas hecho. En el móvil está en «Más».'
   },
   {
     id: 'home',

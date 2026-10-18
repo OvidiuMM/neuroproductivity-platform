@@ -299,7 +299,8 @@ export const ProjectsView: React.FC<ProjectsViewProps> = ({
             Proyectos
           </h2>
           <p className="text-xs text-slate-600">
-            Tareas con fecha de fin para avanzar en una meta. La batería muestra cuánto llevas hecho.
+            Opcional: agrupa tareas relacionadas, con fecha de fin, para cumplir una meta o una parte de ella. Una meta
+            puede tener uno o varios proyectos. La batería muestra cuánto llevas hecho.
           </p>
         </div>
         {hasGoals && (
@@ -316,7 +317,10 @@ export const ProjectsView: React.FC<ProjectsViewProps> = ({
 
       {!hasGoals ? (
         <div className="space-y-3 rounded-2xl border border-slate-200 bg-white p-6 text-center text-sm text-slate-600">
-          <p>Cada proyecto pertenece a una meta. Crea tu primera meta en «Metas».</p>
+          <p>
+            Los proyectos son opcionales y cada uno pertenece a una meta: agrupan sus tareas relacionadas. Crea tu
+            primera meta en «Metas».
+          </p>
           <button
             type="button"
             onClick={onOpenGoals}

@@ -63,10 +63,11 @@ const SCREENS: { tab: AppTab; title: string; icon: React.ReactNode; points: stri
   },
   {
     tab: 'projects',
-    title: 'Proyectos',
+    title: 'Proyectos (opcional)',
     icon: <FolderKanban className="h-5 w-5 text-indigo-600" />,
     points: [
-      'Un proyecto agrupa las tareas de algo con fecha de fin, por ejemplo «Reformar la cocina» dentro de la meta «Tener la casa a punto». Pertenece a una meta y sus tareas cuentan en el avance de esa meta.',
+      'Los proyectos son opcionales: una herramienta para agrupar tareas relacionadas que buscan cumplir una meta o una parte de ella. Una meta puede tener ninguno, uno o varios; sus tareas pueden ir sueltas, en un proyecto o mezcladas.',
+      'Por ejemplo, la meta «Tener la casa a punto» puede tener el proyecto «Reformar la cocina», con fecha de fin, y otras tareas sueltas. Las tareas de un proyecto cuentan en el avance de su meta.',
       'Su avance se ve como una batería: el porcentaje de tareas hechas (las canceladas no cuentan).',
       'Abre un proyecto para ver y manejar sus tareas igual que en «Listas»: completarlas, cambiar su estado, editarlas o borrarlas. «Añadir tarea» la crea ya en el proyecto.',
       'Avisa si va fuera de plazo (pasó la fecha de fin y quedan tareas), si termina pronto y si alguna tarea vence después del fin. Cuando acabes, márcalo como terminado; también lo puedes archivar.',
@@ -132,9 +133,10 @@ export const HowItWorks: React.FC<HowItWorksProps> = ({ onNavigate, onStartTour,
         </h2>
         <p className="max-w-3xl text-sm leading-relaxed text-slate-600">
           CLAR va de lo que te importa a lo que haces hoy: decides qué áreas de tu vida quieres mejorar (Rueda), les
-          pones metas, conviertes cada meta en acciones concretas (tareas, sueltas o agrupadas en proyectos con fecha de
-          fin), eliges qué toca hoy (Top 10 y Agenda) y proteges el tiempo para hacerlas. En el móvil, la barra inferior
-          lleva Inicio, Listas, Agenda y Metas; la Rueda, Proyectos, Tiempo protegido y la Ayuda están en «Más».
+          pones metas, conviertes cada meta en acciones concretas (tareas; si quieres, agrupas las relacionadas en
+          proyectos con fecha de fin), eliges qué toca hoy (Top 10 y Agenda) y proteges el tiempo para hacerlas. En el
+          móvil, la barra inferior lleva Inicio, Listas, Agenda y Metas; la Rueda, Proyectos, Tiempo protegido y la
+          Ayuda están en «Más».
         </p>
       </div>
 
@@ -236,9 +238,10 @@ export const HowItWorks: React.FC<HowItWorksProps> = ({ onNavigate, onStartTour,
           </li>
           <li>
             <strong>Metas → Tareas:</strong> «Añadir tarea» crea la tarea ya vinculada a su meta, y la tarea toma el
-            área de la meta. Lo que tiene fecha de fin y varias tareas va en un proyecto de la meta. Al escribir una
-            tarea, CLAR te propone la meta que más se parece; si no tiene meta, el motor de sugerencias propone un área
-            de la Rueda. Así lo que haces cada día queda vinculado a lo que quieres mejorar.
+            área de la meta. Si una meta, o una parte de ella, necesita varias tareas relacionadas, puedes agruparlas en
+            un proyecto (opcional; una meta puede tener uno o varios). Al escribir una tarea, CLAR te propone la meta
+            que más se parece; si no tiene meta, el motor de sugerencias propone un área de la Rueda. Así lo que haces
+            cada día queda vinculado a lo que quieres mejorar.
           </li>
           <li>
             <strong>Tareas → Top 10 y Agenda:</strong> las más importantes forman tu Top 10 y las que tienen fecha, tu

@@ -14,7 +14,7 @@ test('a new account sees the welcome once: why, the method and how to start', as
   await expect(dialog.getByRole('heading', { name: 'Así funciona' })).toBeFocused();
   await expect(
     dialog.getByRole('list', { name: 'De tus áreas de vida a lo que haces hoy' }).getByRole('listitem')
-  ).toHaveText([/Áreas de vida/, /Metas/, /Tareas/, /Top 10 y Agenda/, /Tiempo protegido/]);
+  ).toHaveText([/Áreas de vida/, /Metas/, /Proyectos \(opcional\)/, /Tareas/, /Top 10 y Agenda/, /Tiempo protegido/]);
   await dialog.getByRole('button', { name: 'Atrás' }).click();
   await expect(dialog.getByRole('heading', { name: 'Te damos la bienvenida a CLAR' })).toBeFocused();
   await dialog.getByRole('button', { name: 'Siguiente' }).click();
