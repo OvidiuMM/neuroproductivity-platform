@@ -68,13 +68,23 @@ const list = <T>(value: unknown, item: (v: unknown) => T | undefined, max: numbe
       })
     : [];
 
-// Textos largos: la app no limita la descripción ni las notas. Estos topes solo cortan lo absurdo (un documento de
-// Firestore admite hasta 1 MiB) y, si se pasan, el registro entero cuenta como no válido: nunca se pierde un texto sin
-// avisar
+// Textos y listas que escribe la persona: la app no limita muchos (descripción, notas, orden del día, asunto o
+// destinatarios de un correo). Estos topes solo cortan lo absurdo (un documento de Firestore admite hasta 1 MiB) y, si
+// se pasan, o si un elemento de una lista no es válido, el registro entero cuenta como no válido: nunca se recorta ni se
+// pierde nada sin avisar. Solo se omiten los campos de formato (fechas, horas, enlaces a otros registros) que no valen.
 const DESCRIPTION_MAX = 100_000;
 const NOTE_MAX = 20_000;
 const EMAIL_BODY_MAX = 200_000;
+const SHORT_TEXT_MAX = 5_000;
+const LIST_MAX = 1_000;
 const tooLong = (value: unknown, max: number) => typeof value === 'string' && value.length > max;
+// Una lista en la que todo vale, o null si alguno no vale o son demasiados (el registro no es válido)
+const strictList = <T>(value: unknown, item: (v: unknown) => T | undefined, max = LIST_MAX): T[] | null => {
+  if (value === undefined || value === null) return [];
+  if (!Array.isArray(value) || value.length > max) return null;
+  const parsed = value.map(item);
+  return parsed.every((v) => v !== undefined) ? parsed : null;
+};
 
 const TASK_STATUSES = ['PENDING', 'BLOCKED', 'IN_PROGRESS', 'DONE', 'CANCELLED'] as const;
 const PRIORITIES = ['CRITICAL', 'HIGH', 'MEDIUM', 'LOW'] as const;
@@ -86,7 +96,8 @@ const observation = (raw: unknown): TaskObservation | undefined => {
   const body = str(raw.text, NOTE_MAX);
   const createdAt = instant(raw.createdAt);
   if (!obsId || !type || body === undefined || !createdAt) return undefined;
-  return { id: obsId, type, text: body, completed: bool(raw.completed), url: str(raw.url, 2000), createdAt };
+  if (tooLong(raw.url, SHORT_TEXT_MAX)) return undefined;
+  return { id: obsId, type, text: body, completed: bool(raw.completed), url: str(raw.url, SHORT_TEXT_MAX), createdAt };
 };
 
 const recurrence = (raw: unknown): Recurrence | undefined => {
@@ -113,8 +124,8 @@ const task = (raw: Obj): Omit<TaskItem, 'userId'> | undefined => {
   const createdAt = instant(raw.createdAt);
   if (!taskId || !title || !listContext || !createdAt) return undefined;
   if (tooLong(raw.description, DESCRIPTION_MAX)) return undefined;
-  if (Array.isArray(raw.observations) && raw.observations.some((o) => isObj(o) && tooLong(o.text, NOTE_MAX)))
-    return undefined;
+  const observations = strictList(raw.observations, observation);
+  if (!observations) return undefined;
   // Las de antes de la 0.6.0 tienen `completed` en lugar de `status`
   const status = oneOf(raw.status, TASK_STATUSES) ?? (raw.completed === true ? 'DONE' : 'PENDING');
   const confidence = raw.wheelCategoryConfidence;
@@ -126,7 +137,7 @@ const task = (raw: Obj): Omit<TaskItem, 'userId'> | undefined => {
     priority: oneOf(raw.priority, PRIORITIES) ?? 'MEDIUM',
     createdAt,
     updatedAt: instant(raw.updatedAt) ?? createdAt,
-    observations: list(raw.observations, observation, 1000),
+    observations,
     isSomeday: bool(raw.isSomeday) ?? false,
     wheelCategory: isAreaId(raw.wheelCategory) ? raw.wheelCategory : undefined,
     wheelCategoryConfidence:
@@ -152,7 +163,7 @@ const goal = (raw: Obj): Omit<Goal, 'userId'> | undefined => {
   const goalId = id(raw.id);
   const title = text(raw.title, GOAL_TITLE_MAX);
   const createdAt = instant(raw.createdAt);
-  if (!goalId || !title || !isAreaId(raw.area) || !createdAt) return undefined;
+  if (!goalId || !title || !isAreaId(raw.area) || !createdAt || tooLong(raw.why, GOAL_WHY_MAX)) return undefined;
   return {
     id: goalId,
     title,
@@ -171,7 +182,8 @@ const project = (raw: Obj): Omit<Project, 'userId'> | undefined => {
   const goalId = id(raw.goalId);
   const endDate = day(raw.endDate);
   const createdAt = instant(raw.createdAt);
-  if (!projectId || !title || !goalId || !endDate || !createdAt) return undefined;
+  if (!projectId || !title || !goalId || !endDate || !createdAt || tooLong(raw.description, PROJECT_DESCRIPTION_MAX))
+    return undefined;
   return {
     id: projectId,
     title,
@@ -187,12 +199,17 @@ const project = (raw: Obj): Omit<Project, 'userId'> | undefined => {
 const wheelLog = (raw: Obj): Omit<WheelOfLifeLog, 'userId'> | undefined => {
   const logId = id(raw.id);
   const timestamp = instant(raw.timestamp);
-  if (!logId || !timestamp || !isObj(raw.scores)) return undefined;
-  const scores = Object.fromEntries(
-    Object.entries(raw.scores).filter(([area, score]) => isAreaId(area) && int(score, 0, 10) !== undefined)
-  ) as Record<string, number>;
-  if (Object.keys(scores).length === 0) return undefined;
-  return { id: logId, timestamp, label: str(raw.label, 200), scores };
+  if (!logId || !timestamp || !isObj(raw.scores) || tooLong(raw.label, SHORT_TEXT_MAX)) return undefined;
+  const entries = Object.entries(raw.scores);
+  // Una puntuación que no vale (área desconocida o fuera de 0–10) invalida la evaluación: no se pierde sin avisar
+  if (entries.length === 0 || entries.some(([area, score]) => !isAreaId(area) || int(score, 0, 10) === undefined))
+    return undefined;
+  return {
+    id: logId,
+    timestamp,
+    label: str(raw.label, SHORT_TEXT_MAX),
+    scores: Object.fromEntries(entries) as Record<string, number>
+  };
 };
 
 const meeting = (raw: Obj): Omit<MeetingGuard, 'userId'> | undefined => {
@@ -201,15 +218,17 @@ const meeting = (raw: Obj): Omit<MeetingGuard, 'userId'> | undefined => {
   const startTime = instant(raw.startTime);
   const endTime = instant(raw.endTime);
   const createdAt = instant(raw.createdAt);
-  if (!meetingId || !title || !startTime || !endTime || !createdAt) return undefined;
+  const agendaPoints = strictList(raw.agendaPoints, (v) => str(v, SHORT_TEXT_MAX));
+  if (!meetingId || !title || !startTime || !endTime || !createdAt || !agendaPoints) return undefined;
+  if (tooLong(raw.moderatorName, SHORT_TEXT_MAX) || tooLong(raw.moderatorEmail, SHORT_TEXT_MAX)) return undefined;
   return {
     id: meetingId,
     title,
     startTime,
     endTime,
-    agendaPoints: list(raw.agendaPoints, (v) => str(v, 1000), 100),
-    moderatorName: str(raw.moderatorName, 300) ?? '',
-    moderatorEmail: str(raw.moderatorEmail, 320) ?? '',
+    agendaPoints,
+    moderatorName: str(raw.moderatorName, SHORT_TEXT_MAX) ?? '',
+    moderatorEmail: str(raw.moderatorEmail, SHORT_TEXT_MAX) ?? '',
     createdAt
   };
 };
@@ -224,14 +243,17 @@ const attachment = (raw: unknown): EmailDraft['attachments'][number] | undefined
 
 const email = (raw: Obj): Omit<EmailDraft, 'userId'> | undefined => {
   const emailId = id(raw.id);
-  if (!emailId || tooLong(raw.body, EMAIL_BODY_MAX)) return undefined;
+  const attachments = strictList(raw.attachments, attachment);
+  const recipients = strictList(raw.recipients, (v) => text(v, SHORT_TEXT_MAX));
+  if (!emailId || !attachments || !recipients) return undefined;
+  if (tooLong(raw.body, EMAIL_BODY_MAX) || tooLong(raw.subject, SHORT_TEXT_MAX)) return undefined;
   return {
     id: emailId,
-    subject: str(raw.subject, 1000) ?? '',
+    subject: str(raw.subject, SHORT_TEXT_MAX) ?? '',
     body: str(raw.body, EMAIL_BODY_MAX) ?? '',
-    attachments: list(raw.attachments, attachment, 100),
+    attachments,
     noAttachmentsDeclared: bool(raw.noAttachmentsDeclared) ?? false,
-    recipients: list(raw.recipients, (v) => text(v, 320), 100),
+    recipients,
     sentAt: instant(raw.sentAt),
     status: oneOf(raw.status, ['draft', 'saved'] as const),
     updatedAt: instant(raw.updatedAt)
