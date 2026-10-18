@@ -58,10 +58,10 @@ export const PrivacyPolicy: React.FC = () => (
         <li>
           <strong>Lo que escribes en CLAR:</strong> tareas (títulos, descripciones, notas, enlaces, fechas, alarmas y de
           qué otra tarea dependen), metas, proyectos (nombre, meta, fecha de fin y descripción), evaluaciones de la
-          Rueda de la Vida (tu puntuación de 0 a 10 en cada área), reuniones y correos de «Tiempo protegido» (asunto,
-          texto, destinatarios y el nombre y el tamaño de los adjuntos: los archivos no salen de tu dispositivo). Sirven
-          para que la app funcione. Las reuniones y los correos pueden incluir el nombre y el email de otras personas:
-          añádelos solo si tienes motivo para ello.
+          Rueda de la Vida (tu puntuación de 0 a 10 en cada área, y los nombres de tus áreas si las cambias o añades),
+          reuniones y correos de «Tiempo protegido» (asunto, texto, destinatarios y el nombre y el tamaño de los
+          adjuntos: los archivos no salen de tu dispositivo). Sirven para que la app funcione. Las reuniones y los
+          correos pueden incluir el nombre y el email de otras personas: añádelos solo si tienes motivo para ello.
         </li>
         <li>
           <strong>Solicitud de acceso:</strong> si la administración aprueba las cuentas una a una, tu nombre, email,
@@ -91,10 +91,11 @@ export const PrivacyPolicy: React.FC = () => (
           <strong>En tu dispositivo:</strong> CLAR usa el almacenamiento local de tu navegador (Local Storage e
           IndexedDB) y la sesión de Firebase exclusivamente por motivos técnicos. Guarda la sesión, una copia de tus
           datos para usar la app sin conexión (se borra al cerrar sesión; ver «Cuánto tiempo se guardan») y algunas
-          preferencias: accesibilidad, orden y filtros de las listas, alarmas ya avisadas y si viste la bienvenida.
-          También registra un service worker, que solo muestra las notificaciones de las alarmas. Todo es necesario para
-          que la app funcione (art. 22.2 de la LSSI), por eso no se pide consentimiento: CLAR no usa cookies de
-          seguimiento, analítica ni publicidad.
+          preferencias: accesibilidad, orden y filtros de las listas, alarmas ya avisadas, si viste la bienvenida, si
+          activaste las alarmas con CLAR cerrada en ese dispositivo (y si muestran el nombre de la tarea) y, en la
+          cuenta de administración, cuándo miró las solicitudes por última vez. También registra un service worker, que
+          solo muestra las notificaciones de las alarmas. Todo es necesario para que la app funcione (art. 22.2 de la
+          LSSI), por eso no se pide consentimiento: CLAR no usa cookies de seguimiento, analítica ni publicidad.
         </li>
       </List>
       <p>
@@ -175,10 +176,10 @@ export const PrivacyPolicy: React.FC = () => (
           Alarmas con CLAR cerrada: al desactivarlas o cerrar sesión en un dispositivo, deja de recibirlas al momento,
           también sin conexión; su identificador y su zona horaria se borran del servidor entonces o, si no hay
           conexión, al intentar el siguiente envío. También se borran al cerrar la sesión en todos los dispositivos, si
-          la administración retira el acceso, al eliminar la cuenta y, en cualquier caso, cuando el dispositivo lleva 30
-          días sin abrir CLAR. Cada alarma pendiente se borra cuando se envía, cuando cambia o se borra su tarea, o
-          cuando vence; de las enviadas solo se guarda cuál fue, para no repetirla, hasta que se borre la tarea o la
-          cuenta.
+          la administración rechaza, retira o bloquea la cuenta, al eliminar la cuenta y, en cualquier caso, cuando el
+          dispositivo lleva 30 días sin abrir CLAR. Cada alarma pendiente se borra cuando se envía, cuando cambia o se
+          borra su tarea, o cuando vence; de las enviadas solo se guarda cuál fue, para no repetirla, hasta que se borre
+          la tarea o la cuenta.
         </li>
         <li>
           Lo que contestes por email a nuestras respuestas: llega al buzón de <Contact /> y se guarda el tiempo
