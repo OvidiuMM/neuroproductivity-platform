@@ -64,6 +64,8 @@ Origen: `src/components/GoalsView.tsx`, `src/components/GoalModal.tsx`, `src/com
 
 Origen: `src/components/ProjectsView.tsx`, `src/components/ProjectModal.tsx`, `src/components/ProjectProgress.tsx`, `src/services/projects.ts`.
 
+Los proyectos son opcionales: una herramienta para agrupar tareas relacionadas que buscan cumplir una meta o una parte de ella. Una meta puede tener ninguno, uno o varios, y sus tareas pueden ir sueltas o en proyectos. La bienvenida, el recorrido, la sección y la ayuda los presentan así.
+
 - **RF-PRO-01.** Un proyecto tiene nombre (obligatorio, hasta 100 caracteres), meta (obligatoria), fecha de fin (obligatoria) y descripción (opcional, hasta 280 caracteres).
 - **RF-PRO-02.** Solo se puede crear un proyecto si existe alguna meta. Sin metas, la sección lo explica y ofrece «Ir a Metas».
 - **RF-PRO-03.** Al elegir la meta del proyecto se ofrecen las activas, agrupadas por área, y la ya elegida aunque esté lograda o archivada.
@@ -278,9 +280,9 @@ Origen: `src/AuthGate.tsx`, `src/AccessGate.tsx`, `src/services/auth.ts`, `src/s
 
 **Primera vez**
 
-- **RF-CUE-20.** La bienvenida se muestra una sola vez por cuenta, en tres pantallas («Por qué», «El método» y «Cómo empezar»). Se salta en cualquier momento con «Saltar» o Escape.
+- **RF-CUE-20.** La bienvenida se muestra una sola vez por cuenta, en tres pantallas («Por qué», «El método» y «Cómo empezar»). «El método» va de las áreas de vida a las metas, los proyectos (opcionales: uno o varios por meta para agrupar tareas relacionadas), las tareas, el Top 10 y la Agenda, y el tiempo protegido. Se salta en cualquier momento con «Saltar» o Escape.
 - **RF-CUE-21.** Que la bienvenida ya se vio se guarda en el perfil y en el dispositivo, así no se repite sin conexión ni en otro dispositivo. Mientras el perfil no llega del servidor, la bienvenida espera.
-- **RF-CUE-22.** Al terminar la bienvenida empieza un recorrido guiado de 9 pasos por los elementos principales, que empieza en «Listas». Se maneja con las flechas y Escape, y salta los pasos cuyo elemento no se ve.
+- **RF-CUE-22.** Al terminar la bienvenida empieza un recorrido guiado de 10 pasos por los elementos principales (entre ellos, «Proyectos (opcional)», en el móvil dentro de «Más»), que empieza en «Listas». Se maneja con las flechas y Escape, y salta los pasos cuyo elemento no se ve.
 - **RF-CUE-23.** Al acabar el recorrido de la primera vez, la app abre la Rueda si la cuenta aún no tiene evaluaciones.
 - **RF-CUE-24.** Si el navegador guarda datos de la versión anterior sin cuentas, la app ofrece importarlos en el primer inicio de sesión, antes de la bienvenida. Se eligen los perfiles que importar (con sus tareas, evaluaciones, reuniones y correos); los datos de demostración nunca se importan.
 - **RF-CUE-25.** Importar borra del navegador todos los datos locales antiguos, también los de los perfiles no marcados. «Descartar» los borra sin importar, previa confirmación, y «Más tarde» deja la decisión para otro momento.

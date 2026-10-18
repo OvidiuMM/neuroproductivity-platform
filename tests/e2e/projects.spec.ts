@@ -106,7 +106,7 @@ test('without goals, Proyectos asks for one first', async ({ page }) => {
   await page.goto('/');
   await signInWithGoogle(page);
   await openSection(page, 'Proyectos');
-  await expect(page.getByText('Cada proyecto pertenece a una meta. Crea tu primera meta en «Metas».')).toBeVisible();
+  await expect(page.getByText(/Los proyectos son opcionales y cada uno pertenece a una meta/)).toBeVisible();
   await page.getByRole('button', { name: 'Ir a Metas' }).click();
   await expect(page.getByRole('heading', { name: 'Metas', level: 2 })).toBeVisible();
 });
