@@ -14,6 +14,9 @@ describe('calendar events on the server', () => {
     assert.equal(buildTaskEvent({ title: 'Sin fecha' }, MADRID, URL), null);
     assert.equal(buildTaskEvent({ ...due, isSomeday: true }, MADRID, URL), null);
     assert.equal(buildTaskEvent({ ...due, dueDate: '16/10/2026' }, MADRID, URL), null);
+    // Un día que no existe tampoco (Google lo rechazaría)
+    assert.equal(buildTaskEvent({ ...due, dueDate: '2026-02-30' }, MADRID, URL), null);
+    assert.equal(buildTaskEvent({ ...due, dueDate: '2026-13-45' }, MADRID, URL), null);
     assert.equal(buildTaskEvent(due, 'Nowhere/Nada', URL), null);
     assert.equal(buildTaskEvent({ ...due, status: 'DONE' }, MADRID, URL)?.summary, '✓ Pagar el alquiler');
     assert.equal(buildTaskEvent({ ...due, status: 'CANCELLED' }, MADRID, URL)?.summary, '✕ Pagar el alquiler');
@@ -21,6 +24,21 @@ describe('calendar events on the server', () => {
     assert.equal(
       buildTaskEvent({ ...due, status: undefined, completed: true }, MADRID, URL)?.summary,
       '✓ Pagar el alquiler'
+    );
+  });
+
+  it('marks its events, leaves the time free, and does not remind about closed tasks', () => {
+    const open = buildTaskEvent({ ...due, alarmTime: '11:30' }, MADRID, URL);
+    assert.equal(open?.transparency, 'transparent');
+    assert.deepEqual(open?.extendedProperties, { private: { clarTask: '1' } });
+    assert.deepEqual(open?.reminders.overrides, [{ method: 'popup', minutes: 30 }]);
+    assert.deepEqual(
+      buildTaskEvent({ ...due, alarmTime: '11:30', status: 'DONE' }, MADRID, URL)?.reminders.overrides,
+      []
+    );
+    assert.deepEqual(
+      buildTaskEvent({ ...due, alarmTime: '11:30', status: 'CANCELLED' }, MADRID, URL)?.reminders.overrides,
+      []
     );
   });
 
@@ -49,6 +67,12 @@ describe('calendar events on the server', () => {
     const event = buildTaskEvent({ ...due, title: 't'.repeat(2_000), description: 'd'.repeat(9_000) }, MADRID, URL);
     assert.equal(event?.summary.length, 1_000);
     assert.equal(event?.description.length, 8_000);
+    // Lo que se recorta es lo de la tarea: el enlace a CLAR se queda
+    assert.ok(event?.description.endsWith('…\n\nTarea de CLAR: https://clar.example'));
+    // Sin partir un emoji
+    const emoji = buildTaskEvent({ ...due, title: '😀'.repeat(1_200) }, MADRID, URL);
+    assert.equal(Array.from(emoji!.summary).length, 1_000);
+    assert.equal(emoji!.summary.slice(0, -1), '😀'.repeat(999));
     const reversed = buildTaskEvent({ ...due, startDate: '2026-10-20', startTime: '09:00' }, MADRID, URL);
     assert.ok(reversed && 'dateTime' in reversed.start && 'dateTime' in reversed.end);
     assert.ok(Date.parse(reversed.start.dateTime) < Date.parse(reversed.end.dateTime));

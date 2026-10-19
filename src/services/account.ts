@@ -7,6 +7,7 @@ import {
 } from 'firebase/auth';
 import { httpsCallable } from 'firebase/functions';
 import { forgetAccess } from './access';
+import { disconnectGoogleCalendar } from './googleCalendar';
 import { signOutAndClearCache, type FirebaseServices } from './firebase';
 import { deleteAllUserData, exportUserData, readWheelAreas } from './repository';
 import { downloadJson } from './download';
@@ -37,6 +38,9 @@ const reauthenticate = (user: User, password?: string) =>
 
 export const deleteAccount = async (services: FirebaseServices, user: User, password?: string) => {
   await reauthenticate(user, password);
+  // Primero se desconecta Google Calendar: así borrar las tareas no borra sus eventos, que se quedan en Google. Si no
+  // se puede, la eliminación sigue (la función la desconecta al final; algún evento podría borrarse antes)
+  await disconnectGoogleCalendar(services).catch(() => undefined);
   await deleteAllUserData(services.db, user.uid);
   // La función borra la cuenta y, después, lo que queda en el servidor (la solicitud de acceso y los mensajes)
   await forgetAccess(services.functions);

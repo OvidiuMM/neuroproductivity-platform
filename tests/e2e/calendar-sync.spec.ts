@@ -56,9 +56,10 @@ test('connecting asks Google only for its own calendar, offline and with PKCE, a
     scope: 'https://www.googleapis.com/auth/calendar.app.created',
     access_type: 'offline',
     prompt: 'consent',
-    code_challenge_method: 'S256',
-    login_hint: email
+    code_challenge_method: 'S256'
   });
+  // Sin el email de la cuenta en la dirección (quedaría en el historial del navegador)
+  expect(authorization.searchParams.has('login_hint')).toBe(false);
   expect(authorization.searchParams.get('code_challenge')).toMatch(/^[\w-]{43}$/);
   expect(authorization.searchParams.get('state')).toMatch(/^[\w-]{32}$/);
 });
@@ -77,13 +78,18 @@ test('saying no in Google, or an answer for another request, connects nothing', 
   await expect(features.getByRole('alert')).toHaveText(
     'No se dio permiso en Google: el calendario no se ha conectado.'
   );
+  // El foco no se pierde: vuelve al botón
+  await expect(connect).toBeFocused();
 
   // Una respuesta con otro `state` no cuenta: la app sigue esperando y se puede cancelar
   answer = () => 'state=otra-peticion&code=codigo-ajeno';
   await connect.click();
   await expect(features).toContainText('Esperando a Google');
-  await features.getByRole('button', { name: 'Cancelar' }).click();
-  await expect(connect).toBeEnabled();
+  // Mientras se espera, el foco está en «Cancelar»
+  const cancel = features.getByRole('button', { name: 'Cancelar la conexión con Google Calendar' });
+  await expect(cancel).toBeFocused();
+  await cancel.click();
+  await expect(connect).toBeFocused();
   await expect(features.getByRole('alert')).toHaveCount(0);
 });
 
@@ -101,7 +107,7 @@ test('a connected account sees it and can disconnect; one whose permission Googl
   await expect(features).toContainText('Conectado: tus tareas con fecha están en el calendario «CLAR»');
   await features.getByRole('button', { name: 'Desconectar Google Calendar' }).click();
   await expect(features).toContainText('El calendario «CLAR» se queda en tu cuenta de Google', SERVER_CALL);
-  await expect(features.getByRole('button', { name: 'Conectar Google Calendar' })).toBeVisible();
+  await expect(features.getByRole('button', { name: 'Conectar Google Calendar' })).toBeFocused();
   // El servidor guarda el calendario para volver a usarlo al conectar otra vez
   expect(await readDocument(`calendar_status/${uid}`)).toMatchObject({
     state: 'disconnected',
@@ -109,6 +115,6 @@ test('a connected account sees it and can disconnect; one whose permission Googl
   });
 
   await writeTextDocument(`calendar_status/${uid}`, { state: 'needsReconnect', reason: 'revoked' });
-  await expect(features).toContainText('Google retiró el permiso de CLAR');
+  await expect(features).toContainText('El permiso de Google ya no vale');
   await expect(features.getByRole('button', { name: 'Volver a conectar' })).toBeVisible();
 });

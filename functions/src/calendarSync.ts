@@ -13,7 +13,8 @@ import {
   calendarTokenKey,
   disconnectCalendar,
   type CalendarLink,
-  type CleanupDeps
+  type CleanupDeps,
+  type ReconnectReason
 } from './calendarCleanup';
 import { openToken, parseTokenKey, sealToken } from './calendarCrypto';
 import {
@@ -28,8 +29,8 @@ import {
 // con fecha de la cuenta van a un calendario propio, «CLAR», en su cuenta de Google. Lo que se cambie en Google no
 // vuelve a CLAR.
 // - Conectar (connectGoogleCalendar): la app abre la autorización de Google (con PKCE) y envía el código; aquí se
-//   canjea por un permiso sin conexión, que se guarda cifrado, se crea el calendario (o se reutiliza el de antes) y se
-//   suben todas las tareas con fecha.
+//   canjea por un permiso sin conexión, que se guarda cifrado, se crea el calendario (o se reutiliza el de antes, y se
+//   borran de él los eventos que ya no tocan) y se suben todas las tareas con fecha.
 // - Cada cambio de una tarea (syncTaskCalendar) crea, actualiza o borra su evento.
 // - Desconectar (disconnectGoogleCalendar, o al perder la función o el acceso): se retira el permiso en Google y se
 //   borra; el calendario se queda en Google. Ver calendarCleanup.ts.
@@ -53,7 +54,8 @@ export interface CalendarDeps extends CleanupDeps {
 }
 const calendarDeps = (): CalendarDeps => ({
   api: googleCalendarApi,
-  client: () => ({ clientId: clientIdParam.value(), clientSecret: clientSecret.value() }),
+  // Sin espacios ni saltos de línea de más (p. ej. al guardar el secreto)
+  client: () => ({ clientId: clientIdParam.value().trim(), clientSecret: clientSecret.value().trim() }),
   key: () => parseTokenKey(calendarTokenKey.value()),
   revoke: (token) => googleCalendarApi.revoke(token),
   appUrl
@@ -77,44 +79,70 @@ export const calendarEntitled = async (uid: string) => {
   return Array.isArray(granted) && granted.includes(FEATURE);
 };
 
-// Permisos de acceso de cada cuenta (duran una hora), en la memoria de la instancia: así cada cambio no pide uno nuevo
+// Permisos de acceso de cada conexión (uid y cuándo se conectó; duran una hora), en la memoria de la instancia: así
+// cada cambio no pide uno nuevo, y el de una conexión anterior nunca se usa con otra. Las llamadas a la vez comparten
+// la renovación.
 const accessTokens = new Map<string, { token: string; expiresAt: number }>();
-const rememberAccessToken = (uid: string, token: string, expiresIn: number) =>
-  accessTokens.set(uid, { token, expiresAt: Date.now() + Math.max(0, expiresIn - 120) * 1000 });
+const refreshing = new Map<string, Promise<string>>();
+const connectionKey = (uid: string, link: CalendarLink) => `${uid}:${link.connectedAt}`;
+const rememberAccessToken = (key: string, token: string, expiresIn: number) =>
+  accessTokens.set(key, { token, expiresAt: Date.now() + Math.max(0, expiresIn - 120) * 1000 });
 
-// Llama a Google con un permiso de acceso vigente; si Google lo rechaza (p. ej. era de una conexión anterior), lo
-// renueva y lo intenta otra vez
+const freshAccessToken = (uid: string, link: CalendarLink, deps: CalendarDeps) => {
+  const key = connectionKey(uid, link);
+  const pending = refreshing.get(key);
+  if (pending) return pending;
+  const promise = (async () => {
+    let refreshToken: string;
+    try {
+      refreshToken = openToken(link.token, deps.key(), uid);
+    } catch {
+      // Cifrado con otra clave (p. ej. tras cambiarla): el permiso ya no se puede usar
+      throw new GoogleApiError(0, 'revoked');
+    }
+    const { accessToken, expiresIn } = await deps.api.refreshAccessToken(deps.client(), refreshToken);
+    rememberAccessToken(key, accessToken, expiresIn);
+    return accessToken;
+  })().finally(() => refreshing.delete(key));
+  refreshing.set(key, promise);
+  return promise;
+};
+
+// Llama a Google con un permiso de acceso vigente; si Google lo rechaza (caducó antes de tiempo), lo renueva y lo
+// intenta otra vez
 const withAccessToken = async (
   uid: string,
   link: CalendarLink,
   deps: CalendarDeps,
   run: (token: string) => Promise<void>
 ) => {
-  const fresh = async () => {
-    const { accessToken, expiresIn } = await deps.api.refreshAccessToken(
-      deps.client(),
-      openToken(link.token, deps.key(), uid)
-    );
-    rememberAccessToken(uid, accessToken, expiresIn);
-    return accessToken;
-  };
-  const cached = accessTokens.get(uid);
+  const key = connectionKey(uid, link);
+  const cached = accessTokens.get(key);
+  const valid = cached && cached.expiresAt > Date.now() ? cached.token : null;
   try {
-    await run(cached && cached.expiresAt > Date.now() ? cached.token : await fresh());
+    await run(valid ?? (await freshAccessToken(uid, link, deps)));
   } catch (error) {
-    if (!(error instanceof GoogleApiError) || error.status !== 401 || !cached) throw error;
-    accessTokens.delete(uid);
-    await run(await fresh());
+    if (!(error instanceof GoogleApiError) || error.status !== 401 || !valid) throw error;
+    accessTokens.delete(key);
+    await run(await freshAccessToken(uid, link, deps));
   }
 };
 
-// Ante un fallo de Google: si el permiso ya no vale o falta el calendario, la cuenta queda pendiente de volver a
-// conectar (y deja de sincronizar); cualquier otro fallo queda en los logs y se arregla con el siguiente cambio
-const handleFailure = async (uid: string, error: unknown, deps: CalendarDeps) => {
-  if (error instanceof GoogleApiError && (error.reason === 'revoked' || error.reason === 'calendarMissing')) {
-    accessTokens.delete(uid);
-    await disconnectCalendar(uid, { reason: error.reason, deps });
-    logger.warn('Calendar needs reconnecting', { reason: error.reason });
+// Si el fallo obliga a volver a conectar: el permiso ya no vale o no existe el calendario
+const reconnectReason = (error: unknown): ReconnectReason | null =>
+  error instanceof GoogleApiError && (error.reason === 'revoked' || error.reason === 'calendarMissing')
+    ? error.reason
+    : null;
+
+// Ante un fallo de Google: si obliga a volver a conectar, la cuenta queda pendiente de hacerlo (y deja de
+// sincronizar), siempre que siga siendo la misma conexión; cualquier otro fallo queda en los logs y se arregla con el
+// siguiente cambio de la tarea que afecte a su evento
+const handleFailure = async (uid: string, error: unknown, deps: CalendarDeps, link: CalendarLink) => {
+  const reason = reconnectReason(error);
+  if (reason) {
+    accessTokens.delete(connectionKey(uid, link));
+    if (await disconnectCalendar(uid, { reason, onlyConnection: link.connectedAt, deps }))
+      logger.warn('Calendar needs reconnecting', { reason });
     return 'reconnect' as const;
   }
   logger.error('Calendar sync failed', {
@@ -135,7 +163,11 @@ export const syncTaskEvent = async (
 ) => {
   const link = knownLink ?? ((await calendarLinkDoc(uid).get()).data() as CalendarLink | undefined);
   if (!link) return 'not-connected' as const;
-  if (!(await calendarEntitled(uid))) return 'not-entitled' as const;
+  if (!(await calendarEntitled(uid))) {
+    // Sin la función (p. ej. ya no es la cuenta de administración), la conexión no se queda
+    await disconnectCalendar(uid, { onlyConnection: link.connectedAt, deps });
+    return 'not-entitled' as const;
+  }
   const eventId = eventIdFor(taskId);
   if (!eventId) return 'skipped' as const;
   const taskRef = adminDb().doc(`users/${uid}/tasks/${taskId}`);
@@ -158,31 +190,51 @@ export const syncTaskEvent = async (
     }
     return event ? ('saved' as const) : ('deleted' as const);
   } catch (error) {
-    return handleFailure(uid, error, deps);
+    return handleFailure(uid, error, deps, link);
   }
 };
 
-// Sube todas las tareas que van al calendario (al conectar). Un fallo suelto se cuenta y se sigue; si el permiso deja
-// de valer, se para
-export const syncAllTasks = async (uid: string, link: CalendarLink, deps: CalendarDeps) => {
+// Sube todas las tareas que van al calendario (al conectar). Con `cleanUp` (al volver a usar un calendario), borra
+// también los eventos de CLAR de tareas que ya no van a él (borradas, sin fecha o en «Algún día» mientras estaba
+// desconectada). Un fallo suelto se cuenta y se sigue; si hay que volver a conectar, se para.
+export const syncAllTasks = async (uid: string, link: CalendarLink, deps: CalendarDeps, cleanUp: boolean) => {
   const tasks = await adminDb().collection(`users/${uid}/tasks`).get();
   const pending = tasks.docs.flatMap((d) => {
     const eventId = eventIdFor(d.id);
     const event = eventId ? buildTaskEvent(d.data(), link.timeZone, deps.appUrl()) : null;
     return eventId && event ? [{ eventId, event }] : [];
   });
+  let stale: string[] = [];
+  if (cleanUp) {
+    const wanted = new Set(pending.map((p) => p.eventId));
+    try {
+      await withAccessToken(uid, link, deps, async (token) => {
+        stale = (await deps.api.listEventIds(token, link.calendarId)).filter((id) => !wanted.has(id));
+      });
+    } catch (error) {
+      if (reconnectReason(error)) throw error;
+      logger.warn('Calendar events not listed', { reason: error instanceof GoogleApiError ? error.reason : 'unknown' });
+    }
+  }
+  const jobs = [
+    ...pending.map(({ eventId, event }) => ({ eventId, event })),
+    ...stale.map((eventId) => ({ eventId, event: null }))
+  ];
   let synced = 0;
   let failed = 0;
-  for (let i = 0; i < pending.length; i += CONCURRENCY) {
+  for (let i = 0; i < jobs.length; i += CONCURRENCY) {
     await Promise.all(
-      pending.slice(i, i + CONCURRENCY).map(async ({ eventId, event }) => {
+      jobs.slice(i, i + CONCURRENCY).map(async ({ eventId, event }) => {
         try {
-          await withAccessToken(uid, link, deps, (token) => deps.api.putEvent(token, link.calendarId, eventId, event));
-          synced++;
+          await withAccessToken(uid, link, deps, (token) =>
+            event
+              ? deps.api.putEvent(token, link.calendarId, eventId, event)
+              : deps.api.deleteEvent(token, link.calendarId, eventId)
+          );
+          if (event) synced++;
         } catch (error) {
-          if (error instanceof GoogleApiError && (error.reason === 'revoked' || error.reason === 'calendarMissing'))
-            throw error;
-          failed++;
+          if (reconnectReason(error)) throw error;
+          if (event) failed++;
         }
       })
     );
@@ -194,6 +246,27 @@ export const syncAllTasks = async (uid: string, link: CalendarLink, deps: Calend
 const allowedOrigins = (url: string) => {
   const project = process.env.GCLOUD_PROJECT ?? '';
   return [new URL(url).origin, `https://${project}.web.app`, `https://${project}.firebaseapp.com`];
+};
+
+// El estado final de una conexión, solo si sigue siendo esa (si entretanto se desconectó o se volvió a conectar, no
+// dice «conectada» sin estarlo)
+const finishConnection = (uid: string, link: CalendarLink, result: { synced: number; failed: number } | null) =>
+  adminDb().runTransaction(async (tx) => {
+    const current = (await tx.get(calendarLinkDoc(uid))).data() as CalendarLink | undefined;
+    if (current?.connectedAt !== link.connectedAt) return;
+    const syncedAt = new Date().toISOString();
+    tx.set(calendarStatusDoc(uid), {
+      state: 'connected',
+      calendarId: link.calendarId,
+      connectedAt: link.connectedAt,
+      ...(result ? { syncedAt, ...(result.failed ? { failed: result.failed } : {}) } : {}),
+      updatedAt: syncedAt
+    });
+  });
+
+const RECONNECT_MESSAGE: Record<ReconnectReason, string> = {
+  revoked: 'Google retiró el permiso mientras se subían las tareas. Vuelve a conectar.',
+  calendarMissing: 'El calendario «CLAR» desapareció de Google mientras se subían las tareas. Vuelve a conectar.'
 };
 
 export const connectCalendar = async (uid: string, data: unknown, deps: CalendarDeps) => {
@@ -211,8 +284,9 @@ export const connectCalendar = async (uid: string, data: unknown, deps: Calendar
   }
   // Sin el permiso del calendario (Google deja desmarcarlo) o sin permiso sin conexión, no hay nada que guardar
   const refreshToken = tokens.refreshToken;
+  const withdraw = () => deps.api.revoke(refreshToken ?? tokens.accessToken).catch(() => undefined);
   if (!tokens.scope.split(' ').includes(CALENDAR_SCOPE) || !refreshToken) {
-    await deps.api.revoke(refreshToken ?? tokens.accessToken).catch(() => undefined);
+    await withdraw();
     throw new HttpsError(
       'permission-denied',
       refreshToken
@@ -220,44 +294,63 @@ export const connectCalendar = async (uid: string, data: unknown, deps: Calendar
         : 'Google no dio el permiso para sincronizar con CLAR cerrada. Vuelve a intentarlo.'
     );
   }
-  // Volver a conectar: el permiso nuevo sustituye al anterior (retirar el anterior retiraría también el nuevo)
+  // Volver a conectar: el permiso nuevo sustituye al anterior (retirar el anterior retiraría también el nuevo, que es
+  // de la misma cuenta y la misma app)
   const previous = (await calendarStatusDoc(uid).get()).data() as { calendarId?: string } | undefined;
-  const calendarId = await deps.api.ensureCalendar(tokens.accessToken, input.timeZone, previous?.calendarId);
   const connectedAt = new Date().toISOString();
-  const link: CalendarLink = {
-    token: sealToken(refreshToken, deps.key(), uid),
-    calendarId,
-    timeZone: input.timeZone,
-    connectedAt
-  };
-  await calendarLinkDoc(uid).set(link);
-  rememberAccessToken(uid, tokens.accessToken, tokens.expiresIn);
-  await calendarStatusDoc(uid).set({ state: 'syncing', calendarId, connectedAt, updatedAt: connectedAt });
-  // Si entretanto le quitaron la función, no se queda conectada
-  if (!(await calendarEntitled(uid))) {
-    await disconnectCalendar(uid, { deps });
-    throw new HttpsError('permission-denied', 'Tu cuenta ya no tiene activada la sincronización con Google Calendar.');
-  }
+  let link: CalendarLink;
   try {
-    const { synced, failed } = await syncAllTasks(uid, link, deps);
-    const syncedAt = new Date().toISOString();
-    await calendarStatusDoc(uid).set({
-      state: 'connected',
-      calendarId,
-      connectedAt,
-      syncedAt,
-      ...(failed ? { failed } : {}),
-      updatedAt: syncedAt
-    });
-    logger.info('Calendar connected', { synced, failed });
-    return { synced, failed };
+    const calendarId = await deps.api.ensureCalendar(tokens.accessToken, input.timeZone, previous?.calendarId);
+    link = { token: sealToken(refreshToken, deps.key(), uid), calendarId, timeZone: input.timeZone, connectedAt };
   } catch (error) {
-    await handleFailure(uid, error, deps);
+    await withdraw();
+    logger.warn('Calendar not prepared', { reason: error instanceof GoogleApiError ? error.reason : 'unknown' });
     throw new HttpsError(
-      'failed-precondition',
-      'Google retiró el permiso mientras se subían las tareas. Vuelve a conectar.'
+      'unavailable',
+      'No se pudo preparar el calendario «CLAR» en Google. Inténtalo de nuevo en un momento.'
     );
   }
+  // El permiso y el estado, en la misma transacción que comprueba que la cuenta sigue con acceso: si se eliminó o
+  // perdió el acceso entretanto, no queda nada
+  const saved = await adminDb().runTransaction(async (tx) => {
+    const access = await tx.get(adminDb().doc(`access/${uid}`));
+    if (access.data()?.status !== 'approved') return false;
+    tx.set(calendarLinkDoc(uid), link);
+    tx.set(calendarStatusDoc(uid), {
+      state: 'syncing',
+      calendarId: link.calendarId,
+      connectedAt,
+      updatedAt: connectedAt
+    });
+    return true;
+  });
+  if (!saved) {
+    await withdraw();
+    throw new HttpsError('permission-denied', 'Tu cuenta ya no tiene acceso a CLAR.');
+  }
+  rememberAccessToken(connectionKey(uid, link), tokens.accessToken, tokens.expiresIn);
+  // Si entretanto le quitaron la función, no se queda conectada
+  if (!(await calendarEntitled(uid))) {
+    await disconnectCalendar(uid, { onlyConnection: connectedAt, deps });
+    throw new HttpsError('permission-denied', 'Tu cuenta ya no tiene activada la sincronización con Google Calendar.');
+  }
+  let result: { synced: number; failed: number };
+  try {
+    result = await syncAllTasks(uid, link, deps, link.calendarId === previous?.calendarId);
+  } catch (error) {
+    const reason = reconnectReason(error);
+    await handleFailure(uid, error, deps, link);
+    if (reason) throw new HttpsError('failed-precondition', RECONNECT_MESSAGE[reason]);
+    // Conectada, pero sin subir las tareas (p. ej. un fallo de la base de datos)
+    await finishConnection(uid, link, null);
+    throw new HttpsError(
+      'unavailable',
+      'Se conectó, pero no se pudieron subir las tareas. Desconecta y vuelve a conectar para subirlas.'
+    );
+  }
+  await finishConnection(uid, link, result);
+  logger.info('Calendar connected', result);
+  return result;
 };
 
 export const connectGoogleCalendar = onCall(

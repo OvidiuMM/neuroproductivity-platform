@@ -854,6 +854,12 @@ export default function App({ user, services, isAdmin = false }: AppProps) {
   // SINCRONIZACIÓN CON GOOGLE CALENDAR: su estado, mientras la función está en uso
   const calendarActive = isAdmin ? featurePrefs.googleCalendar === true : grantedFeatures.includes('googleCalendar');
   const [calendarStatus, setCalendarStatus] = useState<CalendarStatus | null>(null);
+  // Al dejar de estar en uso se olvida el estado: al volver, no se ve el de antes mientras llega el actual
+  const [wasCalendarActive, setWasCalendarActive] = useState(calendarActive);
+  if (wasCalendarActive !== calendarActive) {
+    setWasCalendarActive(calendarActive);
+    if (!calendarActive) setCalendarStatus(null);
+  }
   useEffect(() => {
     if (!calendarActive) return;
     return subscribeToCalendarStatus(db, uid, setCalendarStatus);
@@ -862,8 +868,8 @@ export default function App({ user, services, isAdmin = false }: AppProps) {
     ? {
         available: calendarSyncAvailable(),
         status: calendarStatus,
-        onConnect: (signal: AbortSignal) =>
-          connectGoogleCalendar(services, { loginHint: user.email ?? undefined, signal }),
+        onConnect: (signal: AbortSignal, onAuthorized: () => void) =>
+          connectGoogleCalendar(services, { signal, onAuthorized }),
         onDisconnect: () => disconnectGoogleCalendar(services)
       }
     : null;

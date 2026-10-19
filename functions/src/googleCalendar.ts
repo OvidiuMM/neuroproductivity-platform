@@ -1,17 +1,20 @@
-import { CALENDAR_SUMMARY, type CalendarEventBody } from './calendarLogic';
+import { CALENDAR_SUMMARY, EVENT_MARK, type CalendarEventBody } from './calendarLogic';
 
 // API DE GOOGLE (OAuth y Calendar), con fetch. Solo se usa el permiso `calendar.app.created`: crear un calendario
-// propio («CLAR») y sus eventos; el resto de calendarios de la persona no se ven ni se tocan. Las pruebas usan una
-// versión simulada (functions/test/emulator/calendar.test.ts).
+// propio («CLAR») y sus eventos; el resto de calendarios de la persona no se ven ni se tocan. functions/test/
+// googleCalendar.test.ts la prueba con un fetch simulado; el resto de pruebas usan una versión simulada entera.
 
 export const CALENDAR_SCOPE = 'https://www.googleapis.com/auth/calendar.app.created';
 const TOKEN_URL = 'https://oauth2.googleapis.com/token';
 const REVOKE_URL = 'https://oauth2.googleapis.com/revoke';
 const API = 'https://www.googleapis.com/calendar/v3';
 const TIMEOUT_MS = 15_000;
+// Ante un límite de peticiones o un fallo pasajero de Google, se reintenta con una espera creciente (y algo de azar)
+const RETRY_DELAYS_MS = [1_000, 2_000, 4_000];
+const RATE_LIMIT_REASONS = ['rateLimitExceeded', 'userRateLimitExceeded', 'quotaExceeded'];
 
-// Un fallo de Google. `reason`: 'revoked' (el permiso ya no vale: hay que volver a conectar), 'calendarMissing' (se
-// borró el calendario «CLAR») o el código de error de Google
+// Un fallo de Google. `reason`: 'revoked' (el permiso ya no vale: hay que volver a conectar), 'calendarMissing' (no
+// existe el calendario «CLAR») o el código de error de Google
 export class GoogleApiError extends Error {
   constructor(
     readonly status: number,
@@ -37,11 +40,13 @@ export interface GoogleCalendarApi {
   ensureCalendar(accessToken: string, timeZone: string, previousId?: string): Promise<string>;
   putEvent(accessToken: string, calendarId: string, eventId: string, event: CalendarEventBody): Promise<void>;
   deleteEvent(accessToken: string, calendarId: string, eventId: string): Promise<void>;
+  // Los ids de los eventos que creó CLAR en el calendario
+  listEventIds(accessToken: string, calendarId: string): Promise<string[]>;
 }
 
 const errorReason = async (res: Response) => {
   try {
-    const body = (await res.json()) as { error?: string | { errors?: { reason?: string }[]; status?: string } };
+    const body = (await res.clone().json()) as { error?: string | { errors?: { reason?: string }[]; status?: string } };
     if (typeof body.error === 'string') return body.error;
     return body.error?.errors?.[0]?.reason ?? body.error?.status ?? 'unknown';
   } catch {
@@ -49,12 +54,29 @@ const errorReason = async (res: Response) => {
   }
 };
 
-const call = (url: string, init: RequestInit & { headers?: Record<string, string> }, accessToken?: string) =>
-  fetch(url, {
-    ...init,
-    headers: { ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}), ...init.headers },
-    signal: AbortSignal.timeout(TIMEOUT_MS)
-  });
+// Esperas entre reintentos (las pruebas las acortan)
+let retryDelays = RETRY_DELAYS_MS;
+export const setRetryDelaysForTests = (delays: number[]) => {
+  retryDelays = delays;
+};
+const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+
+const retryable = async (res: Response) =>
+  res.status === 429 ||
+  res.status >= 500 ||
+  (res.status === 403 && RATE_LIMIT_REASONS.includes(await errorReason(res)));
+
+const call = async (url: string, init: RequestInit & { headers?: Record<string, string> }, accessToken?: string) => {
+  for (let attempt = 0; ; attempt++) {
+    const res = await fetch(url, {
+      ...init,
+      headers: { ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}), ...init.headers },
+      signal: AbortSignal.timeout(TIMEOUT_MS)
+    });
+    if (attempt >= retryDelays.length || !(await retryable(res))) return res;
+    await sleep(retryDelays[attempt] * (1 + Math.random() / 2));
+  }
+};
 
 const json = (body: unknown) => ({
   body: JSON.stringify(body),
@@ -75,6 +97,14 @@ const tokenRequest = async (params: Record<string, string>) => {
 };
 
 const calendarUrl = (calendarId: string) => `${API}/calendars/${encodeURIComponent(calendarId)}`;
+
+// Si el calendario existe. Solo un 404 o 410 de Google sobre el propio calendario dice que no
+const calendarExists = async (accessToken: string, calendarId: string) => {
+  const res = await call(calendarUrl(calendarId), { method: 'GET' }, accessToken);
+  if (res.ok) return true;
+  if (res.status === 404 || res.status === 410) return false;
+  throw new GoogleApiError(res.status, await errorReason(res));
+};
 
 export const googleCalendarApi: GoogleCalendarApi = {
   async exchangeCode(client, { code, codeVerifier, redirectUri }) {
@@ -118,8 +148,12 @@ export const googleCalendarApi: GoogleCalendarApi = {
     if (previousId) {
       const res = await call(calendarUrl(previousId), { method: 'GET' }, accessToken);
       if (res.ok) return previousId;
-      if (res.status !== 404 && res.status !== 403 && res.status !== 410)
-        throw new GoogleApiError(res.status, await errorReason(res));
+      // Ya no existe, o este permiso no lo ve (p. ej. otra cuenta de Google): se crea otro. Cualquier otro fallo
+      // (un límite de peticiones que siguió tras los reintentos) se para, para no duplicar el calendario
+      const reason = await errorReason(res);
+      const gone =
+        res.status === 404 || res.status === 410 || (res.status === 403 && !RATE_LIMIT_REASONS.includes(reason));
+      if (!gone) throw new GoogleApiError(res.status, reason);
     }
     const res = await call(
       `${API}/calendars`,
@@ -133,7 +167,8 @@ export const googleCalendarApi: GoogleCalendarApi = {
     return ((await res.json()) as { id: string }).id;
   },
 
-  // Sustituye el evento entero (también uno borrado antes, que vuelve). Si no existe, se crea con su id
+  // Sustituye el evento entero (también uno borrado antes, que vuelve). Si no existe, se crea con su id. Un 404 solo
+  // se toma como calendario borrado si Google lo confirma al pedir el calendario
   async putEvent(accessToken, calendarId, eventId, event) {
     const url = `${calendarUrl(calendarId)}/events/${eventId}`;
     const put = () => call(url, { method: 'PUT', ...json(event) }, accessToken);
@@ -146,9 +181,9 @@ export const googleCalendarApi: GoogleCalendarApi = {
       );
       // Otra sincronización lo creó entretanto
       if (res.status === 409) res = await put();
-      // Sin el calendario, ni se actualiza ni se crea
-      if (res.status === 404) throw new GoogleApiError(404, 'calendarMissing');
     }
+    if (res.status === 404 && !(await calendarExists(accessToken, calendarId)))
+      throw new GoogleApiError(404, 'calendarMissing');
     if (!res.ok) throw new GoogleApiError(res.status, await errorReason(res));
   },
 
@@ -157,5 +192,24 @@ export const googleCalendarApi: GoogleCalendarApi = {
     // Ya no estaba (o no estaba el calendario): nada que borrar
     if (!res.ok && res.status !== 404 && res.status !== 410)
       throw new GoogleApiError(res.status, await errorReason(res));
+  },
+
+  async listEventIds(accessToken, calendarId) {
+    const ids: string[] = [];
+    let pageToken: string | undefined;
+    do {
+      const params = new URLSearchParams({
+        privateExtendedProperty: `${EVENT_MARK}=1`,
+        maxResults: '2500',
+        fields: 'items(id),nextPageToken',
+        ...(pageToken ? { pageToken } : {})
+      });
+      const res = await call(`${calendarUrl(calendarId)}/events?${params.toString()}`, { method: 'GET' }, accessToken);
+      if (!res.ok) throw new GoogleApiError(res.status, await errorReason(res));
+      const page = (await res.json()) as { items?: { id: string }[]; nextPageToken?: string };
+      ids.push(...(page.items ?? []).map((item) => item.id));
+      pageToken = page.nextPageToken;
+    } while (pageToken);
+    return ids;
   }
 };

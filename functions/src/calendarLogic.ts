@@ -12,11 +12,13 @@ const DEADLINE_EVENT_MS = 30 * MINUTE_MS;
 const DEFAULT_EVENT_MS = 60 * MINUTE_MS;
 // Google admite recordatorios de 0 a 4 semanas antes del inicio
 const MAX_REMINDER_MINUTES = 40_320;
-// Topes de lo que se envía (la descripción de un evento de Google admite unos 8 KB)
+// Topes de lo que se envía, en caracteres (la descripción de un evento de Google admite unos 8.000)
 const SUMMARY_MAX = 1_000;
 const DESCRIPTION_MAX = 8_000;
 
 export const CALENDAR_SUMMARY = 'CLAR';
+// Marca de los eventos que crea CLAR (una propiedad privada): así se encuentran al volver a conectar
+export const EVENT_MARK = 'clarTask';
 // Página a la que vuelve Google con el código (public/oauth/google.html)
 export const OAUTH_CALLBACK_PATH = '/oauth/google.html';
 
@@ -46,13 +48,26 @@ export interface CalendarEventBody {
   recurrence?: string[];
   reminders: { useDefault: false; overrides: { method: 'popup'; minutes: number }[] };
   status: 'confirmed';
+  // Una tarea no ocupa la agenda: el tiempo sigue libre en Google
+  transparency: 'transparent';
   source: { title: string; url: string };
+  extendedProperties: { private: Record<string, string> };
 }
 
 const text = (value: unknown) => (typeof value === 'string' ? value : '');
-const day = (value: unknown) => (typeof value === 'string' && DAY.test(value) ? value : undefined);
+// Un día que existe (2026-02-30 no)
+const day = (value: unknown) => {
+  if (typeof value !== 'string' || !DAY.test(value)) return undefined;
+  const [y, m, d] = value.split('-').map(Number);
+  const date = new Date(Date.UTC(y, m - 1, d));
+  return date.getUTCFullYear() === y && date.getUTCMonth() === m - 1 && date.getUTCDate() === d ? value : undefined;
+};
 const time = (value: unknown) => (typeof value === 'string' && TIME.test(value) ? value : undefined);
-const cap = (value: string, max: number) => (value.length > max ? `${value.slice(0, max - 1)}…` : value);
+// Recorta por caracteres completos (sin partir un emoji)
+const cap = (value: string, max: number) => {
+  const chars = Array.from(value);
+  return chars.length > max ? `${chars.slice(0, max - 1).join('')}…` : value;
+};
 
 // Id del evento: el de la tarea en hexadecimal (Google solo admite a-v y 0-9, de 5 a 1024 caracteres). Siempre el
 // mismo para la misma tarea: así reintentar o volver a conectar no duplica nada. null si el id es demasiado largo.
@@ -158,9 +173,10 @@ export const buildTaskEvent = (task: SyncTask, timeZone: string, appUrl: string)
   const allDay = !startTime && !dueTime;
   const oneHour = Boolean(startTime && !dueTime);
   const deadlineNote = oneHour && (startDate ?? dueDate) !== dueDate ? `Fecha límite: ${formatDay(dueDate)}` : '';
-  const description = [text(task.description), notesText(task.observations), deadlineNote, `Tarea de CLAR: ${appUrl}`]
-    .filter(Boolean)
-    .join('\n\n');
+  // Si hay que recortar, se recorta lo de la tarea: el enlace a CLAR del final se queda
+  const link = `Tarea de CLAR: ${appUrl}`;
+  const body = [text(task.description), notesText(task.observations), deadlineNote].filter(Boolean).join('\n\n');
+  const description = body ? `${cap(body, DESCRIPTION_MAX - Array.from(link).length - 2)}\n\n${link}` : link;
   const rule = repeats ? recurrenceRule(task.recurrence, allDay, dueDate, timeZone) : null;
 
   // Inicio y final, como en la app: las horas locales se pasan a instantes en la zona de la cuenta
@@ -175,8 +191,9 @@ export const buildTaskEvent = (task: SyncTask, timeZone: string, appUrl: string)
   // Un inicio después del plazo (datos incoherentes) haría que Google rechazara el evento: se queda en el plazo
   if ('start' in span && span.end <= span.start) span.start = span.end - DEADLINE_EVENT_MS;
 
-  // La alarma, como recordatorio: Google lo cuenta desde el inicio del evento (si cae después, no se pone)
-  const alarm = alarmInstant({ ...task, recurrence: task.recurrence }, timeZone);
+  // La alarma, como recordatorio: Google lo cuenta desde el inicio del evento (si cae después, no se pone). Una tarea
+  // hecha o cancelada no avisa, como en la app
+  const alarm = closed ? null : alarmInstant(task, timeZone);
   const startInstant = 'start' in span ? span.start : at(span.startDate, '00:00');
   const minutes = alarm === null ? null : Math.round((startInstant - alarm) / MINUTE_MS);
   const reminders =
@@ -185,14 +202,16 @@ export const buildTaskEvent = (task: SyncTask, timeZone: string, appUrl: string)
   const iso = (instant: number) => new Date(instant).toISOString();
   return {
     summary: cap(`${closed}${text(task.title)}`, SUMMARY_MAX),
-    description: cap(description, DESCRIPTION_MAX),
+    description,
     ...('start' in span
       ? { start: { dateTime: iso(span.start), timeZone }, end: { dateTime: iso(span.end), timeZone } }
       : { start: { date: span.startDate }, end: { date: span.endDate } }),
     ...(rule ? { recurrence: [rule] } : {}),
     reminders: { useDefault: false, overrides: reminders },
     status: 'confirmed',
-    source: { title: CALENDAR_SUMMARY, url: appUrl }
+    transparency: 'transparent',
+    source: { title: CALENDAR_SUMMARY, url: appUrl },
+    extendedProperties: { private: { [EVENT_MARK]: '1' } }
   };
 };
 

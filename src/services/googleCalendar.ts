@@ -1,3 +1,4 @@
+import { FirebaseError } from 'firebase/app';
 import { doc, onSnapshot, type Firestore } from 'firebase/firestore';
 import { httpsCallable } from 'firebase/functions';
 import type { FirebaseServices } from './firebase';
@@ -14,21 +15,24 @@ export const OAUTH_CALLBACK_PATH = '/oauth/google.html';
 const CHANNEL = 'clar-google-oauth';
 // Lo que se espera a que la persona termine en Google
 const AUTHORIZATION_TIMEOUT_MS = 5 * 60_000;
-// Subir todas las tareas puede tardar (la función tiene hasta 9 minutos)
-const CONNECT_TIMEOUT_MS = 9 * 60_000;
+// Subir todas las tareas puede tardar: la función tiene hasta 9 minutos, y se le da algo más
+const CONNECT_TIMEOUT_MS = 10 * 60_000;
 
 export const calendarSyncAvailable = () => Boolean(CLIENT_ID);
 
 export type CalendarState = 'syncing' | 'connected' | 'needsReconnect' | 'disconnected';
+export type ReconnectReason = 'revoked' | 'calendarMissing';
 export interface CalendarStatus {
   state: CalendarState;
-  reason?: 'revoked' | 'calendarMissing';
+  reason?: ReconnectReason;
   connectedAt?: string;
   syncedAt?: string;
+  updatedAt?: string;
   failed?: number;
 }
 
 const STATES: CalendarState[] = ['syncing', 'connected', 'needsReconnect', 'disconnected'];
+const REASONS: ReconnectReason[] = ['revoked', 'calendarMissing'];
 
 // El estado de la conexión de la cuenta; sin documento (o sin poder leerlo), desconectada
 export const subscribeToCalendarStatus = (db: Firestore, uid: string, onChange: (status: CalendarStatus) => void) =>
@@ -36,7 +40,15 @@ export const subscribeToCalendarStatus = (db: Firestore, uid: string, onChange: 
     doc(db, 'calendar_status', uid),
     (snapshot) => {
       const data = snapshot.data() as Partial<CalendarStatus> | undefined;
-      onChange(data?.state && STATES.includes(data.state) ? { ...data, state: data.state } : { state: 'disconnected' });
+      if (!data?.state || !STATES.includes(data.state)) return onChange({ state: 'disconnected' });
+      onChange({
+        state: data.state,
+        ...(data.reason && REASONS.includes(data.reason) ? { reason: data.reason } : {}),
+        ...(typeof data.connectedAt === 'string' ? { connectedAt: data.connectedAt } : {}),
+        ...(typeof data.syncedAt === 'string' ? { syncedAt: data.syncedAt } : {}),
+        ...(typeof data.updatedAt === 'string' ? { updatedAt: data.updatedAt } : {}),
+        ...(typeof data.failed === 'number' ? { failed: data.failed } : {})
+      });
     },
     (e) => {
       console.error('Error loading the Google Calendar connection:', e);
@@ -59,14 +71,12 @@ export const authorizationUrl = ({
   clientId,
   redirectUri,
   state,
-  challenge,
-  loginHint
+  challenge
 }: {
   clientId: string;
   redirectUri: string;
   state: string;
   challenge: string;
-  loginHint?: string;
 }) =>
   `${AUTH_URL}?${new URLSearchParams({
     client_id: clientId,
@@ -78,8 +88,7 @@ export const authorizationUrl = ({
     include_granted_scopes: 'false',
     state,
     code_challenge: challenge,
-    code_challenge_method: 'S256',
-    ...(loginHint ? { login_hint: loginHint } : {})
+    code_challenge_method: 'S256'
   }).toString()}`;
 
 interface OAuthMessage {
@@ -129,10 +138,11 @@ const waitForCode = (state: string, signal?: AbortSignal) =>
   });
 
 // Conecta la cuenta. Se llama al pulsar el botón: la ventana se abre al momento (si no, el navegador la bloquea) y se
-// le pone la dirección de Google cuando está lista
+// le pone la dirección de Google cuando está lista. `onAuthorized` avisa de que Google ya respondió y empieza la subida
+// de las tareas (que ya no se puede cancelar desde aquí)
 export const connectGoogleCalendar = async (
   { functions }: FirebaseServices,
-  { loginHint, signal }: { loginHint?: string; signal?: AbortSignal } = {}
+  { signal, onAuthorized }: { signal?: AbortSignal; onAuthorized?: () => void } = {}
 ) => {
   if (!CLIENT_ID) throw new Error('La sincronización con Google Calendar no está disponible en esta instalación.');
   const popup = window.open('', 'clar-google-calendar', 'popup,width=520,height=680');
@@ -140,14 +150,25 @@ export const connectGoogleCalendar = async (
   const state = randomString(24);
   const verifier = randomString(48);
   const redirectUri = `${window.location.origin}${OAUTH_CALLBACK_PATH}`;
-  popup.location.href = authorizationUrl({
-    clientId: CLIENT_ID,
-    redirectUri,
-    state,
-    challenge: await challengeOf(verifier),
-    loginHint
-  });
-  const code = await waitForCode(state, signal);
+  let code: string;
+  try {
+    popup.location.href = authorizationUrl({
+      clientId: CLIENT_ID,
+      redirectUri,
+      state,
+      challenge: await challengeOf(verifier)
+    });
+    code = await waitForCode(state, signal);
+  } catch (e) {
+    // Al cancelar o acabarse el tiempo, la ventana de Google se cierra (si aún se puede)
+    try {
+      popup.close();
+    } catch {
+      // Ya no es accesible
+    }
+    throw e;
+  }
+  onAuthorized?.();
   return (
     await httpsCallable<
       { code: string; codeVerifier: string; redirectUri: string; timeZone: string },
@@ -160,6 +181,17 @@ export const connectGoogleCalendar = async (
     })
   ).data;
 };
+
+// Un fallo de conexión con el servidor, en español; los del servidor ya vienen en español
+const CALL_ERRORS: Record<string, string> = {
+  'functions/internal': 'No se pudo conectar con el servidor. Revisa tu conexión e inténtalo de nuevo.',
+  'functions/unavailable': 'No se pudo conectar con el servidor. Revisa tu conexión e inténtalo de nuevo.',
+  'functions/unknown': 'No se pudo conectar con el servidor. Revisa tu conexión e inténtalo de nuevo.',
+  'functions/deadline-exceeded':
+    'La subida de las tareas está tardando más de lo normal y sigue en marcha. Vuelve a mirar en unos minutos.'
+};
+export const calendarErrorMessage = (e: unknown, fallback: string) =>
+  (e instanceof FirebaseError && CALL_ERRORS[e.code]) || (e instanceof Error && e.message) || fallback;
 
 export const disconnectGoogleCalendar = async ({ functions }: FirebaseServices) => {
   await httpsCallable(functions, 'disconnectGoogleCalendar')();
