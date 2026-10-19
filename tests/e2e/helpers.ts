@@ -31,8 +31,9 @@ export const uidOf = async (email: string) => {
   return uid!;
 };
 
-// Escribe campos de un documento en el emulador de Firestore (solo esos: el resto del documento se conserva)
-const patchDocument = async (path: string, fields: Record<string, unknown>) => {
+// Escribe campos de un documento en el emulador de Firestore (solo esos: el resto del documento se conserva), con los
+// valores en el formato de la API REST (p. ej. { stringValue: 'x' })
+export const patchDocument = async (path: string, fields: Record<string, unknown>) => {
   const mask = Object.keys(fields)
     .map((field) => `updateMask.fieldPaths=${field}`)
     .join('&');

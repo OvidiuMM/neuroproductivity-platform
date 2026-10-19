@@ -13,3 +13,20 @@ export const parseFeatureList = (value: unknown): FeatureId[] | null => {
   if (new Set(value).size !== value.length) return null;
   return FEATURE_IDS.filter((id) => value.includes(id));
 };
+
+// Un uid que sirve como id de documento de Firestore (los de Firebase Auth tienen hasta 128 caracteres)
+export const isDocumentId = (value: unknown): value is string =>
+  typeof value === 'string' &&
+  value.length > 0 &&
+  value.length <= 128 &&
+  !value.includes('/') &&
+  value !== '.' &&
+  value !== '..' &&
+  !/^__.*__$/.test(value);
+
+// La petición de setFeatures: la cuenta y sus funciones, o null si no vale
+export const parseFeatureRequest = (data: unknown): { uid: string; granted: FeatureId[] } | null => {
+  const { uid, features } = (data ?? {}) as { uid?: unknown; features?: unknown };
+  const granted = parseFeatureList(features);
+  return isDocumentId(uid) && granted ? { uid, granted } : null;
+};

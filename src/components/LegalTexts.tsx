@@ -170,7 +170,8 @@ export const PrivacyPolicy: React.FC = () => (
         <li>Tu cuenta y lo que escribes: hasta que lo borres o elimines la cuenta.</li>
         <li>Solicitud de acceso y mensajes de «Escríbenos»: hasta que elimines la cuenta.</li>
         <li>
-          Funciones extra: hasta que la administración te las quite, rechace, retire o bloquee la cuenta, o la elimines.
+          Funciones extra: hasta que la administración te las quite o te retire o bloquee el acceso, o elimines la
+          cuenta.
         </li>
         <li>
           Horas de envío de los mensajes: cuentan una hora para el límite de cinco, pero no se borran solas. Se

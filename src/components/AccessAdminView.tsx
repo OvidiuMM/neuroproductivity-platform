@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Ban, Check, Sparkles, UserX, X } from 'lucide-react';
 import type { AccessRequest, DecisionStatus } from '../services/access';
 import { EXTRA_FEATURES, type FeatureId } from '../services/features';
@@ -13,8 +13,9 @@ interface AccessAdminViewProps {
   // Aprobación de cuentas obligatoria (null mientras se carga) y cómo cambiarla
   approvalRequired: boolean | null;
   onSetApprovalRequired: (approvalRequired: boolean) => Promise<void>;
-  // Funciones extra concedidas a cada cuenta (por uid) y cómo cambiarlas; devuelve si se guardaron
-  features: Record<string, FeatureId[]>;
+  // Funciones extra concedidas a cada cuenta (por uid; null mientras se cargan o si no se pudieron cargar) y cómo
+  // cambiarlas; devuelve si se guardaron
+  features: Record<string, FeatureId[]> | null;
   onSetFeatures: (uid: string, features: FeatureId[]) => Promise<boolean>;
 }
 
@@ -122,8 +123,36 @@ export const AccessAdminView: React.FC<AccessAdminViewProps> = ({
   onSetFeatures
 }) => {
   const [busyUid, setBusyUid] = useState<string | null>(null);
-  // Las funciones extra de una cuenta con acceso, mientras se eligen (una cuenta a la vez)
+  // Las funciones extra de una cuenta con acceso, mientras se eligen (una cuenta a la vez). Si la cuenta pierde el
+  // acceso, se descarta lo elegido: al volver a aprobarla empieza sin ninguna
   const [editing, setEditing] = useState<{ uid: string; selected: FeatureId[] } | null>(null);
+  if (editing && !requests.some((r) => r.uid === editing.uid && r.status === 'approved')) setEditing(null);
+  // Al cerrar el panel, el foco vuelve a su botón «Funciones extra» (cuando vuelve a estar activo)
+  const focusAfterClose = useRef<string | null>(null);
+  useEffect(() => {
+    if (!focusAfterClose.current || editing || busyUid) return;
+    document.getElementById(`features-button-${focusAfterClose.current}`)?.focus();
+    focusAfterClose.current = null;
+  }, [editing, busyUid]);
+  const closeEditing = (uid: string) => {
+    focusAfterClose.current = uid;
+    setEditing(null);
+  };
+  // Escape cierra el panel sin guardar
+  const panelRef = useRef<HTMLFieldSetElement>(null);
+  const editingUid = editing?.uid;
+  useEffect(() => {
+    const panel = panelRef.current;
+    if (!panel || !editingUid) return;
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key !== 'Escape') return;
+      e.stopPropagation();
+      focusAfterClose.current = editingUid;
+      setEditing(null);
+    };
+    panel.addEventListener('keydown', onKeyDown);
+    return () => panel.removeEventListener('keydown', onKeyDown);
+  }, [editingUid]);
   // Pasar a aprobación libre aprueba también las pendientes: se confirma antes
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [modeBusy, setModeBusy] = useState(false);
@@ -148,12 +177,13 @@ export const AccessAdminView: React.FC<AccessAdminViewProps> = ({
   };
 
   const toggleEditing = (uid: string) =>
-    setEditing((current) => (current?.uid === uid ? null : { uid, selected: features[uid] ?? [] }));
+    setEditing((current) => (current?.uid === uid ? null : { uid, selected: features?.[uid] ?? [] }));
   const saveFeatures = async () => {
     if (!editing) return;
-    setBusyUid(editing.uid);
+    const { uid, selected } = editing;
+    setBusyUid(uid);
     try {
-      if (await onSetFeatures(editing.uid, editing.selected)) setEditing(null);
+      if (await onSetFeatures(uid, selected)) closeEditing(uid);
     } finally {
       setBusyUid(null);
     }
@@ -258,7 +288,7 @@ export const AccessAdminView: React.FC<AccessAdminViewProps> = ({
                   const who = `${request.name || request.email} (${request.email})`;
                   const isSelf = request.uid === currentUid;
                   const canHaveFeatures = !isSelf && request.status === 'approved';
-                  const granted = canHaveFeatures ? (features[request.uid] ?? []) : [];
+                  const granted = canHaveFeatures ? (features?.[request.uid] ?? []) : [];
                   const isEditing = canHaveFeatures && editing?.uid === request.uid;
                   const panelId = `features-${request.uid}`;
                   return (
@@ -320,8 +350,9 @@ export const AccessAdminView: React.FC<AccessAdminViewProps> = ({
                             <>
                               {canHaveFeatures && (
                                 <button
+                                  id={`features-button-${request.uid}`}
                                   type="button"
-                                  disabled={busyUid === request.uid}
+                                  disabled={busyUid === request.uid || features === null}
                                   onClick={() => toggleEditing(request.uid)}
                                   aria-expanded={isEditing}
                                   aria-controls={isEditing ? panelId : undefined}
@@ -351,36 +382,46 @@ export const AccessAdminView: React.FC<AccessAdminViewProps> = ({
                       </div>
                       {isEditing && (
                         <fieldset
+                          ref={panelRef}
                           id={panelId}
                           className="space-y-2 rounded-xl border border-indigo-100 bg-indigo-50/60 p-3"
                         >
                           <legend className="sr-only">Funciones extra de {who}</legend>
                           <p className="text-[11px] text-slate-600">
-                            Se activan para esta cuenta en cuanto las guardas; para quitarlas, desmárcalas.
+                            Se activan para esta cuenta en cuanto las guardas; para quitarlas, desmárcalas y guarda.
                           </p>
-                          {EXTRA_FEATURES.map((feature) => (
-                            <label key={feature.id} className="flex cursor-pointer items-start gap-2 text-xs">
-                              <input
-                                type="checkbox"
-                                checked={editing.selected.includes(feature.id)}
-                                disabled={busyUid === request.uid}
-                                onChange={(e) => {
-                                  const on = e.target.checked;
-                                  setEditing({
-                                    uid: request.uid,
-                                    selected: EXTRA_FEATURES.map((f) => f.id).filter((id) =>
-                                      id === feature.id ? on : editing.selected.includes(id)
-                                    )
-                                  });
-                                }}
-                                className="mt-0.5 h-4 w-4 shrink-0 rounded border-slate-300 text-indigo-600"
-                              />
-                              <span>
-                                <span className="font-bold text-slate-900">{feature.label}</span>
-                                <span className="block text-slate-600">{feature.description}</span>
-                              </span>
-                            </label>
-                          ))}
+                          {EXTRA_FEATURES.map((feature) => {
+                            const inputId = `features-${request.uid}-${feature.id}`;
+                            return (
+                              <div key={feature.id} className="flex items-start gap-2 text-xs">
+                                <input
+                                  id={inputId}
+                                  type="checkbox"
+                                  aria-describedby={`${inputId}-description`}
+                                  checked={editing.selected.includes(feature.id)}
+                                  disabled={busyUid === request.uid}
+                                  onChange={(e) => {
+                                    const on = e.target.checked;
+                                    setEditing({
+                                      uid: request.uid,
+                                      selected: EXTRA_FEATURES.map((f) => f.id).filter((id) =>
+                                        id === feature.id ? on : editing.selected.includes(id)
+                                      )
+                                    });
+                                  }}
+                                  className="mt-0.5 h-4 w-4 shrink-0 rounded border-slate-300 text-indigo-600"
+                                />
+                                <div>
+                                  <label htmlFor={inputId} className="cursor-pointer font-bold text-slate-900">
+                                    {feature.label}
+                                  </label>
+                                  <p id={`${inputId}-description`} className="text-slate-600">
+                                    {feature.description}
+                                  </p>
+                                </div>
+                              </div>
+                            );
+                          })}
                           <div className="flex flex-wrap gap-2 pt-1">
                             <button
                               type="button"
@@ -392,7 +433,8 @@ export const AccessAdminView: React.FC<AccessAdminViewProps> = ({
                             </button>
                             <button
                               type="button"
-                              onClick={() => setEditing(null)}
+                              disabled={busyUid === request.uid}
+                              onClick={() => closeEditing(request.uid)}
                               className="min-h-11 rounded-xl px-3 text-xs font-semibold text-slate-700 hover:bg-white"
                             >
                               Cancelar

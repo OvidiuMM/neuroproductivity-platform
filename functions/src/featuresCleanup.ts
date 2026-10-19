@@ -1,7 +1,10 @@
 import { adminDb } from './adminApp';
 
-// Quita las funciones extra de una cuenta (ver features.ts): cuando deja de tener acceso y al eliminarla. Va aparte de
-// features.ts para que access.ts lo use sin importarlo (features.ts importa de access.ts).
+// Las funciones extra de una cuenta (ver features.ts). Va aparte de features.ts para que access.ts lo use sin
+// importarlo (features.ts importa de access.ts).
+export const featuresDoc = (uid: string) => adminDb().doc(`features/${uid}`);
+
+// Al eliminar la cuenta. Al quedarse sin acceso se borran en la misma transacción que cambia el acceso (access.ts).
 export const forgetFeatures = async (uid: string) => {
-  await adminDb().doc(`features/${uid}`).delete();
+  await featuresDoc(uid).delete();
 };

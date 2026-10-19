@@ -278,12 +278,14 @@ export default function App({ user, services, isAdmin = false }: AppProps) {
     }
   };
 
-  // FUNCIONES EXTRA de cada cuenta (solo administración): en vivo, para su apartado en las solicitudes
-  const [accountFeatures, setAccountFeatures] = useState<Record<string, FeatureId[]>>({});
+  // FUNCIONES EXTRA de cada cuenta (solo administración): en vivo, para su apartado en las solicitudes. Mientras no
+  // se han cargado (o si fallan), null: no se pueden cambiar, así no se guarda una lista vacía por error
+  const [accountFeatures, setAccountFeatures] = useState<Record<string, FeatureId[]> | null>(null);
   useEffect(() => {
     if (!isAdmin) return;
     return subscribeToAllFeatures(db, setAccountFeatures, (e) => {
       console.error('Error loading extra features:', e);
+      setAccountFeatures(null);
       setAccessError('No se pudieron cargar las funciones extra de las cuentas.');
     });
   }, [db, isAdmin]);
@@ -313,7 +315,7 @@ export default function App({ user, services, isAdmin = false }: AppProps) {
     setWasAdmin(isAdmin);
     if (!isAdmin) {
       setAccessRequests([]);
-      setAccountFeatures({});
+      setAccountFeatures(null);
       setFeedbackTickets([]);
       setActiveTab((tab) => (tab === 'access' ? 'tasks' : tab));
     }
@@ -825,7 +827,7 @@ export default function App({ user, services, isAdmin = false }: AppProps) {
         active: activeFeatures({ isAdmin, granted: grantedFeatures, prefs: featurePrefs }),
         onToggle: (id: FeatureId, on: boolean) => {
           setFeaturePrefs((current) => ({ ...current, [id]: on }));
-          saveFeaturePref(db, uid, id, on).catch(reportError('guardar las funciones extra'));
+          saveFeaturePref(db, uid, id, on).catch(reportError('guardar la función extra'));
         }
       }
     : {

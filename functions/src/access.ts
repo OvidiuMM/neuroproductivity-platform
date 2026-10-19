@@ -1,4 +1,4 @@
-import { forgetFeatures } from './featuresCleanup';
+import { featuresDoc, forgetFeatures } from './featuresCleanup';
 import { forgetFeedback } from './feedbackCleanup';
 import { forgetPushData, forgetPushDevices } from './pushCleanup';
 import { adminAuth, adminDb } from './adminApp';
@@ -157,7 +157,7 @@ export const syncAccess = onCall({ region: REGION }, async (request) => {
 
   // El resto: según la lista negra y el modo de aprobación, la cuenta puede quedar bloqueada o entrar sola
   const email = normalizeEmail(auth.token.email);
-  const status = await db().runTransaction(async (tx) => {
+  const { status, blocked } = await db().runTransaction(async (tx) => {
     const [access, { approvalRequired, emailBlocked }] = await Promise.all([tx.get(accessRef), readPolicy(tx, email)]);
     const current = access.data() as AccessRecord | undefined;
     const action = decideOnSync({
@@ -166,7 +166,7 @@ export const syncAccess = onCall({ region: REGION }, async (request) => {
       emailBlocked,
       emailVerified: auth.token.email_verified === true
     });
-    if (action === 'keep') return current?.status ?? 'none';
+    if (action === 'keep') return { status: current?.status ?? 'none', blocked: false };
     const now = new Date().toISOString();
     const record: AccessRecord = {
       ...profileOf(auth.token),
@@ -176,8 +176,11 @@ export const syncAccess = onCall({ region: REGION }, async (request) => {
       decidedAt: now
     };
     tx.set(accessRef, record);
-    return record.status;
+    // Bloqueada por su email: pierde también sus funciones extra (ver setAccess)
+    if (record.status === 'blocked') tx.delete(featuresDoc(auth.uid));
+    return { status: record.status, blocked: record.status === 'blocked' };
   });
+  if (blocked) await forgetPushDevices(auth.uid);
   return { status, isAdmin: false };
 });
 
@@ -199,7 +202,8 @@ export const requestAccess = onCall({ region: REGION, secrets: emailSecrets }, a
     if (emailBlocked) {
       const now = new Date().toISOString();
       tx.set(ref, { ...profileOf(auth.token), message: '', status: 'blocked', requestedAt: now, decidedAt: now });
-      return { status: 'blocked' as const };
+      tx.delete(featuresDoc(auth.uid));
+      return { status: 'blocked' as const, blocked: true };
     }
     const decision = decideRequest(current.data() as AccessRecord | undefined, new Date(), approvalRequired);
     if (decision.action === 'keep') return { status: decision.status };
@@ -223,6 +227,7 @@ export const requestAccess = onCall({ region: REGION, secrets: emailSecrets }, a
     return { status: record.status, record };
   });
 
+  if ('blocked' in created) await forgetPushDevices(auth.uid);
   if ('record' in created && created.record?.status === 'pending') {
     logger.info('Access requested', { hasMessage: message.length > 0 });
     await sendAccessEmail('new-request', created.record);
@@ -258,12 +263,14 @@ export const setAccess = onCall({ region: REGION, secrets: emailSecrets }, async
     } else if (data.status === 'blocked' && data.email) {
       tx.delete(blockedEmailRef(normalizeEmail(data.email)));
     }
+    // Sin acceso no conserva sus funciones extra: al volver a aprobarla, empieza sin ninguna. Van en la transacción,
+    // así no quedan si algo falla después
+    if (status !== 'approved') tx.delete(featuresDoc(uid));
     return { ...data, status: status as DecisionStatus, decidedAt };
   });
   logger.info('Access decided', { status });
-  // Sin acceso, tampoco recibe alarmas push en sus dispositivos ni conserva sus funciones extra (al volver a aprobarla,
-  // empieza sin ninguna)
-  if (status !== 'approved') await Promise.all([forgetPushDevices(uid), forgetFeatures(uid)]);
+  // Sin acceso, tampoco recibe alarmas push en sus dispositivos
+  if (status !== 'approved') await forgetPushDevices(uid);
   // La persona recibe un aviso cuando se aprueba su acceso (rechazos y retiradas se ven al entrar)
   if (record.status === 'approved' && normalizeEmail(record.email) !== normalizeEmail(adminEmail())) {
     await sendAccessEmail('approved', record);

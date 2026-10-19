@@ -17,7 +17,7 @@ interface AdminViewProps {
   onSeenRequests: () => void;
   approvalRequired: boolean | null;
   onSetApprovalRequired: (approvalRequired: boolean) => Promise<void>;
-  features: Record<string, FeatureId[]>;
+  features: Record<string, FeatureId[]> | null;
   onSetFeatures: (uid: string, features: FeatureId[]) => Promise<boolean>;
   tickets: FeedbackTicket[];
   feedbackError: string | null;

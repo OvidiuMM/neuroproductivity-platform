@@ -248,7 +248,7 @@ Origen: `src/navigation.ts`, `src/components/Navbar.tsx`, `src/components/Bottom
 
 ### 1.10 Cuentas y acceso (RF-CUE)
 
-Origen: `src/AuthGate.tsx`, `src/AccessGate.tsx`, `src/services/auth.ts`, `src/services/account.ts`, `src/services/importData.ts`, `src/services/accountImport.ts`, `src/hooks/useReauthMethods.ts`, `src/components/AccountMenu.tsx`, `src/components/AccessRequestScreen.tsx`, `src/components/DeleteAccountPanel.tsx`, `src/components/ImportAccountDialog.tsx`, `functions/src/access.ts`.
+Origen: `src/AuthGate.tsx`, `src/AccessGate.tsx`, `src/services/auth.ts`, `src/services/account.ts`, `src/services/importData.ts`, `src/services/accountImport.ts`, `src/hooks/useReauthMethods.ts`, `src/components/AccountMenu.tsx`, `src/components/AccessRequestScreen.tsx`, `src/components/DeleteAccountPanel.tsx`, `src/components/ImportAccountDialog.tsx`, `src/services/features.ts`, `functions/src/access.ts`.
 
 **Inicio de sesión y alta**
 
@@ -272,7 +272,7 @@ Origen: `src/AuthGate.tsx`, `src/AccessGate.tsx`, `src/services/auth.ts`, `src/s
 **Gestión de la cuenta**
 
 - **RF-CUE-14.** El menú de la cuenta muestra el nombre, la foto o las iniciales y cómo se entró en esta sesión (Google o email). Da acceso a «Notificaciones de las alarmas» (activar el permiso y, si la instalación tiene push, «Avisarme también con CLAR cerrada» y «Mostrar el nombre de la tarea»), «Accesibilidad», «Descargar mis datos (JSON)», «Importar datos (JSON)», «Funciones extra» (si la cuenta tiene alguna; la persona administradora, siempre), «Escríbenos», la seguridad, «Cerrar sesión» y la eliminación de la cuenta.
-- **RF-CUE-15.** «Descargar mis datos (JSON)» descarga los datos de la app: tareas, evaluaciones, reuniones, correos, metas, proyectos, áreas de la Rueda, nombre y email. No incluye el resto del perfil, la solicitud de acceso ni los mensajes de «Escríbenos».
+- **RF-CUE-15.** «Descargar mis datos (JSON)» descarga los datos de la app: tareas, evaluaciones, reuniones, correos, metas, proyectos, áreas de la Rueda, nombre y email. No incluye el resto del perfil, la solicitud de acceso, las funciones extra ni los mensajes de «Escríbenos».
 - **RF-CUE-16.** Una cuenta con contraseña puede «Cambiar la contraseña» escribiendo la actual y una nueva de al menos 8 caracteres.
 - **RF-CUE-17.** «Cerrar sesión en todos los dispositivos» invalida las sesiones de la cuenta y cierra la de este dispositivo. Los demás pierden el acceso en menos de una hora.
 - **RF-CUE-18.** «Cerrar sesión» borra la copia local de los datos del dispositivo. Si hay otras pestañas de la app abiertas, la copia se queda hasta cerrar sesión con una sola.
@@ -317,10 +317,10 @@ Origen: `src/components/AdminView.tsx`, `src/components/AccessAdminView.tsx`, `s
 - **RF-ADM-16.** Una respuesta nunca se envía dos veces: lleva un identificador que se repite en los reintentos. Si un envío quedó a medias sin saber si salió, no se reenvía y la app lo avisa.
 - **RF-ADM-17.** «Desde mi correo» abre el programa de correo para responder desde otra cuenta. «Marcar como leído», «Cerrar» y «Reabrir» cambian el estado del mensaje; reabrir lo deja leído.
 - **RF-ADM-18.** Cada mensaje nuevo de «Escríbenos» genera un email a la persona administradora, sin el contenido ni los datos de quien escribe.
-- **RF-ADM-19.** En «Solicitudes», cada cuenta con acceso, salvo la propia, tiene «Funciones extra». Abre la lista del catálogo de funciones extra, con su nombre y su descripción, para marcar las que tendrá la cuenta y «Guardar». Las que tiene se ven en su fila.
+- **RF-ADM-19.** En «Solicitudes», cada cuenta con acceso, salvo la propia, tiene «Funciones extra». Abre la lista del catálogo de funciones extra, con su nombre y su descripción, para marcar las que tendrá la cuenta y «Guardar»; «Cancelar» o Escape cierran sin guardar, y el foco vuelve al botón. Las que tiene se ven en su fila. El botón espera a que se hayan cargado las funciones de todas las cuentas, y si la cuenta pierde el acceso con el panel abierto, lo elegido se descarta.
 - **RF-ADM-20.** Una función extra está en uso para la cuenta desde que se guarda, sin que tenga que activarla, y deja de estarlo al desmarcarla. La cuenta lo ve en su menú al momento.
 - **RF-ADM-21.** El servidor solo guarda funciones del catálogo, sin repetir, para una cuenta con el acceso aprobado (en la misma transacción que lo comprueba). La persona administradora no puede cambiar las suyas por esta vía: las enciende en su cuenta (RF-CUE-30).
-- **RF-ADM-22.** Retirar el acceso, rechazar o bloquear una cuenta borra sus funciones extra: si se vuelve a aprobar, empieza sin ninguna. El catálogo está en el código, con los mismos identificadores en la app y en el servidor.
+- **RF-ADM-22.** Retirar el acceso, rechazar o bloquear una cuenta borra sus funciones extra en la misma transacción que cambia su acceso, también cuando queda bloqueada por su email al entrar o al pedir acceso: si se vuelve a aprobar, empieza sin ninguna. Una cuenta sin funciones no tiene documento. El catálogo está en el código, con los mismos identificadores en la app y en el servidor.
 
 ### 1.12 Contacto (RF-CON)
 
@@ -354,7 +354,7 @@ Origen: `src/Root.tsx`, `src/components/LegalPage.tsx`, `src/components/LegalTex
 
 ### 2.1 Seguridad (RNF-SEG)
 
-Origen: `firestore.rules`, `firebase.json`, `functions/src/access.ts`, `functions/src/feedback.ts`, `functions/src/push.ts`, `tests/rules/firestore.rules.test.ts`.
+Origen: `firestore.rules`, `firebase.json`, `functions/src/access.ts`, `functions/src/features.ts`, `functions/src/featuresLogic.ts`, `functions/src/feedback.ts`, `functions/src/push.ts`, `tests/rules/firestore.rules.test.ts`.
 
 - **RNF-SEG-01.** Las reglas de Firestore solo dejan a cada cuenta leer y escribir en `users/{uid}` y sus subcolecciones. Lo que no coincide con ninguna regla queda denegado.
 - **RNF-SEG-02.** Crear y modificar datos exige el acceso aprobado. Leer y borrar los propios datos se permite siempre, para que una cuenta sin acceso pueda llevárselos o eliminarlos.
@@ -375,7 +375,7 @@ Origen: `firestore.rules`, `firebase.json`, `functions/src/access.ts`, `function
 
 ### 2.2 Privacidad (RNF-PRI)
 
-Origen: `functions/src/accessLogic.ts`, `functions/src/feedbackLogic.ts`, `functions/src/feedbackCleanup.ts`, `functions/src/push.ts`, `functions/src/pushCleanup.ts`, `src/services/feedback.ts`, `src/components/LegalTexts.tsx`.
+Origen: `functions/src/accessLogic.ts`, `functions/src/featuresCleanup.ts`, `functions/src/feedbackLogic.ts`, `functions/src/feedbackCleanup.ts`, `functions/src/push.ts`, `functions/src/pushCleanup.ts`, `src/services/feedback.ts`, `src/components/LegalTexts.tsx`.
 
 - **RNF-PRI-01.** Los datos de cada cuenta solo son accesibles para ella (RNF-SEG-01). Para revisar una solicitud, la persona administradora solo ve el nombre, el email, la foto de perfil y el mensaje de la solicitud.
 - **RNF-PRI-02.** Las Cloud Functions se ejecutan en la región `europe-west1` (Bélgica). La app informa de que los datos se guardan en Google Cloud en la Unión Europea (Bélgica).
@@ -449,8 +449,8 @@ Origen: `index.html`, `public/manifest.json`, `functions/src/app.ts`, `src/servi
 Origen: `package.json`, `tsconfig.json`, `.github/workflows/ci.yml`, `tests/`, `functions/test/`.
 
 - **RNF-MAN-01.** El código es TypeScript en modo estricto. ESLint no admite avisos y Prettier fija el formato; un hook de pre-commit los aplica a los archivos del commit.
-- **RNF-MAN-02.** La lógica pura está separada de la interfaz y de Firebase (`src/services/`, `functions/src/accessLogic.ts`, `functions/src/feedbackLogic.ts`, `functions/src/alarmLogic.ts`) y tiene pruebas unitarias con el test runner de Node.
-- **RNF-MAN-03.** Hay pruebas de integración de la importación de datos locales pruebas de las reglas de Firestore contra el emulador y pruebas de la cola y el envío de las alarmas push contra el emulador de Firestore, con un FCM simulado (`npm run test:push`).
+- **RNF-MAN-02.** La lógica pura está separada de la interfaz y de Firebase (`src/services/`, `functions/src/accessLogic.ts`, `functions/src/featuresLogic.ts`, `functions/src/feedbackLogic.ts`, `functions/src/alarmLogic.ts`) y tiene pruebas unitarias con el test runner de Node.
+- **RNF-MAN-03.** Hay pruebas de integración de la importación de datos locales, pruebas de las reglas de Firestore contra el emulador y pruebas contra el emulador de Firestore de la cola y el envío de las alarmas push, con un FCM simulado, y de las funciones extra (`npm run test:push`).
 - **RNF-MAN-04.** Las pruebas de extremo a extremo (Playwright), un archivo por función de la app, usan los emuladores de Auth, Firestore y Functions con un proyecto de demostración. Antes de todas, un paso de calentamiento (`tests/e2e/warm-up.setup.ts`) carga la app y despierta los emuladores, y en desarrollo Vite busca las dependencias de todo `src` al arrancar, así ninguna prueba paga el arranque en frío.
 - **RNF-MAN-05.** En cada push y pull request, CI comprueba el formato, el linter, los tipos, la compilación de la app y de las funciones, y todas las pruebas. Solo despliega desde la rama principal, si todo pasa, y de un despliegue en uno.
 - **RNF-MAN-06.** La app toma la versión de `package.json`; `public/manifest.json` la repite y se actualiza a mano. Se muestra en la cabecera, el inicio de sesión y el pie, y va en las descargas y en la información técnica del contacto.
