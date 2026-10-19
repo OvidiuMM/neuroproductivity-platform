@@ -34,6 +34,7 @@ const entryIn = (page: Page, group: RegExp, email: string) =>
 test('the admin turns on extra features for an account, which sees them at once, and loses them without access', async ({
   browser
 }) => {
+  test.slow(); // Dos cuentas y muchas llamadas a las Cloud Functions del emulador
   const userPage = await openPage(browser);
   const adminPage = await openPage(browser);
   const email = uniqueEmail();
