@@ -787,7 +787,8 @@ export default function App({ user, services, isAdmin = false }: AppProps) {
     ].filter(Boolean);
     showToast(`Importado: ${parts.join(' y ')}.`);
   };
-  const handleDeleteAccount = (password?: string) => deleteAccount(services, user, password);
+  const handleDeleteAccount = (password?: string) =>
+    deleteAccount(services, user, password, { withCalendar: calendarActive });
 
   // IMPORTACIÓN DE DATOS DE LA VERSIÓN SIN CUENTAS
   const handleImportLocalData = async (profileIds: string[]) => {
