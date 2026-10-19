@@ -8,7 +8,8 @@ import type { FirebaseServices } from './firebase';
 // esta ventana, y la Cloud Function connectGoogleCalendar lo canjea, crea el calendario «CLAR» y sube las tareas
 // (functions/src/calendarSync.ts). La app solo lee el estado de la conexión (calendar_status/{uid}).
 // Sin el id del cliente OAuth en la compilación (VITE_GOOGLE_OAUTH_CLIENT_ID), no se ofrece.
-const CLIENT_ID = import.meta.env.VITE_GOOGLE_OAUTH_CLIENT_ID;
+// (Fuera de Vite, p. ej. en las pruebas unitarias, no hay `import.meta.env`)
+const CLIENT_ID = (import.meta.env as ImportMetaEnv | undefined)?.VITE_GOOGLE_OAUTH_CLIENT_ID;
 const AUTH_URL = 'https://accounts.google.com/o/oauth2/v2/auth';
 export const CALENDAR_SCOPE = 'https://www.googleapis.com/auth/calendar.app.created';
 export const OAUTH_CALLBACK_PATH = '/oauth/google.html';
@@ -182,16 +183,24 @@ export const connectGoogleCalendar = async (
   ).data;
 };
 
-// Un fallo de conexión con el servidor, en español; los del servidor ya vienen en español
+// Un fallo de conexión con el servidor, en español. Los mensajes del servidor ya vienen en español y se muestran tal
+// cual (sin el código de estado que añade el SDK); solo se sustituye el mensaje genérico del SDK, que es el propio código
 const CALL_ERRORS: Record<string, string> = {
-  'functions/internal': 'No se pudo conectar con el servidor. Revisa tu conexión e inténtalo de nuevo.',
-  'functions/unavailable': 'No se pudo conectar con el servidor. Revisa tu conexión e inténtalo de nuevo.',
-  'functions/unknown': 'No se pudo conectar con el servidor. Revisa tu conexión e inténtalo de nuevo.',
-  'functions/deadline-exceeded':
+  internal: 'No se pudo conectar con el servidor. Revisa tu conexión e inténtalo de nuevo.',
+  unavailable: 'No se pudo conectar con el servidor. Revisa tu conexión e inténtalo de nuevo.',
+  unknown: 'No se pudo conectar con el servidor. Revisa tu conexión e inténtalo de nuevo.',
+  'deadline-exceeded':
     'La subida de las tareas está tardando más de lo normal y sigue en marcha. Vuelve a mirar en unos minutos.'
 };
-export const calendarErrorMessage = (e: unknown, fallback: string) =>
-  (e instanceof FirebaseError && CALL_ERRORS[e.code]) || (e instanceof Error && e.message) || fallback;
+export const calendarErrorMessage = (e: unknown, fallback: string) => {
+  if (!(e instanceof Error)) return fallback;
+  const message = e.message.replace(/\s*\[\d+\]$/, '').trim();
+  if (e instanceof FirebaseError && e.code.startsWith('functions/')) {
+    const code = e.code.slice('functions/'.length);
+    if (!message || message.toLowerCase() === code) return CALL_ERRORS[code] ?? fallback;
+  }
+  return message || fallback;
+};
 
 export const disconnectGoogleCalendar = async ({ functions }: FirebaseServices) => {
   await httpsCallable(functions, 'disconnectGoogleCalendar')();

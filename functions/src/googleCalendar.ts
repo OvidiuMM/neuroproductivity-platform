@@ -201,13 +201,19 @@ export const googleCalendarApi: GoogleCalendarApi = {
       const params = new URLSearchParams({
         privateExtendedProperty: `${EVENT_MARK}=1`,
         maxResults: '2500',
-        fields: 'items(id),nextPageToken',
+        fields: 'items(id,recurringEventId),nextPageToken',
         ...(pageToken ? { pageToken } : {})
       });
       const res = await call(`${calendarUrl(calendarId)}/events?${params.toString()}`, { method: 'GET' }, accessToken);
       if (!res.ok) throw new GoogleApiError(res.status, await errorReason(res));
-      const page = (await res.json()) as { items?: { id: string }[]; nextPageToken?: string };
-      ids.push(...(page.items ?? []).map((item) => item.id));
+      const page = (await res.json()) as {
+        items?: { id: string; recurringEventId?: string }[];
+        nextPageToken?: string;
+      };
+      // Una repetición que se cambió en Google sale aparte (con el id de su serie): se queda con su serie
+      ids.push(
+        ...(page.items ?? []).filter((item) => !item.recurringEventId && !item.id.includes('_')).map((item) => item.id)
+      );
       pageToken = page.nextPageToken;
     } while (pageToken);
     return ids;

@@ -5,7 +5,15 @@ import { defineSecret, defineString } from 'firebase-functions/params';
 import { adminDb } from './adminApp';
 import { REGION, adminEmail, appUrl, isEmulator, requireAuth } from './access';
 import { isCurrentAdminMarker } from './accessLogic';
-import { buildTaskEvent, eventIdFor, parseConnectRequest, sameEvent, type SyncTask } from './calendarLogic';
+import {
+  buildTaskEvent,
+  eventIdFor,
+  parseConnectRequest,
+  sameEvent,
+  taskIdForEvent,
+  type CalendarEventBody,
+  type SyncTask
+} from './calendarLogic';
 import {
   calendarKeySecrets,
   calendarLinkDoc,
@@ -93,9 +101,11 @@ const freshAccessToken = (uid: string, link: CalendarLink, deps: CalendarDeps) =
   const pending = refreshing.get(key);
   if (pending) return pending;
   const promise = (async () => {
+    // Una clave mal configurada es un fallo de la instalación, no de la cuenta: no la desconecta
+    const tokenKey = deps.key();
     let refreshToken: string;
     try {
-      refreshToken = openToken(link.token, deps.key(), uid);
+      refreshToken = openToken(link.token, tokenKey, uid);
     } catch {
       // Cifrado con otra clave (p. ej. tras cambiarla): el permiso ya no se puede usar
       throw new GoogleApiError(0, 'revoked');
@@ -216,9 +226,17 @@ export const syncAllTasks = async (uid: string, link: CalendarLink, deps: Calend
       logger.warn('Calendar events not listed', { reason: error instanceof GoogleApiError ? error.reason : 'unknown' });
     }
   }
-  const jobs = [
-    ...pending.map(({ eventId, event }) => ({ eventId, event })),
-    ...stale.map((eventId) => ({ eventId, event: null }))
+  // Primero los eventos que sobran. Cada uno comprueba justo antes que su tarea sigue sin ir al calendario: si
+  // entretanto le pusieron fecha, su propio cambio ya actualizó el evento
+  const stillStale = async (eventId: string) => {
+    const taskId = taskIdForEvent(eventId);
+    if (!taskId) return false;
+    const task = await adminDb().doc(`users/${uid}/tasks/${taskId}`).get();
+    return !task.exists || !buildTaskEvent(task.data() as SyncTask, link.timeZone, deps.appUrl());
+  };
+  const jobs: { eventId: string; event: CalendarEventBody | null }[] = [
+    ...stale.map((eventId) => ({ eventId, event: null })),
+    ...pending
   ];
   let synced = 0;
   let failed = 0;
@@ -226,6 +244,7 @@ export const syncAllTasks = async (uid: string, link: CalendarLink, deps: Calend
     await Promise.all(
       jobs.slice(i, i + CONCURRENCY).map(async ({ eventId, event }) => {
         try {
+          if (!event && !(await stillStale(eventId))) return;
           await withAccessToken(uid, link, deps, (token) =>
             event
               ? deps.api.putEvent(token, link.calendarId, eventId, event)
@@ -248,12 +267,17 @@ const allowedOrigins = (url: string) => {
   return [new URL(url).origin, `https://${project}.web.app`, `https://${project}.firebaseapp.com`];
 };
 
-// El estado final de una conexión, solo si sigue siendo esa (si entretanto se desconectó o se volvió a conectar, no
-// dice «conectada» sin estarlo)
+// Si la conexión sigue siendo esa (no se desconectó ni se volvió a conectar entretanto, desde otro dispositivo o al
+// quitarle la función)
+const stillConnected = async (uid: string, link: CalendarLink) =>
+  ((await calendarLinkDoc(uid).get()).data() as CalendarLink | undefined)?.connectedAt === link.connectedAt;
+
+// El estado final de una conexión, solo si sigue siendo esa: si no, no dice «conectada» sin estarlo. Devuelve si lo
+// escribió
 const finishConnection = (uid: string, link: CalendarLink, result: { synced: number; failed: number } | null) =>
   adminDb().runTransaction(async (tx) => {
     const current = (await tx.get(calendarLinkDoc(uid))).data() as CalendarLink | undefined;
-    if (current?.connectedAt !== link.connectedAt) return;
+    if (current?.connectedAt !== link.connectedAt) return false;
     const syncedAt = new Date().toISOString();
     tx.set(calendarStatusDoc(uid), {
       state: 'connected',
@@ -262,7 +286,10 @@ const finishConnection = (uid: string, link: CalendarLink, result: { synced: num
       ...(result ? { syncedAt, ...(result.failed ? { failed: result.failed } : {}) } : {}),
       updatedAt: syncedAt
     });
+    return true;
   });
+
+const CLOSED_MESSAGE = 'La conexión se cerró mientras se subían las tareas (se desconectó o se quitó la función).';
 
 const RECONNECT_MESSAGE: Record<ReconnectReason, string> = {
   revoked: 'Google retiró el permiso mientras se subían las tareas. Vuelve a conectar.',
@@ -338,6 +365,7 @@ export const connectCalendar = async (uid: string, data: unknown, deps: Calendar
   try {
     result = await syncAllTasks(uid, link, deps, link.calendarId === previous?.calendarId);
   } catch (error) {
+    if (!(await stillConnected(uid, link))) throw new HttpsError('failed-precondition', CLOSED_MESSAGE);
     const reason = reconnectReason(error);
     await handleFailure(uid, error, deps, link);
     if (reason) throw new HttpsError('failed-precondition', RECONNECT_MESSAGE[reason]);
@@ -348,7 +376,7 @@ export const connectCalendar = async (uid: string, data: unknown, deps: Calendar
       'Se conectó, pero no se pudieron subir las tareas. Desconecta y vuelve a conectar para subirlas.'
     );
   }
-  await finishConnection(uid, link, result);
+  if (!(await finishConnection(uid, link, result))) throw new HttpsError('failed-precondition', CLOSED_MESSAGE);
   logger.info('Calendar connected', result);
   return result;
 };

@@ -32,7 +32,7 @@ const fakeGoogle = () => {
   const events = new Map<string, CalendarEventBody>();
   const calls: string[] = [];
   let failure: GoogleApiError | null = null;
-  const during: { exchange?: () => Promise<unknown>; put?: () => Promise<unknown> } = {};
+  const during: { exchange?: () => Promise<unknown>; put?: () => Promise<unknown>; list?: () => Promise<unknown> } = {};
   const api: GoogleCalendarApi = {
     exchangeCode: async (_client, { code }) => {
       await during.exchange?.();
@@ -64,7 +64,11 @@ const fakeGoogle = () => {
       events.delete(eventId);
       return Promise.resolve();
     },
-    listEventIds: () => Promise.resolve([...events.keys()])
+    listEventIds: async () => {
+      const ids = [...events.keys()];
+      await during.list?.();
+      return ids;
+    }
   };
   const deps: CalendarDeps = {
     api,
@@ -267,7 +271,7 @@ describe('Google Calendar sync', () => {
       google.during.put = undefined;
       await disconnectCalendar('cal-ana', { deps: google.deps });
     };
-    await connectCalendar('cal-ana', request('again'), google.deps);
+    await assert.rejects(connectCalendar('cal-ana', request('again'), google.deps), /La conexión se cerró/);
     assert.equal(await linked('cal-ana'), false);
     assert.equal((await status('cal-ana'))?.state, 'disconnected');
   });
@@ -300,6 +304,35 @@ describe('Google Calendar sync', () => {
     assert.deepEqual(await connectCalendar('cal-ana', request('again'), google.deps), { synced: 2, failed: 0 });
     assert.equal(google.events.size, 2);
     assert.ok(google.calls.some((c) => c.startsWith('delete:calendar-1:')));
+
+    // Una tarea que recupera su fecha mientras se sube no pierde su evento
+    await disconnectCalendar('cal-ana', { deps: google.deps });
+    await task('cal-ana', 't3', { dueDate: '2026-10-18', isSomeday: true });
+    google.during.list = () => task('cal-ana', 't3', { dueDate: '2026-10-18' });
+    const deletes = google.calls.filter((c) => c.startsWith('delete:')).length;
+    await connectCalendar('cal-ana', request('third'), google.deps);
+    assert.equal(google.calls.filter((c) => c.startsWith('delete:')).length, deletes);
+  });
+
+  it('a misconfigured encryption key is a failure of the installation, not a reason to disconnect', async () => {
+    const google = fakeGoogle();
+    await approve('cal-ana');
+    await grant('cal-ana');
+    await task('cal-ana', 't1', { dueDate: '2026-10-16' });
+    await db.doc('calendar_tokens/cal-ana').set({
+      token: sealToken('refresh-old', KEY, 'cal-ana'),
+      calendarId: 'calendar-1',
+      timeZone: MADRID,
+      connectedAt: '2026-10-02T00:00:00.000Z'
+    });
+    const broken = {
+      ...google.deps,
+      key: () => {
+        throw new Error('CALENDAR_TOKEN_KEY must be 32 bytes in base64');
+      }
+    };
+    assert.equal(await syncTaskEvent('cal-ana', 't1', broken), 'failed');
+    assert.equal(await linked('cal-ana'), true);
   });
 
   it('a permission that can no longer be read (the key changed) asks to reconnect', async () => {

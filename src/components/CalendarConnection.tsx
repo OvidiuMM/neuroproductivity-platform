@@ -52,8 +52,9 @@ export const CalendarConnection: React.FC<CalendarConnectionProps> = ({
   // Mientras se espera a Google se puede cancelar; al cerrar el menú, también se cancela
   const pending = useRef<AbortController | null>(null);
   useEffect(() => () => pending.current?.abort(), []);
-  // Tras pulsar un botón, si desaparece (cambia el paso o llega el estado nuevo) el foco va al control que queda, en
-  // lugar de perderse. Deja de hacerlo en cuanto la persona lleva el foco a otra parte
+  // Mientras el foco está en el bloque, si su control desaparece (cambia el paso o llega un estado nuevo, también desde
+  // otro dispositivo) el foco va al control que queda, en lugar de perderse. Deja de hacerlo en cuanto la persona lleva
+  // el foco a otra parte
   const container = useRef<HTMLDivElement>(null);
   const keepFocus = useRef(false);
   useEffect(() => {
@@ -113,7 +114,14 @@ export const CalendarConnection: React.FC<CalendarConnectionProps> = ({
   const busy = phase !== 'idle';
 
   return (
-    <div ref={container} tabIndex={-1} className="space-y-2 rounded-lg bg-slate-50 p-2.5 focus:outline-none">
+    <div
+      ref={container}
+      tabIndex={-1}
+      onFocus={() => {
+        keepFocus.current = true;
+      }}
+      className="space-y-2 rounded-lg bg-slate-50 p-2.5 focus:outline-none"
+    >
       <div aria-live="polite" className="space-y-2">
         {phase === 'authorizing' ? (
           <p className="text-[11px] text-slate-700">
