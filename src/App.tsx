@@ -130,6 +130,13 @@ import {
   type FeatureId,
   type FeaturePrefs
 } from './services/features';
+import {
+  calendarSyncAvailable,
+  connectGoogleCalendar,
+  disconnectGoogleCalendar,
+  subscribeToCalendarStatus,
+  type CalendarStatus
+} from './services/googleCalendar';
 import { deleteAccount, downloadAccountData, signOutEverywhere } from './services/account';
 import { prepareAccountImport, runAccountImport } from './services/accountImport';
 import type { ImportPlan } from './services/importData';
@@ -844,6 +851,22 @@ export default function App({ user, services, isAdmin = false }: AppProps) {
         active: grantedFeatures,
         onToggle: null
       };
+  // SINCRONIZACIÓN CON GOOGLE CALENDAR: su estado, mientras la función está en uso
+  const calendarActive = isAdmin ? featurePrefs.googleCalendar === true : grantedFeatures.includes('googleCalendar');
+  const [calendarStatus, setCalendarStatus] = useState<CalendarStatus | null>(null);
+  useEffect(() => {
+    if (!calendarActive) return;
+    return subscribeToCalendarStatus(db, uid, setCalendarStatus);
+  }, [db, uid, calendarActive]);
+  const calendar = calendarActive
+    ? {
+        available: calendarSyncAvailable(),
+        status: calendarStatus,
+        onConnect: (signal: AbortSignal) =>
+          connectGoogleCalendar(services, { loginHint: user.email ?? undefined, signal }),
+        onDisconnect: () => disconnectGoogleCalendar(services)
+      }
+    : null;
   const [isAreasEditorOpen, setIsAreasEditorOpen] = useState(false);
   const handleSaveAreas = (areas: WheelArea[]) => {
     saveWheelAreas(db, uid, areas).catch(reportError('guardar las áreas'));
@@ -1349,6 +1372,7 @@ export default function App({ user, services, isAdmin = false }: AppProps) {
               : null
           }
           extraFeatures={extraFeatures}
+          calendar={calendar}
           onDeleteAccount={handleDeleteAccount}
           onChangePassword={(currentPassword, newPassword) => changePassword(user, currentPassword, newPassword)}
           onSignOutEverywhere={() => signOutEverywhere(services)}

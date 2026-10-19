@@ -138,6 +138,9 @@ jobs:
           SMTP_HOST: ${{ vars.SMTP_HOST }}
           # Opcional: dirección pública de la app en los emails (p. ej. https://clar.life)
           APP_URL: ${{ vars.APP_URL }}
+          # Opcional: id del cliente OAuth de Google para sincronizar con Google Calendar (no es secreto; el secreto
+          # del cliente está en Secret Manager como GOOGLE_OAUTH_CLIENT_SECRET)
+          GOOGLE_OAUTH_CLIENT_ID: ${{ vars.GOOGLE_OAUTH_CLIENT_ID }}
         run: |
           for name in ANDROID_PACKAGE_NAME ANDROID_SHA256_FINGERPRINT ADMIN_EMAIL SMTP_USER; do
             if [ -z "${!name}" ]; then
@@ -147,9 +150,9 @@ jobs:
           done
           # Todos los parámetros van en el archivo: en modo no interactivo, el CLI no usa los valores por defecto del
           # código y falla si falta alguno. Sin la variable SMTP_HOST, el servidor de IONOS.
-          printf 'ANDROID_PACKAGE_NAME=%s\nANDROID_SHA256_FINGERPRINT=%s\nADMIN_EMAIL=%s\nSMTP_USER=%s\nSMTP_HOST=%s\nAPP_URL=%s\n' \
+          printf 'ANDROID_PACKAGE_NAME=%s\nANDROID_SHA256_FINGERPRINT=%s\nADMIN_EMAIL=%s\nSMTP_USER=%s\nSMTP_HOST=%s\nAPP_URL=%s\nGOOGLE_OAUTH_CLIENT_ID=%s\n' \
             "$ANDROID_PACKAGE_NAME" "$ANDROID_SHA256_FINGERPRINT" "$ADMIN_EMAIL" "$SMTP_USER" "${SMTP_HOST:-smtp.ionos.es}" "$APP_URL" \
-            > functions/.env
+            "$GOOGLE_OAUTH_CLIENT_ID" > functions/.env
 
       # Los predeploy de firebase.json compilan la SPA y las Cloud Functions antes de subirlas.
       # firebase-tools sale de devDependencies (versión fijada en package.json).
@@ -160,4 +163,6 @@ jobs:
           # web push), para las notificaciones push de las alarmas. Es pública: va en una variable, no en un secreto.
           # Sin ella, la app se compila sin push y las alarmas avisan solo con CLAR abierta.
           VITE_FCM_VAPID_KEY: ${{ vars.FCM_VAPID_KEY }}
+          # Id del cliente OAuth de Google (público). Sin él, la app no ofrece conectar Google Calendar
+          VITE_GOOGLE_OAUTH_CLIENT_ID: ${{ vars.GOOGLE_OAUTH_CLIENT_ID }}
         run: npx firebase deploy --only hosting,functions,firestore --project "$FIREBASE_PROJECT_ID" --non-interactive
