@@ -221,8 +221,9 @@ export const saveUserProfile = (db: Firestore, user: User) =>
 
 // Perfil (users/{uid}) en vivo: por ahora solo interesa si ya vio la bienvenida. `fromServer` dice si el dato ya
 // está confirmado por el servidor (al principio puede venir solo de la caché, o no existir aún)
-// Lo que la app lee del perfil: si ya vio la bienvenida y sus áreas de la Rueda (sin validar: ver resolveAreas)
-export type ProfileRecord = OnboardingRecord & { wheelAreas?: unknown };
+// Lo que la app lee del perfil: si ya vio la bienvenida, sus áreas de la Rueda (sin validar: ver resolveAreas) y qué
+// funciones extra tiene encendidas la administración (sin validar: ver featurePrefsOf)
+export type ProfileRecord = OnboardingRecord & { wheelAreas?: unknown; featurePrefs?: unknown };
 
 export const subscribeToProfile = (
   db: Firestore,

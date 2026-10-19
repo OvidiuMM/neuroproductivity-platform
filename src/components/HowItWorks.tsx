@@ -276,8 +276,8 @@ export const HowItWorks: React.FC<HowItWorksProps> = ({ onNavigate, onStartTour,
           se toca), cambiar la contraseña (si entras con email), cerrar la sesión en todos tus dispositivos o eliminar
           la cuenta con todo su contenido. Si activas «Avisarme también con CLAR cerrada» en un dispositivo, se guardan
           además su identificador de notificaciones y su zona horaria, y tus alarmas pendientes con el nombre de la
-          tarea; la notificación pasa por Firebase Cloud Messaging y solo lleva el nombre si lo pides. Todo el detalle,
-          en la{' '}
+          tarea; la notificación pasa por Firebase Cloud Messaging y solo lleva el nombre si lo pides. Si la
+          administración te activa funciones extra, las verás en el menú de tu cuenta. Todo el detalle, en la{' '}
           <LegalLink to="privacy" newTab>
             política de privacidad
           </LegalLink>

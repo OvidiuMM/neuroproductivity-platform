@@ -353,6 +353,25 @@ test('admin access tab', async ({ page }) => {
   await expectNoViolations(page, 'accesos');
 });
 
+test('extra features: the panel of an account and the switches of the admin', async ({ page, browser }) => {
+  const email = uniqueEmail();
+  const userPage = await (await browser.newContext()).newPage();
+  await userPage.goto('/');
+  await signInWithGoogle(userPage, email);
+  await page.goto('/');
+  await signInWithGoogle(page, ADMIN_EMAIL, 'Administración', { approve: false });
+  await page.getByRole('button', { name: /^Administración/ }).click();
+  const entry = page
+    .getByRole('region', { name: /^Con acceso/ })
+    .getByRole('listitem', { name: new RegExp(email.replace(/[.+]/g, '\\$&')) });
+  await entry.getByRole('button', { name: /^Funciones extra/ }).click();
+  await expect(entry.getByRole('group', { name: /^Funciones extra de / })).toBeVisible();
+  await expectNoViolations(page, 'funciones extra de una cuenta');
+  await page.getByRole('button', { name: 'Tu cuenta' }).click();
+  await expect(page.getByRole('region', { name: 'Funciones extra' })).toBeVisible();
+  await expectNoViolations(page, 'funciones extra de la administración');
+});
+
 test('the prompt before discarding unsaved changes', async ({ page }) => {
   await page.goto('/');
   await signInWithGoogle(page);

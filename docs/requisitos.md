@@ -1,7 +1,7 @@
 # Requisitos del sistema — CLAR
 
 - **Versión:** 0.9.5
-- **Última revisión:** 2026-10-18
+- **Última revisión:** 2026-10-19
 
 Este documento describe qué hace CLAR en la versión 0.9.5: sus requisitos funcionales y no funcionales tal como están implementados en el código de esta versión (la SPA de `src/`, las Cloud Functions de `functions/src/`, las reglas de Firestore, la configuración de Firebase Hosting y las pruebas). No recoge planes ni funciones futuras. Donde el README y el código no coinciden, manda el código.
 
@@ -10,8 +10,8 @@ Este documento describe qué hace CLAR en la versión 0.9.5: sus requisitos func
 **Roles.**
 
 - **Persona usuaria:** cualquier cuenta con sesión iniciada. Solo usa la app con el acceso aprobado.
-- **Persona administradora:** la cuenta cuyo email verificado coincide con el configurado en el despliegue. Decide los accesos y atiende los mensajes de contacto.
-- **Servidor:** las Cloud Functions, únicas que escriben los accesos, la configuración, los mensajes de contacto, los dispositivos de las notificaciones push y la cola de alarmas.
+- **Persona administradora:** la cuenta cuyo email verificado coincide con el configurado en el despliegue. Decide los accesos, activa funciones extra y atiende los mensajes de contacto.
+- **Servidor:** las Cloud Functions, únicas que escriben los accesos, la configuración, las funciones extra de cada cuenta, los mensajes de contacto, los dispositivos de las notificaciones push y la cola de alarmas.
 
 ---
 
@@ -173,7 +173,7 @@ Origen: `src/services/alarms.ts`, `src/services/notifications.ts`, `src/services
 - **RF-ALA-10.** La app revisa las alarmas al menos una vez por minuto, al volver a la pestaña, al reanudarse en el móvil y al recuperar la conexión.
 - **RF-ALA-11.** «Avisarme también con CLAR cerrada», en el menú de la cuenta, se activa en cada dispositivo (pide el permiso de notificaciones si falta). Con él, el dispositivo se registra para las notificaciones push (token de Firebase Cloud Messaging y zona horaria) y la alarma le llega aunque CLAR esté cerrada o el móvil bloqueado. El servidor calcula su momento en la zona horaria del último dispositivo registrado de la cuenta, con el mismo resultado que la app, y la envía en el minuto siguiente; un cambio de zona horaria del dispositivo se registra la próxima vez que se abre CLAR. Una alarma cuyo plazo ya venció no se envía, una ya enviada no se repite al editar la tarea ni al volver a activarlas, y al activarlas no se envían de golpe las que ya pasaron.
 - **RF-ALA-12.** La notificación push dice «Tienes una alarma de CLAR a las hh:mm» y cuándo vence; con «Mostrar el nombre de la tarea» (por dispositivo), «Alarma de las hh:mm: nombre de la tarea». Lleva la misma etiqueta que la de la app, así no salen dos veces. Cambiar, completar o borrar la tarea actualiza o quita su alarma pendiente. Si ningún dispositivo la recibe por un fallo pasajero, se reintenta con una espera creciente (1, 2, 4 y 8 minutos) y, tras cinco intentos, se deja.
-- **RF-ALA-13.** Desactivarlas o cerrar sesión en un dispositivo corta su suscripción al momento, también sin conexión, y borra su token en el servidor. «Cerrar todas las sesiones», cualquier decisión de la administración que deje la cuenta sin acceso (rechazarla, retirarle el acceso o bloquearla) o eliminar la cuenta borran los dispositivos registrados y las alarmas pendientes; un dispositivo que lleva 30 días sin abrir CLAR se borra. Al volver a entrar, el dispositivo se registra de nuevo. Una cuenta tiene como mucho diez dispositivos, y un dispositivo solo recibe las alarmas de la última cuenta que se registró en él. Sin la clave pública de push en la compilación, o con los emuladores, la opción no aparece.
+- **RF-ALA-13.** Desactivarlas o cerrar sesión en un dispositivo corta su suscripción al momento, también sin conexión, y borra su token en el servidor. «Cerrar todas las sesiones», cualquier decisión de la administración que deje la cuenta sin acceso (rechazarla, retirarle el acceso o bloquearla), que la cuenta quede bloqueada por su email al entrar o al pedir acceso, o eliminar la cuenta borran los dispositivos registrados y las alarmas pendientes; un dispositivo que lleva 30 días sin abrir CLAR se borra. Al volver a entrar, el dispositivo se registra de nuevo. Una cuenta tiene como mucho diez dispositivos, y un dispositivo solo recibe las alarmas de la última cuenta que se registró en él. Sin la clave pública de push en la compilación, o con los emuladores, la opción no aparece.
 
 ### 1.6 Agenda (RF-AGE)
 
@@ -248,7 +248,7 @@ Origen: `src/navigation.ts`, `src/components/Navbar.tsx`, `src/components/Bottom
 
 ### 1.10 Cuentas y acceso (RF-CUE)
 
-Origen: `src/AuthGate.tsx`, `src/AccessGate.tsx`, `src/services/auth.ts`, `src/services/account.ts`, `src/services/importData.ts`, `src/services/accountImport.ts`, `src/hooks/useReauthMethods.ts`, `src/components/AccountMenu.tsx`, `src/components/AccessRequestScreen.tsx`, `src/components/DeleteAccountPanel.tsx`, `src/components/ImportAccountDialog.tsx`, `functions/src/access.ts`.
+Origen: `src/AuthGate.tsx`, `src/AccessGate.tsx`, `src/services/auth.ts`, `src/services/account.ts`, `src/services/importData.ts`, `src/services/accountImport.ts`, `src/hooks/useReauthMethods.ts`, `src/components/AccountMenu.tsx`, `src/components/AccessRequestScreen.tsx`, `src/components/DeleteAccountPanel.tsx`, `src/components/ImportAccountDialog.tsx`, `src/services/features.ts`, `functions/src/access.ts`.
 
 **Inicio de sesión y alta**
 
@@ -271,12 +271,12 @@ Origen: `src/AuthGate.tsx`, `src/AccessGate.tsx`, `src/services/auth.ts`, `src/s
 
 **Gestión de la cuenta**
 
-- **RF-CUE-14.** El menú de la cuenta muestra el nombre, la foto o las iniciales y cómo se entró en esta sesión (Google o email). Da acceso a «Notificaciones de las alarmas» (activar el permiso y, si la instalación tiene push, «Avisarme también con CLAR cerrada» y «Mostrar el nombre de la tarea»), «Accesibilidad», «Descargar mis datos (JSON)», «Importar datos (JSON)», «Escríbenos», la seguridad, «Cerrar sesión» y la eliminación de la cuenta.
-- **RF-CUE-15.** «Descargar mis datos (JSON)» descarga los datos de la app: tareas, evaluaciones, reuniones, correos, metas, proyectos, áreas de la Rueda, nombre y email. No incluye el resto del perfil, la solicitud de acceso ni los mensajes de «Escríbenos».
+- **RF-CUE-14.** El menú de la cuenta muestra el nombre, la foto o las iniciales y cómo se entró en esta sesión (Google o email). Da acceso a «Notificaciones de las alarmas» (activar el permiso y, si la instalación tiene push, «Avisarme también con CLAR cerrada» y «Mostrar el nombre de la tarea»), «Accesibilidad», «Descargar mis datos (JSON)», «Importar datos (JSON)», «Funciones extra» (si la cuenta tiene alguna; la persona administradora, siempre), «Escríbenos», la seguridad, «Cerrar sesión» y la eliminación de la cuenta.
+- **RF-CUE-15.** «Descargar mis datos (JSON)» descarga los datos de la app: tareas, evaluaciones, reuniones, correos, metas, proyectos, áreas de la Rueda, nombre y email. No incluye el resto del perfil, la solicitud de acceso, las funciones extra ni los mensajes de «Escríbenos».
 - **RF-CUE-16.** Una cuenta con contraseña puede «Cambiar la contraseña» escribiendo la actual y una nueva de al menos 8 caracteres.
 - **RF-CUE-17.** «Cerrar sesión en todos los dispositivos» invalida las sesiones de la cuenta y cierra la de este dispositivo. Los demás pierden el acceso en menos de una hora.
 - **RF-CUE-18.** «Cerrar sesión» borra la copia local de los datos del dispositivo. Si hay otras pestañas de la app abiertas, la copia se queda hasta cerrar sesión con una sola.
-- **RF-CUE-19.** «Eliminar mi cuenta y todos mis datos» pide confirmarlo con el método con el que se entró en esta sesión: la contraseña o volver a entrar con Google. Una cuenta que tiene los dos puede cambiar al otro, y los errores de la ventana de Google (cerrada, otra cuenta, bloqueada) se explican en español. Borra los datos de la cuenta, su perfil, su solicitud de acceso y sus mensajes de «Escríbenos», y después la cuenta.
+- **RF-CUE-19.** «Eliminar mi cuenta y todos mis datos» pide confirmarlo con el método con el que se entró en esta sesión: la contraseña o volver a entrar con Google. Una cuenta que tiene los dos puede cambiar al otro, y los errores de la ventana de Google (cerrada, otra cuenta, bloqueada) se explican en español. Borra los datos de la cuenta, su perfil, su solicitud de acceso, sus funciones extra y sus mensajes de «Escríbenos», y después la cuenta.
 
 **Primera vez**
 
@@ -293,10 +293,11 @@ Origen: `src/AuthGate.tsx`, `src/AccessGate.tsx`, `src/services/auth.ts`, `src/s
 - **RF-CUE-27.** Antes de importar, la app muestra la fecha de la descarga y, por cada tipo de dato, cuántos registros son nuevos, cuántos ya están en la cuenta (mismo identificador) y cuántos no son válidos, y qué áreas de la Rueda se añadirán.
 - **RF-CUE-28.** Solo se guarda lo que falta: lo que ya está en la cuenta no se modifica, así importar dos veces el mismo archivo no duplica nada. Cada registro se comprueba campo a campo y se guardan solo los campos conocidos, con la cuenta actual como propietaria. Un registro cuenta entero como no válido si le falta algo obligatorio, si un texto o una lista pasa su tope (100.000 caracteres de descripción, 20.000 por nota, 200.000 de cuerpo de correo, 5.000 en los demás textos y 1.000 elementos por lista), si un elemento de una lista no vale o si es un proyecto cuya meta no está ni en la cuenta ni en el archivo: nunca se recorta nada. Los campos opcionales de formato (fechas, horas, referencias a otros registros) que no valen se omiten. Si la cuenta aún tiene las áreas de partida tal cual, se recupera la configuración de áreas del archivo (nombres, orden, ocultas y propias); si no, las que faltan se añaden al final, un nombre repetido lleva un número y, pasado el máximo de áreas a la vista, entran ocultas.
 - **RF-CUE-29.** La importación muestra su avance y no se puede cerrar mientras escribe. Sin conexión no empieza. Si la conexión se pierde o la importación lleva un minuto sin avanzar, lo dice y deja cerrar la ventana: sigue sola al volver la conexión, y si se cierra CLAR antes, volver a importar el archivo completa el resto. Si falla, dice cuántos registros entraron.
+- **RF-CUE-30.** «Funciones extra», en el menú de la cuenta, muestra las que la persona administradora le ha activado, con su descripción y sin interruptor. La persona administradora las tiene todas, con un interruptor por función: empiezan apagadas y lo que elige se guarda en su perfil.
 
 ### 1.11 Administración (RF-ADM)
 
-Origen: `src/components/AdminView.tsx`, `src/components/AccessAdminView.tsx`, `src/components/FeedbackAdminView.tsx`, `src/services/adminAlerts.ts`, `functions/src/access.ts`, `functions/src/accessLogic.ts`, `functions/src/feedback.ts`.
+Origen: `src/components/AdminView.tsx`, `src/components/AccessAdminView.tsx`, `src/components/FeedbackAdminView.tsx`, `src/services/adminAlerts.ts`, `src/services/features.ts`, `functions/src/access.ts`, `functions/src/accessLogic.ts`, `functions/src/features.ts`, `functions/src/featuresLogic.ts`, `functions/src/feedback.ts`.
 
 - **RF-ADM-01.** La cuenta de la persona administradora se aprueba sola al entrar, siempre que su email esté verificado. Si cambia el email configurado, la marca de la cuenta anterior se borra la próxima vez que alguien entra en la app o la administración actúa.
 - **RF-ADM-02.** «Administración» tiene dos pestañas: «Solicitudes» y «Mensajes».
@@ -316,6 +317,10 @@ Origen: `src/components/AdminView.tsx`, `src/components/AccessAdminView.tsx`, `s
 - **RF-ADM-16.** Una respuesta nunca se envía dos veces: lleva un identificador que se repite en los reintentos. Si un envío quedó a medias sin saber si salió, no se reenvía y la app lo avisa.
 - **RF-ADM-17.** «Desde mi correo» abre el programa de correo para responder desde otra cuenta. «Marcar como leído», «Cerrar» y «Reabrir» cambian el estado del mensaje; reabrir lo deja leído.
 - **RF-ADM-18.** Cada mensaje nuevo de «Escríbenos» genera un email a la persona administradora, sin el contenido ni los datos de quien escribe.
+- **RF-ADM-19.** En «Solicitudes», cada cuenta con acceso, salvo la propia, tiene «Funciones extra». Abre la lista del catálogo de funciones extra, con su nombre y su descripción, para marcar las que tendrá la cuenta y «Guardar»; «Cancelar» o Escape cierran sin guardar, y el foco vuelve al botón. Las que tiene se ven en su fila. El botón espera a que se hayan cargado las funciones de todas las cuentas, y si la cuenta pierde el acceso con el panel abierto, lo elegido se descarta.
+- **RF-ADM-20.** Una función extra está en uso para la cuenta desde que se guarda, sin que tenga que activarla, y deja de estarlo al desmarcarla. La cuenta lo ve en su menú al momento.
+- **RF-ADM-21.** El servidor solo guarda funciones del catálogo, sin repetir, para una cuenta con el acceso aprobado (en la misma transacción que lo comprueba). La persona administradora no puede cambiar las suyas por esta vía: las enciende en su cuenta (RF-CUE-30).
+- **RF-ADM-22.** Retirar el acceso, rechazar o bloquear una cuenta borra sus funciones extra en la misma transacción que cambia su acceso, también cuando queda bloqueada por su email al entrar o al pedir acceso: si se vuelve a aprobar, empieza sin ninguna. Una cuenta sin funciones no tiene documento. El catálogo está en el código, con los mismos identificadores en la app y en el servidor.
 
 ### 1.12 Contacto (RF-CON)
 
@@ -349,13 +354,13 @@ Origen: `src/Root.tsx`, `src/components/LegalPage.tsx`, `src/components/LegalTex
 
 ### 2.1 Seguridad (RNF-SEG)
 
-Origen: `firestore.rules`, `firebase.json`, `functions/src/access.ts`, `functions/src/feedback.ts`, `functions/src/push.ts`, `tests/rules/firestore.rules.test.ts`.
+Origen: `firestore.rules`, `firebase.json`, `functions/src/access.ts`, `functions/src/features.ts`, `functions/src/featuresLogic.ts`, `functions/src/feedback.ts`, `functions/src/push.ts`, `tests/rules/firestore.rules.test.ts`.
 
 - **RNF-SEG-01.** Las reglas de Firestore solo dejan a cada cuenta leer y escribir en `users/{uid}` y sus subcolecciones. Lo que no coincide con ninguna regla queda denegado.
 - **RNF-SEG-02.** Crear y modificar datos exige el acceso aprobado. Leer y borrar los propios datos se permite siempre, para que una cuenta sin acceso pueda llevárselos o eliminarlos.
-- **RNF-SEG-03.** Las subcolecciones permitidas son seis: tareas, evaluaciones, reuniones, correos, metas y proyectos. El perfil solo admite sus campos conocidos (datos de la cuenta, bienvenida y áreas de la Rueda).
-- **RNF-SEG-04.** Las solicitudes de acceso, las marcas de administración, la configuración, la lista negra y el contador de mensajes solo los escriben las Cloud Functions. Ningún cliente puede escribirlos, tampoco la persona administradora.
-- **RNF-SEG-05.** Cada cuenta lee solo su propia solicitud de acceso, y la persona administradora, todas. Nadie lee desde la app la lista negra ni el contador de mensajes.
+- **RNF-SEG-03.** Las subcolecciones permitidas son seis: tareas, evaluaciones, reuniones, correos, metas y proyectos. El perfil solo admite sus campos conocidos (datos de la cuenta, bienvenida, áreas de la Rueda y funciones extra encendidas).
+- **RNF-SEG-04.** Las solicitudes de acceso, las marcas de administración, la configuración, las funciones extra de cada cuenta, la lista negra y el contador de mensajes solo los escriben las Cloud Functions. Ningún cliente puede escribirlos, tampoco la persona administradora.
+- **RNF-SEG-05.** Cada cuenta lee solo su propia solicitud de acceso y sus funciones extra, y la persona administradora, todas. Nadie lee desde la app la lista negra ni el contador de mensajes.
 - **RNF-SEG-06.** Las reglas reconocen a la persona administradora solo si existe su marca y el email guardado en ella coincide con el del token de quien lee.
 - **RNF-SEG-07.** La persona administradora solo puede leer los mensajes de contacto y cambiar su estado a nuevo, leído o cerrado. No puede escribir su contenido ni sus respuestas desde la app.
 - **RNF-SEG-08.** Las funciones invocables exigen sesión iniciada. Las de administración comprueban además que el email verificado del token es el configurado.
@@ -370,7 +375,7 @@ Origen: `firestore.rules`, `firebase.json`, `functions/src/access.ts`, `function
 
 ### 2.2 Privacidad (RNF-PRI)
 
-Origen: `functions/src/accessLogic.ts`, `functions/src/feedbackLogic.ts`, `functions/src/feedbackCleanup.ts`, `functions/src/push.ts`, `functions/src/pushCleanup.ts`, `src/services/feedback.ts`, `src/components/LegalTexts.tsx`.
+Origen: `functions/src/accessLogic.ts`, `functions/src/featuresCleanup.ts`, `functions/src/feedbackLogic.ts`, `functions/src/feedbackCleanup.ts`, `functions/src/push.ts`, `functions/src/pushCleanup.ts`, `src/services/feedback.ts`, `src/components/LegalTexts.tsx`.
 
 - **RNF-PRI-01.** Los datos de cada cuenta solo son accesibles para ella (RNF-SEG-01). Para revisar una solicitud, la persona administradora solo ve el nombre, el email, la foto de perfil y el mensaje de la solicitud.
 - **RNF-PRI-02.** Las Cloud Functions se ejecutan en la región `europe-west1` (Bélgica). La app informa de que los datos se guardan en Google Cloud en la Unión Europea (Bélgica).
@@ -382,7 +387,7 @@ Origen: `functions/src/accessLogic.ts`, `functions/src/feedbackLogic.ts`, `funct
 - **RNF-PRI-08.** El Top 10, las sugerencias, las estadísticas y las recomendaciones se calculan en el navegador.
 - **RNF-PRI-09.** La app no carga fuentes externas: usa la tipografía del sistema. No incluye herramientas de analítica ni de seguimiento.
 - **RNF-PRI-10.** Las fotos de perfil se cargan sin enviar la página de origen (`referrerPolicy="no-referrer"`).
-- **RNF-PRI-11.** Al eliminar la cuenta se borran sus datos, su solicitud de acceso y sus mensajes. Solo se conservan el email, si estaba bloqueado (con el identificador interno de la cuenta y la fecha del bloqueo), y las horas de los envíos de la última hora, ligadas solo al identificador interno, para que el límite de mensajes siga aplicándose. Ese registro de envíos no se borra después.
+- **RNF-PRI-11.** Al eliminar la cuenta se borran sus datos, su solicitud de acceso, sus funciones extra y sus mensajes. Solo se conservan el email, si estaba bloqueado (con el identificador interno de la cuenta y la fecha del bloqueo), y las horas de los envíos de la última hora, ligadas solo al identificador interno, para que el límite de mensajes siga aplicándose. Ese registro de envíos no se borra después.
 - **RNF-PRI-12.** Al cerrar sesión se borra la copia local de los datos (RF-CUE-18).
 - **RNF-PRI-13.** Cada cuenta puede descargar sus datos de la app en JSON en cualquier momento, también sin acceso aprobado (ver RF-CUE-15).
 - **RNF-PRI-14.** Las alarmas con CLAR cerrada son opcionales en cada dispositivo (consentimiento). Se guardan el token de cada dispositivo, su zona horaria y si quiere ver el nombre de la tarea y, de cada alarma pendiente, su hora, el nombre de la tarea y cuándo vence; de las enviadas, cuál fue. Por FCM y el servicio push del navegador solo viaja la hora de la alarma y cuándo vence, y el nombre de la tarea solo si el dispositivo lo pide. Los registros del servidor no llevan datos de la persona, solo recuentos y códigos de error.
@@ -444,8 +449,8 @@ Origen: `index.html`, `public/manifest.json`, `functions/src/app.ts`, `src/servi
 Origen: `package.json`, `tsconfig.json`, `.github/workflows/ci.yml`, `tests/`, `functions/test/`.
 
 - **RNF-MAN-01.** El código es TypeScript en modo estricto. ESLint no admite avisos y Prettier fija el formato; un hook de pre-commit los aplica a los archivos del commit.
-- **RNF-MAN-02.** La lógica pura está separada de la interfaz y de Firebase (`src/services/`, `functions/src/accessLogic.ts`, `functions/src/feedbackLogic.ts`, `functions/src/alarmLogic.ts`) y tiene pruebas unitarias con el test runner de Node.
-- **RNF-MAN-03.** Hay pruebas de integración de la importación de datos locales pruebas de las reglas de Firestore contra el emulador y pruebas de la cola y el envío de las alarmas push contra el emulador de Firestore, con un FCM simulado (`npm run test:push`).
+- **RNF-MAN-02.** La lógica pura está separada de la interfaz y de Firebase (`src/services/`, `functions/src/accessLogic.ts`, `functions/src/featuresLogic.ts`, `functions/src/feedbackLogic.ts`, `functions/src/alarmLogic.ts`) y tiene pruebas unitarias con el test runner de Node.
+- **RNF-MAN-03.** Hay pruebas de integración de la importación de datos locales, pruebas de las reglas de Firestore contra el emulador y pruebas contra el emulador de Firestore de la cola y el envío de las alarmas push, con un FCM simulado, y de las funciones extra (`npm run test:push`).
 - **RNF-MAN-04.** Las pruebas de extremo a extremo (Playwright), un archivo por función de la app, usan los emuladores de Auth, Firestore y Functions con un proyecto de demostración. Antes de todas, un paso de calentamiento (`tests/e2e/warm-up.setup.ts`) carga la app y despierta los emuladores, y en desarrollo Vite busca las dependencias de todo `src` al arrancar, así ninguna prueba paga el arranque en frío.
 - **RNF-MAN-05.** En cada push y pull request, CI comprueba el formato, el linter, los tipos, la compilación de la app y de las funciones, y todas las pruebas. Solo despliega desde la rama principal, si todo pasa, y de un despliegue en uno.
 - **RNF-MAN-06.** La app toma la versión de `package.json`; `public/manifest.json` la repite y se actualiza a mano. Se muestra en la cabecera, el inicio de sesión y el pie, y va en las descargas y en la información técnica del contacto.
