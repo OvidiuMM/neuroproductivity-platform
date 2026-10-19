@@ -100,13 +100,20 @@ describe('Google API client', () => {
     });
   });
 
-  it('lists only the events CLAR marked, page by page', async () => {
+  it('lists only the events CLAR marked, page by page, leaving out occurrences edited in Google', async () => {
     respond(
-      { status: 200, body: { items: [{ id: 'clar1' }], nextPageToken: 'p2' } },
+      {
+        status: 200,
+        body: {
+          items: [{ id: 'clar1' }, { id: 'clar3_20261020T070000Z', recurringEventId: 'clar3' }],
+          nextPageToken: 'p2'
+        }
+      },
       { status: 200, body: { items: [{ id: 'clar2' }] } }
     );
     assert.deepEqual(await googleCalendarApi.listEventIds('t', 'cal'), ['clar1', 'clar2']);
     assert.match(requests[0].url, /privateExtendedProperty=clarTask%3D1/);
+    assert.match(requests[0].url, /recurringEventId/);
     assert.match(requests[1].url, /pageToken=p2/);
   });
 });

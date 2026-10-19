@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import { randomBytes } from 'node:crypto';
 import { describe, it } from 'node:test';
 import { openToken, parseTokenKey, sealToken } from '../src/calendarCrypto';
-import { buildTaskEvent, eventIdFor, parseConnectRequest, recurrenceRule } from '../src/calendarLogic';
+import { buildTaskEvent, eventIdFor, parseConnectRequest, recurrenceRule, taskIdForEvent } from '../src/calendarLogic';
 
 // Lo propio del servidor; que el evento coincide con el de la app lo comprueba tests/unit/calendarSync.test.ts
 const MADRID = 'Europe/Madrid';
@@ -52,6 +52,13 @@ describe('calendar events on the server', () => {
     assert.equal(buildTaskEvent({ ...due, recurrence: { frequency: 'HOURLY' } }, MADRID, URL)?.recurrence, undefined);
   });
 
+  it('drops a series whose end is not a real day, rather than repeating it forever', () => {
+    assert.equal(
+      recurrenceRule({ frequency: 'DAILY', interval: 1, until: '2026-02-30' }, false, '2026-02-01', MADRID),
+      null
+    );
+  });
+
   it('writes the end of a series in UTC at the end of the local day', () => {
     assert.equal(
       recurrenceRule({ frequency: 'DAILY', interval: 1, until: '2026-12-31' }, false, '2026-10-16', MADRID),
@@ -85,6 +92,10 @@ describe('calendar events on the server', () => {
     assert.notEqual(eventIdFor('task-1'), eventIdFor('task-2'));
     assert.match(eventIdFor('Tarea ñ/1')!, /^[a-v0-9]{5,1024}$/);
     assert.equal(eventIdFor('x'.repeat(600)), null);
+    // Y de vuelta, para comprobar la tarea de un evento
+    assert.equal(taskIdForEvent(eventIdFor('Tarea ñ/1')!), 'Tarea ñ/1');
+    assert.equal(taskIdForEvent('abc123'), null);
+    assert.equal(taskIdForEvent('clar1'), null);
   });
 
   it('accepts a connection request only back to the app, with a PKCE verifier and a real time zone', () => {

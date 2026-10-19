@@ -76,6 +76,12 @@ export const eventIdFor = (taskId: string) => {
   return id.length <= 1024 ? id : null;
 };
 
+// La tarea de un id de evento de CLAR, o null si no es uno
+export const taskIdForEvent = (eventId: string) => {
+  const hex = eventId.startsWith('clar') ? eventId.slice(4) : '';
+  return hex && hex.length % 2 === 0 && /^[0-9a-f]+$/.test(hex) ? Buffer.from(hex, 'hex').toString('utf8') : null;
+};
+
 // Las notas de la tarea, una por línea; las de lista, con su casilla (como en la app)
 const notesText = (observations: unknown) => {
   if (!Array.isArray(observations)) return '';
@@ -143,6 +149,8 @@ export const recurrenceRule = (value: unknown, allDay: boolean, anchorDate: stri
     parts.push(`BYMONTH=2;${lastDayFallback(29)}`);
   }
   const until = day(rec.until);
+  // Un final que no es un día que existe no vale: mejor un evento suelto que una serie sin fin
+  if (rec.until !== undefined && !until) return null;
   if (until) {
     // Con hora: el final del día local de `until`, en UTC
     const stamp = allDay
