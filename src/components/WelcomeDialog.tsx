@@ -1,5 +1,14 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { ArrowDown, ArrowRight, CalendarDays, Compass, ListChecks, ShieldCheck, Target } from 'lucide-react';
+import {
+  ArrowDown,
+  ArrowRight,
+  CalendarDays,
+  Compass,
+  FolderKanban,
+  ListChecks,
+  ShieldCheck,
+  Target
+} from 'lucide-react';
 import { useModalFocus } from '../hooks/useModalFocus';
 import type { OnboardingOutcome } from '../services/onboarding';
 import { BRAND_NAME, BrandMark } from './BrandMark';
@@ -9,10 +18,16 @@ interface WelcomeDialogProps {
   onFinish: (outcome: OnboardingOutcome) => void;
 }
 
-// El método de un vistazo: de lo que te importa (áreas) a lo que haces hoy (Top 10 y Agenda), con el tiempo protegido
+// El método de un vistazo: de lo que te importa (áreas) a lo que haces hoy (Top 10 y Agenda), con el tiempo protegido.
+// Los proyectos son opcionales: una forma de agrupar tareas relacionadas de una meta
 const MODEL = [
   { icon: Compass, title: 'Áreas de vida', text: 'Tu Rueda: salud, trabajo, finanzas, familia…' },
   { icon: Target, title: 'Metas', text: 'Lo que quieres conseguir en cada área, empezando por las más bajas.' },
+  {
+    icon: FolderKanban,
+    title: 'Proyectos (opcional)',
+    text: 'Si una meta, o una parte de ella, necesita varias tareas relacionadas, agrúpalas en un proyecto con fecha de fin. Una meta puede tener uno o varios.'
+  },
   { icon: ListChecks, title: 'Tareas', text: 'Acciones físicas concretas para cada meta, en Profesional o Personal.' },
   { icon: CalendarDays, title: 'Top 10 y Agenda', text: 'Qué hacer hoy y cuándo, con alarmas antes del plazo.' },
   { icon: ShieldCheck, title: 'Tiempo protegido', text: 'Mañanas sin reuniones y correos escritos en orden.' }

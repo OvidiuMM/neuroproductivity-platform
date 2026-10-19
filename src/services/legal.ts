@@ -30,7 +30,7 @@ export const OWNER = {
 export const MIN_AGE = 14;
 
 // Fecha de la versión vigente de los textos legales: cámbiala con cada cambio de contenido
-export const LEGAL_UPDATED = '17 de octubre de 2026';
+export const LEGAL_UPDATED = '19 de octubre de 2026';
 
 // Quién envía los emails de CLAR (encargado del tratamiento)
 export const EMAIL_PROVIDER = 'IONOS';

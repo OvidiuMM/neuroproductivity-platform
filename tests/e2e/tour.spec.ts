@@ -25,7 +25,7 @@ test('the guided tour walks through the essentials with the keyboard and can be 
   await startFromHelp(page);
 
   const step = (title: string) => page.getByRole('dialog', { name: title });
-  await expect(step('Captura una tarea')).toContainText('Paso 1 de 9');
+  await expect(step('Captura una tarea')).toContainText('Paso 1 de 10');
   await expect(page.getByRole('heading', { name: 'Captura una tarea' })).toBeFocused();
   await expectSpotlightOn(page, page.getByRole('button', { name: 'Nueva tarea', exact: true }));
 
@@ -43,7 +43,8 @@ test('the guided tour walks through the essentials with the keyboard and can be 
     'Ordena y filtra',
     'Agenda',
     'Rueda de la Vida',
-    'Metas'
+    'Metas',
+    'Proyectos (opcional)'
   ]) {
     await page.getByRole('button', { name: 'Siguiente' }).click();
     await expect(step(title)).toBeVisible();
@@ -51,7 +52,7 @@ test('the guided tour walks through the essentials with the keyboard and can be 
   await page.getByRole('button', { name: 'Siguiente' }).click();
   await expect(step('Tu progreso')).toBeVisible();
   await page.getByRole('button', { name: 'Siguiente' }).click();
-  await expect(step('Ayuda')).toContainText('Paso 9 de 9');
+  await expect(step('Ayuda')).toContainText('Paso 10 de 10');
   await page.getByRole('button', { name: 'Terminar' }).click();
   await expect(page.getByRole('dialog')).toHaveCount(0);
   // Repetido desde la ayuda, no lleva a la Rueda (eso es solo la primera vez): sigue en las listas
@@ -81,6 +82,10 @@ test('on a phone the tour points at the floating button and at «Más»', async 
     page,
     page.getByRole('navigation', { name: 'Secciones' }).getByRole('button', { name: 'Metas' })
   );
+  // Proyectos, opcionales, están en «Más»
+  await page.keyboard.press('ArrowRight');
+  await expect(page.getByRole('dialog', { name: 'Proyectos (opcional)' })).toBeVisible();
+  await expectSpotlightOn(page, page.getByRole('button', { name: 'Más secciones' }));
   for (let i = 0; i < 2; i++) await page.keyboard.press('ArrowRight');
   await expect(page.getByRole('dialog', { name: 'Ayuda' })).toBeVisible();
   await expectSpotlightOn(page, page.getByRole('button', { name: 'Más secciones' }));

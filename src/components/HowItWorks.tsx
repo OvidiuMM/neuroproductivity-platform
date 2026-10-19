@@ -63,10 +63,11 @@ const SCREENS: { tab: AppTab; title: string; icon: React.ReactNode; points: stri
   },
   {
     tab: 'projects',
-    title: 'Proyectos',
+    title: 'Proyectos (opcional)',
     icon: <FolderKanban className="h-5 w-5 text-indigo-600" />,
     points: [
-      'Un proyecto agrupa las tareas de algo con fecha de fin, por ejemplo «Reformar la cocina» dentro de la meta «Tener la casa a punto». Pertenece a una meta y sus tareas cuentan en el avance de esa meta.',
+      'Los proyectos son opcionales: una herramienta para agrupar tareas relacionadas que buscan cumplir una meta o una parte de ella. Una meta puede tener ninguno, uno o varios; sus tareas pueden ir sueltas, en un proyecto o mezcladas.',
+      'Por ejemplo, la meta «Tener la casa a punto» puede tener el proyecto «Reformar la cocina», con fecha de fin, y otras tareas sueltas. Las tareas de un proyecto cuentan en el avance de su meta.',
       'Su avance se ve como una batería: el porcentaje de tareas hechas (las canceladas no cuentan).',
       'Abre un proyecto para ver y manejar sus tareas igual que en «Listas»: completarlas, cambiar su estado, editarlas o borrarlas. «Añadir tarea» la crea ya en el proyecto.',
       'Avisa si va fuera de plazo (pasó la fecha de fin y quedan tareas), si termina pronto y si alguna tarea vence después del fin. Cuando acabes, márcalo como terminado; también lo puedes archivar.',
@@ -79,12 +80,12 @@ const SCREENS: { tab: AppTab; title: string; icon: React.ReactNode; points: stri
     icon: <Briefcase className="h-5 w-5 text-indigo-600" />,
     points: [
       'Dos listas separadas, Profesional y Personal, para no mezclar contextos. Cambia entre ellas con el selector de la barra superior.',
-      'Las 10 primeras tareas, según el orden y los filtros que elijas (prioridad, fecha límite, estimación, estado o área), forman tu Top 10; el resto queda en segundo plano.',
+      'Las 10 primeras tareas, según el orden y los filtros que elijas (prioridad, fecha límite, estimación, última actualización, estado o área), forman tu Top 10; el resto queda en segundo plano.',
       'Si la fecha límite está a más de una semana, la tarea cuenta un nivel menos de prioridad. También puedes indicar cuánto te llevará (estimación).',
       'Al crear una tarea, el analizador te pide una acción física concreta (por ejemplo «Llamar al taller…») en lugar de un tema abstracto.',
       'Meta: vincula la tarea a una de tus metas y tomará su área (si el título se parece a una meta, CLAR te propone vincularla). Sin meta, el motor de sugerencias te propone el área de la Rueda con la que se relaciona. Si la meta aún no existe, «Nueva meta» la crea ahí mismo con su nombre y su área.',
       'Tareas que dependen de otras: en «Más opciones», «Empieza después de» elige la tarea a la que espera. Mientras esa no esté hecha o cancelada, esta sale con un candado («Bloqueada: espera a…»), no entra en el Top 10 y no se puede marcar como hecha. Al terminar la otra se desbloquea sola. Varias tareas pueden esperar a la misma y avanzar en paralelo.',
-      'Cada tarea tiene un estado: Pendiente, En progreso, Bloqueada, Hecha o Cancelada. Hecha y Cancelada la archivan; una cancelada no cuenta como hecha en las estadísticas ni en el avance de las metas. Desde «Archivadas» la reactivas cambiando su estado.',
+      'Cada tarea tiene un estado: Pendiente, En progreso, Bloqueada, Hecha o Cancelada. Mientras espera a otra tarea no se puede poner «En progreso» ni «Hecha». Hecha y Cancelada la archivan; una cancelada no cuenta como hecha en las estadísticas ni en el avance de las metas. Desde «Archivadas» la reactivas cambiando su estado.',
       'Si cierras con cambios sin guardar el formulario de una tarea, una meta o un proyecto, o el editor de áreas, CLAR te pregunta antes de descartarlos; si cierras la pestaña, te avisa el navegador.',
       'Puedes darle una fecha límite o un intervalo, con hora opcional: el título se pone violeta cuando falta menos de una semana y rojo cuando ha vencido. Las fechas se escriben como dd/mm/aaaa o se eligen en el calendario, con la semana empezando en lunes.',
       'Pulsa el título de una tarea, o su lápiz, para editarla. El menú «⋯» tiene el estado, el calendario, la descarga y eliminar.',
@@ -132,9 +133,10 @@ export const HowItWorks: React.FC<HowItWorksProps> = ({ onNavigate, onStartTour,
         </h2>
         <p className="max-w-3xl text-sm leading-relaxed text-slate-600">
           CLAR va de lo que te importa a lo que haces hoy: decides qué áreas de tu vida quieres mejorar (Rueda), les
-          pones metas, conviertes cada meta en acciones concretas (tareas, sueltas o agrupadas en proyectos con fecha de
-          fin), eliges qué toca hoy (Top 10 y Agenda) y proteges el tiempo para hacerlas. En el móvil, la barra inferior
-          lleva Inicio, Listas, Agenda y Metas; la Rueda, Proyectos, Tiempo protegido y la Ayuda están en «Más».
+          pones metas, conviertes cada meta en acciones concretas (tareas; si quieres, agrupas las relacionadas en
+          proyectos con fecha de fin), eliges qué toca hoy (Top 10 y Agenda) y proteges el tiempo para hacerlas. En el
+          móvil, la barra inferior lleva Inicio, Listas, Agenda y Metas; la Rueda, Proyectos, Tiempo protegido y la
+          Ayuda están en «Más».
         </p>
       </div>
 
@@ -236,9 +238,10 @@ export const HowItWorks: React.FC<HowItWorksProps> = ({ onNavigate, onStartTour,
           </li>
           <li>
             <strong>Metas → Tareas:</strong> «Añadir tarea» crea la tarea ya vinculada a su meta, y la tarea toma el
-            área de la meta. Lo que tiene fecha de fin y varias tareas va en un proyecto de la meta. Al escribir una
-            tarea, CLAR te propone la meta que más se parece; si no tiene meta, el motor de sugerencias propone un área
-            de la Rueda. Así lo que haces cada día queda vinculado a lo que quieres mejorar.
+            área de la meta. Si una meta, o una parte de ella, necesita varias tareas relacionadas, puedes agruparlas en
+            un proyecto (opcional; una meta puede tener uno o varios). Al escribir una tarea, CLAR te propone la meta
+            que más se parece; si no tiene meta, el motor de sugerencias propone un área de la Rueda. Así lo que haces
+            cada día queda vinculado a lo que quieres mejorar.
           </li>
           <li>
             <strong>Tareas → Top 10 y Agenda:</strong> las más importantes forman tu Top 10 y las que tienen fecha, tu
@@ -271,7 +274,10 @@ export const HowItWorks: React.FC<HowItWorksProps> = ({ onNavigate, onStartTour,
           cuando hay cambios pendientes o no hay conexión; púlsalo para forzar la sincronización. Desde el menú de tu
           cuenta puedes descargar tus datos e importar una descarga anterior (se añade lo que falta; lo que ya tienes no
           se toca), cambiar la contraseña (si entras con email), cerrar la sesión en todos tus dispositivos o eliminar
-          la cuenta con todo su contenido. Todo el detalle, en la{' '}
+          la cuenta con todo su contenido. Si activas «Avisarme también con CLAR cerrada» en un dispositivo, se guardan
+          además su identificador de notificaciones y su zona horaria, y tus alarmas pendientes con el nombre de la
+          tarea; la notificación pasa por Firebase Cloud Messaging y solo lleva el nombre si lo pides. Todo el detalle,
+          en la{' '}
           <LegalLink to="privacy" newTab>
             política de privacidad
           </LegalLink>
