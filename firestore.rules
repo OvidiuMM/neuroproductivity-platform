@@ -2,8 +2,8 @@ rules_version = '2';
 
 // Cada persona solo puede leer y escribir sus propios datos en users/{uid}. Crear y modificar exige que la
 // administración haya aprobado su acceso (access/{uid}); leer y borrar no, para que una cuenta pendiente o
-// retirada pueda descargar o eliminar lo suyo. Las solicitudes de acceso y la lista de administración solo las
-// escriben las Cloud Functions. Todo lo que no coincide con estas reglas queda denegado.
+// retirada pueda descargar o eliminar lo suyo. Las solicitudes de acceso, la lista de administración y las funciones
+// extra de cada cuenta solo las escriben las Cloud Functions. Todo lo que no coincide con estas reglas queda denegado.
 service cloud.firestore {
   match /databases/{database}/documents {
     function isOwner(uid) {

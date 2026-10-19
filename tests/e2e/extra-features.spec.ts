@@ -1,5 +1,15 @@
 import { expect, test, type Browser, type Page } from '@playwright/test';
-import { ADMIN_EMAIL, readDocument, signInWithGoogle, uidOf, uniqueEmail } from './helpers';
+import {
+  ADMIN_EMAIL,
+  approveAccess,
+  callFunction,
+  createVerifiedAccount,
+  patchDocument,
+  readDocument,
+  signInWithGoogle,
+  uidOf,
+  uniqueEmail
+} from './helpers';
 
 // Esperas que pasan por una Cloud Function del emulador: con la suite en paralelo su arranque puede tardar
 const SERVER_CALL = { timeout: 15_000 };
@@ -40,12 +50,23 @@ test('the admin turns on extra features for an account, which sees them at once,
   await openAdmin(adminPage);
   await adminPage.getByRole('button', { name: /^Administración/ }).click();
   const entry = entryIn(adminPage, /^Con acceso/, email);
-  await entry.getByRole('button', { name: /^Funciones extra/ }).click();
-  await expect(entry.getByRole('button', { name: /^Funciones extra/ })).toHaveAttribute('aria-expanded', 'true');
-  await entry.getByRole('checkbox', { name: new RegExp(CALENDAR) }).check();
-  await entry.getByRole('button', { name: 'Guardar' }).click();
+  const featuresButton = entry.getByRole('button', { name: /^Funciones extra/ });
+  const panel = entry.getByRole('group', { name: /^Funciones extra de / });
+  // Escape cierra el panel sin guardar y el foco vuelve a su botón
+  await featuresButton.click();
+  await expect(featuresButton).toHaveAttribute('aria-expanded', 'true');
+  await panel.getByRole('checkbox', { name: CALENDAR }).check();
+  await adminPage.keyboard.press('Escape');
+  await expect(panel).toHaveCount(0);
+  await expect(featuresButton).toBeFocused();
+
+  await featuresButton.click();
+  await expect(panel.getByRole('checkbox', { name: CALENDAR })).not.toBeChecked();
+  await panel.getByRole('checkbox', { name: CALENDAR }).check();
+  await panel.getByRole('button', { name: 'Guardar' }).click();
   await expect(entry).toContainText(`Funciones extra: ${CALENDAR}`, SERVER_CALL);
-  await expect(entry.getByRole('button', { name: 'Guardar' })).toHaveCount(0);
+  await expect(panel).toHaveCount(0);
+  await expect(featuresButton).toBeFocused();
 
   // La cuenta la ve en su menú sin recargar, sin interruptor: la administración decide
   menu = await openAccountMenu(userPage);
@@ -54,33 +75,52 @@ test('the admin turns on extra features for an account, which sees them at once,
   await expect(features).toContainText('Activadas para tu cuenta por la administración.');
   await expect(features.getByRole('switch')).toHaveCount(0);
 
-  // Al quitarla, desaparece
-  await entry.getByRole('button', { name: /^Funciones extra/ }).click();
-  await entry.getByRole('checkbox', { name: new RegExp(CALENDAR) }).uncheck();
-  await entry.getByRole('button', { name: 'Guardar' }).click();
+  // Al quitarla, desaparece (y sin funciones no queda documento)
+  await featuresButton.click();
+  await panel.getByRole('checkbox', { name: CALENDAR }).uncheck();
+  await panel.getByRole('button', { name: 'Guardar' }).click();
   await expect(features).toHaveCount(0, SERVER_CALL);
   await expect(entry).not.toContainText('Funciones extra:');
+  expect(await readDocument(`features/${uid}`)).toBeNull();
 
-  // Al retirar el acceso se borran: al volver a aprobarla, empieza sin ninguna
-  await entry.getByRole('button', { name: /^Funciones extra/ }).click();
-  await entry.getByRole('checkbox', { name: new RegExp(CALENDAR) }).check();
-  await entry.getByRole('button', { name: 'Guardar' }).click();
+  // Al retirar el acceso se borran, también con el panel abierto: al volver a aprobarla, empieza sin ninguna
+  await featuresButton.click();
+  await panel.getByRole('checkbox', { name: CALENDAR }).check();
+  await panel.getByRole('button', { name: 'Guardar' }).click();
   await expect(entry).toContainText(`Funciones extra: ${CALENDAR}`, SERVER_CALL);
+  await featuresButton.click();
+  await panel.getByRole('checkbox', { name: CALENDAR }).uncheck();
   await entry.getByRole('button', { name: /^Retirar acceso/ }).click();
   await expect.poll(() => readDocument(`features/${uid}`), SERVER_CALL).toBeNull();
-  await expect(entryIn(adminPage, /^Rechazadas o retiradas/, email)).toBeVisible();
-  await expect(
-    entryIn(adminPage, /^Rechazadas o retiradas/, email).getByRole('button', { name: /^Funciones extra/ })
-  ).toHaveCount(0);
+  const closed = entryIn(adminPage, /^Rechazadas o retiradas/, email);
+  await expect(closed.getByRole('button', { name: /^Funciones extra/ })).toHaveCount(0);
+  await closed.getByRole('button', { name: /^Aprobar/ }).click();
+  await expect(featuresButton).toHaveAttribute('aria-expanded', 'false', SERVER_CALL);
+  await expect(panel).toHaveCount(0);
+  await expect(entry).not.toContainText('Funciones extra:');
+});
+
+test('only the admin can set extra features, and deleting the account removes them', async () => {
+  const { email, uid, idToken } = await createVerifiedAccount();
+  await approveAccess(email);
+  // Una cuenta que no es administración no puede concederse nada
+  expect((await callFunction('setFeatures', idToken, { uid, features: ['googleCalendar'] })).status).toBe(403);
+  expect(await readDocument(`features/${uid}`)).toBeNull();
+  // Al eliminar la cuenta, sus funciones extra se borran con ella
+  await patchDocument(`features/${uid}`, { granted: { arrayValue: { values: [{ stringValue: 'googleCalendar' }] } } });
+  expect((await callFunction('forgetAccess', idToken, {})).status).toBe(200);
+  expect(await readDocument(`features/${uid}`)).toBeNull();
 });
 
 test('the admin has every extra feature in their account, switched off until they turn it on', async ({ page }) => {
   await openAdmin(page);
+  // La cuenta de administración es compartida por la suite (y por las ejecuciones con los emuladores abiertos): se
+  // empieza sin nada encendido y la prueba lo deja apagado
   const adminUid = await uidOf(ADMIN_EMAIL);
+  await patchDocument(`users/${adminUid}`, { featurePrefs: { mapValue: { fields: {} } } });
   const menu = await openAccountMenu(page);
   const features = menu.getByRole('region', { name: 'Funciones extra' });
   const calendar = features.getByRole('switch', { name: CALENDAR });
-  // La cuenta de administración es compartida por la suite: la prueba la deja apagada
   await expect(features).toContainText('Como administración, las tienes todas');
   await expect(calendar).not.toBeChecked();
   await calendar.check();

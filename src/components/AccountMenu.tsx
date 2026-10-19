@@ -323,26 +323,38 @@ export const AccountMenu: React.FC<AccountMenuProps> = ({
                   {extraFeatures.features.map((feature) => {
                     const { onToggle } = extraFeatures;
                     const descriptionId = `account-feature-${feature.id}`;
+                    const labelId = `${descriptionId}-label`;
+                    const on = extraFeatures.active.includes(feature.id);
                     return (
-                      <li key={feature.id}>
-                        {onToggle ? (
-                          <label className="flex min-h-9 cursor-pointer items-center gap-2 text-xs font-semibold text-slate-800">
-                            <input
-                              type="checkbox"
-                              role="switch"
-                              checked={extraFeatures.active.includes(feature.id)}
-                              onChange={(e) => onToggle(feature.id, e.target.checked)}
-                              aria-describedby={descriptionId}
-                              className="h-4 w-4 rounded border-slate-300 text-indigo-600"
-                            />
+                      <li key={feature.id} className="flex items-start justify-between gap-3">
+                        <div className="min-w-0">
+                          <p id={labelId} className="text-xs font-semibold text-slate-800">
                             {feature.label}
-                          </label>
-                        ) : (
-                          <p className="text-xs font-semibold text-slate-800">{feature.label}</p>
+                          </p>
+                          <p id={descriptionId} className="text-[11px] text-slate-600">
+                            {feature.description}
+                          </p>
+                        </div>
+                        {onToggle && (
+                          <button
+                            type="button"
+                            role="switch"
+                            aria-checked={on}
+                            aria-labelledby={labelId}
+                            aria-describedby={descriptionId}
+                            onClick={() => onToggle(feature.id, !on)}
+                            className={`relative mt-0.5 h-6 w-11 shrink-0 rounded-full border-2 ${
+                              on ? 'border-indigo-600 bg-indigo-600' : 'border-slate-500 bg-slate-200'
+                            }`}
+                          >
+                            <span
+                              aria-hidden="true"
+                              className={`absolute top-0.5 h-4 w-4 rounded-full bg-white shadow transition-transform ${
+                                on ? 'left-0.5 translate-x-5' : 'left-0.5 translate-x-0 border border-slate-500'
+                              }`}
+                            />
+                          </button>
                         )}
-                        <p id={descriptionId} className="text-[11px] text-slate-600">
-                          {feature.description}
-                        </p>
                       </li>
                     );
                   })}

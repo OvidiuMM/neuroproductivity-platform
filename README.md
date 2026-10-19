@@ -173,7 +173,7 @@ La lista completa y numerada de lo que hace la app, con sus requisitos no funcio
 - **Eliminar la cuenta tras entrar con Google:** se confirma con el método con el que se entró en esta sesión (`useReauthMethods`); una cuenta con contraseña y Google puede cambiar al otro, y los errores de la ventana de Google salen en español.
 - **Pruebas e2e más estables:** un paso de calentamiento (`tests/e2e/warm-up.setup.ts`) carga la app y despierta los emuladores antes de todas, y Vite busca las dependencias de todo `src` al arrancar.
 
-### Alarmas con CLAR cerrada y proyectos opcionales (próxima versión)
+### Alarmas con CLAR cerrada, proyectos opcionales y funciones extra (próxima versión)
 
 - **Alarmas con CLAR cerrada (push):** con «Avisarme también con CLAR cerrada» activado en un dispositivo (menú de la cuenta; la notificación lleva solo la hora salvo que se pida el nombre de la tarea), las alarmas le llegan aunque la app esté cerrada o el móvil bloqueado, por Firebase Cloud Messaging y una Cloud Function que se ejecuta cada minuto (ver [Notificaciones push de las alarmas](#notificaciones-push-de-las-alarmas)).
 - **Proyectos opcionales:** la bienvenida, el recorrido guiado (un paso más, «Proyectos (opcional)»), la sección y la ayuda presentan los proyectos como una herramienta opcional para agrupar tareas relacionadas de una meta o de una parte de ella (ninguno, uno o varios por meta).
@@ -428,7 +428,7 @@ El repositorio utiliza `package-lock.json` (en la raíz, en `functions/` y en `t
 │   │   ├── accessLogic.ts       # Reglas puras del acceso (estados, esperas, modo de aprobación, correos)
 │   │   ├── features.ts          # setFeatures: funciones extra de cada cuenta (solo la administración)
 │   │   ├── featuresLogic.ts     # Catálogo de funciones extra y validación de lo que pide la administración
-│   │   ├── featuresCleanup.ts   # Quitar las funciones extra de una cuenta (sin acceso o eliminada)
+│   │   ├── featuresCleanup.ts   # Documento de las funciones extra de una cuenta y su borrado al eliminarla
 │   │   ├── feedback.ts          # submitFeedback y replyToFeedback (mensajes de contacto y sus respuestas)
 │   │   ├── feedbackLogic.ts     # Validación, límite por hora y correos del contacto
 │   │   ├── feedbackCleanup.ts   # Borrado de los mensajes al eliminar la cuenta

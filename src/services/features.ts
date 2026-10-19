@@ -25,9 +25,6 @@ export const EXTRA_FEATURES: readonly ExtraFeature[] = [
 
 const FEATURE_IDS = EXTRA_FEATURES.map((f) => f.id);
 
-export const isFeatureId = (value: unknown): value is FeatureId =>
-  typeof value === 'string' && (FEATURE_IDS as string[]).includes(value);
-
 // Lo guardado en Firestore, sin fiarse: solo las del catálogo, en su orden
 export const featureList = (value: unknown): FeatureId[] =>
   Array.isArray(value) ? FEATURE_IDS.filter((id) => value.includes(id)) : [];
@@ -61,7 +58,10 @@ export const subscribeToOwnFeatures = (db: Firestore, uid: string, onChange: (gr
   onSnapshot(
     doc(db, 'features', uid),
     (snapshot) => onChange(featureList(snapshot.data()?.granted)),
-    () => onChange([])
+    (e) => {
+      console.error('Error loading own extra features:', e);
+      onChange([]);
+    }
   );
 
 // Solo para la administración: las de todas las cuentas, por uid

@@ -12,8 +12,10 @@ const db = adminDb();
 const access = (uid: string, status: string) => db.doc(`access/${uid}`).set({ status, email: `${uid}@example.com` });
 const granted = async (uid: string) => (await db.doc(`features/${uid}`).get()).data()?.granted as unknown;
 
+// Solo las cuentas de esta prueba: push.test.ts usa el mismo emulador a la vez
+const UIDS = ['carla', 'dani', 'elena', 'nadie'];
 const clear = async () => {
-  for (const name of ['features', 'access']) await db.recursiveDelete(db.collection(name));
+  await Promise.all(UIDS.flatMap((uid) => [db.doc(`features/${uid}`).delete(), db.doc(`access/${uid}`).delete()]));
 };
 
 describe('extra features', () => {
@@ -24,8 +26,9 @@ describe('extra features', () => {
     await access('carla', 'approved');
     await saveGrantedFeatures('carla', ['googleCalendar']);
     assert.deepEqual(await granted('carla'), ['googleCalendar']);
+    // Sin funciones no queda documento
     await saveGrantedFeatures('carla', []);
-    assert.deepEqual(await granted('carla'), []);
+    assert.equal((await db.doc('features/carla').get()).exists, false);
   });
 
   it('does not save features for an account without access', async () => {

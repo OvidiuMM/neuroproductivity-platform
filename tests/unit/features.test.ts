@@ -1,13 +1,7 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { FEATURE_IDS } from '../../functions/src/featuresLogic';
-import {
-  EXTRA_FEATURES,
-  activeFeatures,
-  featureList,
-  featurePrefsOf,
-  isFeatureId
-} from '../../src/services/features.ts';
+import { EXTRA_FEATURES, activeFeatures, featureList, featurePrefsOf } from '../../src/services/features.ts';
 
 test('the app and the server know the same extra features', () => {
   assert.deepEqual(
@@ -27,8 +21,6 @@ test('reads what is stored without trusting it', () => {
   assert.deepEqual(featurePrefsOf({ googleCalendar: true, otra: true }), { googleCalendar: true });
   assert.deepEqual(featurePrefsOf({ googleCalendar: 'sí' }), {});
   assert.deepEqual(featurePrefsOf(null), {});
-  assert.equal(isFeatureId('googleCalendar'), true);
-  assert.equal(isFeatureId('constructor'), false);
 });
 
 test('the admin uses the features switched on, which start off; other accounts use the ones granted', () => {
