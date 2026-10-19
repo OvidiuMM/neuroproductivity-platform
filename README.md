@@ -173,25 +173,26 @@ La lista completa y numerada de lo que hace la app, con sus requisitos no funcio
 - **Eliminar la cuenta tras entrar con Google:** se confirma con el método con el que se entró en esta sesión (`useReauthMethods`); una cuenta con contraseña y Google puede cambiar al otro, y los errores de la ventana de Google salen en español.
 - **Pruebas e2e más estables:** un paso de calentamiento (`tests/e2e/warm-up.setup.ts`) carga la app y despierta los emuladores antes de todas, y Vite busca las dependencias de todo `src` al arrancar.
 
-### Alarmas con CLAR cerrada, proyectos opcionales y funciones extra (próxima versión)
+### Alarmas con CLAR cerrada, proyectos opcionales, funciones extra y Google Calendar (próxima versión)
 
 - **Alarmas con CLAR cerrada (push):** con «Avisarme también con CLAR cerrada» activado en un dispositivo (menú de la cuenta; la notificación lleva solo la hora salvo que se pida el nombre de la tarea), las alarmas le llegan aunque la app esté cerrada o el móvil bloqueado, por Firebase Cloud Messaging y una Cloud Function que se ejecuta cada minuto (ver [Notificaciones push de las alarmas](#notificaciones-push-de-las-alarmas)).
 - **Proyectos opcionales:** la bienvenida, el recorrido guiado (un paso más, «Proyectos (opcional)»), la sección y la ayuda presentan los proyectos como una herramienta opcional para agrupar tareas relacionadas de una meta o de una parte de ella (ninguno, uno o varios por meta).
 - **Importar sin recortar:** un registro con un texto o una lista que pasa su tope cuenta entero como no válido.
 - **Funciones extra:** en **Administración** → **Solicitudes**, cada cuenta con acceso tiene «Funciones extra» para activarle funciones del catálogo (`src/services/features.ts`, con los mismos ids en `functions/src/featuresLogic.ts`). Una función activada está en uso desde ese momento y la cuenta la ve en su menú; la administración las tiene todas y las enciende o apaga en el suyo (empiezan apagadas). Las guarda la Cloud Function `setFeatures` en `features/{uid}`, y se borran al retirar, rechazar o bloquear la cuenta y al eliminarla.
+- **Sincronización con Google Calendar (función extra):** con la función en uso, «Conectar Google Calendar», en el menú de la cuenta, crea un calendario «CLAR» en la cuenta de Google de la persona y mantiene en él sus tareas con fecha (salvo «Algún día»), en un solo sentido, con los mismos eventos que «Añadir al calendario» (ver [Sincronización con Google Calendar](#sincronización-con-google-calendar)).
 - **CI:** `actions/checkout` y `actions/setup-node` en v7 (Node 24).
 
 ---
 
 ## 🛠️ Stack Tecnológico
 
-| Capa                    | Tecnologías                                                                                                                                                                                                                                                                                                                                                                                                                                                        |
-| :---------------------- | :----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Frontend**            | React 19, TypeScript, Vite, Tailwind CSS v4, Lucide Icons                                                                                                                                                                                                                                                                                                                                                                                                          |
-| **Algoritmia**          | Motor TF-IDF & Cosine Similarity en TS, Parser sintáctico de verbos en español                                                                                                                                                                                                                                                                                                                                                                                     |
-| **Visualización**       | SVG interactivo polar / radar, Matemáticas polares de deformación poligonal                                                                                                                                                                                                                                                                                                                                                                                        |
-| **Cuentas y datos**     | Firebase Authentication (Google y email con contraseña) y Cloud Firestore (`europe-west1`) con caché persistente: funciona sin conexión y sincroniza entre dispositivos                                                                                                                                                                                                                                                                                            |
-| **Hosting y funciones** | Firebase Hosting (SPA, en https://clar.life) y Cloud Functions for Firebase 2.ª gen (`europe-west1`): funciones invocables de acceso, funciones extra, contacto y registro de dispositivos para las alarmas push, el trigger `queueTaskAlarm` y la función programada `sendDueAlarms` (Firebase Cloud Messaging), con avisos por email (SMTP de IONOS, con nodemailer), y la función HTTP `api`, que solo sirve `/.well-known/assetlinks.json` para la APK Android |
+| Capa                    | Tecnologías                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                |
+| :---------------------- | :----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Frontend**            | React 19, TypeScript, Vite, Tailwind CSS v4, Lucide Icons                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  |
+| **Algoritmia**          | Motor TF-IDF & Cosine Similarity en TS, Parser sintáctico de verbos en español                                                                                                                                                                                                                                                                                                                                                                                                                                                             |
+| **Visualización**       | SVG interactivo polar / radar, Matemáticas polares de deformación poligonal                                                                                                                                                                                                                                                                                                                                                                                                                                                                |
+| **Cuentas y datos**     | Firebase Authentication (Google y email con contraseña) y Cloud Firestore (`europe-west1`) con caché persistente: funciona sin conexión y sincroniza entre dispositivos                                                                                                                                                                                                                                                                                                                                                                    |
+| **Hosting y funciones** | Firebase Hosting (SPA, en https://clar.life) y Cloud Functions for Firebase 2.ª gen (`europe-west1`): funciones invocables de acceso, funciones extra, Google Calendar, contacto y registro de dispositivos para las alarmas push, los triggers `queueTaskAlarm` y `syncTaskCalendar` (con la API de Google Calendar) y la función programada `sendDueAlarms` (Firebase Cloud Messaging), con avisos por email (SMTP de IONOS, con nodemailer), y la función HTTP `api`, que solo sirve `/.well-known/assetlinks.json` para la APK Android |
 
 ---
 
@@ -313,6 +314,20 @@ Con CLAR cerrada, las alarmas llegan por Firebase Cloud Messaging a los disposit
 3. **APK (TWA):** generarla con la delegación de notificaciones (Bubblewrap: `enableNotifications: true`) y el permiso `POST_NOTIFICATIONS` de Android 13+.
 4. **Emuladores:** FCM no tiene emulador, así que con ellos no se usa push; el trigger funciona y la tarea programada no se ejecuta.
 
+#### Sincronización con Google Calendar
+
+Es la función extra «Sincronizar con Google Calendar», en un solo sentido: CLAR → Google. «Conectar Google Calendar», en el menú de la cuenta, abre la autorización de Google en una ventana (solo el permiso `calendar.app.created`, sin conexión, con PKCE); Google vuelve a `/oauth/google.html` (`public/oauth/`), que pasa el código a la app. La Cloud Function `connectGoogleCalendar` lo canjea, comprueba que la cuenta puede usar la función, crea el calendario «CLAR» (o vuelve a usar el anterior), guarda el permiso cifrado con AES-256-GCM en `calendar_tokens/{uid}` y sube las tareas con fecha. Después, el trigger `syncTaskCalendar` crea, actualiza o borra el evento de cada tarea al cambiarla, con un id fijo por tarea, y comprueba cada vez que la cuenta sigue con la función (concedida y con acceso, o la administración con su interruptor encendido). Los eventos salen de `functions/src/calendarLogic.ts`, que da el mismo resultado que «Añadir al calendario» (`tests/unit/calendarSync.test.ts` lo comprueba). `disconnectGoogleCalendar`, quitar la función (`calendarFeatureChanged`, `calendarPrefChanged`), perder el acceso y eliminar la cuenta retiran el permiso en Google; el calendario se queda en la cuenta de Google. La app solo lee `calendar_status/{uid}`. Si Google retira el permiso o se borra el calendario, la cuenta pasa a «Volver a conectar».
+
+Configuración, una sola vez (los secretos se escriben en el terminal, nunca en el repositorio ni en un chat). **Los dos secretos tienen que existir antes de desplegar esta versión: sin ellos, el despliegue falla.**
+
+1. **API:** `gcloud services enable calendar-json.googleapis.com --project "$PROJECT_ID"`.
+2. **Pantalla de consentimiento** (Google Cloud → Google Auth Platform): usuarios externos, nombre «CLAR», dominio autorizado `clar.life`, enlaces a `https://clar.life/privacidad` y `https://clar.life/condiciones`, y el permiso `https://www.googleapis.com/auth/calendar.app.created`. Publícala («En producción»): en «Prueba», Google caduca los permisos a los 7 días. Hasta que Google verifique la app (el permiso es sensible: pide la política de privacidad, que ya incluye la declaración de uso limitado, y un vídeo del flujo), la ventana avisa de que la app no está verificada.
+3. **Cliente OAuth** (Credenciales → Crear ID de cliente → Aplicación web): origen `https://clar.life` y URI de redirección `https://clar.life/oauth/google.html` (y las de `https://<proyecto>.web.app`, si se usa esa dirección).
+4. **Secreto del cliente**, en Secret Manager (se pega en el terminal y se termina con Ctrl+D): `gcloud secrets create GOOGLE_OAUTH_CLIENT_SECRET --data-file=- --project "$PROJECT_ID"`.
+5. **Clave del cifrado** de los permisos, generada en local: `openssl rand -base64 32 | gcloud secrets create CALENDAR_TOKEN_KEY --data-file=- --project "$PROJECT_ID"`. Si se cambia, los permisos guardados dejan de poder leerse y cada cuenta tiene que volver a conectar.
+6. **Id del cliente** (no es secreto), en la variable del repositorio `GOOGLE_OAUTH_CLIENT_ID` (`gh variable set GOOGLE_OAUTH_CLIENT_ID`). La compilación lo lee como `VITE_GOOGLE_OAUTH_CLIENT_ID` y las funciones, como el parámetro `GOOGLE_OAUTH_CLIENT_ID`; sin él, la app no ofrece conectar.
+7. **Emuladores:** Google no tiene emulador. `npm run test:push` prueba la conexión, la sincronización y la desconexión con un Google simulado; las pruebas de extremo a extremo interceptan la ventana de Google, y en los emuladores `connectGoogleCalendar` dice que no está disponible.
+
 #### Dominio propio (clar.life)
 
 La dirección principal de la app es `https://clar.life` (la de Firebase Hosting sigue funcionando). Servida desde ese dominio, el inicio de sesión usa el mismo dominio (`authDomain`, en `src/services/authDomain.ts`), así el navegador no bloquea la ventana de Google por ser de otro sitio. Configuración, una sola vez:
@@ -414,7 +429,8 @@ El repositorio utiliza `package-lock.json` (en la raíz, en `functions/` y en `t
 ├── firebase.json                # Firebase Hosting (rewrites y caché), Cloud Functions, Firestore y emuladores
 ├── firestore.rules              # Reglas: users/{uid} (crear y modificar exige acceso aprobado), access, admins,
 │                                #   settings y feedback_tickets (solo la administración, y solo su estado)
-├── public/                      # Manifiesto, iconos, pantalla de inicio y sw.js (service worker de las notificaciones)
+├── public/                      # Manifiesto, iconos, pantalla de inicio, sw.js (service worker de las notificaciones) y
+│                                #   oauth/ (vuelta de la autorización de Google Calendar)
 ├── tools/eslint/                # ESLint con su propio TypeScript 5.9
 ├── .github/workflows/ci.yml     # Validación (tipos, linter, pruebas) y despliegue desde main
 ├── functions/                   # Cloud Functions for Firebase (región europe-west1)
@@ -426,6 +442,12 @@ El repositorio utiliza `package-lock.json` (en la raíz, en `functions/` y en `t
 │   │   ├── access.ts            # syncAccess, requestAccess, setAccess, setAccessMode, forgetAccess, revokeSessions
 │   │   │                        #   y avisos por email (SMTP)
 │   │   ├── accessLogic.ts       # Reglas puras del acceso (estados, esperas, modo de aprobación, correos)
+│   │   ├── calendarSync.ts      # Google Calendar: connectGoogleCalendar, disconnectGoogleCalendar, syncTaskCalendar
+│   │   │                        #   y la desconexión al perder la función
+│   │   ├── calendarLogic.ts     # Evento de cada tarea (igual que «Añadir al calendario») y validación al conectar
+│   │   ├── calendarCleanup.ts   # Dónde se guarda la conexión y cómo se desconecta (también al eliminar la cuenta)
+│   │   ├── calendarCrypto.ts    # Cifrado AES-256-GCM del permiso de Google
+│   │   ├── googleCalendar.ts    # API de Google (OAuth y Calendar), con fetch
 │   │   ├── features.ts          # setFeatures: funciones extra de cada cuenta (solo la administración)
 │   │   ├── featuresLogic.ts     # Catálogo de funciones extra y validación de lo que pide la administración
 │   │   ├── featuresCleanup.ts   # Documento de las funciones extra de una cuenta y su borrado al eliminarla
@@ -463,6 +485,7 @@ El repositorio utiliza `package-lock.json` (en la raíz, en `functions/` y en `t
 │   │   ├── repository.ts        # Lectura en tiempo real y escritura de los datos de cada cuenta
 │   │   ├── access.ts            # Solicitudes de acceso, modo de aprobación y llamadas a las Cloud Functions
 │   │   ├── features.ts          # Funciones extra: catálogo, las de la cuenta y las de todas (administración)
+│   │   ├── googleCalendar.ts    # Conectar Google Calendar (ventana de Google con PKCE) y estado de la conexión
 │   │   ├── auth.ts              # Email y contraseña: alta con verificación, acceso, recuperación y cambio
 │   │   ├── account.ts           # Descarga de los datos, eliminación de la cuenta y cierre de todas las sesiones
 │   │   ├── importData.ts        # Importar la descarga: validación campo a campo, qué entra y fusión de áreas
@@ -509,6 +532,7 @@ El repositorio utiliza `package-lock.json` (en la raíz, en `functions/` y en `t
 │       ├── AdminView.tsx · AccessAdminView.tsx · FeedbackAdminView.tsx # Administración: solicitudes y mensajes
 │       ├── FeedbackDialog.tsx   # «Escríbenos»
 │       ├── AccountMenu.tsx · AccessibilityPanel.tsx · DeleteAccountPanel.tsx
+│       ├── CalendarConnection.tsx # Conectar, estado y desconectar Google Calendar (en «Tu cuenta»)
 │       ├── ImportLocalDataModal.tsx # Importación de datos locales en el primer inicio de sesión
 │       ├── ImportAccountDialog.tsx # Vista previa y avance de «Importar datos (JSON)»
 │       ├── NewGoalInline.tsx    # Crear una meta desde el formulario de la tarea
@@ -529,7 +553,7 @@ El repositorio utiliza `package-lock.json` (en la raíz, en `functions/` y en `t
 ## 🧱 Arquitectura y modelo de datos
 
 - **Sin servidor propio:** la SPA (React) habla directamente con Firebase: Authentication para las cuentas y Cloud Firestore (`europe-west1`) para los datos, con caché persistente para funcionar sin conexión y sincronizar entre dispositivos y pestañas. Las reglas de Firestore (`firestore.rules`) son la frontera de seguridad: cada cuenta solo lee y escribe lo suyo.
-- **Cloud Functions invocables** (2.ª gen, `europe-west1`) para lo que no puede hacer el navegador: los accesos (`syncAccess`, `requestAccess`, `setAccess`, `setAccessMode`, `forgetAccess`, `revokeSessions`) el contacto (`submitFeedback`, `replyToFeedback`), con los avisos por email (SMTP de IONOS), y las notificaciones push de las alarmas (`registerPushDevice` y `unregisterPushDevice`, el trigger `queueTaskAlarm` sobre las tareas y `sendDueAlarms`, programada cada minuto; `functions/src/push.ts`). La función HTTP `api` solo sirve `/.well-known/assetlinks.json` para la APK Android.
+- **Cloud Functions invocables** (2.ª gen, `europe-west1`) para lo que no puede hacer el navegador: los accesos (`syncAccess`, `requestAccess`, `setAccess`, `setAccessMode`, `forgetAccess`, `revokeSessions`) el contacto (`submitFeedback`, `replyToFeedback`), con los avisos por email (SMTP de IONOS), y las notificaciones push de las alarmas (`registerPushDevice` y `unregisterPushDevice`, el trigger `queueTaskAlarm` sobre las tareas y `sendDueAlarms`, programada cada minuto; `functions/src/push.ts`), las funciones extra (`setFeatures`) y la sincronización con Google Calendar (`connectGoogleCalendar`, `disconnectGoogleCalendar` y los triggers `syncTaskCalendar`, `calendarFeatureChanged` y `calendarPrefChanged`; `functions/src/calendarSync.ts`). La función HTTP `api` solo sirve `/.well-known/assetlinks.json` para la APK Android.
 - **En el navegador:** las sugerencias de área y de meta, el Top 10, las alarmas, las estadísticas, las descargas y los archivos de calendario.
 
 **Modelo de datos (Firestore).** Los tipos están en `src/types/index.ts`.
@@ -542,6 +566,7 @@ El repositorio utiliza `package-lock.json` (en la raíz, en `functions/` y en `t
 | `users/{uid}/goals` · `users/{uid}/projects`                           | Metas (área, para qué, fecha objetivo) y proyectos (meta, fecha de fin)                                                                                                                  | La app           |
 | `users/{uid}/meetings` · `users/{uid}/emails`                          | Reuniones y correos de «Tiempo protegido»                                                                                                                                                | La app           |
 | `access/{uid}` · `admins/{uid}` · `settings/access` · `blocked_emails` | Solicitudes y estado del acceso, marca de administración, modo de aprobación y emails bloqueados                                                                                         | Cloud Functions  |
+| `calendar_tokens/{uid}` · `calendar_status/{uid}`                      | Conexión con Google Calendar: el permiso de Google cifrado, el calendario y la zona horaria; y el estado que ve la cuenta (`calendar_status`, solo lo lee ella)                          | Cloud Functions  |
 | `features/{uid}`                                                       | Funciones extra que la administración ha activado a la cuenta (`granted`)                                                                                                                | Cloud Functions  |
 | `feedback_tickets` · `feedback_limits`                                 | Mensajes de «Escríbenos» con sus respuestas, y su límite por hora                                                                                                                        | Cloud Functions  |
 | `push_devices/{uid}` · `push_tokens` · `alarm_queue` · `alarm_sent`    | Tokens de FCM y zona horaria de cada dispositivo, de qué cuenta es cada token, la próxima alarma por enviar de cada tarea y la última enviada                                            | Cloud Functions  |

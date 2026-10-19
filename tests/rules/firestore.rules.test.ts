@@ -305,6 +305,28 @@ describe('firestore.rules', () => {
     await assertFails(setDoc(doc(admin, 'features/bruno'), { granted: ['googleCalendar'] }));
   });
 
+  it('lets an account read only the state of its Google Calendar connection, and nobody its permission', async () => {
+    await env.withSecurityRulesDisabled(async (ctx) => {
+      await setDoc(doc(ctx.firestore(), 'admins/admin'), {
+        email: 'admin@example.com',
+        since: '2026-10-11T10:00:00.000Z'
+      });
+      await setDoc(doc(ctx.firestore(), 'calendar_status/ana'), { state: 'connected', calendarId: 'c1' });
+      await setDoc(doc(ctx.firestore(), 'calendar_tokens/ana'), { calendarId: 'c1', timeZone: 'Europe/Madrid' });
+    });
+    const ana = env.authenticatedContext('ana').firestore();
+    const bruno = env.authenticatedContext('bruno').firestore();
+    const admin = env.authenticatedContext('admin', { email: 'admin@example.com' }).firestore();
+
+    await assertSucceeds(getDoc(doc(ana, 'calendar_status/ana')));
+    await assertFails(getDoc(doc(bruno, 'calendar_status/ana')));
+    await assertFails(getDoc(doc(admin, 'calendar_status/ana')));
+    await assertFails(setDoc(doc(ana, 'calendar_status/ana'), { state: 'connected' }));
+    await assertFails(getDoc(doc(ana, 'calendar_tokens/ana')));
+    await assertFails(getDoc(doc(admin, 'calendar_tokens/ana')));
+    await assertFails(setDoc(doc(ana, 'calendar_tokens/ana'), { calendarId: 'otro' }));
+  });
+
   it('never lets a client write access requests or the admin list, not even the admin', async () => {
     await env.withSecurityRulesDisabled(async (ctx) => {
       await setDoc(doc(ctx.firestore(), 'admins/admin'), {
