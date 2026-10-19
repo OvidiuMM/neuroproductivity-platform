@@ -202,8 +202,9 @@ export const PrivacyPolicy: React.FC = () => (
         <li>
           Conexión con Google Calendar: el permiso se borra (y se retira en Google) al desconectar, si la administración
           te quita la función, si pierdes el acceso y al eliminar la cuenta. El identificador del calendario se guarda,
-          para volver a usarlo si conectas otra vez, hasta que elimines la cuenta. El calendario «CLAR» y sus eventos se
-          quedan en tu cuenta de Google hasta que los borres tú.
+          para volver a usarlo si conectas otra vez, hasta que elimines la cuenta. Si retiras el permiso desde tu cuenta
+          de Google, CLAR lo borra en cuanto lo detecta (en la siguiente sincronización). El calendario «CLAR» y sus
+          eventos se quedan en tu cuenta de Google hasta que los borres tú.
         </li>
         <li>
           Horas de envío de los mensajes: cuentan una hora para el límite de cinco, pero no se borran solas. Se

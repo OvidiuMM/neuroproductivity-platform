@@ -4,6 +4,7 @@ import { after, beforeEach, describe, it } from 'node:test';
 import { adminDb } from '../../src/adminApp';
 import { DEMO_ADMIN_EMAIL } from '../../src/accessLogic';
 import { disconnectCalendar } from '../../src/calendarCleanup';
+import { sealToken } from '../../src/calendarCrypto';
 import type { CalendarEventBody } from '../../src/calendarLogic';
 import { calendarEntitled, connectCalendar, syncTaskEvent, type CalendarDeps } from '../../src/calendarSync';
 import { CALENDAR_SCOPE, GoogleApiError, type GoogleCalendarApi } from '../../src/googleCalendar';
@@ -25,19 +26,23 @@ const request = (code = 'abc') => ({
   timeZone: MADRID
 });
 
-// Google simulado: guarda los eventos de cada calendario y apunta cada llamada
+// Google simulado: guarda los eventos del calendario y apunta cada llamada. `during` deja hacer algo justo antes de que
+// Google responda (p. ej. desconectar a mitad de una sincronización)
 const fakeGoogle = () => {
   const events = new Map<string, CalendarEventBody>();
   const calls: string[] = [];
   let failure: GoogleApiError | null = null;
+  const during: { exchange?: () => Promise<unknown>; put?: () => Promise<unknown> } = {};
   const api: GoogleCalendarApi = {
-    exchangeCode: (_client, { code }) =>
-      Promise.resolve({
+    exchangeCode: async (_client, { code }) => {
+      await during.exchange?.();
+      return {
         refreshToken: code === 'no-offline' ? null : `refresh-${code}`,
         accessToken: `access-${code}`,
         expiresIn: 3600,
         scope: code === 'no-scope' ? 'openid' : CALENDAR_SCOPE
-      }),
+      };
+    },
     refreshAccessToken: () => Promise.resolve({ accessToken: 'access-renewed', expiresIn: 3600 }),
     revoke: (token) => {
       calls.push(`revoke:${token}`);
@@ -47,18 +52,19 @@ const fakeGoogle = () => {
       calls.push(`calendar:${previousId ?? 'new'}`);
       return Promise.resolve(previousId ?? 'calendar-1');
     },
-    putEvent: (_token, calendarId, eventId, event) => {
-      if (failure) return Promise.reject(failure);
+    putEvent: async (_token, calendarId, eventId, event) => {
+      await during.put?.();
+      if (failure) throw failure;
       calls.push(`put:${calendarId}:${eventId}`);
       events.set(eventId, event);
-      return Promise.resolve();
     },
     deleteEvent: (_token, calendarId, eventId) => {
       if (failure) return Promise.reject(failure);
       calls.push(`delete:${calendarId}:${eventId}`);
       events.delete(eventId);
       return Promise.resolve();
-    }
+    },
+    listEventIds: () => Promise.resolve([...events.keys()])
   };
   const deps: CalendarDeps = {
     api,
@@ -67,7 +73,7 @@ const fakeGoogle = () => {
     revoke: (token) => api.revoke(token),
     appUrl: () => URL
   };
-  return { deps, events, calls, failWith: (error: GoogleApiError | null) => (failure = error) };
+  return { deps, events, calls, during, failWith: (error: GoogleApiError | null) => (failure = error) };
 };
 
 const approve = (uid: string) => db.doc(`access/${uid}`).set({ status: 'approved', email: `${uid}@example.com` });
@@ -149,7 +155,7 @@ describe('Google Calendar sync', () => {
     assert.equal(await syncTaskEvent('cal-ana', 't1', google.deps), 'deleted');
   });
 
-  it('stops syncing as soon as the account loses the feature or its access', async () => {
+  it('stops syncing and disconnects as soon as the account loses the feature or its access', async () => {
     const google = fakeGoogle();
     await approve('cal-ana');
     await grant('cal-ana');
@@ -157,10 +163,16 @@ describe('Google Calendar sync', () => {
     await task('cal-ana', 't1', { dueDate: '2026-10-16' });
     await db.doc('features/cal-ana').delete();
     assert.equal(await syncTaskEvent('cal-ana', 't1', google.deps), 'not-entitled');
+    assert.equal(await linked('cal-ana'), false);
+    assert.equal((await status('cal-ana'))?.state, 'disconnected');
+    assert.ok(google.calls.includes('revoke:refresh-abc'));
+
     await grant('cal-ana');
+    await connectCalendar('cal-ana', request('again'), google.deps);
+    const puts = google.calls.filter((c) => c.startsWith('put:')).length;
     await db.doc('access/cal-ana').set({ status: 'revoked' });
     assert.equal(await syncTaskEvent('cal-ana', 't1', google.deps), 'not-entitled');
-    assert.equal(google.calls.filter((c) => c.startsWith('put:')).length, 0);
+    assert.equal(google.calls.filter((c) => c.startsWith('put:')).length, puts);
   });
 
   it('counts the admin switch only for the current admin, never for other accounts', async () => {
@@ -232,5 +244,79 @@ describe('Google Calendar sync', () => {
     await db.doc('calendar_status/cal-ana').delete();
     await disconnectCalendar('cal-ana', { reason: 'revoked', deps: google.deps });
     assert.equal(await status('cal-ana'), undefined);
+  });
+
+  it('a sync that fails after a disconnect does not undo it, nor claim to be connected', async () => {
+    const google = fakeGoogle();
+    await approve('cal-ana');
+    await grant('cal-ana');
+    await connectCalendar('cal-ana', request(), google.deps);
+    await task('cal-ana', 't1', { dueDate: '2026-10-16' });
+    // Se desconecta mientras Google responde; después Google rechaza el permiso, ya retirado
+    google.during.put = async () => {
+      google.during.put = undefined;
+      await disconnectCalendar('cal-ana', { deps: google.deps });
+    };
+    google.failWith(new GoogleApiError(400, 'revoked'));
+    assert.equal(await syncTaskEvent('cal-ana', 't1', google.deps), 'reconnect');
+    assert.equal((await status('cal-ana'))?.state, 'disconnected');
+
+    // Una subida inicial que termina después de desconectar no deja «conectada» sin permiso
+    google.failWith(null);
+    google.during.put = async () => {
+      google.during.put = undefined;
+      await disconnectCalendar('cal-ana', { deps: google.deps });
+    };
+    await connectCalendar('cal-ana', request('again'), google.deps);
+    assert.equal(await linked('cal-ana'), false);
+    assert.equal((await status('cal-ana'))?.state, 'disconnected');
+  });
+
+  it('an account deleted while connecting keeps nothing, and the new permission is withdrawn', async () => {
+    const google = fakeGoogle();
+    await approve('cal-bruno');
+    await grant('cal-bruno');
+    google.during.exchange = async () => {
+      await db.doc('access/cal-bruno').delete();
+      await disconnectCalendar('cal-bruno', { forget: true, deps: google.deps });
+    };
+    await assert.rejects(connectCalendar('cal-bruno', request(), google.deps), /ya no tiene acceso/);
+    assert.equal(await linked('cal-bruno'), false);
+    assert.equal(await status('cal-bruno'), undefined);
+    assert.ok(google.calls.includes('revoke:refresh-abc'));
+  });
+
+  it('reconnecting to the same calendar removes the events of tasks that left it meanwhile', async () => {
+    const google = fakeGoogle();
+    await approve('cal-ana');
+    await grant('cal-ana');
+    await task('cal-ana', 't1', { dueDate: '2026-10-16' });
+    await task('cal-ana', 't2', { dueDate: '2026-10-17' });
+    await connectCalendar('cal-ana', request(), google.deps);
+    assert.equal(google.events.size, 2);
+    await disconnectCalendar('cal-ana', { deps: google.deps });
+    await db.doc('users/cal-ana/tasks/t2').delete();
+    await task('cal-ana', 't3', { dueDate: '2026-10-18' });
+    assert.deepEqual(await connectCalendar('cal-ana', request('again'), google.deps), { synced: 2, failed: 0 });
+    assert.equal(google.events.size, 2);
+    assert.ok(google.calls.some((c) => c.startsWith('delete:calendar-1:')));
+  });
+
+  it('a permission that can no longer be read (the key changed) asks to reconnect', async () => {
+    const google = fakeGoogle();
+    await approve('cal-ana');
+    await grant('cal-ana');
+    await task('cal-ana', 't1', { dueDate: '2026-10-16' });
+    await db.doc('calendar_tokens/cal-ana').set({
+      token: sealToken('refresh-old', randomBytes(32), 'cal-ana'),
+      calendarId: 'calendar-1',
+      timeZone: MADRID,
+      connectedAt: '2026-10-01T00:00:00.000Z'
+    });
+    assert.equal(await syncTaskEvent('cal-ana', 't1', google.deps), 'reconnect');
+    assert.deepEqual(
+      { state: (await status('cal-ana'))?.state, reason: (await status('cal-ana'))?.reason },
+      { state: 'needsReconnect', reason: 'revoked' }
+    );
   });
 });
