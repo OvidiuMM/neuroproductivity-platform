@@ -10,8 +10,8 @@ import { parseFeatureRequest, type FeatureId } from './featuresLogic';
 // las escribe este servidor y las leen la propia cuenta y la administración. Se borran al perder el acceso (en la
 // misma transacción, en access.ts) y al eliminar la cuenta.
 // La administración no tiene documento: tiene todas y las enciende o apaga en su perfil (users/{uid}.featurePrefs).
-// Ese campo lo puede escribir cualquier cuenta en su perfil, así que el servidor solo lo tiene en cuenta para la
-// cuenta de administración actual (con su marca vigente en admins/{uid}), nunca para las demás.
+// Ese campo lo puede escribir cualquier cuenta en su perfil: el servidor solo debe tenerlo en cuenta para la cuenta de
+// administración actual (con su marca vigente en admins/{uid}), nunca para las demás.
 
 // Guarda las funciones de una cuenta, en la misma transacción que comprueba que sigue con acceso: si la
 // administración se lo retira entretanto, la transacción se repite y no guarda nada.
