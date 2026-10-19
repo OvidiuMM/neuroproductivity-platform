@@ -119,6 +119,17 @@ import {
   setAccessMode,
   subscribeToApprovalRequired
 } from './services/access';
+import {
+  EXTRA_FEATURES,
+  activeFeatures,
+  featurePrefsOf,
+  saveFeaturePref,
+  setFeatures,
+  subscribeToAllFeatures,
+  subscribeToOwnFeatures,
+  type FeatureId,
+  type FeaturePrefs
+} from './services/features';
 import { deleteAccount, downloadAccountData, signOutEverywhere } from './services/account';
 import { prepareAccountImport, runAccountImport } from './services/accountImport';
 import type { ImportPlan } from './services/importData';
@@ -267,6 +278,32 @@ export default function App({ user, services, isAdmin = false }: AppProps) {
     }
   };
 
+  // FUNCIONES EXTRA de cada cuenta (solo administración): en vivo, para su apartado en las solicitudes
+  const [accountFeatures, setAccountFeatures] = useState<Record<string, FeatureId[]>>({});
+  useEffect(() => {
+    if (!isAdmin) return;
+    return subscribeToAllFeatures(db, setAccountFeatures, (e) => {
+      console.error('Error loading extra features:', e);
+      setAccessError('No se pudieron cargar las funciones extra de las cuentas.');
+    });
+  }, [db, isAdmin]);
+  const handleSetFeatures = async (targetUid: string, features: FeatureId[]) => {
+    setAccessError(null);
+    try {
+      await setFeatures(services.functions, targetUid, features);
+      showToast('Funciones extra guardadas.');
+      return true;
+    } catch (e) {
+      console.error('Error setting extra features:', e);
+      setAccessError(
+        e instanceof FirebaseError && e.code === 'functions/failed-precondition'
+          ? 'Esta cuenta ya no tiene acceso: no puede tener funciones extra.'
+          : 'No se pudieron guardar las funciones extra. Revisa tu conexión e inténtalo de nuevo.'
+      );
+      return false;
+    }
+  };
+
   // MENSAJES DE CONTACTO (solo administración): los abiertos en vivo; los cerrados, bajo demanda en su vista
   const [feedbackTickets, setFeedbackTickets] = useState<FeedbackTicket[]>([]);
   const [feedbackError, setFeedbackError] = useState<string | null>(null);
@@ -276,6 +313,7 @@ export default function App({ user, services, isAdmin = false }: AppProps) {
     setWasAdmin(isAdmin);
     if (!isAdmin) {
       setAccessRequests([]);
+      setAccountFeatures({});
       setFeedbackTickets([]);
       setActiveTab((tab) => (tab === 'access' ? 'tasks' : tab));
     }
@@ -756,6 +794,8 @@ export default function App({ user, services, isAdmin = false }: AppProps) {
   const [seenOnThisDevice] = useState(() => hasSeenLocally(uid));
   // ÁREAS DE LA RUEDA de la cuenta (en el perfil); sin nada guardado, las 7 de partida
   const [wheelAreas, setWheelAreas] = useState<WheelArea[]>(DEFAULT_AREAS);
+  // Las funciones extra que la administración tiene encendidas (en el perfil)
+  const [featurePrefs, setFeaturePrefs] = useState<FeaturePrefs>({});
   const [welcomeClosed, setWelcomeClosed] = useState(false);
   useEffect(
     () =>
@@ -767,11 +807,32 @@ export default function App({ user, services, isAdmin = false }: AppProps) {
           // Las áreas solo cambian (y con ellas las vistas que las usan) si cambia lo guardado
           const next = resolveAreas(record?.wheelAreas);
           setWheelAreas((current) => (JSON.stringify(current) === JSON.stringify(next) ? current : next));
+          const prefs = featurePrefsOf(record?.featurePrefs);
+          setFeaturePrefs((current) => (JSON.stringify(current) === JSON.stringify(prefs) ? current : prefs));
         },
         (e) => console.error('Error loading profile:', e)
       ),
     [db, uid]
   );
+  // FUNCIONES EXTRA en uso: la administración enciende las suyas en su cuenta (en el perfil); el resto usa las que la
+  // administración le ha activado. El interruptor cambia al momento; si no se pudiera guardar, el perfil lo devuelve
+  // a como estaba
+  const [grantedFeatures, setGrantedFeatures] = useState<FeatureId[]>([]);
+  useEffect(() => subscribeToOwnFeatures(db, uid, setGrantedFeatures), [db, uid]);
+  const extraFeatures = isAdmin
+    ? {
+        features: EXTRA_FEATURES,
+        active: activeFeatures({ isAdmin, granted: grantedFeatures, prefs: featurePrefs }),
+        onToggle: (id: FeatureId, on: boolean) => {
+          setFeaturePrefs((current) => ({ ...current, [id]: on }));
+          saveFeaturePref(db, uid, id, on).catch(reportError('guardar las funciones extra'));
+        }
+      }
+    : {
+        features: EXTRA_FEATURES.filter((f) => grantedFeatures.includes(f.id)),
+        active: grantedFeatures,
+        onToggle: null
+      };
   const [isAreasEditorOpen, setIsAreasEditorOpen] = useState(false);
   const handleSaveAreas = (areas: WheelArea[]) => {
     saveWheelAreas(db, uid, areas).catch(reportError('guardar las áreas'));
@@ -1120,6 +1181,8 @@ export default function App({ user, services, isAdmin = false }: AppProps) {
                   onSeenRequests={markRequestsSeen}
                   approvalRequired={approvalRequired}
                   onSetApprovalRequired={handleSetApprovalRequired}
+                  features={accountFeatures}
+                  onSetFeatures={handleSetFeatures}
                   tickets={feedbackTickets}
                   feedbackError={feedbackError}
                   onSetFeedbackStatus={handleSetFeedbackStatus}
@@ -1274,6 +1337,7 @@ export default function App({ user, services, isAdmin = false }: AppProps) {
                 }
               : null
           }
+          extraFeatures={extraFeatures}
           onDeleteAccount={handleDeleteAccount}
           onChangePassword={(currentPassword, newPassword) => changePassword(user, currentPassword, newPassword)}
           onSignOutEverywhere={() => signOutEverywhere(services)}

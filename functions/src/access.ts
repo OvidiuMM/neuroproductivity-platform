@@ -1,3 +1,4 @@
+import { forgetFeatures } from './featuresCleanup';
 import { forgetFeedback } from './feedbackCleanup';
 import { forgetPushData, forgetPushDevices } from './pushCleanup';
 import { adminAuth, adminDb } from './adminApp';
@@ -260,8 +261,9 @@ export const setAccess = onCall({ region: REGION, secrets: emailSecrets }, async
     return { ...data, status: status as DecisionStatus, decidedAt };
   });
   logger.info('Access decided', { status });
-  // Sin acceso, tampoco recibe alarmas push en sus dispositivos
-  if (status !== 'approved') await forgetPushDevices(uid);
+  // Sin acceso, tampoco recibe alarmas push en sus dispositivos ni conserva sus funciones extra (al volver a aprobarla,
+  // empieza sin ninguna)
+  if (status !== 'approved') await Promise.all([forgetPushDevices(uid), forgetFeatures(uid)]);
   // La persona recibe un aviso cuando se aprueba su acceso (rechazos y retiradas se ven al entrar)
   if (record.status === 'approved' && normalizeEmail(record.email) !== normalizeEmail(adminEmail())) {
     await sendAccessEmail('approved', record);
@@ -324,8 +326,8 @@ export const setAccessMode = onCall({ region: REGION, secrets: emailSecrets, tim
 });
 
 // Último paso para eliminar la cuenta: la borra de Auth y después sus datos, su solicitud de acceso, su marca de
-// administración, sus mensajes y sus dispositivos y alarmas de las notificaciones push (la lista negra por email se
-// conserva). Borrar la solicitud sin borrar la cuenta
+// administración, sus mensajes, sus dispositivos y alarmas de las notificaciones push y sus funciones extra (la lista
+// negra por email se conserva). Borrar la solicitud sin borrar la cuenta
 // dejaría a una cuenta rechazada o retirada volver a entrar o a pedir acceso al momento, sin decisión de nadie: por
 // eso la cuenta va primero y si falla no se borra nada. Pide un inicio de sesión reciente, como Firebase para borrar
 // la cuenta desde el navegador.
@@ -340,7 +342,8 @@ export const forgetAccess = onCall({ region: REGION, timeoutSeconds: 300 }, asyn
     db().doc(`access/${auth.uid}`).delete(),
     db().doc(`admins/${auth.uid}`).delete(),
     forgetFeedback(auth.uid),
-    forgetPushData(auth.uid)
+    forgetPushData(auth.uid),
+    forgetFeatures(auth.uid)
   ]);
   logger.info('Account deleted');
   return { ok: true };
