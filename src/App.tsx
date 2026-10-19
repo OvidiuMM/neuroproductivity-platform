@@ -281,13 +281,22 @@ export default function App({ user, services, isAdmin = false }: AppProps) {
   // FUNCIONES EXTRA de cada cuenta (solo administración): en vivo, para su apartado en las solicitudes. Mientras no
   // se han cargado (o si fallan), null: no se pueden cambiar, así no se guarda una lista vacía por error
   const [accountFeatures, setAccountFeatures] = useState<Record<string, FeatureId[]> | null>(null);
+  // Su error va aparte: se ve mientras no se puedan cambiar, aunque otra acción borre el de las solicitudes
+  const [featuresError, setFeaturesError] = useState<string | null>(null);
   useEffect(() => {
     if (!isAdmin) return;
-    return subscribeToAllFeatures(db, setAccountFeatures, (e) => {
-      console.error('Error loading extra features:', e);
-      setAccountFeatures(null);
-      setAccessError('No se pudieron cargar las funciones extra de las cuentas.');
-    });
+    return subscribeToAllFeatures(
+      db,
+      (features) => {
+        setAccountFeatures(features);
+        setFeaturesError(null);
+      },
+      (e) => {
+        console.error('Error loading extra features:', e);
+        setAccountFeatures(null);
+        setFeaturesError('No se pudieron cargar las funciones extra de las cuentas. Vuelve a cargar la página.');
+      }
+    );
   }, [db, isAdmin]);
   const handleSetFeatures = async (targetUid: string, features: FeatureId[]) => {
     setAccessError(null);
@@ -1177,7 +1186,7 @@ export default function App({ user, services, isAdmin = false }: AppProps) {
                 <AdminView
                   requests={accessRequests}
                   currentUid={uid}
-                  accessError={accessError}
+                  accessError={accessError ?? featuresError}
                   onDecide={handleDecideAccess}
                   requestsSeenAt={requestsSeenAt}
                   onSeenRequests={markRequestsSeen}
