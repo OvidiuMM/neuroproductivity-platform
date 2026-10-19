@@ -12,11 +12,13 @@ import {
   Accessibility,
   KeyRound,
   MonitorSmartphone,
-  MessageSquare
+  MessageSquare,
+  Sparkles
 } from 'lucide-react';
 import { DeleteAccountPanel } from './DeleteAccountPanel';
 import { LegalLink } from './LegalLinks';
 import { NotificationPermission } from './NotificationPermission';
+import type { ExtraFeature, FeatureId } from '../services/features';
 
 interface AccountMenuProps {
   isOpen: boolean;
@@ -38,6 +40,13 @@ interface AccountMenuProps {
     showTitle: boolean;
     onShowTitleChange: (show: boolean) => Promise<void>;
   } | null;
+  // Funciones extra: la administración las tiene todas y las enciende o apaga aquí (onToggle); el resto ve las que la
+  // administración le ha activado. Sin ninguna, el apartado no aparece
+  extraFeatures: {
+    features: readonly ExtraFeature[];
+    active: FeatureId[];
+    onToggle: ((id: FeatureId, on: boolean) => void) | null;
+  };
   onDeleteAccount: (password?: string) => Promise<void>;
   onChangePassword: (currentPassword: string, newPassword: string) => Promise<void>;
   onSignOutEverywhere: () => Promise<void>;
@@ -66,6 +75,7 @@ export const AccountMenu: React.FC<AccountMenuProps> = ({
   onExportData,
   onImportData,
   push,
+  extraFeatures,
   onDeleteAccount,
   onChangePassword,
   onSignOutEverywhere,
@@ -298,6 +308,47 @@ export const AccountMenu: React.FC<AccountMenuProps> = ({
                 </div>
               )}
             </div>
+            {extraFeatures.features.length > 0 && (
+              <section aria-labelledby="account-features" className="rounded-xl border border-slate-200 px-4 py-2.5">
+                <h3 id="account-features" className="flex items-center gap-1.5 text-xs font-bold text-slate-700">
+                  <Sparkles className="h-3.5 w-3.5 text-indigo-600" aria-hidden="true" />
+                  Funciones extra
+                </h3>
+                <p className="text-[11px] text-slate-600">
+                  {extraFeatures.onToggle
+                    ? 'Como administración, las tienes todas: enciende las que quieras usar.'
+                    : 'Activadas para tu cuenta por la administración.'}
+                </p>
+                <ul className="mt-2 space-y-2">
+                  {extraFeatures.features.map((feature) => {
+                    const { onToggle } = extraFeatures;
+                    const descriptionId = `account-feature-${feature.id}`;
+                    return (
+                      <li key={feature.id}>
+                        {onToggle ? (
+                          <label className="flex min-h-9 cursor-pointer items-center gap-2 text-xs font-semibold text-slate-800">
+                            <input
+                              type="checkbox"
+                              role="switch"
+                              checked={extraFeatures.active.includes(feature.id)}
+                              onChange={(e) => onToggle(feature.id, e.target.checked)}
+                              aria-describedby={descriptionId}
+                              className="h-4 w-4 rounded border-slate-300 text-indigo-600"
+                            />
+                            {feature.label}
+                          </label>
+                        ) : (
+                          <p className="text-xs font-semibold text-slate-800">{feature.label}</p>
+                        )}
+                        <p id={descriptionId} className="text-[11px] text-slate-600">
+                          {feature.description}
+                        </p>
+                      </li>
+                    );
+                  })}
+                </ul>
+              </section>
+            )}
             <button type="button" onClick={onContact} disabled={busy !== null} className={actionClass}>
               <MessageSquare className="h-4 w-4 text-indigo-600" aria-hidden="true" />
               Escríbenos: ideas, fallos o dudas

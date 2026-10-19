@@ -86,7 +86,7 @@ describe('firestore.rules', () => {
     await assertSucceeds(deleteDoc(ref));
   });
 
-  it('lets the profile hold only the account data, whether the welcome was seen and the Wheel areas', async () => {
+  it('lets the profile hold only the account data, whether the welcome was seen, the Wheel areas and feature switches', async () => {
     const ana = env.authenticatedContext('ana').firestore();
     const profile = { name: 'Ana', email: 'ana@example.com', photoUrl: '', createdAt: '', lastLoginAt: '' };
 
@@ -107,6 +107,8 @@ describe('firestore.rules', () => {
     await assertSucceeds(
       setDoc(doc(ana, 'users/ana'), { wheelAreas: [{ id: 'Salud', label: 'Cuerpo' }] }, { merge: true })
     );
+    // Qué funciones extra tiene encendidas (solo cuenta para la administración)
+    await assertSucceeds(setDoc(doc(ana, 'users/ana'), { featurePrefs: { googleCalendar: true } }, { merge: true }));
     await assertFails(updateDoc(doc(ana, 'users/ana'), { isAdmin: true }));
     await assertFails(setDoc(doc(env.authenticatedContext('bruno').firestore(), 'users/bruno'), { role: 'admin' }));
   });
@@ -279,6 +281,28 @@ describe('firestore.rules', () => {
     await assertFails(getDoc(doc(ana, 'alarm_sent/ana__task-1')));
     await assertFails(getDoc(doc(ana, 'push_tokens/t1')));
     await assertFails(setDoc(doc(ana, 'push_tokens/t2'), { uid: 'ana' }));
+  });
+
+  it('lets each account read only its own extra features, the admin read all of them, and no client write them', async () => {
+    await env.withSecurityRulesDisabled(async (ctx) => {
+      await setDoc(doc(ctx.firestore(), 'admins/admin'), {
+        email: 'admin@example.com',
+        since: '2026-10-11T10:00:00.000Z'
+      });
+      await setDoc(doc(ctx.firestore(), 'features/ana'), { granted: ['googleCalendar'], updatedAt: 'now' });
+    });
+    const ana = env.authenticatedContext('ana').firestore();
+    const bruno = env.authenticatedContext('bruno').firestore();
+    const admin = env.authenticatedContext('admin', { email: 'admin@example.com' }).firestore();
+
+    await assertSucceeds(getDoc(doc(ana, 'features/ana')));
+    await assertFails(getDoc(doc(bruno, 'features/ana')));
+    await assertFails(getDocs(collection(ana, 'features')));
+    await assertSucceeds(getDocs(collection(admin, 'features')));
+    await assertFails(setDoc(doc(bruno, 'features/bruno'), { granted: ['googleCalendar'] }));
+    await assertFails(updateDoc(doc(ana, 'features/ana'), { granted: [] }));
+    await assertFails(deleteDoc(doc(ana, 'features/ana')));
+    await assertFails(setDoc(doc(admin, 'features/bruno'), { granted: ['googleCalendar'] }));
   });
 
   it('never lets a client write access requests or the admin list, not even the admin', async () => {

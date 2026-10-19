@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { UserCheck } from 'lucide-react';
 import type { AccessRequest, DecisionStatus } from '../services/access';
+import type { FeatureId } from '../services/features';
 import type { ClosedFeedbackPage, FeedbackStatus, FeedbackTicket, ReplyResult } from '../services/feedbackApi';
 import { AccessAdminView } from './AccessAdminView';
 import { FeedbackAdminView } from './FeedbackAdminView';
@@ -16,6 +17,8 @@ interface AdminViewProps {
   onSeenRequests: () => void;
   approvalRequired: boolean | null;
   onSetApprovalRequired: (approvalRequired: boolean) => Promise<void>;
+  features: Record<string, FeatureId[]>;
+  onSetFeatures: (uid: string, features: FeatureId[]) => Promise<boolean>;
   tickets: FeedbackTicket[];
   feedbackError: string | null;
   onSetFeedbackStatus: (ticket: FeedbackTicket, status: FeedbackStatus) => Promise<boolean>;
@@ -35,6 +38,8 @@ export const AdminView: React.FC<AdminViewProps> = ({
   onSeenRequests,
   approvalRequired,
   onSetApprovalRequired,
+  features,
+  onSetFeatures,
   tickets,
   feedbackError,
   onSetFeedbackStatus,
@@ -104,6 +109,8 @@ export const AdminView: React.FC<AdminViewProps> = ({
           newSince={highlightSince}
           approvalRequired={approvalRequired}
           onSetApprovalRequired={onSetApprovalRequired}
+          features={features}
+          onSetFeatures={onSetFeatures}
         />
       ) : (
         <FeedbackAdminView

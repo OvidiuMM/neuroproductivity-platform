@@ -75,6 +75,10 @@ export const PrivacyPolicy: React.FC = () => (
           por hora se guardan las horas de los de la última hora. Sirven para atenderte y responderte por email.
         </li>
         <li>
+          <strong>Funciones extra:</strong> cuáles te ha activado la administración y cuándo; en la cuenta de
+          administración, cuáles tiene encendidas. Sirven para que puedas usarlas.
+        </li>
+        <li>
           <strong>Cuentas bloqueadas:</strong> el email de una cuenta bloqueada por abuso, para que no pueda volver a
           registrarse.
         </li>
@@ -131,11 +135,11 @@ export const PrivacyPolicy: React.FC = () => (
       <List>
         <li>Tú, desde cualquier dispositivo con tu cuenta.</li>
         <li>
-          Desde la app, la administración de CLAR (su titular) ve solo las solicitudes de acceso y los mensajes de
-          «Escríbenos»: las reglas de la base de datos no le dejan leer tus tareas, metas, proyectos, evaluaciones,
-          reuniones ni correos. Como responsable del proyecto en Google Cloud, el titular podría acceder técnicamente a
-          todos los datos desde la consola; solo lo hará cuando sea imprescindible para mantener el servicio, resolver
-          una incidencia o atender una petición tuya.
+          Desde la app, la administración de CLAR (su titular) ve solo las solicitudes de acceso, las funciones extra de
+          cada cuenta y los mensajes de «Escríbenos»: las reglas de la base de datos no le dejan leer tus tareas, metas,
+          proyectos, evaluaciones, reuniones ni correos. Como responsable del proyecto en Google Cloud, el titular
+          podría acceder técnicamente a todos los datos desde la consola; solo lo hará cuando sea imprescindible para
+          mantener el servicio, resolver una incidencia o atender una petición tuya.
         </li>
         <li>
           Encargados del tratamiento, que tratan los datos solo para prestar su servicio: Google, con Firebase
@@ -165,6 +169,9 @@ export const PrivacyPolicy: React.FC = () => (
       <List>
         <li>Tu cuenta y lo que escribes: hasta que lo borres o elimines la cuenta.</li>
         <li>Solicitud de acceso y mensajes de «Escríbenos»: hasta que elimines la cuenta.</li>
+        <li>
+          Funciones extra: hasta que la administración te las quite, rechace, retire o bloquee la cuenta, o la elimines.
+        </li>
         <li>
           Horas de envío de los mensajes: cuentan una hora para el límite de cinco, pero no se borran solas. Se
           descartan cuando envías otro mensaje pasada esa hora; si no envías ninguno más, o eliminas la cuenta justo

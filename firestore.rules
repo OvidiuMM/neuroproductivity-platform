@@ -33,6 +33,12 @@ service cloud.firestore {
       allow read: if isOwner(uid);
     }
 
+    // Funciones extra de cada cuenta: las concede la administración con la Cloud Function setFeatures. Las lee la
+    // propia cuenta y la administración; nadie las escribe desde la app.
+    match /features/{uid} {
+      allow read: if isOwner(uid) || isAdmin();
+    }
+
     // Configuración que fija la administración (p. ej. si hay que aprobar las cuentas): la escriben las Cloud
     // Functions. La lista negra por email (blocked_emails) no la ve nadie desde la app.
     match /settings/{name} {
@@ -48,13 +54,13 @@ service cloud.firestore {
         && request.resource.data.status in ['new', 'read', 'closed'];
     }
 
-    // Campos del perfil que escribe la app (datos de la cuenta, si ya vio la bienvenida y sus áreas de la Rueda);
-    // cualquier otro se rechaza
+    // Campos del perfil que escribe la app (datos de la cuenta, si ya vio la bienvenida, sus áreas de la Rueda y qué
+    // funciones extra tiene encendidas, que solo cuenta para la administración); cualquier otro se rechaza
     function onlyProfileFields(keys) {
       return keys.hasOnly([
         'name', 'email', 'photoUrl', 'createdAt', 'lastLoginAt',
         'hasSeenOnboarding', 'onboardingVersion', 'onboardingSeenAt', 'onboardingOutcome',
-        'wheelAreas'
+        'wheelAreas', 'featurePrefs'
       ]);
     }
 
