@@ -206,3 +206,46 @@ test('an account with the starting areas untouched gets the configuration of the
   assert.equal(merged.restoredAreas, false);
   assert.equal(merged.areas, null);
 });
+
+test('long or invalid user text in goals, meetings, emails and evaluations makes the record not valid', () => {
+  const meeting = {
+    id: 'meet-1',
+    title: 'Revisión',
+    startTime: createdAt,
+    endTime: createdAt,
+    createdAt,
+    agendaPoints: ['Uno']
+  };
+  const email = { id: 'email-1', subject: 'Hola', body: 'Cuerpo del correo', recipients: ['a@example.com'] };
+  const parsed = parseAccountExport(
+    file({
+      goals: [goal, { ...goal, id: 'goal-why', why: 'w'.repeat(281) }],
+      meetings: [
+        meeting,
+        { ...meeting, id: 'meet-2', agendaPoints: ['p'.repeat(5_001)] },
+        { ...meeting, id: 'meet-3', agendaPoints: 'no es una lista' }
+      ],
+      emails: [
+        email,
+        { ...email, id: 'email-2', recipients: Array.from({ length: 1_001 }, (_, i) => `r${i}@example.com`) },
+        { ...email, id: 'email-3', subject: 's'.repeat(5_001) }
+      ],
+      wheelLogs: [log, { ...log, id: 'wheel-2', scores: { Salud: 7, '../x': 3 } }],
+      tasks: [task, { ...task, id: 'task-bad-note', observations: [{ id: 'obs-1', type: 'note', text: 'Sin fecha' }] }]
+    })
+  );
+  assert.equal(parsed.data.goals.length, 1);
+  assert.equal(parsed.invalid.goals, 1);
+  assert.deepEqual(
+    parsed.data.meetings.map((m) => m.id),
+    ['meet-1']
+  );
+  assert.equal(parsed.invalid.meetings, 2);
+  assert.deepEqual(
+    parsed.data.emails.map((e) => e.id),
+    ['email-1']
+  );
+  assert.equal(parsed.invalid.emails, 2);
+  assert.equal(parsed.invalid.wheelLogs, 1);
+  assert.equal(parsed.invalid.tasks, 1);
+});

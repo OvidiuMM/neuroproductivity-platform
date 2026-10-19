@@ -41,9 +41,10 @@ El sistema rechaza las restricciones coercitivas (como las rotaciones atencional
 
 1. **Rueda de la Vida:** puntúas de 0 a 10 tu satisfacción en 7 áreas. Es el punto de partida.
 2. **Metas:** lo que quieres conseguir en cada área, empezando por las más bajas. Las áreas con 5 o menos y sin metas salen en «Necesitan atención».
-3. **Tareas:** acciones físicas concretas, en la lista Profesional o Personal. Cada meta tiene «Añadir tarea», y una tarea vinculada toma el área de su meta. Lo que tiene fecha de fin y varias tareas se agrupa en un **proyecto** de la meta.
-4. **Top 10 y Agenda:** qué hacer hoy y cuándo, con alarmas antes del plazo.
-5. **Tiempo protegido:** mañanas sin reuniones y correos escritos en orden.
+3. **Proyectos (opcional):** si una meta, o una parte de ella, necesita varias tareas relacionadas, se agrupan en un proyecto con fecha de fin. Una meta puede tener ninguno, uno o varios; es una herramienta, no un paso obligatorio.
+4. **Tareas:** acciones físicas concretas, en la lista Profesional o Personal. Cada meta tiene «Añadir tarea», y una tarea vinculada toma el área de su meta; puede ir suelta o dentro de un proyecto.
+5. **Top 10 y Agenda:** qué hacer hoy y cuándo, con alarmas antes del plazo.
+6. **Tiempo protegido:** mañanas sin reuniones y correos escritos en orden.
 
 Al volver a evaluar la Rueda se ve el efecto de las acciones, y las áreas cambian de orden en «Metas».
 
@@ -69,7 +70,7 @@ La lista completa y numerada de lo que hace la app, con sus requisitos no funcio
 - **Sección «Metas»:** las áreas van de la puntuación más baja a la más alta según la última evaluación (sin evaluación, en el orden de la Rueda), cada una con sus metas activas, su progreso (tareas hechas sobre el total) y las tareas que les quedan. Las áreas con 5 o menos y sin metas salen en «Necesitan atención», con un botón que abre la meta con esa área elegida. «Añadir tarea» crea una tarea ya vinculada a la meta. Las logradas y archivadas quedan plegadas al final.
 - **Vínculo con las tareas** (`goalId`): la tarea toma el área de su meta al leerse, así cambiar el área de una meta no reescribe sus tareas. Al eliminar una meta, sus tareas se quedan sin meta y con su área.
 - **Inicio:** una tarjeta con las metas activas y su progreso, y una recomendación cuando el área más baja de la última evaluación (5 o menos) no tiene metas.
-- **Proyectos** (`users/{uid}/projects`, sección «Proyectos»): nombre, meta (obligatoria), fecha de fin y descripción; activos, terminados o archivados. Las tareas de un proyecto (`projectId`) toman su meta al leerse (`applyProjectGoals`) y cuentan en el avance de la meta. Cada proyecto muestra su avance como una batería (tareas hechas sobre el total, sin las canceladas) y avisa si va fuera de plazo (pasó la fecha de fin con tareas abiertas), si termina en menos de una semana, si todas sus tareas están hechas y si alguna vence después del fin. En su vista, las tareas se manejan con las mismas tarjetas que en «Listas». Cada meta muestra sus proyectos activos; una meta con proyectos no se puede eliminar, y al eliminar un proyecto sus tareas siguen en la meta (`src/services/projects.ts`).
+- **Proyectos (opcionales)** (`users/{uid}/projects`, sección «Proyectos»): una herramienta para agrupar tareas relacionadas que buscan cumplir una meta o una parte de ella; una meta puede tener ninguno, uno o varios. Cada uno tiene nombre, meta (obligatoria), fecha de fin y descripción; activos, terminados o archivados. Las tareas de un proyecto (`projectId`) toman su meta al leerse (`applyProjectGoals`) y cuentan en el avance de la meta. Cada proyecto muestra su avance como una batería (tareas hechas sobre el total, sin las canceladas) y avisa si va fuera de plazo (pasó la fecha de fin con tareas abiertas), si termina en menos de una semana, si todas sus tareas están hechas y si alguna vence después del fin. En su vista, las tareas se manejan con las mismas tarjetas que en «Listas». Cada meta muestra sus proyectos activos; una meta con proyectos no se puede eliminar, y al eliminar un proyecto sus tareas siguen en la meta (`src/services/projects.ts`).
 
 ### 3. Listas y jerarquía visual
 
@@ -86,7 +87,7 @@ La lista completa y numerada de lo que hace la app, con sus requisitos no funcio
 - **Fechas y colores del plazo:** Fecha límite o intervalo opcional, con hora opcional. El título se pone violeta cuando falta menos de una semana y rojo cuando ha vencido. Los campos de fecha usan un calendario propio con la semana empezando en lunes (se escriben como dd/mm/aaaa y se manejan con el teclado), sea cual sea el idioma del navegador.
 - **Alarmas:** una hora para avisar antes del plazo (ver [Alarmas](#alarmas-092)).
 - **Tareas recurrentes:** cada día, semana (eligiendo los días), mes (día del mes, «el 2.º lunes» o «el último viernes») o año, cada N periodos. Al repetir, «Inicio» es desde cuándo se repite y la fecha límite hasta cuándo (opcional); cada repetición vence su propio día, nunca como un intervalo. Al marcar una repetición como Hecha o Cancelada se archiva y se crea la siguiente en la misma operación (cancelar una repetición no termina la serie) (sin duplicados aunque se marque desde dos dispositivos); las ya vencidas, hora límite incluida, se saltan si se completa con retraso.
-- **Calendario:** «Añadir al calendario», en el menú «⋯» de la tarea, la lleva a Google Calendar, Outlook.com, Outlook de Microsoft 365 o cualquier calendario (`.ics`, con la alarma), mediante enlaces y sin conectar cuentas. La descripción lleva la de la tarea y sus notas; con hora de inicio y sin hora límite, el evento dura una hora. Las recurrentes exportan la serie (RRULE con semanas que empiezan en lunes y el último día del mes cuando el día no existe); las de un intervalo de varios días exportan solo la repetición actual. Las series con hora van en hora local con la zona horaria del dispositivo, así el día y la hora no se mueven con el cambio de horario.
+- **Calendario:** «Añadir al calendario», en el menú «⋯» de la tarea, la lleva a Google Calendar, Outlook.com, Outlook de Microsoft 365 o cualquier calendario (`.ics`, con la alarma), mediante enlaces y sin conectar cuentas. La descripción lleva la de la tarea y sus notas; con hora de inicio y sin hora límite, el evento dura una hora. Las recurrentes exportan la serie (RRULE con semanas que empiezan en lunes y el último día del mes cuando el día no existe); cada repetición en su día, también las antiguas que tenían fecha de inicio. Las series con hora van en hora local con la zona horaria del dispositivo, así el día y la hora no se mueven con el cambio de horario.
 
 ### 4. Motor de sugerencias
 
@@ -110,7 +111,7 @@ La lista completa y numerada de lo que hace la app, con sus requisitos no funcio
 ### Cuentas, Inicio, Agenda y accesibilidad
 
 - **Cuentas y sincronización:** Inicio de sesión con Google o con email y contraseña (con verificación del email antes de solicitar acceso y recuperación de la contraseña por email); los datos de cada cuenta se guardan en Firestore (UE), funcionan sin conexión y se sincronizan entre dispositivos. En el primer inicio de sesión se ofrece importar los datos que la versión anterior guardaba solo en el navegador. Un indicador en la cabecera está verde cuando todo está guardado en el servidor y naranja cuando hay cambios pendientes o no hay conexión; al pulsarlo se fuerza la sincronización.
-- **Cuenta autogestionada:** desde el menú de la cuenta se cambia la contraseña, se cierra la sesión en todos los dispositivos (los demás pierden el acceso en menos de una hora), se descargan los datos, se importa una descarga anterior (se añade lo que falta y lo que ya está no se toca) y se elimina la cuenta con todo su contenido, confirmándolo con la contraseña o con Google.
+- **Cuenta autogestionada:** desde el menú de la cuenta se activan las notificaciones de las alarmas (y, en cada dispositivo, «Avisarme también con CLAR cerrada»), se cambia la contraseña, se cierra la sesión en todos los dispositivos (los demás pierden el acceso en menos de una hora), se descargan los datos, se importa una descarga anterior (se añade lo que falta y lo que ya está no se toca) y se elimina la cuenta con todo su contenido, confirmándolo con la contraseña o con Google.
 - **Acceso:** la administración puede exigir la aprobación de cada cuenta (por defecto) o desactivarla; también puede retirar el acceso o bloquear una cuenta junto con su email. Sin acceso se ve una pantalla para solicitarlo con un mensaje opcional, desde la que también se pueden descargar o eliminar los datos guardados. La administración decide en **Administración** → **Solicitudes** y recibe un email por cada solicitud. Un aviso rojo, en «Administración» y en sus pestañas, cuenta las solicitudes pendientes, los mensajes sin leer y, con la aprobación desactivada, las cuentas que entraron solas desde la última vez que se miraron las solicitudes en ese dispositivo, que salen marcadas como «Nueva»; la persona recibe otro cuando se aprueba (detalles en [Aprobación de accesos](#aprobación-de-accesos)).
 - **Accesibilidad:** panel propio (menú de la cuenta y pantallas de inicio de sesión y acceso) con tamaño del texto, alto contraste, reducir animaciones y foco muy visible, guardados en cada dispositivo. Toda la app se usa con el teclado (los diálogos atrapan y devuelven el foco, enlace para saltar al contenido) y una auditoría automática WCAG 2.1 AA revisa cada pantalla en CI.
 - **Inicio:** el foco de la lista activa, las metas activas con su progreso, los proyectos activos con su batería y su plazo, y estadísticas de las tareas (hechas por día, semana y mes, y canceladas en el mes; antes o después del plazo; velocidad en tareas y horas estimadas por semana; tiempo medio hasta completarlas; racha; pendientes, vencidas y bloqueadas; reparto por área, con los nombres de la cuenta), con recomendaciones según esos datos (también si un proyecto va fuera de plazo).
@@ -132,7 +133,7 @@ La lista completa y numerada de lo que hace la app, con sus requisitos no funcio
 ### Alarmas (0.9.2)
 
 - **Una hora por tarea** (`alarmTime`, HH:mm). Todas las horas de la app se escriben en 24 h con un campo propio (`TimeField`, `src/services/timeInput.ts`: 9:30, 0930, 21:45), no con el selector del navegador, que en sistemas en 12 h muestra a. m./p. m. y podía guardar 23:00 en lugar de 11:00. El momento en que suena se calcula al leer, en la zona horaria del dispositivo (`src/services/alarms.ts`): con hora límite, dentro de las 24 h anteriores (el mismo día si es antes; si no, la víspera); solo con fecha, la víspera a esa hora. Una tarea que se repite necesita hora límite, y cada repetición hereda la alarma.
-- **Avisa con la app abierta** (`useTaskAlarms`): un aviso dentro de CLAR con «Ver tarea» y, con permiso, una notificación del sistema (desde el service worker `public/sw.js` desde 0.9.5, que es lo que permite mostrarlas en Android, también en la app instalada; en Safari del iPhone sin instalar, solo el aviso dentro de la app). Con la app cerrada, o congelada en segundo plano por Android, no puede sonar: avisa al volver. Las alarmas que pasaron con la app cerrada avisan al abrirla si la tarea aún no ha vencido, y el aviso dice a qué hora era. El aviso y la notificación llevan la hora de la alarma. Cada alarma avisa una sola vez, también con varias pestañas (`localStorage` y Web Locks).
+- **Avisa con la app abierta** (`useTaskAlarms`): un aviso dentro de CLAR con «Ver tarea» y, con permiso, una notificación del sistema (desde el service worker `public/sw.js` desde 0.9.5, que es lo que permite mostrarlas en Android, también en la app instalada; en Safari del iPhone sin instalar, solo el aviso dentro de la app). Con la app cerrada, o congelada en segundo plano por Android, solo suena si el dispositivo tiene activado «Avisarme también con CLAR cerrada» (notificaciones push); si no, avisa al volver. Las alarmas que pasaron con la app cerrada avisan al abrirla si la tarea aún no ha vencido, y el aviso dice a qué hora era. El aviso y la notificación llevan la hora de la alarma. Cada alarma avisa una sola vez, también con varias pestañas (`localStorage` y Web Locks).
 - **Calendario:** el archivo .ics incluye la alarma (`VALARM`).
 
 ### Borradores de correo (0.9.2)
@@ -165,23 +166,31 @@ La lista completa y numerada de lo que hace la app, con sus requisitos no funcio
 
 ### Importar los datos, calendario y alarmas en Android (0.9.5)
 
-- **Importar datos (JSON):** en el menú de la cuenta, junto a «Descargar mis datos (JSON)». Acepta ese archivo (también los descargados antes de esta versión) y enseña antes qué entra: por cada tipo, lo nuevo, lo que ya está en la cuenta y lo que no es válido. Se añade solo lo que falta (mismo id: no se toca), así importar dos veces el mismo archivo no duplica nada. Si la cuenta aún tiene las áreas de partida, se recupera la configuración de áreas del archivo; si no, las que falten se añaden (con un número si el nombre ya existe, y ocultas pasado el máximo a la vista). Un texto desmesurado o un proyecto sin su meta cuentan como no válidos: nunca se recorta nada sin avisar. Cada registro se comprueba campo a campo y solo se guardan los campos conocidos (`src/services/importData.ts`); hace falta conexión, porque se mira en el servidor qué hay ya. La descarga lleva ahora `app`, `version` y `type: "account"`.
-- **Alarmas con CLAR cerrada (push):** con «Avisarme también con CLAR cerrada» activado en un dispositivo (menú de la cuenta), las alarmas le llegan aunque la app esté cerrada o el móvil bloqueado, por Firebase Cloud Messaging y una Cloud Function que se ejecuta cada minuto (ver [Notificaciones push de las alarmas](#notificaciones-push-de-las-alarmas)).
-- **Notificaciones de las alarmas en Android:** CLAR registra un service worker (`public/sw.js`, solo para las notificaciones: no intercepta peticiones ni guarda caché) y muestra la notificación desde él, así sale también en Android y en la app instalada mientras CLAR esté viva. El permiso se ofrece también en el menú de la cuenta, y las alarmas se revisan al reanudarse la app, al volver a mostrarse la página y al recuperar la conexión. El formulario dice que con CLAR cerrada o el móvil bloqueado la alarma no suena y propone el .ics.
+- **Importar datos (JSON):** en el menú de la cuenta, junto a «Descargar mis datos (JSON)». Acepta ese archivo (también los descargados antes de esta versión) y enseña antes qué entra: por cada tipo, lo nuevo, lo que ya está en la cuenta y lo que no es válido. Se añade solo lo que falta (mismo id: no se toca), así importar dos veces el mismo archivo no duplica nada. Si la cuenta aún tiene las áreas de partida, se recupera la configuración de áreas del archivo; si no, las que falten se añaden (con un número si el nombre ya existe, y ocultas pasado el máximo a la vista). Un registro con un texto o una lista que pasa su tope, con un elemento que no vale o un proyecto sin su meta cuenta entero como no válido: nunca se recorta nada. Cada registro se comprueba campo a campo y solo se guardan los campos conocidos (`src/services/importData.ts`); hace falta conexión, porque se mira en el servidor qué hay ya. La descarga lleva ahora `app`, `version` y `type: "account"`.
+- **Notificaciones de las alarmas en Android:** CLAR registra un service worker (`public/sw.js`, solo para las notificaciones: no intercepta peticiones ni guarda caché) y muestra la notificación desde él, así sale también en Android y en la app instalada mientras CLAR esté viva. El permiso se ofrece también en el menú de la cuenta, y las alarmas se revisan al reanudarse la app, al volver a mostrarse la página y al recuperar la conexión. Sin push en la instalación, el formulario dice que con CLAR cerrada o el móvil bloqueado la alarma no suena y propone el .ics.
 - **Textos legales:** el responsable con su nombre completo y un domicilio a efectos de notificaciones (RGPD, art. 13.1.a); la edad mínima, 14 años o la del país de residencia si es mayor; una licencia técnica sobre el contenido para poder alojarlo y mostrarlo; el almacenamiento local del navegador (Local Storage e IndexedDB) y el service worker, explicados como técnicos (art. 22.2 de la LSSI), y en el aviso legal, la ausencia de afiliación con el autor del libro que inspira el método.
 - **Calendario:** una tarea con hora de inicio y sin hora límite se exporta como un evento de una hora (antes llegaba hasta el final del día límite; si la fecha límite es otro día, la descripción la dice), y las notas de la tarea van en la descripción del evento, las de lista con su casilla (en los enlaces de Google y Outlook, recortada a 1.500 caracteres; el .ics la lleva entera). Las series con hora se exportan en hora local con su zona horaria: antes iban en UTC, y una serie de los lunes a las 00:30 caía en domingo y se movía una hora con el cambio de horario.
+- **Eliminar la cuenta tras entrar con Google:** se confirma con el método con el que se entró en esta sesión (`useReauthMethods`); una cuenta con contraseña y Google puede cambiar al otro, y los errores de la ventana de Google salen en español.
+- **Pruebas e2e más estables:** un paso de calentamiento (`tests/e2e/warm-up.setup.ts`) carga la app y despierta los emuladores antes de todas, y Vite busca las dependencias de todo `src` al arrancar.
+
+### Alarmas con CLAR cerrada y proyectos opcionales (próxima versión)
+
+- **Alarmas con CLAR cerrada (push):** con «Avisarme también con CLAR cerrada» activado en un dispositivo (menú de la cuenta; la notificación lleva solo la hora salvo que se pida el nombre de la tarea), las alarmas le llegan aunque la app esté cerrada o el móvil bloqueado, por Firebase Cloud Messaging y una Cloud Function que se ejecuta cada minuto (ver [Notificaciones push de las alarmas](#notificaciones-push-de-las-alarmas)).
+- **Proyectos opcionales:** la bienvenida, el recorrido guiado (un paso más, «Proyectos (opcional)»), la sección y la ayuda presentan los proyectos como una herramienta opcional para agrupar tareas relacionadas de una meta o de una parte de ella (ninguno, uno o varios por meta).
+- **Importar sin recortar:** un registro con un texto o una lista que pasa su tope cuenta entero como no válido.
+- **CI:** `actions/checkout` y `actions/setup-node` en v7 (Node 24).
 
 ---
 
 ## 🛠️ Stack Tecnológico
 
-| Capa                    | Tecnologías                                                                                                                                                                                                                                                                                       |
-| :---------------------- | :------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| **Frontend**            | React 19, TypeScript, Vite, Tailwind CSS v4, Lucide Icons                                                                                                                                                                                                                                         |
-| **Algoritmia**          | Motor TF-IDF & Cosine Similarity en TS, Parser sintáctico de verbos en español                                                                                                                                                                                                                    |
-| **Visualización**       | SVG interactivo polar / radar, Matemáticas polares de deformación poligonal                                                                                                                                                                                                                       |
-| **Cuentas y datos**     | Firebase Authentication (Google y email con contraseña) y Cloud Firestore (`europe-west1`) con caché persistente: funciona sin conexión y sincroniza entre dispositivos                                                                                                                           |
-| **Hosting y funciones** | Firebase Hosting (SPA, en https://clar.life) y Cloud Functions for Firebase 2.ª gen (`europe-west1`): funciones invocables de acceso y contacto, con avisos por email (SMTP de IONOS, con nodemailer), y la función HTTP `api`, que solo sirve `/.well-known/assetlinks.json` para la APK Android |
+| Capa                    | Tecnologías                                                                                                                                                                                                                                                                                                                                                                                                                                       |
+| :---------------------- | :------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| **Frontend**            | React 19, TypeScript, Vite, Tailwind CSS v4, Lucide Icons                                                                                                                                                                                                                                                                                                                                                                                         |
+| **Algoritmia**          | Motor TF-IDF & Cosine Similarity en TS, Parser sintáctico de verbos en español                                                                                                                                                                                                                                                                                                                                                                    |
+| **Visualización**       | SVG interactivo polar / radar, Matemáticas polares de deformación poligonal                                                                                                                                                                                                                                                                                                                                                                       |
+| **Cuentas y datos**     | Firebase Authentication (Google y email con contraseña) y Cloud Firestore (`europe-west1`) con caché persistente: funciona sin conexión y sincroniza entre dispositivos                                                                                                                                                                                                                                                                           |
+| **Hosting y funciones** | Firebase Hosting (SPA, en https://clar.life) y Cloud Functions for Firebase 2.ª gen (`europe-west1`): funciones invocables de acceso, contacto y registro de dispositivos para las alarmas push, el trigger `queueTaskAlarm` y la función programada `sendDueAlarms` (Firebase Cloud Messaging), con avisos por email (SMTP de IONOS, con nodemailer), y la función HTTP `api`, que solo sirve `/.well-known/assetlinks.json` para la APK Android |
 
 ---
 
@@ -220,10 +229,11 @@ npm run typecheck
 npm run lint
 npm run format:check
 
-# 6. Ejecutar pruebas unitarias, de integración, de reglas de Firestore y de las Cloud Functions
+# 6. Ejecutar pruebas unitarias, de integración, de reglas de Firestore, de las alarmas push y de las Cloud Functions
 npm run test:unit
 npm run test:integration
 npm run test:rules
+npm run test:push
 npm --prefix functions test
 
 # 7. Instalar Chromium y ejecutar pruebas E2E
@@ -235,7 +245,7 @@ La app estará disponible en `http://localhost:3000` y la interfaz de los emulad
 
 ### Pruebas automatizadas
 
-El banco de pruebas cubre lógica pura con el test runner de Node, la importación de datos locales, las reglas de seguridad de Firestore contra el emulador, flujos de extremo a extremo en Chromium con Playwright, uno por función de la app (`tests/e2e/*.spec.ts`), con el emulador de Auth para el inicio de sesión, y una auditoría automática de accesibilidad WCAG 2.1 A y AA con axe-core en cada pantalla, también con alto contraste y texto muy grande (`tests/e2e/a11y.spec.ts`). `npm test` ejecuta todos los niveles; las Cloud Functions (lógica de accesos y contacto, y `assetlinks.json`) se prueban aparte con `npm --prefix functions test`. GitHub Actions también valida tipos, compila la aplicación y las Cloud Functions, y ejecuta toda la suite en cada push y pull request.
+El banco de pruebas cubre lógica pura con el test runner de Node, la importación de datos locales, las reglas de seguridad de Firestore contra el emulador, la cola y el envío de las alarmas push contra el emulador de Firestore con un FCM simulado (`npm run test:push`), flujos de extremo a extremo en Chromium con Playwright, tras un paso de calentamiento (`tests/e2e/warm-up.setup.ts`), uno por función de la app (`tests/e2e/*.spec.ts`), con el emulador de Auth para el inicio de sesión, y una auditoría automática de accesibilidad WCAG 2.1 A y AA con axe-core en cada pantalla, también con alto contraste y texto muy grande (`tests/e2e/a11y.spec.ts`). `npm test` ejecuta todos los niveles; las Cloud Functions (lógica de accesos, contacto y alarmas —comparada con la de la app, también en los cambios de hora—, y `assetlinks.json`) se prueban aparte con `npm --prefix functions test`. GitHub Actions también valida tipos, compila la aplicación y las Cloud Functions, y ejecuta toda la suite en cada push y pull request.
 
 ### Despliegue en Firebase (Hosting + Cloud Functions + Firestore)
 
@@ -295,10 +305,10 @@ npm run deploy
 
 #### Notificaciones push de las alarmas
 
-Con CLAR cerrada, las alarmas llegan por Firebase Cloud Messaging a los dispositivos donde se activó «Avisarme también con CLAR cerrada» (menú de la cuenta; se activa en cada dispositivo, con permiso de notificaciones). La notificación dice «Tienes una alarma de CLAR a las hh:mm» y cuándo vence; el nombre de la tarea solo va si el dispositivo lo pide («Mostrar el nombre de la tarea»), porque se ve con el móvil bloqueado. El dispositivo registra su token, su zona horaria y esa preferencia (`registerPushDevice`, como mucho diez por cuenta; `push_tokens` dice de qué cuenta es cada token, así un dispositivo compartido solo recibe las alarmas de la última cuenta registrada, y un token que no se renueva en 30 días se borra). El trigger `queueTaskAlarm` pone al día en una transacción la próxima alarma de la tarea en `alarm_queue`, calculada en esa zona horaria con el mismo resultado que la app (`functions/src/alarmLogic.ts`), salvo si es la misma que ya se envió (`alarm_sent`). `sendDueAlarms`, cada minuto, toma en una transacción las que tocan, las envía y apunta que se enviaron; si ningún dispositivo la recibe por un fallo pasajero, vuelve a la cola con una espera creciente (cinco intentos), y los tokens que FCM da por inválidos se borran. Desactivarlas o cerrar sesión corta la suscripción del navegador al momento (también sin conexión) y borra el token (`unregisterPushDevice`). «Cerrar todas las sesiones», retirar el acceso y eliminar la cuenta borran los dispositivos y la cola (las alarmas ya enviadas solo se borran con la cuenta, para no repetirlas). Ninguna de estas colecciones se lee ni se escribe desde la app. `npm run test:push` prueba la cola y el envío contra el emulador de Firestore con un FCM simulado. Límite conocido: la zona horaria es la del último dispositivo registrado.
+Con CLAR cerrada, las alarmas llegan por Firebase Cloud Messaging a los dispositivos donde se activó «Avisarme también con CLAR cerrada» (menú de la cuenta; se activa en cada dispositivo, con permiso de notificaciones). La notificación dice «Tienes una alarma de CLAR a las hh:mm» y cuándo vence; con «Mostrar el nombre de la tarea», «Alarma de las hh:mm: nombre de la tarea», porque se ve con el móvil bloqueado. El dispositivo registra su token, su zona horaria y esa preferencia (`registerPushDevice`, como mucho diez por cuenta; `push_tokens` dice de qué cuenta es cada token, así un dispositivo compartido solo recibe las alarmas de la última cuenta registrada, y un token que no se renueva en 30 días se borra). El trigger `queueTaskAlarm` pone al día en una transacción la próxima alarma de la tarea en `alarm_queue`, calculada en esa zona horaria con el mismo resultado que la app (`functions/src/alarmLogic.ts`), salvo si es la misma que ya se envió (`alarm_sent`). `sendDueAlarms`, cada minuto, toma en una transacción las que tocan, las envía y apunta que se enviaron; si ningún dispositivo la recibe por un fallo pasajero, vuelve a la cola con una espera creciente (cinco intentos), y los tokens que FCM da por inválidos se borran. Desactivarlas o cerrar sesión corta la suscripción del navegador al momento (también sin conexión) y borra el token (`unregisterPushDevice`). «Cerrar todas las sesiones», retirar el acceso y eliminar la cuenta borran los dispositivos y la cola (las alarmas ya enviadas solo se borran con la cuenta, para no repetirlas). Ninguna de estas colecciones se lee ni se escribe desde la app. `npm run test:push` prueba la cola y el envío contra el emulador de Firestore con un FCM simulado. Límite conocido: la zona horaria es la del último dispositivo registrado.
 
 1. **Clave VAPID:** Firebase → Configuración del proyecto → Cloud Messaging → Certificados web push → «Generar par de claves». La clave pública va en la variable del repositorio `FCM_VAPID_KEY` (`gh variable set FCM_VAPID_KEY`). La compilación la lee como `VITE_FCM_VAPID_KEY`; sin ella, la app no usa push.
-2. **APIs:** el primer despliegue activa Cloud Scheduler (para `sendDueAlarms`) y Eventarc (para el trigger) si el CLI no puede hacerlo solo.
+2. **APIs y permisos (una vez, con una cuenta propietaria):** activar `cloudscheduler.googleapis.com`, `eventarc.googleapis.com`, `pubsub.googleapis.com` y `run.googleapis.com`; dar a `github-deployer` los roles `roles/cloudscheduler.admin` y `roles/eventarc.developer`; y dar a los agentes de servicio los que pide el primer despliegue: `roles/iam.serviceAccountTokenCreator` al de Pub/Sub, y `roles/run.invoker` y `roles/eventarc.eventReceiver` a la cuenta de Compute (ver la configuración inicial). El primer despliegue del trigger puede fallar con «Permission denied while using the Eventarc Service Agent» mientras se propagan los permisos: basta con volver a lanzarlo unos minutos después.
 3. **APK (TWA):** generarla con la delegación de notificaciones (Bubblewrap: `enableNotifications: true`) y el permiso `POST_NOTIFICATIONS` de Android 13+.
 4. **Emuladores:** FCM no tiene emulador, así que con ellos no se usa push; el trigger funciona y la tarea programada no se ejecuta.
 
@@ -333,6 +343,7 @@ El workflow necesita estos valores en el repositorio. Los secrets se ocultan en 
 | Variable | `SMTP_USER`                      | Buzón que envía los avisos y las respuestas, y recibe lo que contesten        |
 | Variable | `SMTP_HOST`                      | Opcional: servidor SMTP del buzón (por defecto `smtp.ionos.es`)               |
 | Variable | `APP_URL`                        | Opcional: dirección de la app en los emails (`https://clar.life`)             |
+| Variable | `FCM_VAPID_KEY`                  | Opcional: clave pública Web Push de FCM; sin ella, la app no ofrece push      |
 
 Configuración inicial, una sola vez, con una cuenta propietaria del proyecto:
 
@@ -345,7 +356,7 @@ REPO_ID=1408574835  # gh api repos/OvidiuMM/neuroproductivity-platform -q .id
 # 1. Cuenta de servicio con los permisos para desplegar Hosting, Functions y las reglas de Firestore
 #    (secretmanager.viewer: el CLI comprueba el secreto SMTP_PASSWORD al desplegar)
 gcloud iam service-accounts create github-deployer --project "$PROJECT_ID" --display-name "GitHub Actions deployer"
-for role in roles/firebasehosting.admin roles/cloudfunctions.admin roles/firebaserules.admin roles/datastore.indexAdmin roles/secretmanager.viewer; do
+for role in roles/firebasehosting.admin roles/cloudfunctions.admin roles/firebaserules.admin roles/datastore.indexAdmin roles/secretmanager.viewer roles/cloudscheduler.admin roles/eventarc.developer; do
   gcloud projects add-iam-policy-binding "$PROJECT_ID" --member "serviceAccount:$SA" --role "$role" --condition None
 done
 # Las funciones se ejecutan con la cuenta de servicio de Compute y el CLI comprueba también la de App Engine;
@@ -353,6 +364,16 @@ done
 for runtime_sa in "$PROJECT_NUMBER-compute@developer.gserviceaccount.com" "$PROJECT_ID@appspot.gserviceaccount.com"; do
   gcloud iam service-accounts add-iam-policy-binding "$runtime_sa" \
     --project "$PROJECT_ID" --member "serviceAccount:$SA" --role roles/iam.serviceAccountUser
+done
+
+# Alarmas push (sendDueAlarms con Cloud Scheduler y el trigger queueTaskAlarm con Eventarc): APIs y permisos de los
+# agentes de servicio, que el CLI no puede dar con la cuenta de despliegue
+gcloud services enable cloudscheduler.googleapis.com eventarc.googleapis.com pubsub.googleapis.com run.googleapis.com --project "$PROJECT_ID"
+gcloud projects add-iam-policy-binding "$PROJECT_ID" --condition None \
+  --member "serviceAccount:service-$PROJECT_NUMBER@gcp-sa-pubsub.iam.gserviceaccount.com" --role roles/iam.serviceAccountTokenCreator
+for role in roles/run.invoker roles/eventarc.eventReceiver; do
+  gcloud projects add-iam-policy-binding "$PROJECT_ID" --condition None \
+    --member "serviceAccount:$PROJECT_NUMBER-compute@developer.gserviceaccount.com" --role "$role"
 done
 
 # 2. Workload Identity Federation, limitada a este repositorio y a la rama main
@@ -372,6 +393,7 @@ gh secret set GCP_WORKLOAD_IDENTITY_PROVIDER \
   --body "projects/$PROJECT_NUMBER/locations/global/workloadIdentityPools/github/providers/neuroproductivity-platform"
 gh variable set ANDROID_PACKAGE_NAME --body "<package-name>"
 gh variable set ANDROID_SHA256_FINGERPRINT --body "<huella-sha256>"
+gh variable set FCM_VAPID_KEY --body "<clave-publica-vapid>"
 ```
 
 El repositorio utiliza `package-lock.json` (en la raíz, en `functions/` y en `tools/eslint/`) como únicos archivos de bloqueo; no añadas `bun.lock` ni `pnpm-lock.yaml`. Después de cambiar dependencias, actualiza y confirma `package.json` y `package-lock.json` juntos. Para comprobar la instalación reproducible, ejecuta `npm ci`, `npm ci --prefix functions` y `npm ci --prefix tools/eslint` antes de compilar y probar.
@@ -387,16 +409,16 @@ El repositorio utiliza `package-lock.json` (en la raíz, en `functions/` y en `t
 ├── package.json                 # Dependencias y scripts
 ├── vite.config.ts               # Configuración de Vite y Tailwind
 ├── tsconfig.json                # Configuración de TypeScript estricto
-├── playwright.config.ts         # Pruebas E2E (proyectos chromium y global-settings)
+├── playwright.config.ts         # Pruebas E2E (proyectos warm-up, chromium y global-settings)
 ├── firebase.json                # Firebase Hosting (rewrites y caché), Cloud Functions, Firestore y emuladores
 ├── firestore.rules              # Reglas: users/{uid} (crear y modificar exige acceso aprobado), access, admins,
 │                                #   settings y feedback_tickets (solo la administración, y solo su estado)
-├── public/                      # Manifiesto, iconos y pantalla de inicio
+├── public/                      # Manifiesto, iconos, pantalla de inicio y sw.js (service worker de las notificaciones)
 ├── tools/eslint/                # ESLint con su propio TypeScript 5.9
 ├── .github/workflows/ci.yml     # Validación (tipos, linter, pruebas) y despliegue desde main
 ├── functions/                   # Cloud Functions for Firebase (región europe-west1)
 │   ├── src/
-│   │   ├── index.ts             # Exporta la función HTTP `api`, las de acceso y las de contacto
+│   │   ├── index.ts             # Exporta la función HTTP `api`, las de acceso, las de contacto y las de las alarmas push
 │   │   ├── app.ts               # Función HTTP `api`: solo /.well-known/assetlinks.json (APK Android)
 │   │   ├── adminApp.ts          # Firebase Admin compartido
 │   │   ├── access.ts            # syncAccess, requestAccess, setAccess, setAccessMode, forgetAccess, revokeSessions
@@ -404,8 +426,12 @@ El repositorio utiliza `package-lock.json` (en la raíz, en `functions/` y en `t
 │   │   ├── accessLogic.ts       # Reglas puras del acceso (estados, esperas, modo de aprobación, correos)
 │   │   ├── feedback.ts          # submitFeedback y replyToFeedback (mensajes de contacto y sus respuestas)
 │   │   ├── feedbackLogic.ts     # Validación, límite por hora y correos del contacto
-│   │   └── feedbackCleanup.ts   # Borrado de los mensajes al eliminar la cuenta
-│   └── test/                    # assetlinks.json, Admin, lógica de acceso y de contacto
+│   │   ├── feedbackCleanup.ts   # Borrado de los mensajes al eliminar la cuenta
+│   │   ├── push.ts              # Alarmas push: registerPushDevice, unregisterPushDevice, queueTaskAlarm, sendDueAlarms
+│   │   ├── alarmLogic.ts        # Momento de cada alarma en la zona del dispositivo (igual que la app) y su texto
+│   │   └── pushCleanup.ts       # Dar de baja los dispositivos de una cuenta y borrar su cola
+│   └── test/                    # assetlinks.json, Admin, lógica de acceso, de contacto y de las alarmas
+│       └── emulator/            # Cola y envío de las alarmas push contra el emulador de Firestore (npm run test:push)
 ├── src/
 │   ├── main.tsx                 # Montaje de React y preferencias de accesibilidad antes del primer render
 │   ├── Root.tsx                 # Textos legales públicos según la ruta; si no, la app
@@ -424,6 +450,7 @@ El repositorio utiliza `package-lock.json` (en la raíz, en `functions/` y en `t
 │   │   ├── useAreas.ts          # Áreas de la Rueda de la cuenta (contexto de React)
 │   │   ├── useMediaQuery.ts     # Tamaño de pantalla (móvil o no)
 │   │   ├── useNow.ts            # Reloj por minutos para plazos y prioridad efectiva
+│   │   ├── useReauthMethods.ts  # Cómo confirmar con un inicio de sesión reciente (el método de esta sesión primero)
 │   │   └── useTaskAlarms.ts     # Alarmas de las tareas mientras la app está abierta
 │   ├── services/
 │   │   ├── firebase.ts          # Firebase (Auth, Firestore con caché sin conexión, Functions) y sincronización forzada
@@ -434,6 +461,7 @@ El repositorio utiliza `package-lock.json` (en la raíz, en `functions/` y en `t
 │   │   ├── account.ts           # Descarga de los datos, eliminación de la cuenta y cierre de todas las sesiones
 │   │   ├── importData.ts        # Importar la descarga: validación campo a campo, qué entra y fusión de áreas
 │   │   ├── accountImport.ts     # Importar la descarga: lectura del archivo y escritura por lotes
+│   │   ├── push.ts              # Alarmas con CLAR cerrada: registro y baja del dispositivo (FCM)
 │   │   ├── wheel.ts · goals.ts  # Áreas de la Rueda (propias de cada cuenta); metas, su orden y su progreso
 │   │   ├── projects.ts          # Proyectos: avance, plazo, meta de sus tareas y orden
 │   │   ├── dependencies.ts      # Tareas que esperan a otra: bloqueos, ciclos y candidatas
@@ -476,6 +504,8 @@ El repositorio utiliza `package-lock.json` (en la raíz, en `functions/` y en `t
 │       ├── FeedbackDialog.tsx   # «Escríbenos»
 │       ├── AccountMenu.tsx · AccessibilityPanel.tsx · DeleteAccountPanel.tsx
 │       ├── ImportLocalDataModal.tsx # Importación de datos locales en el primer inicio de sesión
+│       ├── ImportAccountDialog.tsx # Vista previa y avance de «Importar datos (JSON)»
+│       ├── NewGoalInline.tsx    # Crear una meta desde el formulario de la tarea
 │       ├── WelcomeDialog.tsx · ProductTour.tsx # Bienvenida y recorrido guiado
 │       ├── HowItWorks.tsx       # Ayuda
 │       ├── LegalPage.tsx · LegalTexts.tsx · LegalLinks.tsx # Privacidad, condiciones y aviso legal
@@ -485,7 +515,7 @@ El repositorio utiliza `package-lock.json` (en la raíz, en `functions/` y en `t
 └── tests/
     ├── unit/ · integration/     # Lógica pura e importación de datos locales (node:test)
     ├── rules/                   # Reglas de Firestore contra el emulador
-    └── e2e/                     # Playwright: flujos completos y auditoría WCAG (axe-core)
+    └── e2e/                     # Playwright: calentamiento (warm-up.setup.ts), flujos completos y auditoría WCAG (axe-core)
 ```
 
 ---
