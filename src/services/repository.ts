@@ -250,8 +250,13 @@ export const saveWheelAreas = (db: Firestore, uid: string, areas: WheelArea[]) =
 export const readWheelAreas = async (db: Firestore, uid: string) =>
   ((await getDoc(doc(db, 'users', uid))).data() as ProfileRecord | undefined)?.wheelAreas;
 
-export const markOnboardingSeen = (db: Firestore, uid: string, outcome: OnboardingOutcome) =>
-  setDoc(doc(db, 'users', uid), onboardingRecord(outcome), { merge: true });
+// Con `releaseNotesSeen`, también las novedades de esa versión, en la misma escritura
+export const markOnboardingSeen = (db: Firestore, uid: string, outcome: OnboardingOutcome, releaseNotesSeen?: string) =>
+  setDoc(
+    doc(db, 'users', uid),
+    { ...onboardingRecord(outcome), ...(releaseNotesSeen ? { releaseNotesSeen } : {}) },
+    { merge: true }
+  );
 
 // Las novedades de esta versión, vistas
 export const markReleaseNotesSeen = (db: Firestore, uid: string, version: string) =>

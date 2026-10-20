@@ -394,7 +394,7 @@ test('release notes of the version', async ({ page }) => {
   await signInWithGoogle(page);
   await page
     .getByRole('banner')
-    .getByRole('button', { name: /^Novedades de la versión/ })
+    .getByRole('button', { name: /novedades de esta versión$/ })
     .click();
   await expect(page.getByRole('dialog', { name: /^Novedades de la versión/ })).toBeVisible();
   await expectNoViolations(page, 'novedades de la versión');

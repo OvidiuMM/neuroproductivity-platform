@@ -73,7 +73,7 @@ export const Navbar: React.FC<NavbarProps> = ({
             <button
               type="button"
               onClick={onShowReleaseNotes}
-              aria-label={`Novedades de la versión ${__APP_VERSION__}`}
+              aria-label={`v${__APP_VERSION__}: novedades de esta versión`}
               className="hidden rounded border border-indigo-200 bg-indigo-50 px-1.5 py-0.5 font-mono text-[10px] font-bold whitespace-nowrap text-indigo-700 hover:bg-indigo-100 sm:inline"
             >
               v{__APP_VERSION__}

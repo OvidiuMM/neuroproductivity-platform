@@ -441,7 +441,7 @@ Origen: `src/services/firebase.ts`, `src/services/repository.ts`, `src/lazy.tsx`
 
 Origen: `src/App.tsx`, `src/Root.tsx`, `src/lazy.tsx`, `vite.config.ts`, `firebase.json`.
 
-- **RNF-REN-01.** Las secciones y ventanas que no se ven al arrancar se descargan la primera vez que se abren: Agenda, Rueda, Metas, Proyectos, Tiempo protegido, Ayuda, Administración, la vista previa de la importación, los editores de metas, proyectos y áreas, la bienvenida y el recorrido.
+- **RNF-REN-01.** Las secciones y ventanas que no se ven al arrancar se descargan la primera vez que se abren: Agenda, Rueda, Metas, Proyectos, Tiempo protegido, Ayuda, Administración, la vista previa de la importación, los editores de metas, proyectos y áreas, la bienvenida, el recorrido y las novedades.
 - **RNF-REN-02.** Las páginas legales se cargan sin Firebase ni el resto de la app.
 - **RNF-REN-03.** Las librerías van en paquetes aparte (Firebase, React y el resto; las notificaciones push de Firebase, en otro que solo se descarga si se activan), que el navegador conserva entre versiones. Los archivos de `/assets/` se sirven con caché de un año, como inmutables.
 - **RNF-REN-04.** Los cálculos (Top 10, estadísticas, sugerencias, agenda y alarmas) se hacen en el navegador sobre los datos ya cargados. Los estados que dependen de la hora se recalculan cada minuto.

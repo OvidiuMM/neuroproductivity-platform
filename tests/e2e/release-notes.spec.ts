@@ -15,6 +15,8 @@ import {
 const SERVER_CALL = { timeout: 15_000 };
 const latest = RELEASE_NOTES[0];
 const NOTES = `Novedades de la versión ${latest.version}`;
+// La versión de la cabecera: su nombre empieza por lo que se ve
+const VERSION_BUTTON = `v${latest.version}: novedades de esta versión`;
 
 test('after an update an account sees the release notes once, and can open them again from the version', async ({
   page
@@ -36,13 +38,21 @@ test('after an update an account sees the release notes once, and can open them 
     .poll(async () => (await readDocument(`users/${await uidOf(email)}`))?.releaseNotesSeen, SERVER_CALL)
     .toBe(latest.version);
 
-  // No vuelve a salir sola
+  // No vuelve a salir sola, tampoco en otro dispositivo (sin la copia local: lo dice el perfil)
+  const synced = page.getByRole('button', { name: /^Sincronizado con el servidor/ });
   await page.reload();
-  await expect(page.getByRole('button', { name: 'Nueva tarea', exact: true })).toBeVisible();
+  await expect(synced).toBeVisible(SERVER_CALL);
+  await expect(page.getByRole('dialog')).toHaveCount(0);
+  await page.evaluate(() => {
+    for (const key of Object.keys(localStorage))
+      if (key.startsWith('clar_release_notes:')) localStorage.removeItem(key);
+  });
+  await page.reload();
+  await expect(synced).toBeVisible(SERVER_CALL);
   await expect(page.getByRole('dialog')).toHaveCount(0);
 
   // La versión de la cabecera las abre; Escape las cierra y el foco vuelve a la versión
-  const version = page.getByRole('banner').getByRole('button', { name: NOTES });
+  const version = page.getByRole('banner').getByRole('button', { name: VERSION_BUTTON });
   await version.click();
   await expect(dialog).toBeVisible();
   await page.keyboard.press('Escape');
@@ -50,7 +60,7 @@ test('after an update an account sees the release notes once, and can open them 
   await expect(version).toBeFocused();
 });
 
-test('the help lists the release notes of every version', async ({ page }) => {
+test('the help shows the release notes of the current version', async ({ page }) => {
   await page.goto('/');
   await signInWithGoogle(page);
   await openSection(page, 'Ayuda');
