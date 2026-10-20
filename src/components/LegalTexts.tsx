@@ -79,6 +79,24 @@ export const PrivacyPolicy: React.FC = () => (
           administración, cuáles tiene encendidas. Sirven para que puedas usarlas.
         </li>
         <li>
+          <strong>Sincronización con Google Calendar:</strong> si tienes esta función y conectas tu cuenta de Google,
+          CLAR guarda el permiso que le das (cifrado), el identificador de su calendario «CLAR» y tu zona horaria, y
+          envía a ese calendario el título, la descripción, las notas, las fechas, la repetición y la alarma de tus
+          tareas con fecha (las hechas y canceladas, marcadas con «✓» o «✕»). Sirve para que veas tus tareas en Google
+          Calendar. CLAR solo pide permiso para crear y usar su propio calendario: no ve ni cambia tus otros calendarios
+          ni sus eventos, y no lee nada de tu cuenta de Google. El uso y la transferencia a cualquier otra aplicación de
+          la información recibida de las API de Google se ajustan a la{' '}
+          <a
+            href="https://developers.google.com/terms/api-services-user-data-policy"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="font-semibold text-indigo-700 underline hover:text-indigo-900"
+          >
+            Política de datos de usuario de los servicios de las API de Google
+          </a>
+          , incluidos sus requisitos de uso limitado.
+        </li>
+        <li>
           <strong>Cuentas bloqueadas:</strong> el email de una cuenta bloqueada por abuso, para que no pueda volver a
           registrarse.
         </li>
@@ -128,6 +146,11 @@ export const PrivacyPolicy: React.FC = () => (
           <strong>Consentimiento</strong> (art. 6.1.a RGPD): las alarmas con CLAR cerrada, que activas en cada
           dispositivo. Lo retiras desactivándolas en el menú de tu cuenta.
         </li>
+        <li>
+          <strong>Consentimiento</strong> (art. 6.1.a RGPD): la sincronización con Google Calendar, al conectar tu
+          cuenta de Google. Lo retiras con «Desconectar Google Calendar», en el menú de tu cuenta, o quitando el permiso
+          de CLAR en tu cuenta de Google.
+        </li>
       </List>
     </Section>
 
@@ -148,8 +171,9 @@ export const PrivacyPolicy: React.FC = () => (
         </li>
         <li>
           Otros servicios, solo cuando tú lo decides: al usar «Añadir al calendario» con Google Calendar u Outlook, el
-          título, la descripción y las notas de la tarea van en el enlace; «Abrir en mi correo» pasa el correo a tu
-          programa de correo.
+          título, la descripción y las notas de la tarea van en el enlace; si conectas Google Calendar, los datos de tus
+          tareas con fecha van al calendario «CLAR» de tu propia cuenta de Google, donde Google los trata según sus
+          condiciones y su política de privacidad; «Abrir en mi correo» pasa el correo a tu programa de correo.
         </li>
       </List>
       <p>CLAR no vende ni cede tus datos a nadie.</p>
@@ -161,7 +185,9 @@ export const PrivacyPolicy: React.FC = () => (
         salen de {EMAIL_PROVIDER}, también en la UE. Firebase Authentication (tu cuenta: nombre, email y foto) y
         Firebase Cloud Messaging (las notificaciones de las alarmas, si las activas) pueden tratar datos fuera de la UE,
         en Estados Unidos, con las garantías del Marco de Privacidad de Datos UE-EE. UU. (decisión de adecuación de la
-        Comisión Europea de 10 de julio de 2023) y de las cláusulas contractuales tipo de la Comisión.
+        Comisión Europea de 10 de julio de 2023) y de las cláusulas contractuales tipo de la Comisión. Si conectas
+        Google Calendar, lo que se envía a tu cuenta de Google queda sujeto a sus condiciones, y Google puede tratarlo
+        fuera de la UE.
       </p>
     </Section>
 
@@ -172,6 +198,13 @@ export const PrivacyPolicy: React.FC = () => (
         <li>
           Funciones extra: hasta que la administración te las quite o te retire o bloquee el acceso, o elimines la
           cuenta.
+        </li>
+        <li>
+          Conexión con Google Calendar: el permiso se borra (y se retira en Google) al desconectar, si la administración
+          te quita la función, si pierdes el acceso y al eliminar la cuenta. El identificador del calendario se guarda,
+          para volver a usarlo si conectas otra vez, hasta que elimines la cuenta. Si retiras el permiso desde tu cuenta
+          de Google, CLAR lo borra en cuanto lo detecta (en la siguiente sincronización). El calendario «CLAR» y sus
+          eventos se quedan en tu cuenta de Google hasta que los borres tú.
         </li>
         <li>
           Horas de envío de los mensajes: cuentan una hora para el límite de cinco, pero no se borran solas. Se

@@ -11,7 +11,7 @@ Este documento describe qué hace CLAR en la versión 0.9.5: sus requisitos func
 
 - **Persona usuaria:** cualquier cuenta con sesión iniciada. Solo usa la app con el acceso aprobado.
 - **Persona administradora:** la cuenta cuyo email verificado coincide con el configurado en el despliegue. Decide los accesos, activa funciones extra y atiende los mensajes de contacto.
-- **Servidor:** las Cloud Functions, únicas que escriben los accesos, la configuración, las funciones extra de cada cuenta, los mensajes de contacto, los dispositivos de las notificaciones push y la cola de alarmas.
+- **Servidor:** las Cloud Functions, únicas que escriben los accesos, la configuración, las funciones extra de cada cuenta, la conexión con Google Calendar, los mensajes de contacto, los dispositivos de las notificaciones push y la cola de alarmas.
 
 ---
 
@@ -276,7 +276,7 @@ Origen: `src/AuthGate.tsx`, `src/AccessGate.tsx`, `src/services/auth.ts`, `src/s
 - **RF-CUE-16.** Una cuenta con contraseña puede «Cambiar la contraseña» escribiendo la actual y una nueva de al menos 8 caracteres.
 - **RF-CUE-17.** «Cerrar sesión en todos los dispositivos» invalida las sesiones de la cuenta y cierra la de este dispositivo. Los demás pierden el acceso en menos de una hora.
 - **RF-CUE-18.** «Cerrar sesión» borra la copia local de los datos del dispositivo. Si hay otras pestañas de la app abiertas, la copia se queda hasta cerrar sesión con una sola.
-- **RF-CUE-19.** «Eliminar mi cuenta y todos mis datos» pide confirmarlo con el método con el que se entró en esta sesión: la contraseña o volver a entrar con Google. Una cuenta que tiene los dos puede cambiar al otro, y los errores de la ventana de Google (cerrada, otra cuenta, bloqueada) se explican en español. Borra los datos de la cuenta, su perfil, su solicitud de acceso, sus funciones extra y sus mensajes de «Escríbenos», y después la cuenta.
+- **RF-CUE-19.** «Eliminar mi cuenta y todos mis datos» pide confirmarlo con el método con el que se entró en esta sesión: la contraseña o volver a entrar con Google. Una cuenta que tiene los dos puede cambiar al otro, y los errores de la ventana de Google (cerrada, otra cuenta, bloqueada) se explican en español. Borra los datos de la cuenta, su perfil, su solicitud de acceso, sus funciones extra, su conexión con Google Calendar y sus mensajes de «Escríbenos», y después la cuenta.
 
 **Primera vez**
 
@@ -348,13 +348,27 @@ Origen: `src/Root.tsx`, `src/components/LegalPage.tsx`, `src/components/LegalTex
 - **RF-LEG-07.** Una prueba unitaria falla si los textos legales no tienen titular, domicilio a efectos de notificaciones o email de contacto.
 - **RF-LEG-08.** El responsable se identifica con su nombre completo, un domicilio a efectos de notificaciones y un email (RGPD, art. 13.1.a), en la política de privacidad y en el aviso legal. La política explica el almacenamiento local del navegador (Local Storage e IndexedDB) y el service worker, todos técnicos (art. 22.2 de la LSSI).
 
+### 1.14 Sincronización con Google Calendar (RF-GCA)
+
+Origen: `src/services/googleCalendar.ts`, `src/components/CalendarConnection.tsx`, `public/oauth/google.html`, `public/oauth/google.js`, `functions/src/calendarSync.ts`, `functions/src/calendarLogic.ts`, `functions/src/calendarCleanup.ts`, `functions/src/calendarCrypto.ts`, `functions/src/googleCalendar.ts`.
+
+- **RF-GCA-01.** Es la función extra «Sincronizar con Google Calendar». Con la función en uso (concedida por la persona administradora o, en su cuenta, encendida), «Funciones extra», en el menú de la cuenta, ofrece «Conectar Google Calendar». Si la compilación no tiene el id del cliente OAuth de Google, dice que no está disponible en esta instalación.
+- **RF-GCA-02.** Conectar abre la autorización de Google en una ventana, solo con el permiso `calendar.app.created` (crear un calendario propio y sus eventos), sin conexión y pidiendo el consentimiento, con PKCE y un `state` propio. Google vuelve a `/oauth/google.html`, que pasa el código a la app y se cierra. Mientras tanto, la app dice que espera a Google y deja «Cancelar». Si se rechaza el permiso o se acaba el tiempo (5 minutos), lo dice.
+- **RF-GCA-03.** El servidor canjea el código (con el secreto del cliente, en Secret Manager), comprueba que la cuenta puede usar la función, que Google dio el permiso del calendario y uno sin conexión, y que la dirección de vuelta es de la app. Crea el calendario «CLAR» (o vuelve a usar el de una conexión anterior, si sigue existiendo, y borra de él los eventos de CLAR de tareas que ya no van al calendario), guarda el permiso cifrado y sube todas las tareas que van al calendario. Cuando Google responde, la app dice que está subiendo las tareas (ya sin «Cancelar»), y al acabar, cuántas se subieron y cuántas no. Si algo falla después de dar permiso en Google, el permiso se retira.
+- **RF-GCA-04.** Van al calendario las tareas con fecha límite de las dos listas, salvo las de «Algún día». El evento es el mismo que el de «Añadir al calendario» (RF-TAR), en la zona horaria del dispositivo al conectar: día completo, intervalo, una hora con inicio y sin hora límite, la descripción con las notas, la serie y la alarma como recordatorio (Google lo cuenta desde el inicio; si la alarma cae después del inicio, no se pone). Los eventos no ocupan tiempo en la agenda («disponible») y llevan una marca privada de CLAR. Si la descripción pasa de 8.000 caracteres, se recorta lo de la tarea y se conserva el enlace a CLAR.
+- **RF-GCA-05.** Cada cambio de una tarea crea, actualiza o borra su evento al momento; los cambios que no afectan al evento no llaman a Google. Una tarea hecha o cancelada conserva su evento con «✓» o «✕» delante, sin la serie y sin recordatorio: la repetición siguiente lleva la serie. Borrar la tarea, quitarle la fecha o pasarla a «Algún día» borra su evento. Cada tarea tiene un evento con un identificador fijo, así que reintentar o volver a conectar no duplica nada.
+- **RF-GCA-06.** La sincronización va en un solo sentido: lo que se cambia en Google no vuelve a CLAR, y el siguiente cambio de la tarea lo sustituye.
+- **RF-GCA-07.** El servidor comprueba en cada cambio que la cuenta puede usar la función: con el acceso aprobado y la función concedida, o la persona administradora (con su marca vigente) con la función encendida en su perfil.
+- **RF-GCA-08.** «Desconectar Google Calendar» retira el permiso en Google y lo borra; el calendario «CLAR» se queda en la cuenta de Google. Pasa lo mismo al perder la función (la persona administradora la quita o apaga la suya; también si la cuenta deja de ser la de administración), al perder el acceso y al eliminar la cuenta, que desconecta antes de borrar los datos: los eventos se quedan en Google.
+- **RF-GCA-09.** Si el permiso de Google ya no vale (se retiró, caducó o no se puede leer) o Google confirma que no existe el calendario «CLAR», la sincronización se para y el menú lo explica y ofrece «Volver a conectar». Un fallo que llega tarde solo cuenta para la conexión que lo tuvo: no deshace una desconexión ni una conexión más nueva. Ante un límite de peticiones o un fallo pasajero, se reintenta hasta tres veces con una espera creciente; cualquier otro fallo queda en los registros, sin datos de la persona, y se arregla con el siguiente cambio de la tarea que afecte a su evento.
+
 ---
 
 ## 2. Requisitos no funcionales
 
 ### 2.1 Seguridad (RNF-SEG)
 
-Origen: `firestore.rules`, `firebase.json`, `functions/src/access.ts`, `functions/src/features.ts`, `functions/src/featuresLogic.ts`, `functions/src/feedback.ts`, `functions/src/push.ts`, `tests/rules/firestore.rules.test.ts`.
+Origen: `firestore.rules`, `firebase.json`, `functions/src/access.ts`, `functions/src/calendarCrypto.ts`, `functions/src/calendarSync.ts`, `functions/src/features.ts`, `functions/src/featuresLogic.ts`, `functions/src/feedback.ts`, `functions/src/push.ts`, `tests/rules/firestore.rules.test.ts`.
 
 - **RNF-SEG-01.** Las reglas de Firestore solo dejan a cada cuenta leer y escribir en `users/{uid}` y sus subcolecciones. Lo que no coincide con ninguna regla queda denegado.
 - **RNF-SEG-02.** Crear y modificar datos exige el acceso aprobado. Leer y borrar los propios datos se permite siempre, para que una cuenta sin acceso pueda llevárselos o eliminarlos.
@@ -372,10 +386,11 @@ Origen: `firestore.rules`, `firebase.json`, `functions/src/access.ts`, `function
 - **RNF-SEG-14.** Los correos salen por SMTP con TLS (puerto 465).
 - **RNF-SEG-15.** El despliegue desde CI se autentica con Workload Identity Federation, sin claves de cuenta de servicio guardadas.
 - **RNF-SEG-16.** Los dispositivos de las notificaciones push (`push_devices`, `push_tokens`) y las alarmas pendientes y enviadas (`alarm_queue`, `alarm_sent`) solo los usan las Cloud Functions: las reglas no dejan leerlos ni escribirlos desde la app, tampoco a su dueño. Registrar un dispositivo exige sesión iniciada y acceso aprobado, y valida el token y la zona horaria.
+- **RNF-SEG-17.** La conexión con Google Calendar usa el permiso más pequeño (`calendar.app.created`), PKCE y un `state` propio. El permiso sin conexión se guarda cifrado con AES-256-GCM (la clave, `CALENDAR_TOKEN_KEY`, está en Secret Manager, y el uid va como dato asociado) en `calendar_tokens`, que ninguna cuenta puede leer ni escribir desde la app; `calendar_status` solo lo lee su dueño. El secreto del cliente OAuth está en Secret Manager (`GOOGLE_OAUTH_CLIENT_SECRET`).
 
 ### 2.2 Privacidad (RNF-PRI)
 
-Origen: `functions/src/accessLogic.ts`, `functions/src/featuresCleanup.ts`, `functions/src/feedbackLogic.ts`, `functions/src/feedbackCleanup.ts`, `functions/src/push.ts`, `functions/src/pushCleanup.ts`, `src/services/feedback.ts`, `src/components/LegalTexts.tsx`.
+Origen: `functions/src/accessLogic.ts`, `functions/src/calendarCleanup.ts`, `functions/src/featuresCleanup.ts`, `functions/src/feedbackLogic.ts`, `functions/src/feedbackCleanup.ts`, `functions/src/push.ts`, `functions/src/pushCleanup.ts`, `src/services/feedback.ts`, `src/components/LegalTexts.tsx`.
 
 - **RNF-PRI-01.** Los datos de cada cuenta solo son accesibles para ella (RNF-SEG-01). Para revisar una solicitud, la persona administradora solo ve el nombre, el email, la foto de perfil y el mensaje de la solicitud.
 - **RNF-PRI-02.** Las Cloud Functions se ejecutan en la región `europe-west1` (Bélgica). La app informa de que los datos se guardan en Google Cloud en la Unión Europea (Bélgica).
@@ -383,7 +398,7 @@ Origen: `functions/src/accessLogic.ts`, `functions/src/featuresCleanup.ts`, `fun
 - **RNF-PRI-04.** Los registros (logs) de las funciones no incluyen datos personales ni el identificador de la cuenta.
 - **RNF-PRI-05.** La información técnica de un mensaje de contacto es opcional, se ve antes de enviarla y no incluye el identificador completo del navegador (user-agent).
 - **RNF-PRI-06.** De los adjuntos de un correo solo se guardan el nombre y el tamaño. Los archivos no salen del dispositivo.
-- **RNF-PRI-07.** Las descargas (JSON e .ics) se generan en el navegador, sin pasar por ningún servidor. Los enlaces al calendario no conectan ninguna cuenta.
+- **RNF-PRI-07.** Las descargas (JSON e .ics) se generan en el navegador, sin pasar por ningún servidor. Los enlaces al calendario no conectan ninguna cuenta; la sincronización con Google Calendar (RF-GCA) es aparte y opcional.
 - **RNF-PRI-08.** El Top 10, las sugerencias, las estadísticas y las recomendaciones se calculan en el navegador.
 - **RNF-PRI-09.** La app no carga fuentes externas: usa la tipografía del sistema. No incluye herramientas de analítica ni de seguimiento.
 - **RNF-PRI-10.** Las fotos de perfil se cargan sin enviar la página de origen (`referrerPolicy="no-referrer"`).
@@ -391,6 +406,7 @@ Origen: `functions/src/accessLogic.ts`, `functions/src/featuresCleanup.ts`, `fun
 - **RNF-PRI-12.** Al cerrar sesión se borra la copia local de los datos (RF-CUE-18).
 - **RNF-PRI-13.** Cada cuenta puede descargar sus datos de la app en JSON en cualquier momento, también sin acceso aprobado (ver RF-CUE-15).
 - **RNF-PRI-14.** Las alarmas con CLAR cerrada son opcionales en cada dispositivo (consentimiento). Se guardan el token de cada dispositivo, su zona horaria y si quiere ver el nombre de la tarea y, de cada alarma pendiente, su hora, el nombre de la tarea y cuándo vence; de las enviadas, cuál fue. Por FCM y el servicio push del navegador solo viaja la hora de la alarma y cuándo vence, y el nombre de la tarea solo si el dispositivo lo pide. Los registros del servidor no llevan datos de la persona, solo recuentos y códigos de error.
+- **RNF-PRI-15.** La sincronización con Google Calendar es opcional (consentimiento al conectar). Envía a la cuenta de Google de la persona el título, la descripción, las notas, las fechas, la repetición y la alarma de sus tareas con fecha, y no lee nada de su cuenta de Google. Al desconectar, al perder la función o el acceso y al eliminar la cuenta se retira el permiso; el calendario y sus eventos se quedan en Google. La política de privacidad incluye la declaración de uso limitado de las API de Google.
 
 ### 2.3 Accesibilidad (RNF-ACC)
 
@@ -449,8 +465,8 @@ Origen: `index.html`, `public/manifest.json`, `functions/src/app.ts`, `src/servi
 Origen: `package.json`, `tsconfig.json`, `.github/workflows/ci.yml`, `tests/`, `functions/test/`.
 
 - **RNF-MAN-01.** El código es TypeScript en modo estricto. ESLint no admite avisos y Prettier fija el formato; un hook de pre-commit los aplica a los archivos del commit.
-- **RNF-MAN-02.** La lógica pura está separada de la interfaz y de Firebase (`src/services/`, `functions/src/accessLogic.ts`, `functions/src/featuresLogic.ts`, `functions/src/feedbackLogic.ts`, `functions/src/alarmLogic.ts`) y tiene pruebas unitarias con el test runner de Node.
-- **RNF-MAN-03.** Hay pruebas de integración de la importación de datos locales, pruebas de las reglas de Firestore contra el emulador y pruebas contra el emulador de Firestore de la cola y el envío de las alarmas push, con un FCM simulado, y de las funciones extra (`npm run test:push`).
+- **RNF-MAN-02.** La lógica pura está separada de la interfaz y de Firebase (`src/services/`, `functions/src/accessLogic.ts`, `functions/src/featuresLogic.ts`, `functions/src/calendarLogic.ts`, `functions/src/feedbackLogic.ts`, `functions/src/alarmLogic.ts`) y tiene pruebas unitarias con el test runner de Node.
+- **RNF-MAN-03.** Hay pruebas de integración de la importación de datos locales, pruebas de las reglas de Firestore contra el emulador y pruebas contra el emulador de Firestore de la cola y el envío de las alarmas push, con un FCM simulado, de las funciones extra y de la sincronización con Google Calendar, con un Google simulado (`npm run test:push`). Una prueba unitaria comprueba que el evento de la sincronización coincide con el de «Añadir al calendario», también con TZ=Europe/Madrid y TZ=America/New_York.
 - **RNF-MAN-04.** Las pruebas de extremo a extremo (Playwright), un archivo por función de la app, usan los emuladores de Auth, Firestore y Functions con un proyecto de demostración. Antes de todas, un paso de calentamiento (`tests/e2e/warm-up.setup.ts`) carga la app y despierta los emuladores, y en desarrollo Vite busca las dependencias de todo `src` al arrancar, así ninguna prueba paga el arranque en frío.
 - **RNF-MAN-05.** En cada push y pull request, CI comprueba el formato, el linter, los tipos, la compilación de la app y de las funciones, y todas las pruebas. Solo despliega desde la rama principal, si todo pasa, y de un despliegue en uno.
 - **RNF-MAN-06.** La app toma la versión de `package.json`; `public/manifest.json` la repite y se actualiza a mano. Se muestra en la cabecera, el inicio de sesión y el pie, y va en las descargas y en la información técnica del contacto.
@@ -463,7 +479,7 @@ Origen: `package.json`, `tsconfig.json`, `.github/workflows/ci.yml`, `tests/`, `
 Lo que el código no hace y un lector podría esperar:
 
 - CLAR no envía correos ni sube adjuntos: los guarda y los pasa al programa de correo.
-- No se conecta a cuentas de calendario: solo exporta con enlaces y archivos .ics.
+- Solo se conecta con Google Calendar, y en un solo sentido (RF-GCA): con los demás calendarios, solo exporta con enlaces y archivos .ics.
 - «Tiempo protegido» no tiene herramienta para la tercera fuga de tiempo, los mensajes.
 - Las reuniones no se pueden editar ni eliminar desde la app.
 - Las evaluaciones de la Rueda no se editan ni se borran una a una, y las áreas no se eliminan ni se reordenan.

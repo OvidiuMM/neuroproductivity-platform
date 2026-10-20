@@ -8,8 +8,11 @@ import {
   fillAndSaveTask,
   localDateFromToday,
   openSection,
+  patchDocument,
   signInWithGoogle,
-  uniqueEmail
+  uidOf,
+  uniqueEmail,
+  writeTextDocument
 } from './helpers';
 
 // Esperas que pasan por una Cloud Function del emulador: con la suite en paralelo su arranque puede tardar
@@ -370,6 +373,20 @@ test('extra features: the panel of an account and the switches of the admin', as
   await page.getByRole('button', { name: 'Tu cuenta' }).click();
   await expect(page.getByRole('region', { name: 'Funciones extra' })).toBeVisible();
   await expectNoViolations(page, 'funciones extra de la administración');
+});
+
+test('Google Calendar connection in the account menu', async ({ page }) => {
+  const email = uniqueEmail();
+  await page.goto('/');
+  await signInWithGoogle(page, email);
+  const uid = await uidOf(email);
+  await patchDocument(`features/${uid}`, {
+    granted: { arrayValue: { values: [{ stringValue: 'googleCalendar' }] } }
+  });
+  await writeTextDocument(`calendar_status/${uid}`, { state: 'needsReconnect', reason: 'calendarMissing' });
+  await page.getByRole('button', { name: 'Tu cuenta' }).click();
+  await expect(page.getByRole('button', { name: 'Volver a conectar' })).toBeVisible();
+  await expectNoViolations(page, 'conexión con Google Calendar');
 });
 
 test('the prompt before discarding unsaved changes', async ({ page }) => {
