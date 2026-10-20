@@ -221,9 +221,14 @@ export const saveUserProfile = (db: Firestore, user: User) =>
 
 // Perfil (users/{uid}) en vivo: por ahora solo interesa si ya vio la bienvenida. `fromServer` dice si el dato ya
 // está confirmado por el servidor (al principio puede venir solo de la caché, o no existir aún)
-// Lo que la app lee del perfil: si ya vio la bienvenida, sus áreas de la Rueda (sin validar: ver resolveAreas) y qué
-// funciones extra tiene encendidas la administración (sin validar: ver featurePrefsOf)
-export type ProfileRecord = OnboardingRecord & { wheelAreas?: unknown; featurePrefs?: unknown };
+// Lo que la app lee del perfil: si ya vio la bienvenida, sus áreas de la Rueda (sin validar: ver resolveAreas), qué
+// funciones extra tiene encendidas la administración (sin validar: ver featurePrefsOf) y la última versión cuyas
+// novedades vio (sin validar: ver shouldShowReleaseNotes)
+export type ProfileRecord = OnboardingRecord & {
+  wheelAreas?: unknown;
+  featurePrefs?: unknown;
+  releaseNotesSeen?: unknown;
+};
 
 export const subscribeToProfile = (
   db: Firestore,
@@ -247,6 +252,10 @@ export const readWheelAreas = async (db: Firestore, uid: string) =>
 
 export const markOnboardingSeen = (db: Firestore, uid: string, outcome: OnboardingOutcome) =>
   setDoc(doc(db, 'users', uid), onboardingRecord(outcome), { merge: true });
+
+// Las novedades de esta versión, vistas
+export const markReleaseNotesSeen = (db: Firestore, uid: string, version: string) =>
+  setDoc(doc(db, 'users', uid), { releaseNotesSeen: version }, { merge: true });
 
 // Firestore admite como máximo 500 operaciones por lote
 const BATCH_LIMIT = 450;

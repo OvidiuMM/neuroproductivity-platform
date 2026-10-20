@@ -60,13 +60,13 @@ service cloud.firestore {
         && request.resource.data.status in ['new', 'read', 'closed'];
     }
 
-    // Campos del perfil que escribe la app (datos de la cuenta, si ya vio la bienvenida, sus áreas de la Rueda y qué
-    // funciones extra tiene encendidas, que solo cuenta para la administración); cualquier otro se rechaza
+    // Campos del perfil que escribe la app (datos de la cuenta, si ya vio la bienvenida y las novedades, sus áreas de la
+    // Rueda y qué funciones extra tiene encendidas, que solo cuenta para la administración); cualquier otro se rechaza
     function onlyProfileFields(keys) {
       return keys.hasOnly([
         'name', 'email', 'photoUrl', 'createdAt', 'lastLoginAt',
         'hasSeenOnboarding', 'onboardingVersion', 'onboardingSeenAt', 'onboardingOutcome',
-        'wheelAreas', 'featurePrefs'
+        'wheelAreas', 'featurePrefs', 'releaseNotesSeen'
       ]);
     }
 

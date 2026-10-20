@@ -389,6 +389,17 @@ test('Google Calendar connection in the account menu', async ({ page }) => {
   await expectNoViolations(page, 'conexión con Google Calendar');
 });
 
+test('release notes of the version', async ({ page }) => {
+  await page.goto('/');
+  await signInWithGoogle(page);
+  await page
+    .getByRole('banner')
+    .getByRole('button', { name: /^Novedades de la versión/ })
+    .click();
+  await expect(page.getByRole('dialog', { name: /^Novedades de la versión/ })).toBeVisible();
+  await expectNoViolations(page, 'novedades de la versión');
+});
+
 test('the prompt before discarding unsaved changes', async ({ page }) => {
   await page.goto('/');
   await signInWithGoogle(page);

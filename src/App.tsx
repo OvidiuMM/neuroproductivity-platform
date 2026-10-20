@@ -40,6 +40,7 @@ import {
   saveWheelAreas,
   type ProfileRecord,
   markOnboardingSeen,
+  markReleaseNotesSeen,
   importUserData,
   saveEmail,
   deleteEmail,
@@ -83,6 +84,12 @@ import {
 } from './services/push';
 import { TOUR_STEPS } from './tourSteps';
 import { hasSeenLocally, hasSeenOnboarding, rememberLocally, type OnboardingOutcome } from './services/onboarding';
+import {
+  releaseFor,
+  rememberReleaseLocally,
+  seenReleaseLocally,
+  shouldShowReleaseNotes
+} from './services/releaseNotes';
 import { applyGoalAreas, latestScores } from './services/goals';
 import { DEFAULT_AREAS, logAverage, resolveAreas } from './services/wheel';
 import { AreasContext } from './hooks/useAreas';
@@ -175,6 +182,7 @@ const ImportAccountDialog = retryableLazy(() =>
 );
 const WelcomeDialog = retryableLazy(() => import('./components/WelcomeDialog').then((m) => m.WelcomeDialog));
 const ProductTour = retryableLazy(() => import('./components/ProductTour').then((m) => m.ProductTour));
+const ReleaseNotesDialog = retryableLazy(() => import('./components/ReleaseNotes').then((m) => m.ReleaseNotesDialog));
 
 // Por qué no salió una respuesta a un mensaje de contacto (los códigos que devuelve replyToFeedback)
 const REPLY_ERRORS: Record<string, string> = {
@@ -909,9 +917,42 @@ export default function App({ user, services, isAdmin = false }: AppProps) {
   const finishWelcome = (outcome: OnboardingOutcome) => {
     rememberLocally(uid, outcome);
     markOnboardingSeen(db, uid, outcome).catch(reportError('guardar tu progreso'));
+    // Quien empieza por la bienvenida no necesita las novedades de esta versión
+    if (!isWelcomeReplay) markReleaseNotesRead();
     setWelcomeClosed(true);
     setIsWelcomeReplay(false);
     if (outcome === 'completed') startTour(!isWelcomeReplay);
+  };
+
+  // NOVEDADES: al entrar después de una actualización se abren una vez por cuenta, cuando no hay otra ventana (la
+  // bienvenida, el recorrido o la importación); también al pulsar la versión. Como la bienvenida, se espera al perfil
+  // confirmado por el servidor y cuenta lo visto en este dispositivo
+  const currentRelease = releaseFor(__APP_VERSION__);
+  const [seenReleaseHere] = useState(() => seenReleaseLocally(uid));
+  const [releaseNotesClosed, setReleaseNotesClosed] = useState(false);
+  const [isReleaseNotesReplay, setIsReleaseNotesReplay] = useState(false);
+  const isReleaseNotesOpen =
+    currentRelease !== null &&
+    (isReleaseNotesReplay ||
+      (!releaseNotesClosed &&
+        !isWelcomeOpen &&
+        !isTourOpen &&
+        !isImportOpen &&
+        profileOnboarding.fromServer &&
+        shouldShowReleaseNotes({
+          current: __APP_VERSION__,
+          onboarded: hasSeenOnboarding(profileOnboarding.record, seenOnThisDevice),
+          seenInProfile: profileOnboarding.record?.releaseNotesSeen,
+          seenHere: seenReleaseHere
+        })));
+  function markReleaseNotesRead() {
+    rememberReleaseLocally(uid, __APP_VERSION__);
+    markReleaseNotesSeen(db, uid, __APP_VERSION__).catch(reportError('guardar tu progreso'));
+    setReleaseNotesClosed(true);
+  }
+  const closeReleaseNotes = () => {
+    markReleaseNotesRead();
+    setIsReleaseNotesReplay(false);
   };
 
   // Hoja «Más» del móvil: secciones que no caben en la barra inferior, sincronización y cuenta
@@ -930,6 +971,7 @@ export default function App({ user, services, isAdmin = false }: AppProps) {
     isAreasEditorOpen ||
     isFeedbackOpen ||
     isWelcomeOpen ||
+    isReleaseNotesOpen ||
     isTourOpen ||
     isMoreOpen ||
     goalEditor !== null ||
@@ -1044,6 +1086,7 @@ export default function App({ user, services, isAdmin = false }: AppProps) {
             onForceSync={handleForceSync}
             isAdmin={isAdmin}
             pendingAccessCount={pendingAccessCount}
+            onShowReleaseNotes={() => setIsReleaseNotesReplay(true)}
           />
 
           {/* NUEVA TAREA: debajo de la cabecera en tableta y escritorio; en el móvil, botón flotante sobre la barra */}
@@ -1238,7 +1281,14 @@ export default function App({ user, services, isAdmin = false }: AppProps) {
           <footer className="mt-12 border-t border-slate-200 bg-white py-6 text-xs text-slate-500">
             <div className="mx-auto flex max-w-7xl flex-col items-center justify-between gap-3 px-4 sm:flex-row sm:px-6 lg:px-8">
               <div className="flex flex-wrap items-center justify-center gap-2">
-                <span className="font-bold text-slate-700">CLAR v{__APP_VERSION__}</span>
+                <button
+                  type="button"
+                  onClick={() => setIsReleaseNotesReplay(true)}
+                  aria-label={`Novedades de la versión ${__APP_VERSION__}`}
+                  className="font-bold text-slate-700 hover:text-indigo-700"
+                >
+                  CLAR v{__APP_VERSION__}
+                </button>
                 <span className="text-slate-300">·</span>
                 <p className="text-slate-500">Decide qué hacer ahora, con claridad.</p>
               </div>
@@ -1414,6 +1464,11 @@ export default function App({ user, services, isAdmin = false }: AppProps) {
         {isWelcomeOpen && (
           <DeferredDialog retry={WelcomeDialog.retry} onCancel={() => finishWelcome('skipped')}>
             <WelcomeDialog onFinish={finishWelcome} />
+          </DeferredDialog>
+        )}
+        {isReleaseNotesOpen && currentRelease && (
+          <DeferredDialog retry={ReleaseNotesDialog.retry} onCancel={closeReleaseNotes}>
+            <ReleaseNotesDialog release={currentRelease} onClose={closeReleaseNotes} />
           </DeferredDialog>
         )}
         {isTourOpen && (
