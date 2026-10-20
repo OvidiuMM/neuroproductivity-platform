@@ -85,6 +85,7 @@ import {
 import { TOUR_STEPS } from './tourSteps';
 import { hasSeenLocally, hasSeenOnboarding, rememberLocally, type OnboardingOutcome } from './services/onboarding';
 import {
+  hasSeenRelease,
   releaseFor,
   rememberReleaseLocally,
   seenReleaseLocally,
@@ -914,45 +915,37 @@ export default function App({ user, services, isAdmin = false }: AppProps) {
     if (isFirstRunTour && wheelSynced && wheelLogs.length === 0) navigate('wheel');
   };
 
+  // NOVEDADES DE LA VERSIÓN: lo visto se guarda en el perfil y en este dispositivo, y nunca se apunta una versión
+  // anterior a la ya vista (p. ej. desde una pestaña que aún tiene la versión de antes)
+  const currentRelease = releaseFor(__APP_VERSION__);
+  const [seenReleaseHere] = useState(() => seenReleaseLocally(uid));
+  const releaseSeenInProfile = hasSeenRelease(profileOnboarding.record?.releaseNotesSeen, __APP_VERSION__);
+  const rememberReleaseSeen = () => {
+    if (!hasSeenRelease(seenReleaseLocally(uid), __APP_VERSION__)) rememberReleaseLocally(uid, __APP_VERSION__);
+  };
+  const [releaseNotesClosed, setReleaseNotesClosed] = useState(false);
+  const markReleaseNotesRead = () => {
+    rememberReleaseSeen();
+    if (!releaseSeenInProfile) markReleaseNotesSeen(db, uid, __APP_VERSION__).catch(reportError('guardar tu progreso'));
+    setReleaseNotesClosed(true);
+  };
+
   const finishWelcome = (outcome: OnboardingOutcome) => {
     rememberLocally(uid, outcome);
-    markOnboardingSeen(db, uid, outcome).catch(reportError('guardar tu progreso'));
-    // Quien empieza por la bienvenida no necesita las novedades de esta versión
-    if (!isWelcomeReplay) markReleaseNotesRead();
+    // La primera bienvenida da por vistas las novedades de esta versión, en la misma escritura (así otra pestaña no ve
+    // un momento «bienvenida vista, novedades no»). Si algún día se vuelve a mostrar la bienvenida a quien ya la vio
+    // (subiendo ONBOARDING_VERSION), sus novedades se siguen mostrando después
+    const firstWelcome = !isWelcomeReplay && !profileOnboarding.record?.hasSeenOnboarding;
+    if (firstWelcome) {
+      rememberReleaseSeen();
+      setReleaseNotesClosed(true);
+    }
+    markOnboardingSeen(db, uid, outcome, firstWelcome && !releaseSeenInProfile ? __APP_VERSION__ : undefined).catch(
+      reportError('guardar tu progreso')
+    );
     setWelcomeClosed(true);
     setIsWelcomeReplay(false);
     if (outcome === 'completed') startTour(!isWelcomeReplay);
-  };
-
-  // NOVEDADES: al entrar después de una actualización se abren una vez por cuenta, cuando no hay otra ventana (la
-  // bienvenida, el recorrido o la importación); también al pulsar la versión. Como la bienvenida, se espera al perfil
-  // confirmado por el servidor y cuenta lo visto en este dispositivo
-  const currentRelease = releaseFor(__APP_VERSION__);
-  const [seenReleaseHere] = useState(() => seenReleaseLocally(uid));
-  const [releaseNotesClosed, setReleaseNotesClosed] = useState(false);
-  const [isReleaseNotesReplay, setIsReleaseNotesReplay] = useState(false);
-  const isReleaseNotesOpen =
-    currentRelease !== null &&
-    (isReleaseNotesReplay ||
-      (!releaseNotesClosed &&
-        !isWelcomeOpen &&
-        !isTourOpen &&
-        !isImportOpen &&
-        profileOnboarding.fromServer &&
-        shouldShowReleaseNotes({
-          current: __APP_VERSION__,
-          onboarded: hasSeenOnboarding(profileOnboarding.record, seenOnThisDevice),
-          seenInProfile: profileOnboarding.record?.releaseNotesSeen,
-          seenHere: seenReleaseHere
-        })));
-  function markReleaseNotesRead() {
-    rememberReleaseLocally(uid, __APP_VERSION__);
-    markReleaseNotesSeen(db, uid, __APP_VERSION__).catch(reportError('guardar tu progreso'));
-    setReleaseNotesClosed(true);
-  }
-  const closeReleaseNotes = () => {
-    markReleaseNotesRead();
-    setIsReleaseNotesReplay(false);
   };
 
   // Hoja «Más» del móvil: secciones que no caben en la barra inferior, sincronización y cuenta
@@ -967,11 +960,11 @@ export default function App({ user, services, isAdmin = false }: AppProps) {
     return header?.offsetParent ? header : document.getElementById(MORE_BUTTON_ID);
   };
   // La pantalla de bienvenida no cuenta: es decorativa, se quita sola y deja pasar los clics mientras se desvanece
-  const isDialogOpen =
+  // Las ventanas abiertas sin contar las novedades, que no se abren solas encima de ninguna
+  const otherDialogOpen =
     isAreasEditorOpen ||
     isFeedbackOpen ||
     isWelcomeOpen ||
-    isReleaseNotesOpen ||
     isTourOpen ||
     isMoreOpen ||
     goalEditor !== null ||
@@ -984,6 +977,38 @@ export default function App({ user, services, isAdmin = false }: AppProps) {
     isAccessibilityOpen ||
     isImportOpen ||
     importPlan !== null;
+
+  // NOVEDADES: al entrar después de una actualización se abren solas una vez por cuenta, sin otra ventana abierta y con
+  // el perfil confirmado por el servidor (como la bienvenida). Una vez abiertas siguen así hasta cerrarlas, aunque se
+  // pierda la conexión; si se dan por vistas en otra pestaña, se cierran. También se abren al pulsar la versión
+  const [releaseNotesShown, setReleaseNotesShown] = useState(false);
+  const [isReleaseNotesReplay, setIsReleaseNotesReplay] = useState(false);
+  if (
+    !releaseNotesShown &&
+    !releaseNotesClosed &&
+    !otherDialogOpen &&
+    profileOnboarding.fromServer &&
+    shouldShowReleaseNotes({
+      current: __APP_VERSION__,
+      onboarded: hasSeenOnboarding(profileOnboarding.record, seenOnThisDevice),
+      seenInProfile: profileOnboarding.record?.releaseNotesSeen,
+      seenHere: seenReleaseHere
+    })
+  )
+    setReleaseNotesShown(true);
+  const isReleaseNotesOpen =
+    currentRelease !== null &&
+    (isReleaseNotesReplay || (releaseNotesShown && !releaseNotesClosed && !releaseSeenInProfile));
+  const closeReleaseNotes = () => {
+    markReleaseNotesRead();
+    setIsReleaseNotesReplay(false);
+  };
+  // Si la ventana no se puede descargar y se cancela, se cierra sin darlas por vistas
+  const dismissReleaseNotes = () => {
+    setReleaseNotesClosed(true);
+    setIsReleaseNotesReplay(false);
+  };
+  const isDialogOpen = otherDialogOpen || isReleaseNotesOpen;
 
   // El service worker de las notificaciones (Android solo las muestra desde él) y, con permiso, el registro de este
   // dispositivo para las notificaciones push (las alarmas suenan aunque CLAR esté cerrada)
@@ -1284,7 +1309,7 @@ export default function App({ user, services, isAdmin = false }: AppProps) {
                 <button
                   type="button"
                   onClick={() => setIsReleaseNotesReplay(true)}
-                  aria-label={`Novedades de la versión ${__APP_VERSION__}`}
+                  aria-label={`CLAR v${__APP_VERSION__}: novedades de esta versión`}
                   className="font-bold text-slate-700 hover:text-indigo-700"
                 >
                   CLAR v{__APP_VERSION__}
@@ -1467,8 +1492,12 @@ export default function App({ user, services, isAdmin = false }: AppProps) {
           </DeferredDialog>
         )}
         {isReleaseNotesOpen && currentRelease && (
-          <DeferredDialog retry={ReleaseNotesDialog.retry} onCancel={closeReleaseNotes}>
-            <ReleaseNotesDialog release={currentRelease} onClose={closeReleaseNotes} />
+          <DeferredDialog retry={ReleaseNotesDialog.retry} onCancel={dismissReleaseNotes}>
+            <ReleaseNotesDialog
+              release={currentRelease}
+              onClose={closeReleaseNotes}
+              returnFocusTo={() => document.getElementById('main-content')}
+            />
           </DeferredDialog>
         )}
         {isTourOpen && (

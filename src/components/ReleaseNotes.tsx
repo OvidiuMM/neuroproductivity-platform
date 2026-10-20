@@ -18,12 +18,14 @@ export const ReleaseChanges: React.FC<{ release: ReleaseNote }> = ({ release }) 
 interface ReleaseNotesDialogProps {
   release: ReleaseNote;
   onClose: () => void;
+  // Adónde vuelve el foco si se abrió sola (no hay botón que la abriera)
+  returnFocusTo?: () => HTMLElement | null;
 }
 
 // Novedades de la versión: se abren solas una vez al entrar después de una actualización, y al pulsar la versión
-export const ReleaseNotesDialog: React.FC<ReleaseNotesDialogProps> = ({ release, onClose }) => {
+export const ReleaseNotesDialog: React.FC<ReleaseNotesDialogProps> = ({ release, onClose, returnFocusTo }) => {
   const dialogRef = useRef<HTMLDivElement>(null);
-  useModalFocus(true, dialogRef, onClose);
+  useModalFocus(true, dialogRef, onClose, returnFocusTo);
   return (
     <div className="fixed inset-0 z-50 flex justify-center overflow-y-auto bg-slate-900/70 p-4 backdrop-blur-xs sm:p-8">
       <div
@@ -49,7 +51,6 @@ export const ReleaseNotesDialog: React.FC<ReleaseNotesDialogProps> = ({ release,
         <div className="space-y-4 p-6">
           <p className="text-xs text-slate-500">Publicada en {release.month}.</p>
           <ReleaseChanges release={release} />
-          <p className="text-xs text-slate-600">Las novedades de cada versión están también en la Ayuda.</p>
           <button
             type="button"
             onClick={onClose}

@@ -20,6 +20,11 @@ test('the version of package.json has its release notes, first, and each change 
   }
 });
 
+test('the manifest and the splash screen carry the same version', () => {
+  assert.equal((JSON.parse(readFileSync('public/manifest.json', 'utf8')) as { version: string }).version, version);
+  assert.match(readFileSync('public/splash.svg', 'utf8'), new RegExp(`>v${version.replace(/\./g, '\\.')}<`));
+});
+
 test('versions compare by number, not as text', () => {
   assert.ok(compareVersions('0.9.10', '0.9.6') > 0);
   assert.ok(compareVersions('1.0', '0.9.6') > 0);
