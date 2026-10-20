@@ -18,6 +18,8 @@ interface NavbarProps {
   onForceSync: () => void;
   isAdmin?: boolean;
   pendingAccessCount?: number;
+  // La versión abre sus novedades
+  onShowReleaseNotes: () => void;
 }
 
 // Cabecera de una sola línea en todos los tamaños: marca y versión, las secciones (desde 768 px), las dos listas, la
@@ -32,6 +34,7 @@ export const Navbar: React.FC<NavbarProps> = ({
   taskCounts,
   syncStatus,
   onForceSync,
+  onShowReleaseNotes,
   isAdmin = false,
   pendingAccessCount = 0
 }) => {
@@ -67,9 +70,14 @@ export const Navbar: React.FC<NavbarProps> = ({
             <span className="text-lg leading-tight font-extrabold tracking-[0.12em] whitespace-nowrap text-slate-900 sm:tracking-[0.2em]">
               {BRAND_NAME}
             </span>
-            <span className="hidden rounded border border-indigo-200 bg-indigo-50 px-1.5 py-0.5 font-mono text-[10px] font-bold whitespace-nowrap text-indigo-700 sm:inline">
+            <button
+              type="button"
+              onClick={onShowReleaseNotes}
+              aria-label={`Novedades de la versión ${__APP_VERSION__}`}
+              className="hidden rounded border border-indigo-200 bg-indigo-50 px-1.5 py-0.5 font-mono text-[10px] font-bold whitespace-nowrap text-indigo-700 hover:bg-indigo-100 sm:inline"
+            >
               v{__APP_VERSION__}
-            </span>
+            </button>
           </div>
 
           {/* Secciones (escritorio y tableta): solo icono hasta 1280 px; «Ayuda» y «Administración», siempre */}

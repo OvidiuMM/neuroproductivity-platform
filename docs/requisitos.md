@@ -1,9 +1,9 @@
 # Requisitos del sistema — CLAR
 
-- **Versión:** 0.9.5
-- **Última revisión:** 2026-10-19
+- **Versión:** 0.9.6
+- **Última revisión:** 2026-10-20
 
-Este documento describe qué hace CLAR en la versión 0.9.5: sus requisitos funcionales y no funcionales tal como están implementados en el código de esta versión (la SPA de `src/`, las Cloud Functions de `functions/src/`, las reglas de Firestore, la configuración de Firebase Hosting y las pruebas). No recoge planes ni funciones futuras. Donde el README y el código no coinciden, manda el código.
+Este documento describe qué hace CLAR en la versión 0.9.6: sus requisitos funcionales y no funcionales tal como están implementados en el código de esta versión (la SPA de `src/`, las Cloud Functions de `functions/src/`, las reglas de Firestore, la configuración de Firebase Hosting y las pruebas). No recoge planes ni funciones futuras. Donde el README y el código no coinciden, manda el código.
 
 **Convenciones.** RF: requisito funcional. RNF: requisito no funcional. Los identificadores son estables: un requisito nuevo toma el siguiente número libre de su sección y uno retirado no se reutiliza. Los textos entre «» son etiquetas de la interfaz. «Origen» señala los archivos principales de cada sección.
 
@@ -232,7 +232,7 @@ Origen: `src/components/HomeView.tsx`, `src/services/stats.ts`.
 
 ### 1.9 Navegación y ayuda (RF-NAV)
 
-Origen: `src/navigation.ts`, `src/components/Navbar.tsx`, `src/components/BottomNav.tsx`, `src/components/MoreSheet.tsx`, `src/components/SyncIndicator.tsx`, `src/components/HowItWorks.tsx`.
+Origen: `src/navigation.ts`, `src/components/Navbar.tsx`, `src/components/BottomNav.tsx`, `src/components/MoreSheet.tsx`, `src/components/SyncIndicator.tsx`, `src/components/HowItWorks.tsx`, `src/components/ReleaseNotes.tsx`, `src/services/releaseNotes.ts`.
 
 - **RF-NAV-01.** Las secciones son Inicio, Listas, Agenda, Rueda de la Vida, Metas, Proyectos, Tiempo protegido y Ayuda. Administración solo aparece para la persona administradora, delante de Ayuda.
 - **RF-NAV-02.** Desde 768 px de ancho, la cabecera lleva las secciones, las dos listas, el indicador de sincronización y la cuenta. «Nueva tarea» va debajo de la cabecera.
@@ -243,8 +243,10 @@ Origen: `src/navigation.ts`, `src/components/Navbar.tsx`, `src/components/Bottom
 - **RF-NAV-07.** Al arrancar, la app muestra una pantalla de inicio que se cierra sola en 1,6 s o al tocarla.
 - **RF-NAV-08.** «Ayuda» explica cada sección con un botón «Ir a…», los primeros pasos, cómo se relacionan las secciones, dónde se guardan los datos, la accesibilidad y los créditos.
 - **RF-NAV-09.** Desde «Ayuda» se puede «Repetir el recorrido», «Ver la introducción» y abrir «Escríbenos».
-- **RF-NAV-10.** El pie muestra la versión de la app, «Ver la ayuda» y los enlaces a los textos legales, que se abren en otra pestaña.
+- **RF-NAV-10.** El pie muestra la versión de la app (que abre sus novedades), «Ver la ayuda» y los enlaces a los textos legales, que se abren en otra pestaña.
 - **RF-NAV-11.** Si una sección o ventana no se puede descargar, la app muestra un aviso con «Reintentar» en su lugar y el resto sigue funcionando. Una ventana que aún se está descargando se puede cancelar.
+- **RF-NAV-12.** Al entrar después de una actualización, una ventana «Novedades de la versión N» cuenta los cambios de esa versión, una sola vez por cuenta, cuando no hay otra ventana abierta (la bienvenida, el recorrido o la importación). Lo visto se guarda en el perfil y en el dispositivo; como la bienvenida, espera al perfil confirmado por el servidor. Las cuentas nuevas empiezan por la bienvenida, que da por vistas las novedades de la versión.
+- **RF-NAV-13.** La versión de la cabecera (desde 640 px) y la del pie abren las novedades de la versión. «Ayuda» tiene el apartado «Novedades», con la versión actual a la vista y las anteriores plegadas. Cada versión publicada tiene su entrada, con la misma versión que la app (una prueba lo comprueba).
 
 ### 1.10 Cuentas y acceso (RF-CUE)
 
@@ -372,7 +374,7 @@ Origen: `firestore.rules`, `firebase.json`, `functions/src/access.ts`, `function
 
 - **RNF-SEG-01.** Las reglas de Firestore solo dejan a cada cuenta leer y escribir en `users/{uid}` y sus subcolecciones. Lo que no coincide con ninguna regla queda denegado.
 - **RNF-SEG-02.** Crear y modificar datos exige el acceso aprobado. Leer y borrar los propios datos se permite siempre, para que una cuenta sin acceso pueda llevárselos o eliminarlos.
-- **RNF-SEG-03.** Las subcolecciones permitidas son seis: tareas, evaluaciones, reuniones, correos, metas y proyectos. El perfil solo admite sus campos conocidos (datos de la cuenta, bienvenida, áreas de la Rueda y funciones extra encendidas).
+- **RNF-SEG-03.** Las subcolecciones permitidas son seis: tareas, evaluaciones, reuniones, correos, metas y proyectos. El perfil solo admite sus campos conocidos (datos de la cuenta, bienvenida, novedades vistas, áreas de la Rueda y funciones extra encendidas).
 - **RNF-SEG-04.** Las solicitudes de acceso, las marcas de administración, la configuración, las funciones extra de cada cuenta, la lista negra y el contador de mensajes solo los escriben las Cloud Functions. Ningún cliente puede escribirlos, tampoco la persona administradora.
 - **RNF-SEG-05.** Cada cuenta lee solo su propia solicitud de acceso y sus funciones extra, y la persona administradora, todas. Nadie lee desde la app la lista negra ni el contador de mensajes.
 - **RNF-SEG-06.** Las reglas reconocen a la persona administradora solo si existe su marca y el email guardado en ella coincide con el del token de quien lee.
