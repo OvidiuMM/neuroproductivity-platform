@@ -1,5 +1,7 @@
 import React from 'react';
 import { pushAvailable } from '../services/push';
+import { RELEASE_NOTES } from '../services/releaseNotes';
+import { ReleaseChanges } from './ReleaseNotes';
 import { AppTab } from '../types';
 import { LegalLink } from './LegalLinks';
 import {
@@ -13,7 +15,8 @@ import {
   Link2,
   CalendarDays,
   LayoutDashboard,
-  Target
+  Target,
+  Sparkles
 } from 'lucide-react';
 
 interface HowItWorksProps {
@@ -286,6 +289,37 @@ export const HowItWorks: React.FC<HowItWorksProps> = ({ onNavigate, onStartTour,
           .
         </p>
       </div>
+
+      {/* NOVEDADES: la versión actual, a la vista; las anteriores, plegadas */}
+      <section
+        aria-labelledby="help-release-notes"
+        className="space-y-4 rounded-2xl border border-slate-200 bg-white p-6 shadow-xs"
+      >
+        <h3
+          id="help-release-notes"
+          className="flex items-center gap-1.5 text-xs font-bold tracking-wider text-slate-700 uppercase"
+        >
+          <Sparkles className="h-4 w-4 text-indigo-600" aria-hidden="true" />
+          Novedades
+        </h3>
+        {RELEASE_NOTES.map((release, index) =>
+          index === 0 ? (
+            <div key={release.version} className="space-y-3">
+              <h4 className="text-sm font-bold text-slate-900">
+                Versión {release.version} · {release.month}
+              </h4>
+              <ReleaseChanges release={release} />
+            </div>
+          ) : (
+            <details key={release.version} className="space-y-3">
+              <summary className="cursor-pointer text-sm font-bold text-slate-900">
+                Versión {release.version} · {release.month}
+              </summary>
+              <ReleaseChanges release={release} />
+            </details>
+          )
+        )}
+      </section>
 
       {/* ACCESIBILIDAD */}
       <div className="space-y-2 rounded-2xl border border-slate-200 bg-white p-6 shadow-xs">

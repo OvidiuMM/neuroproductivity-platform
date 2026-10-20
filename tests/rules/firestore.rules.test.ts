@@ -107,6 +107,8 @@ describe('firestore.rules', () => {
     await assertSucceeds(
       setDoc(doc(ana, 'users/ana'), { wheelAreas: [{ id: 'Salud', label: 'Cuerpo' }] }, { merge: true })
     );
+    // La última versión cuyas novedades vio
+    await assertSucceeds(setDoc(doc(ana, 'users/ana'), { releaseNotesSeen: '0.9.6' }, { merge: true }));
     // Qué funciones extra tiene encendidas (solo cuenta para la administración)
     await assertSucceeds(setDoc(doc(ana, 'users/ana'), { featurePrefs: { googleCalendar: true } }, { merge: true }));
     await assertFails(updateDoc(doc(ana, 'users/ana'), { isAdmin: true }));
