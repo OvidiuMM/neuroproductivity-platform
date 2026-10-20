@@ -1,6 +1,7 @@
 // NOVEDADES DE CADA VERSIÓN, contadas para quien usa la app (los detalles técnicos están en el README). Al publicar una
 // versión se añade su entrada al principio, con la misma versión que package.json (tests/unit/releaseNotes.test.ts lo
 // comprueba). Al entrar después de una actualización, cada cuenta ve una vez las de su versión; todas están en la Ayuda.
+// Las funciones extra no se anuncian aquí: solo las ve quien las tiene, en el menú de su cuenta.
 
 export interface ReleaseChange {
   title: string;
@@ -28,20 +29,12 @@ export const RELEASE_NOTES: readonly ReleaseNote[] = [
         text: 'La bienvenida, el recorrido guiado y la Ayuda presentan los proyectos como lo que son: una forma opcional de agrupar tareas relacionadas de una meta, o de una parte de ella. Una meta puede no tener ninguno, o tener uno o varios.'
       },
       {
-        title: 'Funciones extra',
-        text: 'La administración puede activar en tu cuenta funciones adicionales. Si tienes alguna, la verás en el menú de tu cuenta, en «Funciones extra».'
-      },
-      {
-        title: 'Tus tareas en Google Calendar',
-        text: 'La primera función extra, si la administración te la activa: conecta tu cuenta de Google y tus tareas con fecha (salvo las de «Algún día») aparecen solas en un calendario «CLAR», y se actualizan al cambiarlas. Lo que cambies en Google no vuelve a CLAR, y CLAR no ve ni cambia tus otros calendarios.'
-      },
-      {
         title: 'Importar sin recortes',
         text: 'Al importar una descarga, un registro con un texto o una lista más largos de lo permitido no entra recortado: cuenta como no válido, y la vista previa te lo dice.'
       },
       {
         title: 'Privacidad al día',
-        text: 'La política de privacidad explica las alarmas con CLAR cerrada y la sincronización con Google Calendar.'
+        text: 'La política de privacidad explica las alarmas con CLAR cerrada.'
       },
       {
         title: 'Novedades al entrar',
