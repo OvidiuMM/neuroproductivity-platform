@@ -19,6 +19,7 @@ import { DeleteAccountPanel } from './DeleteAccountPanel';
 import { LegalLink } from './LegalLinks';
 import { NotificationPermission } from './NotificationPermission';
 import type { ExtraFeature, FeatureId } from '../services/features';
+import { CalendarConnection, type CalendarConnectionProps } from './CalendarConnection';
 
 interface AccountMenuProps {
   isOpen: boolean;
@@ -47,6 +48,8 @@ interface AccountMenuProps {
     active: FeatureId[];
     onToggle: ((id: FeatureId, on: boolean) => void) | null;
   };
+  // Conexión con Google Calendar, mientras su función está en uso (si no, null)
+  calendar: CalendarConnectionProps | null;
   onDeleteAccount: (password?: string) => Promise<void>;
   onChangePassword: (currentPassword: string, newPassword: string) => Promise<void>;
   onSignOutEverywhere: () => Promise<void>;
@@ -76,6 +79,7 @@ export const AccountMenu: React.FC<AccountMenuProps> = ({
   onImportData,
   push,
   extraFeatures,
+  calendar,
   onDeleteAccount,
   onChangePassword,
   onSignOutEverywhere,
@@ -326,35 +330,38 @@ export const AccountMenu: React.FC<AccountMenuProps> = ({
                     const labelId = `${descriptionId}-label`;
                     const on = extraFeatures.active.includes(feature.id);
                     return (
-                      <li key={feature.id} className="flex items-start justify-between gap-3">
-                        <div className="min-w-0">
-                          <p id={labelId} className="text-xs font-semibold text-slate-800">
-                            {feature.label}
-                          </p>
-                          <p id={descriptionId} className="text-[11px] text-slate-600">
-                            {feature.description}
-                          </p>
-                        </div>
-                        {onToggle && (
-                          <button
-                            type="button"
-                            role="switch"
-                            aria-checked={on}
-                            aria-labelledby={labelId}
-                            aria-describedby={descriptionId}
-                            onClick={() => onToggle(feature.id, !on)}
-                            className={`relative mt-0.5 h-6 w-11 shrink-0 rounded-full border-2 ${
-                              on ? 'border-indigo-600 bg-indigo-600' : 'border-slate-500 bg-slate-200'
-                            }`}
-                          >
-                            <span
-                              aria-hidden="true"
-                              className={`absolute top-0.5 h-4 w-4 rounded-full bg-white shadow transition-transform ${
-                                on ? 'left-0.5 translate-x-5' : 'left-0.5 translate-x-0 border border-slate-500'
+                      <li key={feature.id} className="space-y-2">
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="min-w-0">
+                            <p id={labelId} className="text-xs font-semibold text-slate-800">
+                              {feature.label}
+                            </p>
+                            <p id={descriptionId} className="text-[11px] text-slate-600">
+                              {feature.description}
+                            </p>
+                          </div>
+                          {onToggle && (
+                            <button
+                              type="button"
+                              role="switch"
+                              aria-checked={on}
+                              aria-labelledby={labelId}
+                              aria-describedby={descriptionId}
+                              onClick={() => onToggle(feature.id, !on)}
+                              className={`relative mt-0.5 h-6 w-11 shrink-0 rounded-full border-2 ${
+                                on ? 'border-indigo-600 bg-indigo-600' : 'border-slate-500 bg-slate-200'
                               }`}
-                            />
-                          </button>
-                        )}
+                            >
+                              <span
+                                aria-hidden="true"
+                                className={`absolute top-0.5 h-4 w-4 rounded-full bg-white shadow transition-transform ${
+                                  on ? 'left-0.5 translate-x-5' : 'left-0.5 translate-x-0 border border-slate-500'
+                                }`}
+                              />
+                            </button>
+                          )}
+                        </div>
+                        {feature.id === 'googleCalendar' && on && calendar && <CalendarConnection {...calendar} />}
                       </li>
                     );
                   })}

@@ -1,3 +1,4 @@
+import { calendarKeySecrets, disconnectCalendar } from './calendarCleanup';
 import { featuresDoc, forgetFeatures } from './featuresCleanup';
 import { forgetFeedback } from './feedbackCleanup';
 import { forgetPushData, forgetPushDevices } from './pushCleanup';
@@ -344,28 +345,34 @@ export const setAccessMode = onCall({ region: REGION, secrets: emailSecrets, tim
 });
 
 // Último paso para eliminar la cuenta: la borra de Auth y después sus datos, su solicitud de acceso, su marca de
-// administración, sus mensajes, sus dispositivos y alarmas de las notificaciones push y sus funciones extra (la lista
-// negra por email se conserva). Borrar la solicitud sin borrar la cuenta
+// administración, sus mensajes, sus dispositivos y alarmas de las notificaciones push, sus funciones extra y su conexión
+// con Google Calendar (la lista negra por email se conserva). Borrar la solicitud sin borrar la cuenta
 // dejaría a una cuenta rechazada o retirada volver a entrar o a pedir acceso al momento, sin decisión de nadie: por
 // eso la cuenta va primero y si falla no se borra nada. Pide un inicio de sesión reciente, como Firebase para borrar
 // la cuenta desde el navegador.
-export const forgetAccess = onCall({ region: REGION, timeoutSeconds: 300 }, async (request) => {
-  const auth = requireAuth(request);
-  if (!isRecentSignIn(auth.token.auth_time, new Date())) {
-    throw new HttpsError('failed-precondition', 'Vuelve a iniciar sesión para eliminar la cuenta.');
+export const forgetAccess = onCall(
+  { region: REGION, timeoutSeconds: 300, secrets: calendarKeySecrets },
+  async (request) => {
+    const auth = requireAuth(request);
+    if (!isRecentSignIn(auth.token.auth_time, new Date())) {
+      throw new HttpsError('failed-precondition', 'Vuelve a iniciar sesión para eliminar la cuenta.');
+    }
+    await adminAuth().deleteUser(auth.uid);
+    await Promise.all([
+      db().recursiveDelete(db().doc(`users/${auth.uid}`)),
+      db().doc(`access/${auth.uid}`).delete(),
+      db().doc(`admins/${auth.uid}`).delete(),
+      forgetFeedback(auth.uid),
+      forgetPushData(auth.uid),
+      forgetFeatures(auth.uid)
+    ]);
+    // La conexión con Google Calendar, al final: se retira el permiso y no queda nada (el calendario «CLAR» se queda en
+    // su cuenta de Google). Después de borrar la solicitud de acceso, así una sincronización que acabe tarde no deja nada
+    await disconnectCalendar(auth.uid, { forget: true });
+    logger.info('Account deleted');
+    return { ok: true };
   }
-  await adminAuth().deleteUser(auth.uid);
-  await Promise.all([
-    db().recursiveDelete(db().doc(`users/${auth.uid}`)),
-    db().doc(`access/${auth.uid}`).delete(),
-    db().doc(`admins/${auth.uid}`).delete(),
-    forgetFeedback(auth.uid),
-    forgetPushData(auth.uid),
-    forgetFeatures(auth.uid)
-  ]);
-  logger.info('Account deleted');
-  return { ok: true };
-});
+);
 
 // Cierra la sesión en todos los dispositivos: invalida los tokens de renovación de la cuenta
 export const revokeSessions = onCall({ region: REGION }, async (request) => {

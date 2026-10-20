@@ -130,6 +130,13 @@ import {
   type FeatureId,
   type FeaturePrefs
 } from './services/features';
+import {
+  calendarSyncAvailable,
+  connectGoogleCalendar,
+  disconnectGoogleCalendar,
+  subscribeToCalendarStatus,
+  type CalendarStatus
+} from './services/googleCalendar';
 import { deleteAccount, downloadAccountData, signOutEverywhere } from './services/account';
 import { prepareAccountImport, runAccountImport } from './services/accountImport';
 import type { ImportPlan } from './services/importData';
@@ -780,7 +787,8 @@ export default function App({ user, services, isAdmin = false }: AppProps) {
     ].filter(Boolean);
     showToast(`Importado: ${parts.join(' y ')}.`);
   };
-  const handleDeleteAccount = (password?: string) => deleteAccount(services, user, password);
+  const handleDeleteAccount = (password?: string) =>
+    deleteAccount(services, user, password, { withCalendar: calendarActive });
 
   // IMPORTACIÓN DE DATOS DE LA VERSIÓN SIN CUENTAS
   const handleImportLocalData = async (profileIds: string[]) => {
@@ -844,6 +852,28 @@ export default function App({ user, services, isAdmin = false }: AppProps) {
         active: grantedFeatures,
         onToggle: null
       };
+  // SINCRONIZACIÓN CON GOOGLE CALENDAR: su estado, mientras la función está en uso
+  const calendarActive = isAdmin ? featurePrefs.googleCalendar === true : grantedFeatures.includes('googleCalendar');
+  const [calendarStatus, setCalendarStatus] = useState<CalendarStatus | null>(null);
+  // Al dejar de estar en uso se olvida el estado: al volver, no se ve el de antes mientras llega el actual
+  const [wasCalendarActive, setWasCalendarActive] = useState(calendarActive);
+  if (wasCalendarActive !== calendarActive) {
+    setWasCalendarActive(calendarActive);
+    if (!calendarActive) setCalendarStatus(null);
+  }
+  useEffect(() => {
+    if (!calendarActive) return;
+    return subscribeToCalendarStatus(db, uid, setCalendarStatus);
+  }, [db, uid, calendarActive]);
+  const calendar = calendarActive
+    ? {
+        available: calendarSyncAvailable(),
+        status: calendarStatus,
+        onConnect: (signal: AbortSignal, onAuthorized: () => void) =>
+          connectGoogleCalendar(services, { signal, onAuthorized }),
+        onDisconnect: () => disconnectGoogleCalendar(services)
+      }
+    : null;
   const [isAreasEditorOpen, setIsAreasEditorOpen] = useState(false);
   const handleSaveAreas = (areas: WheelArea[]) => {
     saveWheelAreas(db, uid, areas).catch(reportError('guardar las áreas'));
@@ -1349,6 +1379,7 @@ export default function App({ user, services, isAdmin = false }: AppProps) {
               : null
           }
           extraFeatures={extraFeatures}
+          calendar={calendar}
           onDeleteAccount={handleDeleteAccount}
           onChangePassword={(currentPassword, newPassword) => changePassword(user, currentPassword, newPassword)}
           onSignOutEverywhere={() => signOutEverywhere(services)}

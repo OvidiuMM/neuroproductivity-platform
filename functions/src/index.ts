@@ -13,5 +13,15 @@ export { replyToFeedback, submitFeedback } from './feedback';
 // Funciones extra que la administración activa a cada cuenta
 export { setFeatures } from './features';
 
+// Sincronización con Google Calendar (función extra): conectar y desconectar, cada cambio de una tarea y la desconexión
+// al perder la función
+export {
+  calendarFeatureChanged,
+  calendarPrefChanged,
+  connectGoogleCalendar,
+  disconnectGoogleCalendar,
+  syncTaskCalendar
+} from './calendarSync';
+
 // Notificaciones push de las alarmas: registro de dispositivos, cola de alarmas y envío cada minuto
 export { queueTaskAlarm, registerPushDevice, sendDueAlarms, unregisterPushDevice } from './push';

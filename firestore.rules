@@ -39,6 +39,12 @@ service cloud.firestore {
       allow read: if isOwner(uid) || isAdmin();
     }
 
+    // Sincronización con Google Calendar: el estado de la conexión lo escribe el servidor y solo lo lee la propia
+    // cuenta. El permiso de Google (cifrado, en calendar_tokens) no lo lee nadie desde la app, tampoco su dueño.
+    match /calendar_status/{uid} {
+      allow read: if isOwner(uid);
+    }
+
     // Configuración que fija la administración (p. ej. si hay que aprobar las cuentas): la escriben las Cloud
     // Functions. La lista negra por email (blocked_emails) no la ve nadie desde la app.
     match /settings/{name} {
