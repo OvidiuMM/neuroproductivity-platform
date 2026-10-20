@@ -1,5 +1,6 @@
 import { expect, type Page } from '@playwright/test';
 import { ONBOARDING_VERSION } from '../../src/services/onboarding';
+import { RELEASE_NOTES } from '../../src/services/releaseNotes';
 
 // Cada test usa una cuenta nueva en el emulador de Auth para no compartir datos
 export const uniqueEmail = () => `e2e-${Date.now()}-${Math.random().toString(36).slice(2, 8)}@example.com`;
@@ -69,11 +70,13 @@ export const readDocument = async (path: string) => {
   return Object.fromEntries(Object.entries(fields).map(([key, value]) => [key, Object.values(value)[0]]));
 };
 
-// Da por vista la bienvenida, como si la cuenta ya la hubiera pasado: casi todas las pruebas no la necesitan
-export const markOnboarded = async (email: string) => {
+// Da por vista la bienvenida, como si la cuenta ya la hubiera pasado, y las novedades de la versión actual: casi
+// todas las pruebas no las necesitan. Con `releaseNotes: false`, la cuenta aún no ha visto las novedades
+export const markOnboarded = async (email: string, { releaseNotes = true }: { releaseNotes?: boolean } = {}) => {
   await patchDocument(`users/${await uidOf(email)}`, {
     hasSeenOnboarding: { booleanValue: true },
-    onboardingVersion: { integerValue: String(ONBOARDING_VERSION) }
+    onboardingVersion: { integerValue: String(ONBOARDING_VERSION) },
+    ...(releaseNotes ? { releaseNotesSeen: { stringValue: RELEASE_NOTES[0].version } } : {})
   });
 };
 

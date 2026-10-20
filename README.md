@@ -1,7 +1,7 @@
 # CLAR — Plataforma de Gestión del Tiempo y Neurociencia Aplicada
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
-[![Version](https://img.shields.io/badge/Version-0.9.5-indigo.svg)](#)
+[![Version](https://img.shields.io/badge/Version-0.9.6-indigo.svg)](#)
 [![React](https://img.shields.io/badge/React-19-61dafb.svg?logo=react&logoColor=black)](https://react.dev/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-7.x-3178c6.svg?logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
 [![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-4.x-38bdf8.svg?logo=tailwindcss&logoColor=white)](https://tailwindcss.com/)
@@ -173,13 +173,14 @@ La lista completa y numerada de lo que hace la app, con sus requisitos no funcio
 - **Eliminar la cuenta tras entrar con Google:** se confirma con el método con el que se entró en esta sesión (`useReauthMethods`); una cuenta con contraseña y Google puede cambiar al otro, y los errores de la ventana de Google salen en español.
 - **Pruebas e2e más estables:** un paso de calentamiento (`tests/e2e/warm-up.setup.ts`) carga la app y despierta los emuladores antes de todas, y Vite busca las dependencias de todo `src` al arrancar.
 
-### Alarmas con CLAR cerrada, proyectos opcionales, funciones extra y Google Calendar (próxima versión)
+### Alarmas con CLAR cerrada, proyectos opcionales, funciones extra, Google Calendar y novedades (0.9.6)
 
 - **Alarmas con CLAR cerrada (push):** con «Avisarme también con CLAR cerrada» activado en un dispositivo (menú de la cuenta; la notificación lleva solo la hora salvo que se pida el nombre de la tarea), las alarmas le llegan aunque la app esté cerrada o el móvil bloqueado, por Firebase Cloud Messaging y una Cloud Function que se ejecuta cada minuto (ver [Notificaciones push de las alarmas](#notificaciones-push-de-las-alarmas)).
 - **Proyectos opcionales:** la bienvenida, el recorrido guiado (un paso más, «Proyectos (opcional)»), la sección y la ayuda presentan los proyectos como una herramienta opcional para agrupar tareas relacionadas de una meta o de una parte de ella (ninguno, uno o varios por meta).
 - **Importar sin recortar:** un registro con un texto o una lista que pasa su tope cuenta entero como no válido.
 - **Funciones extra:** en **Administración** → **Solicitudes**, cada cuenta con acceso tiene «Funciones extra» para activarle funciones del catálogo (`src/services/features.ts`, con los mismos ids en `functions/src/featuresLogic.ts`). Una función activada está en uso desde ese momento y la cuenta la ve en su menú; la administración las tiene todas y las enciende o apaga en el suyo (empiezan apagadas). Las guarda la Cloud Function `setFeatures` en `features/{uid}`, y se borran al retirar, rechazar o bloquear la cuenta y al eliminarla.
 - **Sincronización con Google Calendar (función extra):** con la función en uso, «Conectar Google Calendar», en el menú de la cuenta, crea un calendario «CLAR» en la cuenta de Google de la persona y mantiene en él sus tareas con fecha (salvo «Algún día»), en un solo sentido, con los mismos eventos que «Añadir al calendario» (ver [Sincronización con Google Calendar](#sincronización-con-google-calendar)).
+- **Novedades de cada versión:** al entrar después de una actualización, una ventana cuenta una vez por cuenta las novedades de la versión (lo visto se guarda en el perfil, `releaseNotesSeen`, y en el dispositivo; las cuentas nuevas empiezan por la bienvenida, que las da por vistas). Están todas en la Ayuda y se abren también al pulsar la versión. El contenido está en `src/services/releaseNotes.ts`: al publicar una versión se añade su entrada al principio, y una prueba unitaria falla si la de `package.json` no tiene la suya.
 - **CI:** `actions/checkout` y `actions/setup-node` en v7 (Node 24).
 
 ---
@@ -489,6 +490,7 @@ El repositorio utiliza `package-lock.json` (en la raíz, en `functions/` y en `t
 │   │   ├── access.ts            # Solicitudes de acceso, modo de aprobación y llamadas a las Cloud Functions
 │   │   ├── features.ts          # Funciones extra: catálogo, las de la cuenta y las de todas (administración)
 │   │   ├── googleCalendar.ts    # Conectar Google Calendar (ventana de Google con PKCE) y estado de la conexión
+│   │   ├── releaseNotes.ts      # Novedades de cada versión y cuándo se muestran
 │   │   ├── auth.ts              # Email y contraseña: alta con verificación, acceso, recuperación y cambio
 │   │   ├── account.ts           # Descarga de los datos, eliminación de la cuenta y cierre de todas las sesiones
 │   │   ├── importData.ts        # Importar la descarga: validación campo a campo, qué entra y fusión de áreas
@@ -536,6 +538,7 @@ El repositorio utiliza `package-lock.json` (en la raíz, en `functions/` y en `t
 │       ├── FeedbackDialog.tsx   # «Escríbenos»
 │       ├── AccountMenu.tsx · AccessibilityPanel.tsx · DeleteAccountPanel.tsx
 │       ├── CalendarConnection.tsx # Conectar, estado y desconectar Google Calendar (en «Tu cuenta»)
+│       ├── ReleaseNotes.tsx     # Ventana «Novedades de la versión» y lista de cambios (también en la Ayuda)
 │       ├── ImportLocalDataModal.tsx # Importación de datos locales en el primer inicio de sesión
 │       ├── ImportAccountDialog.tsx # Vista previa y avance de «Importar datos (JSON)»
 │       ├── NewGoalInline.tsx    # Crear una meta desde el formulario de la tarea
@@ -561,18 +564,18 @@ El repositorio utiliza `package-lock.json` (en la raíz, en `functions/` y en `t
 
 **Modelo de datos (Firestore).** Los tipos están en `src/types/index.ts`.
 
-| Ruta                                                                   | Contenido                                                                                                                                                                                | Quién la escribe |
-| :--------------------------------------------------------------------- | :--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | :--------------- |
-| `users/{uid}`                                                          | Perfil: nombre, email, foto, alta y último acceso, bienvenida vista, áreas de la Rueda (`wheelAreas`) y, en la cuenta de administración, sus funciones extra encendidas (`featurePrefs`) | La app           |
-| `users/{uid}/tasks`                                                    | Tareas: lista, estado, prioridad, fechas, alarma, repetición, meta, proyecto, dependencia y notas                                                                                        | La app           |
-| `users/{uid}/wheelLogs`                                                | Evaluaciones de la Rueda: una puntuación de 0 a 10 por área (solo se añaden)                                                                                                             | La app           |
-| `users/{uid}/goals` · `users/{uid}/projects`                           | Metas (área, para qué, fecha objetivo) y proyectos (meta, fecha de fin)                                                                                                                  | La app           |
-| `users/{uid}/meetings` · `users/{uid}/emails`                          | Reuniones y correos de «Tiempo protegido»                                                                                                                                                | La app           |
-| `access/{uid}` · `admins/{uid}` · `settings/access` · `blocked_emails` | Solicitudes y estado del acceso, marca de administración, modo de aprobación y emails bloqueados                                                                                         | Cloud Functions  |
-| `calendar_tokens/{uid}` · `calendar_status/{uid}`                      | Conexión con Google Calendar: el permiso de Google cifrado, el calendario y la zona horaria; y el estado que ve la cuenta (`calendar_status`, solo lo lee ella)                          | Cloud Functions  |
-| `features/{uid}`                                                       | Funciones extra que la administración ha activado a la cuenta (`granted`)                                                                                                                | Cloud Functions  |
-| `feedback_tickets` · `feedback_limits`                                 | Mensajes de «Escríbenos» con sus respuestas, y su límite por hora                                                                                                                        | Cloud Functions  |
-| `push_devices/{uid}` · `push_tokens` · `alarm_queue` · `alarm_sent`    | Tokens de FCM y zona horaria de cada dispositivo, de qué cuenta es cada token, la próxima alarma por enviar de cada tarea y la última enviada                                            | Cloud Functions  |
+| Ruta                                                                   | Contenido                                                                                                                                                                                                                       | Quién la escribe |
+| :--------------------------------------------------------------------- | :------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | :--------------- |
+| `users/{uid}`                                                          | Perfil: nombre, email, foto, alta y último acceso, bienvenida vista, áreas de la Rueda (`wheelAreas`), novedades vistas (`releaseNotesSeen`) y, en la cuenta de administración, sus funciones extra encendidas (`featurePrefs`) | La app           |
+| `users/{uid}/tasks`                                                    | Tareas: lista, estado, prioridad, fechas, alarma, repetición, meta, proyecto, dependencia y notas                                                                                                                               | La app           |
+| `users/{uid}/wheelLogs`                                                | Evaluaciones de la Rueda: una puntuación de 0 a 10 por área (solo se añaden)                                                                                                                                                    | La app           |
+| `users/{uid}/goals` · `users/{uid}/projects`                           | Metas (área, para qué, fecha objetivo) y proyectos (meta, fecha de fin)                                                                                                                                                         | La app           |
+| `users/{uid}/meetings` · `users/{uid}/emails`                          | Reuniones y correos de «Tiempo protegido»                                                                                                                                                                                       | La app           |
+| `access/{uid}` · `admins/{uid}` · `settings/access` · `blocked_emails` | Solicitudes y estado del acceso, marca de administración, modo de aprobación y emails bloqueados                                                                                                                                | Cloud Functions  |
+| `calendar_tokens/{uid}` · `calendar_status/{uid}`                      | Conexión con Google Calendar: el permiso de Google cifrado, el calendario y la zona horaria; y el estado que ve la cuenta (`calendar_status`, solo lo lee ella)                                                                 | Cloud Functions  |
+| `features/{uid}`                                                       | Funciones extra que la administración ha activado a la cuenta (`granted`)                                                                                                                                                       | Cloud Functions  |
+| `feedback_tickets` · `feedback_limits`                                 | Mensajes de «Escríbenos» con sus respuestas, y su límite por hora                                                                                                                                                               | Cloud Functions  |
+| `push_devices/{uid}` · `push_tokens` · `alarm_queue` · `alarm_sent`    | Tokens de FCM y zona horaria de cada dispositivo, de qué cuenta es cada token, la próxima alarma por enviar de cada tarea y la última enviada                                                                                   | Cloud Functions  |
 
 ---
 
