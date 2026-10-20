@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { test } from 'node:test';
+import { EXTRA_FEATURES } from '../../src/services/features.ts';
 import { RELEASE_NOTES, compareVersions, releaseFor, shouldShowReleaseNotes } from '../../src/services/releaseNotes.ts';
 
 const { version } = JSON.parse(readFileSync('package.json', 'utf8')) as { version: string };
@@ -16,6 +17,17 @@ test('the version of package.json has its release notes, first, and each change 
     assert.ok(release.changes.length > 0);
     for (const change of release.changes) {
       assert.ok(change.title.trim() && change.text.trim(), release.version);
+    }
+  }
+});
+
+test('the release notes never announce the extra features', () => {
+  for (const release of RELEASE_NOTES) {
+    for (const { title, text } of release.changes) {
+      const said = `${title} ${text}`;
+      assert.doesNotMatch(said, /funci[oó]n(es)? extra|calendario «CLAR»/i, release.version);
+      for (const { label, description } of EXTRA_FEATURES)
+        assert.ok(!said.includes(label) && !said.includes(description), release.version);
     }
   }
 });

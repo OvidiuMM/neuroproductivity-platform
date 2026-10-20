@@ -25,9 +25,14 @@ interface HowItWorksProps {
   onStartTour: () => void;
   onShowWelcome: () => void;
   onContact: () => void;
+  // La sincronización con Google Calendar está en uso en la cuenta. Las funciones extra no se anuncian: la Ayuda solo
+  // las explica a quien las tiene
+  calendarSync: boolean;
 }
 
-const SCREENS: { tab: AppTab; title: string; icon: React.ReactNode; points: string[] }[] = [
+const screensFor = (
+  calendarSync: boolean
+): { tab: AppTab; title: string; icon: React.ReactNode; points: string[] }[] => [
   {
     tab: 'home',
     title: 'Inicio',
@@ -92,7 +97,10 @@ const SCREENS: { tab: AppTab; title: string; icon: React.ReactNode; points: stri
       'Si cierras con cambios sin guardar el formulario de una tarea, una meta o un proyecto, o el editor de áreas, CLAR te pregunta antes de descartarlos; si cierras la pestaña, te avisa el navegador.',
       'Puedes darle una fecha límite o un intervalo, con hora opcional: el título se pone violeta cuando falta menos de una semana y rojo cuando ha vencido. Las fechas se escriben como dd/mm/aaaa o se eligen en el calendario, con la semana empezando en lunes.',
       'Pulsa el título de una tarea, o su lápiz, para editarla. El menú «⋯» tiene el estado, el calendario, la descarga y eliminar.',
-      'Con fecha límite, «Añadir al calendario», en el menú «⋯» de la tarea, la lleva a Google Calendar, Outlook o cualquier calendario (archivo .ics), con su descripción y sus notas. Si tiene hora de inicio y no hora límite, el evento dura una hora. Si tienes la función extra «Sincronizar con Google Calendar» y conectas tu cuenta de Google (en el menú de tu cuenta), tus tareas con fecha aparecen solas en un calendario «CLAR» y se actualizan al cambiarlas (las de «Algún día», no); lo que cambies en Google no vuelve a CLAR.',
+      'Con fecha límite, «Añadir al calendario», en el menú «⋯» de la tarea, la lleva a Google Calendar, Outlook o cualquier calendario (archivo .ics), con su descripción y sus notas. Si tiene hora de inicio y no hora límite, el evento dura una hora.' +
+        (calendarSync
+          ? ' Con «Sincronizar con Google Calendar», si conectas tu cuenta de Google (en el menú de tu cuenta), tus tareas con fecha aparecen solas en un calendario «CLAR» y se actualizan al cambiarlas (las de «Algún día», no); lo que cambies en Google no vuelve a CLAR.'
+          : ''),
       '«Descargar (JSON)», en el menú «⋯», guarda la tarea con todos sus datos (y los nombres de su meta, su proyecto y las tareas de las que depende). Las metas y los proyectos también se descargan, con sus tareas.',
       'Alarma: una hora para que CLAR te avise antes del plazo, dentro de las 24 h anteriores (con la tarea a las 11:00, una alarma a las 10:57 suena 3 minutos antes). Sin hora límite, suena la víspera a esa hora; una tarea que se repite necesita hora límite para llevarla.',
       pushAvailable()
@@ -126,7 +134,13 @@ const SCREENS: { tab: AppTab; title: string; icon: React.ReactNode; points: stri
   }
 ];
 
-export const HowItWorks: React.FC<HowItWorksProps> = ({ onNavigate, onStartTour, onShowWelcome, onContact }) => {
+export const HowItWorks: React.FC<HowItWorksProps> = ({
+  onNavigate,
+  onStartTour,
+  onShowWelcome,
+  onContact,
+  calendarSync
+}) => {
   return (
     <div className="space-y-6">
       <div className="space-y-2 rounded-2xl border border-slate-200 bg-white p-6 shadow-xs">
@@ -202,7 +216,7 @@ export const HowItWorks: React.FC<HowItWorksProps> = ({ onNavigate, onStartTour,
 
       {/* PANTALLAS */}
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-        {SCREENS.map((screen) => (
+        {screensFor(calendarSync).map((screen) => (
           <section
             key={screen.tab}
             className="flex flex-col gap-3 rounded-2xl border border-slate-200 bg-white p-5 shadow-xs"
@@ -279,10 +293,10 @@ export const HowItWorks: React.FC<HowItWorksProps> = ({ onNavigate, onStartTour,
           se toca), cambiar la contraseña (si entras con email), cerrar la sesión en todos tus dispositivos o eliminar
           la cuenta con todo su contenido. Si activas «Avisarme también con CLAR cerrada» en un dispositivo, se guardan
           además su identificador de notificaciones y su zona horaria, y tus alarmas pendientes con el nombre de la
-          tarea; la notificación pasa por Firebase Cloud Messaging y solo lleva el nombre si lo pides. Si la
-          administración te activa funciones extra, las verás en el menú de tu cuenta; con Google Calendar conectado,
-          los datos de tus tareas con fecha se envían a un calendario «CLAR» de tu cuenta de Google. Todo el detalle, en
-          la{' '}
+          tarea; la notificación pasa por Firebase Cloud Messaging y solo lleva el nombre si lo pides.
+          {calendarSync &&
+            ' Con Google Calendar conectado, los datos de tus tareas con fecha se envían a un calendario «CLAR» de tu cuenta de Google.'}{' '}
+          Todo el detalle, en la{' '}
           <LegalLink to="privacy" newTab>
             política de privacidad
           </LegalLink>

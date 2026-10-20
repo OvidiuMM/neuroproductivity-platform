@@ -241,12 +241,12 @@ Origen: `src/navigation.ts`, `src/components/Navbar.tsx`, `src/components/Bottom
 - **RF-NAV-05.** Pulsar el indicador fuerza la sincronización: reabre la conexión y espera la confirmación del servidor, como mucho 15 s. Un aviso dice si lo consiguió.
 - **RF-NAV-06.** Cada acción que guarda, elimina o cambia algo muestra un aviso breve. Los avisos con «Deshacer» duran 5 s; los demás, 4 s.
 - **RF-NAV-07.** Al arrancar, la app muestra una pantalla de inicio que se cierra sola en 1,6 s o al tocarla.
-- **RF-NAV-08.** «Ayuda» explica cada sección con un botón «Ir a…», los primeros pasos, cómo se relacionan las secciones, dónde se guardan los datos, la accesibilidad y los créditos.
+- **RF-NAV-08.** «Ayuda» explica cada sección con un botón «Ir a…», los primeros pasos, cómo se relacionan las secciones, dónde se guardan los datos, la accesibilidad y los créditos. Las funciones extra solo se explican a la cuenta que las tiene en uso.
 - **RF-NAV-09.** Desde «Ayuda» se puede «Repetir el recorrido», «Ver la introducción» y abrir «Escríbenos».
 - **RF-NAV-10.** El pie muestra la versión de la app (que abre sus novedades), «Ver la ayuda» y los enlaces a los textos legales, que se abren en otra pestaña.
 - **RF-NAV-11.** Si una sección o ventana no se puede descargar, la app muestra un aviso con «Reintentar» en su lugar y el resto sigue funcionando. Una ventana que aún se está descargando se puede cancelar.
 - **RF-NAV-12.** Al entrar después de una actualización, una ventana «Novedades de la versión N» cuenta los cambios de esa versión, una sola vez por cuenta, cuando no hay otra ventana abierta (la bienvenida, el recorrido o la importación). Lo visto se guarda en el perfil y en el dispositivo; como la bienvenida, espera al perfil confirmado por el servidor. Las cuentas nuevas empiezan por la bienvenida, que da por vistas las novedades de la versión.
-- **RF-NAV-13.** La versión de la cabecera (desde 640 px) y la del pie abren las novedades de la versión. «Ayuda» tiene el apartado «Novedades», con la versión actual a la vista y las anteriores plegadas. Cada versión publicada tiene su entrada, con la misma versión que la app (una prueba lo comprueba).
+- **RF-NAV-13.** La versión de la cabecera (desde 640 px) y la del pie abren las novedades de la versión. «Ayuda» tiene el apartado «Novedades», con la versión actual a la vista y las anteriores plegadas. Cada versión publicada tiene su entrada, con la misma versión que la app (una prueba lo comprueba). Las novedades nunca anuncian las funciones extra (otra prueba lo comprueba).
 
 ### 1.10 Cuentas y acceso (RF-CUE)
 
