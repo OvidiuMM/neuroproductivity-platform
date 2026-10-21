@@ -16,12 +16,20 @@ const keyOf = (request: string | { url: string }) => {
   return url.pathname + url.search;
 };
 
+interface WorkerOptions {
+  precache?: string[];
+  version?: string;
+  // Lo guardado, por versión: { nombre de la caché: { dirección: contenido } }
+  stored?: Record<string, Record<string, string>>;
+  network?: (path: string) => Answer;
+}
+
 const worker = ({
   precache = PRECACHE,
   version = 'v2',
   stored = { 'clar-app-v2': { '/': 'app guardada', '/assets/app.js': 'código guardado' } },
   network = (path: string): Answer => ({ body: `de la red: ${path}` })
-} = {}) => {
+}: WorkerOptions = {}) => {
   const listeners: Record<string, (event: unknown) => void> = {};
   const store = new Map(Object.entries(stored).map(([name, entries]) => [name, new Map(Object.entries(entries))]));
   const requested: string[] = [];
