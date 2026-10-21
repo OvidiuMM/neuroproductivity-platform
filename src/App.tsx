@@ -69,7 +69,7 @@ import { alarmLateNote, alarmSetAtFor, formatClock } from './services/alarms';
 import {
   NOTIFICATIONS_GRANTED_EVENT,
   notificationState,
-  registerNotificationWorker,
+  registerServiceWorker,
   requestNotifications,
   showSystemNotification
 } from './services/notifications';
@@ -1019,7 +1019,7 @@ export default function App({ user, services, isAdmin = false }: AppProps) {
   // El service worker de las notificaciones (Android solo las muestra desde él) y, con permiso, el registro de este
   // dispositivo para las notificaciones push (las alarmas suenan aunque CLAR esté cerrada)
   useEffect(() => {
-    registerNotificationWorker();
+    registerServiceWorker();
   }, []);
   const [pushEnabled, setPushEnabled] = useState(() => isPushEnabled(uid));
   useEffect(() => {
