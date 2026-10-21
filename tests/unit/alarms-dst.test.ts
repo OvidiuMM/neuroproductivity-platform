@@ -10,10 +10,10 @@ const { buildCalendarEvent, buildIcs } = await import('../../src/services/calend
 const local = (date: Date) =>
   `${date.getMonth() + 1}/${date.getDate()} ${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`;
 
-test('a daylight-saving change on the due day does not move the alarm of the day before', () => {
-  // Solo fecha, el día del cambio: la víspera a las 02:30, que sí existe
-  assert.equal(local(alarmMoment({ dueDate: '2030-03-31', alarmTime: '02:30' })!), '3/30 02:30');
-  // Hora límite a la 01:00 del día del cambio: la alarma de las 02:30 es la víspera, a las 02:30
+test('a daylight-saving change does not move the alarm of the day before, and a time in the gap rings earlier', () => {
+  // Solo fecha, el día del cambio: las 02:30 no existen, suena a la 01:30 (como con hora límite, ver abajo)
+  assert.equal(local(alarmMoment({ dueDate: '2030-03-31', alarmTime: '02:30' })!), '3/31 01:30');
+  // Hora límite a la 01:00 del día del cambio (de antes de 0.9.7): la alarma de las 02:30 es la víspera, a las 02:30
   assert.equal(local(alarmMoment({ dueDate: '2030-03-31', dueTime: '01:00', alarmTime: '02:30' })!), '3/30 02:30');
   // El mismo día, antes de la hora límite y fuera del salto: sin cambios
   assert.equal(local(alarmMoment({ dueDate: '2030-03-31', dueTime: '10:00', alarmTime: '09:15' })!), '3/31 09:15');

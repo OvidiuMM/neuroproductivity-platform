@@ -10,7 +10,7 @@ import {
   isArchived
 } from '../services/tasks';
 import { formatEstimate } from '../services/taskListing';
-import { alarmMoment, describeAlarm } from '../services/alarms';
+import { alarmLabel, alarmMoment, describeAlarm } from '../services/alarms';
 import { TaskDates } from './TaskDates';
 import { TaskActionsMenu } from './TaskActionsMenu';
 import { useAreas } from '../hooks/useAreas';
@@ -68,14 +68,18 @@ const PriorityBadge: React.FC<{ task: TaskItem; now: Date }> = ({ task, now }) =
   );
 };
 
-// Alarma: la hora, con cuándo suena en el título (sin hacer y con alarma válida)
-const AlarmBadge: React.FC<{ task: TaskItem }> = ({ task }) => {
-  if (isArchived(task) || !alarmMoment(task)) return null;
+// Alarma: cuándo suena («hoy 17:00»), con la frase entera en el título (sin hacer y con alarma válida)
+const AlarmBadge: React.FC<{ task: TaskItem; now: Date }> = ({ task, now }) => {
+  const at = isArchived(task) ? null : alarmMoment(task);
+  if (!at) return null;
   return (
-    <span className="inline-flex items-center gap-1" title={describeAlarm(task) ?? undefined}>
+    <span
+      className="inline-flex items-center gap-1"
+      title={(at > now ? describeAlarm(task, now) : `Alarma de ${alarmLabel(at, now)}.`) ?? undefined}
+    >
       <Bell className="h-3 w-3" aria-hidden="true" />
       <span className="sr-only">Alarma:</span>
-      {task.alarmTime}
+      {alarmLabel(at, now)}
     </span>
   );
 };
@@ -191,7 +195,7 @@ export const TaskCard: React.FC<TaskCardProps> = ({
 
         <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] text-slate-500">
           <TaskDates task={task} now={now} />
-          <AlarmBadge task={task} />
+          <AlarmBadge task={task} now={now} />
           <EstimateBadge minutes={task.estimateMinutes} />
           {variant !== 'someday' && <PriorityBadge task={task} now={now} />}
           {goal ? (

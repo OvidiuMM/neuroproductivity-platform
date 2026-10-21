@@ -126,6 +126,15 @@ export const signInWithGoogle = async (
 };
 
 // Fecha local (YYYY-MM-DD) a N días de hoy; los campos de fecha la aceptan escrita así
+// Reloj de Playwright lejos de medianoche: las pruebas de alarmas ponen la alarma y el plazo unos minutos después de
+// ahora, y cerca de medianoche caerían en días distintos. Se atrasa o se adelanta lo justo (poco: la sesión del
+// emulador sigue valiendo). La hora es la de la página, en su zona horaria (antes de cargar nada)
+export const installClockAwayFromMidnight = async (page: Page) => {
+  const minutes = await page.evaluate(() => new Date().getHours() * 60 + new Date().getMinutes());
+  const shift = minutes >= 22 * 60 + 50 ? -120 : minutes < 15 ? 30 : 0;
+  await page.clock.install({ time: new Date(Date.now() + shift * 60_000) });
+};
+
 export const localDateFromToday = (days: number) => {
   const d = new Date();
   d.setDate(d.getDate() + days);

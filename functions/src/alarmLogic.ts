@@ -16,6 +16,7 @@ export interface AlarmTask {
   dueTime?: unknown;
   alarmTime?: unknown;
   recurrence?: unknown;
+  alarmSetAt?: unknown;
 }
 
 // Una zona horaria IANA que entiende el entorno (p. ej. «Europe/Madrid»)
@@ -69,15 +70,14 @@ const previousDay = (date: string) => {
   return new Date(Date.UTC(y, m - 1, d - 1)).toISOString().slice(0, 10);
 };
 
-// Cuándo suena: con hora límite, dentro de las 24 h anteriores (el mismo día si la alarma es antes que la hora
-// límite; si no, la víspera); sin hora límite, la víspera. Una tarea que se repite necesita hora límite.
+// Cuándo suena, como en la app (src/services/alarms.ts): el día límite, a su hora (con hora límite, antes de ella),
+// también en las tareas que se repiten. Las de antes de 0.9.7 con la alarma a la hora límite o más tarde, la víspera.
 export const alarmInstant = (task: AlarmTask, timeZone: string): number | null => {
   const { alarmTime, dueDate, dueTime } = task;
   if (typeof alarmTime !== 'string' || !ALARM_TIME.test(alarmTime)) return null;
   if (typeof dueDate !== 'string' || !DAY.test(dueDate)) return null;
   const hasDueTime = typeof dueTime === 'string' && ALARM_TIME.test(dueTime);
-  if (task.recurrence && !hasDueTime) return null;
-  if (hasDueTime && alarmTime < dueTime) return zonedInstant(dueDate, alarmTime, timeZone);
+  if (!hasDueTime || alarmTime < dueTime) return zonedInstant(dueDate, alarmTime, timeZone);
   return zonedInstant(previousDay(dueDate), alarmTime, timeZone);
 };
 
@@ -115,13 +115,18 @@ const clock = (instant: number, timeZone: string) =>
 const day = (instant: number, timeZone: string) =>
   new Intl.DateTimeFormat('es-ES', { timeZone, day: 'numeric', month: 'short' }).format(instant);
 
-// La alarma por avisar de una tarea, o null: sin alarma, archivada, en «Algún día» o con el plazo ya vencido
+// La alarma por avisar de una tarea, o null: sin alarma, archivada, en «Algún día», con el plazo ya vencido o puesta
+// (o cambiada) después de su hora: como en la app, no suena
 export const queuedAlarm = (taskId: string, task: AlarmTask, timeZone: string, now: number): QueuedAlarm | null => {
   if (isArchived(task) || task.isSomeday === true) return null;
   const at = alarmInstant(task, timeZone);
   const due = dueInstant(task, timeZone);
   if (at === null || due === null || due <= now) return null;
+  const set = typeof task.alarmSetAt === 'string' ? Date.parse(task.alarmSetAt) : NaN;
+  if (Number.isFinite(set) && at <= set) return null;
   const hasDueTime = typeof task.dueTime === 'string' && ALARM_TIME.test(task.dueTime);
+  // Una de antes de 0.9.7 (sin alarmSetAt) solo con fecha sonaba la víspera: si su hora de ahora ya pasó, ya sonó
+  if (task.alarmSetAt === undefined && !hasDueTime && at <= now) return null;
   return {
     at,
     due,
