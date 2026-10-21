@@ -191,6 +191,12 @@ La lista completa y numerada de lo que hace la app, con sus requisitos no funcio
 - **El logo gira mientras carga:** el brillo blanco da vueltas dentro del anillo (`BrandMark spinning`, `LoadingScreen`) en las pantallas de arranque y en la de inicio; con «menos movimiento», quieto.
 - **Calendario:** una tarea con solo fecha es un evento de una hora a la hora de su alarma o, sin alarma, a las 09:00 (los intervalos de varios días sin horas siguen de día completo). En la sincronización con Google Calendar, las notas van en HTML, como lista con viñetas (`eventDescription` en `functions/src/calendarLogic.ts`); los eventos ya sincronizados cambian al cambiar su tarea o al volver a conectar.
 
+### Dictado, borradores, presentación y registro abierto (1.0.0)
+
+- **Dictar tareas** (`src/services/speech.ts`, `DictateButton`): micrófono en el título y en las notas, con el reconocimiento de voz del navegador, en español y hasta 30 s por dictado; un solo dictado a la vez. Accesos «Nueva tarea por voz» (`/?nueva=voz`) y «Nueva tarea» en el manifiesto. `Permissions-Policy` deja el micrófono a la propia app.
+- **Borradores de tareas** (`users/{uid}/taskDrafts`, `TaskDraftsModal`): una tarea nueva que se cierra sin guardar se queda en «Borradores», en Listas, con «Continuar» y «Eliminar»; se sincronizan, van en la descarga y se borran con la cuenta (no se importan).
+- **Compartir y presentación:** «Compartir CLAR» en el menú de la cuenta (`ShareAppButton`), tarjeta Open Graph (`public/og-image.png`, fuera de la copia sin conexión) y la pantalla de entrada como página de presentación (`LoginScreen`), con enlace al repositorio.
+
 ---
 
 ## 🛠️ Stack Tecnológico

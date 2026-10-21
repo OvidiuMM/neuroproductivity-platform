@@ -2,12 +2,15 @@ import React, { useState } from 'react';
 import { Eye, EyeOff, Mail } from 'lucide-react';
 import { describeAuthError, MIN_PASSWORD_LENGTH } from '../services/auth';
 
-type Mode = 'signin' | 'signup' | 'reset';
+export type EmailAuthMode = 'signin' | 'signup' | 'reset';
+type Mode = EmailAuthMode;
 
 interface EmailAuthFormProps {
   onSignIn: (email: string, password: string) => Promise<void>;
   onSignUp: (account: { name: string; email: string; password: string }) => Promise<void>;
   onReset: (email: string) => Promise<void>;
+  // Con qué empieza (la página de presentación abre «Crear una cuenta» desde su botón)
+  initialMode?: Mode;
 }
 
 const TITLES: Record<Mode, string> = {
@@ -27,8 +30,13 @@ const inputClass =
 const linkClass = 'text-xs font-semibold text-indigo-700 hover:text-indigo-900 underline-offset-2 hover:underline';
 
 // Acceso con email y contraseña: entrar, crear cuenta (con verificación del email) y recuperar la contraseña
-export const EmailAuthForm: React.FC<EmailAuthFormProps> = ({ onSignIn, onSignUp, onReset }) => {
-  const [mode, setMode] = useState<Mode>('signin');
+export const EmailAuthForm: React.FC<EmailAuthFormProps> = ({
+  onSignIn,
+  onSignUp,
+  onReset,
+  initialMode = 'signin'
+}) => {
+  const [mode, setMode] = useState<Mode>(initialMode);
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');

@@ -7,9 +7,10 @@ import type { Plugin } from 'vite';
 // conexión (la app en «/», sus trozos y sus iconos) y una versión que cambia con su contenido: así cada versión
 // publicada tiene su copia y la anterior se borra. En desarrollo no pasa por aquí y no guarda nada.
 
-// Lo que no se guarda: el propio service worker, la vuelta de la autorización de Google (necesita conexión) y los
-// archivos ocultos, que Hosting no publica (firebase.json)
-const SKIP = [/^sw\.js$/, /^oauth\//, /(^|\/)\./, /\.map$/];
+// Lo que no se guarda: el propio service worker, la vuelta de la autorización de Google (necesita conexión), los
+// archivos ocultos, que Hosting no publica (firebase.json), y la imagen de la tarjeta al compartir el enlace (solo la
+// piden otros sitios)
+const SKIP = [/^sw\.js$/, /^oauth\//, /(^|\/)\./, /\.map$/, /^og-image\.png$/];
 
 // Las direcciones que se guardan, a partir de los archivos de la compilación (rutas relativas a dist)
 export const precacheList = (files: string[]) =>
