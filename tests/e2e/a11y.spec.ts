@@ -347,7 +347,7 @@ test('email sign-up and email confirmation screens', async ({ page }) => {
   await page.getByRole('button', { name: 'Crear una cuenta' }).click();
   await page.getByLabel('Email', { exact: true }).fill(uniqueEmail());
   await page.getByLabel('Contraseña', { exact: true }).fill('clave-segura-1');
-  await page.getByRole('button', { name: 'Crear cuenta' }).click();
+  await page.getByRole('button', { name: 'Crear cuenta', exact: true }).click();
   await expect(page.getByRole('heading', { name: 'Confirma tu email' })).toBeVisible();
   await expectNoViolations(page, 'confirmar el email');
 });
