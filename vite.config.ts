@@ -3,13 +3,15 @@ import react from '@vitejs/plugin-react';
 import { readFileSync } from 'fs';
 import path from 'path';
 import { defineConfig } from 'vite';
+import { precacheServiceWorker } from './vite-plugins/precache.ts';
 
 // package.json es la única fuente de la versión que muestra la app
 const { version } = JSON.parse(readFileSync(path.resolve(__dirname, 'package.json'), 'utf8')) as { version: string };
 
 export default defineConfig(() => {
   return {
-    plugins: [react(), tailwindcss()],
+    // precacheServiceWorker: lo que guarda el service worker para abrir CLAR sin conexión
+    plugins: [react(), tailwindcss(), precacheServiceWorker()],
     build: {
       // El SDK de Firebase (Auth, Firestore y Functions) ronda los 670 kB sin comprimir y hace falta para entrar
       chunkSizeWarningLimit: 700,

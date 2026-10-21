@@ -427,13 +427,13 @@ Origen: `tests/e2e/a11y.spec.ts`, `src/hooks/useModalFocus.ts`, `src/components/
 
 ### 2.4 Funcionamiento sin conexión y sincronización (RNF-OFF)
 
-Origen: `src/services/firebase.ts`, `src/services/repository.ts`, `src/lazy.tsx`.
+Origen: `src/services/firebase.ts`, `src/services/repository.ts`, `src/lazy.tsx`, `public/sw.js`, `vite-plugins/precache.ts`.
 
 - **RNF-OFF-01.** Firestore usa una caché persistente en el dispositivo, compartida entre pestañas. Con la app abierta, se puede leer y escribir sin conexión.
 - **RNF-OFF-02.** Las escrituras se aplican al momento en la copia local y se envían al servidor en segundo plano. Al volver la conexión, se sincronizan con el servidor y con los demás dispositivos y pestañas.
 - **RNF-OFF-03.** Los datos llegan en tiempo real: un cambio hecho en otro dispositivo aparece sin recargar.
 - **RNF-OFF-04.** Necesitan conexión: iniciar sesión, comprobar un acceso que aún no está en la caché, «Deshacer», las funciones del servidor (solicitar acceso, contacto y administración) eliminar la cuenta, importar datos (se comprueba en el servidor qué hay ya) y activar las alarmas con CLAR cerrada.
-- **RNF-OFF-05.** El service worker de la app (`public/sw.js`) solo muestra notificaciones: no guarda la app en caché ni intercepta peticiones, y se sirve sin caché para que se actualice. Al arrancar, la app descarga su configuración de Firebase del Hosting; si no puede, muestra un error en lugar de la app.
+- **RNF-OFF-05.** La app se abre sin conexión, también la instalada en Android, una vez abierta con conexión en ese dispositivo. El service worker (`public/sw.js`), registrado al arrancar, guarda una copia de cada versión publicada: la app, todos sus trozos (también los de las secciones que no se han abierto), sus iconos y su configuración de Firebase. Las páginas se piden primero a la red (con 4 s de espera como mucho) y, sin conexión, sale la copia; los archivos de la app, de la copia. Al publicar una versión, la copia nueva sustituye a la anterior. En desarrollo no guarda nada. La configuración de Firebase también se guarda en el dispositivo; si no hay ninguna (la primera vez sin conexión), la app dice que necesita conexión. El service worker se sirve sin caché para que se actualice. Lo que pide la entrada con Google, otros sitios y las peticiones que no son de lectura van siempre a la red.
 - **RNF-OFF-06.** Si sin conexión falla la descarga de una parte de la app, la app no se recarga: sigue en pie con los datos y ofrece «Reintentar».
 - **RNF-OFF-07.** Los cambios simultáneos desde varios dispositivos no duplican ni pisan datos. La siguiente repetición tiene un identificador fijo, «Deshacer» comprueba en una transacción que nada cambió, y al eliminar una meta o un proyecto cada tarea se desvincula en su propia transacción, solo si sigue vinculada.
 
