@@ -37,12 +37,38 @@ export interface FirebaseServices {
 }
 
 // En producción Firebase Hosting sirve la configuración en /__/firebase/init.json,
-// así el ID del proyecto no tiene que estar en el repositorio.
-const loadConfig = async (): Promise<FirebaseOptions> => {
+// así el ID del proyecto no tiene que estar en el repositorio. Sin conexión la da el service worker (public/sw.js) y,
+// si tampoco, la última que llegó, guardada en el dispositivo (no es secreta: la misma para todos)
+const CONFIG_KEY = 'clar_firebase_config';
+
+export const loadConfig = async (): Promise<FirebaseOptions> => {
   if (usingEmulators) return EMULATOR_CONFIG;
-  const res = await fetch('/__/firebase/init.json');
-  if (!res.ok) throw new Error(`No se pudo cargar la configuración de Firebase (${res.status})`);
-  return withAuthDomain((await res.json()) as FirebaseOptions, window.location.hostname);
+  try {
+    const res = await fetch('/__/firebase/init.json');
+    if (!res.ok) throw new Error(`No se pudo cargar la configuración de Firebase (${res.status})`);
+    const config = (await res.json()) as FirebaseOptions;
+    try {
+      localStorage.setItem(CONFIG_KEY, JSON.stringify(config));
+    } catch {
+      // Sin almacenamiento (p. ej. lleno): la próxima vez sin conexión no habrá copia
+    }
+    return withAuthDomain(config, window.location.hostname);
+  } catch (error) {
+    const saved = savedConfig();
+    if (saved) return withAuthDomain(saved, window.location.hostname);
+    throw navigator.onLine === false
+      ? new Error('no hay conexión. La primera vez, CLAR necesita conexión para abrirse.')
+      : error;
+  }
+};
+
+const savedConfig = (): FirebaseOptions | null => {
+  try {
+    const value = JSON.parse(localStorage.getItem(CONFIG_KEY) ?? 'null') as unknown;
+    return value && typeof value === 'object' && typeof (value as FirebaseOptions).apiKey === 'string' ? value : null;
+  } catch {
+    return null;
+  }
 };
 
 let services: Promise<FirebaseServices> | null = null;

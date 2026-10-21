@@ -6,6 +6,7 @@ import {
   callFunction,
   createVerifiedAccount,
   fillAndSaveTask,
+  installClockAwayFromMidnight,
   localDateFromToday,
   openSection,
   patchDocument,
@@ -87,6 +88,9 @@ test('main sections, forms and dialogs', async ({ page }) => {
     dueDate: localDateFromToday(1),
     dueTime: '10:00'
   });
+  // Una que vence hoy: su etiqueta «Hoy» y su borde también se auditan
+  await page.getByRole('button', { name: 'Nueva Tarea' }).click();
+  await fillAndSaveTask(page, { title: 'Pagar el recibo de la luz', dueDate: localDateFromToday(0) });
   await expectNoViolations(page, 'listas duales');
 
   await page.getByRole('button', { name: 'Agenda', exact: true }).click();
@@ -411,17 +415,26 @@ test('the prompt before discarding unsaved changes', async ({ page }) => {
 });
 
 test('task alarm: the field in the form and the alert', async ({ page }) => {
+  await installClockAwayFromMidnight(page);
   await page.goto('/');
   await signInWithGoogle(page);
   const title = `Revisar el contrato ${Date.now().toString(36)}`;
   await page.getByRole('button', { name: 'Nueva tarea', exact: true }).click();
   await page.getByPlaceholder('ej. Llamar al proveedor para acordar el plazo de entrega').fill(title);
-  // Vence mañana a las 00:01; la alarma a la misma hora es 24 h antes, hoy a las 00:01: ya pasó y avisa al guardar
-  await page.getByLabel('Fecha límite', { exact: true }).fill(localDateFromToday(1));
-  await page.getByLabel('Hora límite').fill('00:01');
-  await page.getByLabel(/^Alarma/).fill('00:01');
+  // Vence hoy (sin hora) con la alarma dentro de dos minutos: al adelantar el reloj, avisa
+  const inTwoMinutes = await page.evaluate(() => {
+    const d = new Date(Date.now() + 2 * 60_000);
+    const pad = (n: number) => String(n).padStart(2, '0');
+    return {
+      date: `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`,
+      time: `${pad(d.getHours())}:${pad(d.getMinutes())}`
+    };
+  });
+  await page.getByLabel('Fecha límite', { exact: true }).fill(inTwoMinutes.date);
+  await page.getByLabel(/^Alarma/).fill(inTwoMinutes.time);
   await expectNoViolations(page, 'formulario con alarma');
   await page.getByRole('button', { name: 'Guardar la tarea' }).click();
+  await page.clock.fastForward('03:00');
   await expect(page.getByRole('region', { name: `Alarma: ${title}` })).toBeVisible();
   await expectNoViolations(page, 'aviso de alarma');
 });

@@ -3,6 +3,7 @@ import type { User } from 'firebase/auth';
 import { FirebaseError } from 'firebase/app';
 import App from './App';
 import { AccessRequestScreen } from './components/AccessRequestScreen';
+import { LoadingScreen } from './components/BrandMark';
 import { FeedbackDialog } from './components/FeedbackDialog';
 import { EmailVerificationScreen } from './components/EmailVerificationScreen';
 import { needsEmailVerification } from './services/auth';
@@ -99,11 +100,7 @@ export const AccessGate: React.FC<AccessGateProps> = ({ user, services }) => {
 
   // Mientras se consulta al servidor no se muestra el formulario (la administración se aprueba en ese paso)
   if (isChecking && (effectiveStatus === 'unknown' || effectiveStatus === 'none')) {
-    return (
-      <div className="flex min-h-screen items-center justify-center bg-slate-50 text-sm text-slate-500" role="status">
-        Comprobando tu acceso…
-      </div>
-    );
+    return <LoadingScreen text="Comprobando tu acceso…" />;
   }
 
   return (

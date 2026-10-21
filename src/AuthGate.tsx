@@ -11,6 +11,7 @@ import {
 import { FirebaseError } from 'firebase/app';
 import { AccessGate } from './AccessGate';
 import { LoginScreen } from './components/LoginScreen';
+import { LoadingScreen } from './components/BrandMark';
 import { getFirebase, type FirebaseServices } from './services/firebase';
 import { sendPasswordReset, signInWithEmail, signUpWithEmail } from './services/auth';
 
@@ -78,11 +79,7 @@ export const AuthGate: React.FC = () => {
   };
 
   if (state.status === 'loading') {
-    return (
-      <div className="flex min-h-screen items-center justify-center bg-slate-50 text-sm text-slate-500" role="status">
-        Cargando…
-      </div>
-    );
+    return <LoadingScreen text="Cargando…" />;
   }
 
   if (state.status === 'error') {

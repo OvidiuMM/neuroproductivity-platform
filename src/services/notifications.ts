@@ -16,8 +16,10 @@ export const requestNotifications = async (): Promise<NotificationState> => {
   return state;
 };
 
-// Registra el service worker de las notificaciones (una vez por carga; si falla, se usan las de la página)
-export const registerNotificationWorker = () => {
+// Registra el service worker (public/sw.js): guarda la app para abrirla sin conexión y muestra las notificaciones. Se
+// registra al arrancar (main.tsx) y otra vez al entrar en la app, por si entonces falló; si no se puede, las
+// notificaciones salen desde la página
+export const registerServiceWorker = () => {
   if (typeof navigator === 'undefined' || !('serviceWorker' in navigator)) return;
   navigator.serviceWorker.register('/sw.js').catch(() => undefined);
 };

@@ -10,7 +10,7 @@ import {
   isArchived
 } from '../services/tasks';
 import { formatEstimate } from '../services/taskListing';
-import { alarmMoment, describeAlarm } from '../services/alarms';
+import { alarmLabel, alarmMoment, describeAlarm } from '../services/alarms';
 import { TaskDates } from './TaskDates';
 import { TaskActionsMenu } from './TaskActionsMenu';
 import { useAreas } from '../hooks/useAreas';
@@ -68,14 +68,18 @@ const PriorityBadge: React.FC<{ task: TaskItem; now: Date }> = ({ task, now }) =
   );
 };
 
-// Alarma: la hora, con cuándo suena en el título (sin hacer y con alarma válida)
-const AlarmBadge: React.FC<{ task: TaskItem }> = ({ task }) => {
-  if (isArchived(task) || !alarmMoment(task)) return null;
+// Alarma: cuándo suena («hoy 17:00»), con la frase entera en el título (sin hacer y con alarma válida)
+const AlarmBadge: React.FC<{ task: TaskItem; now: Date }> = ({ task, now }) => {
+  const at = isArchived(task) ? null : alarmMoment(task);
+  if (!at) return null;
   return (
-    <span className="inline-flex items-center gap-1" title={describeAlarm(task) ?? undefined}>
+    <span
+      className="inline-flex items-center gap-1"
+      title={(at > now ? describeAlarm(task, now) : `Alarma de ${alarmLabel(at, now)}.`) ?? undefined}
+    >
       <Bell className="h-3 w-3" aria-hidden="true" />
       <span className="sr-only">Alarma:</span>
-      {task.alarmTime}
+      {alarmLabel(at, now)}
     </span>
   );
 };
@@ -125,11 +129,16 @@ export const TaskCard: React.FC<TaskCardProps> = ({
 }) => {
   const { label: areaName } = useAreas();
   // El color de plazo sustituye al color base: con las dos clases, el orden del CSS decidiría cuál gana
-  const titleColor = (base: string) => DEADLINE_TITLE_CLASS[getDeadlineState(task, now)] || base;
+  const deadline = getDeadlineState(task, now);
+  const titleColor = (base: string) => DEADLINE_TITLE_CLASS[deadline] || base;
   const isTop = variant === 'top';
+  // Las que vencen hoy destacan: borde izquierdo violeta, título en negrita y la etiqueta «Hoy» (en TaskDates)
+  const isToday = deadline === 'today';
 
   return (
-    <li className={`flex items-start gap-1 p-1 sm:gap-2 sm:p-1.5 ${CARD_CLASS[variant]}`}>
+    <li
+      className={`flex items-start gap-1 p-1 sm:gap-2 sm:p-1.5 ${CARD_CLASS[variant]} ${isToday ? 'border-l-4 border-l-violet-600' : ''}`}
+    >
       {blocker ? (
         // Bloqueada: en lugar del círculo para completarla, un candado (lo explica la etiqueta de la tarjeta)
         <span className="flex h-11 w-11 shrink-0 items-center justify-center" title="Bloqueada" aria-hidden="true">
@@ -164,14 +173,14 @@ export const TaskCard: React.FC<TaskCardProps> = ({
             ))}
           {/* El título abre la edición */}
           {variant === 'peripheral' ? (
-            <p className={`min-w-0 text-sm ${titleColor('text-slate-700')}`}>
+            <p className={`min-w-0 text-sm ${isToday ? 'font-bold' : ''} ${titleColor('text-slate-700')}`}>
               <button type="button" onClick={() => onEdit(task)} className={`${titleButton} block max-w-full truncate`}>
                 {task.title}
               </button>
             </p>
           ) : (
             <h4
-              className={`min-w-0 text-sm leading-snug break-words ${isTop ? 'font-bold sm:text-base' : 'font-semibold'} ${titleColor('text-slate-900')}`}
+              className={`min-w-0 text-sm leading-snug break-words ${isTop ? 'font-bold sm:text-base' : isToday ? 'font-bold' : 'font-semibold'} ${titleColor('text-slate-900')}`}
             >
               <button type="button" onClick={() => onEdit(task)} className={titleButton}>
                 {task.title}
@@ -186,7 +195,7 @@ export const TaskCard: React.FC<TaskCardProps> = ({
 
         <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] text-slate-500">
           <TaskDates task={task} now={now} />
-          <AlarmBadge task={task} />
+          <AlarmBadge task={task} now={now} />
           <EstimateBadge minutes={task.estimateMinutes} />
           {variant !== 'someday' && <PriorityBadge task={task} now={now} />}
           {goal ? (
