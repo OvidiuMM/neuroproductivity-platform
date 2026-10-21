@@ -74,6 +74,11 @@ export const decideRequest = (
   return now.getTime() >= retryAt ? { action: 'create' } : { action: 'wait', retryAt: new Date(retryAt).toISOString() };
 };
 
+// Estado de una solicitud nueva: con la aprobación libre, una cuenta que nunca pidió acceso entra sola; una que fue
+// rechazada o retirada y vuelve a pedirlo espera a la administración, en cualquier modo (fue su decisión)
+export const newRequestStatus = (previous: AccessRecord | undefined, approvalRequired: boolean) =>
+  !approvalRequired && !previous ? ('approved' as const) : ('pending' as const);
+
 // Aprobar desde cualquier estado no aprobado (también desbloquea), rechazar solo pendientes, retirar a quien tiene
 // acceso o está bloqueado (desbloquear sin dar acceso) y bloquear desde cualquier otro estado
 export const canDecide = (from: AccessStatus, to: DecisionStatus) =>

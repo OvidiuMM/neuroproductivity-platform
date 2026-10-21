@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
 import { Eye, EyeOff, Mail } from 'lucide-react';
 import { describeAuthError, MIN_PASSWORD_LENGTH } from '../services/auth';
+import { MIN_AGE } from '../services/legal';
+import { LegalLink } from './LegalLinks';
 
 export type EmailAuthMode = 'signin' | 'signup' | 'reset';
 type Mode = EmailAuthMode;
@@ -44,6 +46,8 @@ export const EmailAuthForm: React.FC<EmailAuthFormProps> = ({
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [info, setInfo] = useState<string | null>(null);
+  // Al crear la cuenta se confirma la edad y se aceptan las condiciones (con el registro abierto no hay quien lo revise)
+  const [accepted, setAccepted] = useState(false);
 
   const switchTo = (next: Mode) => {
     setMode(next);
@@ -58,6 +62,10 @@ export const EmailAuthForm: React.FC<EmailAuthFormProps> = ({
     setInfo(null);
     if (mode === 'signup' && password.length < MIN_PASSWORD_LENGTH) {
       setError(`La contraseña debe tener al menos ${MIN_PASSWORD_LENGTH} caracteres.`);
+      return;
+    }
+    if (mode === 'signup' && !accepted) {
+      setError(`Para crear la cuenta, confirma que tienes ${MIN_AGE} años o más y acepta las condiciones de uso.`);
       return;
     }
     setBusy(true);
@@ -151,6 +159,24 @@ export const EmailAuthForm: React.FC<EmailAuthFormProps> = ({
               Al menos {MIN_PASSWORD_LENGTH} caracteres. Te enviaremos un email para confirmar tu dirección.
             </p>
           )}
+        </div>
+      )}
+
+      {mode === 'signup' && (
+        <div className="flex items-start gap-2 text-xs leading-relaxed text-slate-700">
+          <input
+            id="auth-accept"
+            type="checkbox"
+            checked={accepted}
+            onChange={(e) => setAccepted(e.target.checked)}
+            className="mt-0.5 h-4 w-4 shrink-0 rounded border-slate-300 text-indigo-600 focus:ring-indigo-400"
+          />
+          <label htmlFor="auth-accept">
+            Tengo {MIN_AGE} años o más (o la edad mínima legal en mi país, si es mayor) y acepto las condiciones de uso
+          </label>
+          <LegalLink to="terms" newTab>
+            (leerlas)
+          </LegalLink>
         </div>
       )}
 

@@ -52,8 +52,9 @@ export const PrivacyPolicy: React.FC = () => (
       <List>
         <li>
           <strong>Tu cuenta:</strong> nombre, email, foto de perfil (si entras con Google), fecha de alta y del último
-          acceso. Si entras con email, la contraseña la guarda Firebase Authentication de forma que nadie, tampoco CLAR,
-          puede leerla. Sirven para crear tu cuenta y dejarte entrar.
+          acceso, y cuándo aceptaste estas condiciones (y su versión). Si entras con email, la contraseña la guarda
+          Firebase Authentication de forma que nadie, tampoco CLAR, puede leerla. Sirven para crear tu cuenta y dejarte
+          entrar.
         </li>
         <li>
           <strong>Lo que escribes en CLAR:</strong> tareas (títulos, descripciones, notas, enlaces, fechas, alarmas y de
@@ -65,9 +66,9 @@ export const PrivacyPolicy: React.FC = () => (
           incluir el nombre y el email de otras personas: añádelos solo si tienes motivo para ello.
         </li>
         <li>
-          <strong>Solicitud de acceso:</strong> si la administración aprueba las cuentas una a una, tu nombre, email,
-          foto y el mensaje que escribas, con el estado y la fecha de la decisión. Sirven para decidir el acceso y
-          evitar abusos.
+          <strong>Registro de acceso:</strong> tu nombre, email y foto, el estado de tu acceso y sus fechas y, si pides
+          acceso, el mensaje que escribas. Sirven para gestionar el acceso (aprobarlo cuando se revisan las cuentas,
+          retirarlo o bloquearlo) y evitar abusos.
         </li>
         <li>
           <strong>Mensajes de «Escríbenos»:</strong> el tipo, el asunto y el texto, con tu nombre y tu email, y las
@@ -161,11 +162,12 @@ export const PrivacyPolicy: React.FC = () => (
       <List>
         <li>Tú, desde cualquier dispositivo con tu cuenta.</li>
         <li>
-          Desde la app, la administración de CLAR (su titular) ve solo las solicitudes de acceso, las funciones extra de
-          cada cuenta y los mensajes de «Escríbenos»: las reglas de la base de datos no le dejan leer tus tareas, metas,
-          proyectos, evaluaciones, reuniones, correos ni borradores. Como responsable del proyecto en Google Cloud, el
-          titular podría acceder técnicamente a todos los datos desde la consola; solo lo hará cuando sea imprescindible
-          para mantener el servicio, resolver una incidencia o atender una petición tuya.
+          Desde la app, la administración de CLAR (su titular) ve solo la lista de cuentas (nombre, email, foto y estado
+          de acceso), las funciones extra de cada cuenta y los mensajes de «Escríbenos»: las reglas de la base de datos
+          no le dejan leer tus tareas, metas, proyectos, evaluaciones, reuniones, correos ni borradores. Como
+          responsable del proyecto en Google Cloud, el titular podría acceder técnicamente a todos los datos desde la
+          consola; solo lo hará cuando sea imprescindible para mantener el servicio, resolver una incidencia o atender
+          una petición tuya.
         </li>
         <li>
           Encargados del tratamiento, que tratan los datos solo para prestar su servicio: Google, con Firebase
@@ -200,7 +202,7 @@ export const PrivacyPolicy: React.FC = () => (
     <Section id="privacy-retention" title="Cuánto tiempo se guardan">
       <List>
         <li>Tu cuenta y lo que escribes: hasta que lo borres o elimines la cuenta.</li>
-        <li>Solicitud de acceso y mensajes de «Escríbenos»: hasta que elimines la cuenta.</li>
+        <li>Registro de acceso y mensajes de «Escríbenos»: hasta que elimines la cuenta.</li>
         <li>
           Funciones extra: hasta que la administración te las quite o te retire o bloquee el acceso, o elimines la
           cuenta.

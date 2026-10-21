@@ -24,7 +24,7 @@ interface AccessRequestScreenProps {
 const COPY: Record<AccessRequestScreenProps['status'], { title: string; text: string }> = {
   none: {
     title: 'Solicita acceso',
-    text: 'El acceso a CLAR se aprueba cuenta a cuenta. Envía tu solicitud y te avisaremos por email cuando esté aprobada.'
+    text: 'Tu cuenta aún no tiene acceso. Solicítalo: si la aprobación es automática, entrarás al momento; si no, te avisaremos por email cuando esté aprobada.'
   },
   pending: {
     title: 'Solicitud enviada',
@@ -32,11 +32,11 @@ const COPY: Record<AccessRequestScreenProps['status'], { title: string; text: st
   },
   rejected: {
     title: 'Solicitud no aprobada',
-    text: 'Tu solicitud de acceso no se ha aprobado. Pasado un día puedes volver a solicitarlo.'
+    text: 'Tu solicitud de acceso no se ha aprobado. Pasado un día puedes volver a solicitarlo, y la administración lo revisará.'
   },
   revoked: {
     title: 'Acceso retirado',
-    text: 'Tu acceso a CLAR se ha retirado. Tus datos siguen guardados. Pasado un día puedes volver a solicitarlo.'
+    text: 'Tu acceso a CLAR se ha retirado. Tus datos siguen guardados. Pasado un día puedes volver a solicitarlo, y la administración lo revisará.'
   },
   blocked: {
     title: 'Cuenta bloqueada',
@@ -228,7 +228,7 @@ export const AccessRequestScreen: React.FC<AccessRequestScreenProps> = ({
             )}
 
             <p className="text-[11px] leading-relaxed text-slate-600">
-              Para revisar tu solicitud se guardan tu nombre, tu email, tu foto de perfil (si entras con Google) y el
+              Para gestionar tu acceso se guardan tu nombre, tu email, tu foto de perfil (si entras con Google) y el
               mensaje, en servidores de Google Cloud en la Unión Europea (Bélgica).
             </p>
 

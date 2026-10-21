@@ -128,6 +128,19 @@ export const buildFeedbackEmail = (ticket: FeedbackTicket, appUrl: string) => ({
   text: `Hay un mensaje nuevo (${TYPE_LABEL[ticket.type]}). Léelo y contesta en «Administración» → «Mensajes»: ${appUrl}`
 });
 
+// Avisos a la administración: como mucho uno cada 15 minutos (con el registro abierto podrían llegar muchos). Un mensaje
+// que llega antes se apunta y sale en el resumen siguiente (flushFeedbackNotices)
+export const NOTICE_INTERVAL_MS = 15 * 60 * 1000;
+export const noticeDue = (lastSentAt: unknown, now: Date) => {
+  const last = typeof lastSentAt === 'string' ? Date.parse(lastSentAt) : NaN;
+  return !Number.isFinite(last) || now.getTime() - last >= NOTICE_INTERVAL_MS;
+};
+
+export const buildFeedbackDigestEmail = (count: number, appUrl: string) => ({
+  subject: `[CLAR] ${count === 1 ? 'Un mensaje nuevo' : `${count} mensajes nuevos`}`,
+  text: `Hay ${count === 1 ? 'un mensaje nuevo' : `${count} mensajes nuevos`} desde el último aviso. Léelos y contesta en «Administración» → «Mensajes»: ${appUrl}`
+});
+
 // Respuesta a quien escribió, en texto plano y con su mensaje citado. Si contesta, le llega al buzón que la envía.
 export const buildReplyEmail = (ticket: FeedbackTicket, message: string, appUrl: string) => ({
   subject: `Re: [CLAR] ${ticket.subject}`,

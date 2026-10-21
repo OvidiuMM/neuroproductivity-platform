@@ -193,7 +193,8 @@ export const AccessAdminView: React.FC<AccessAdminViewProps> = ({
     <div className="space-y-5">
       <p className="text-xs text-slate-600">
         Aprueba quién puede usar la app. Cada solicitud nueva te llega también por email, y la persona recibe otro
-        cuando la apruebas.
+        cuando la apruebas. Con la aprobación desactivada no llegan emails: las cuentas nuevas salen aquí como «Nueva».
+        Una cuenta retirada puede eliminarse y volver con el mismo email; para impedirlo, bloquéala.
       </p>
 
       <section
@@ -238,7 +239,7 @@ export const AccessAdminView: React.FC<AccessAdminViewProps> = ({
           >
             <p>
               Sin aprobación obligatoria, las cuentas nuevas o pendientes con el email confirmado entran solas; las
-              rechazadas, retiradas y bloqueadas, no.
+              rechazadas, retiradas y bloqueadas, no (si vuelven a pedir acceso, esperan a que lo decidas).
               {pendingCount > 0 &&
                 ` También se aprobarán ${pendingCount === 1 ? 'la solicitud pendiente' : `las ${pendingCount} solicitudes pendientes`}.`}
             </p>
