@@ -65,7 +65,7 @@ import { MoreSheet } from './components/MoreSheet';
 import { FeedbackDialog } from './components/FeedbackDialog';
 import { AlarmAlerts, type AlarmAlert } from './components/AlarmAlerts';
 import { useTaskAlarms } from './hooks/useTaskAlarms';
-import { alarmLateNote, formatClock } from './services/alarms';
+import { alarmLateNote, alarmSetAtFor, formatClock } from './services/alarms';
 import {
   NOTIFICATIONS_GRANTED_EVENT,
   notificationState,
@@ -590,12 +590,18 @@ export default function App({ user, services, isAdmin = false }: AppProps) {
     const now = new Date().toISOString();
     if (editingTask) {
       const current = tasks.find((t) => t.id === editingTask.id) ?? editingTask;
-      saveTask(db, uid, { ...current, ...taskData, updatedAt: now }).catch(reportError('guardar la tarea'));
+      saveTask(db, uid, {
+        ...current,
+        ...taskData,
+        alarmSetAt: alarmSetAtFor(current, taskData, now),
+        updatedAt: now
+      }).catch(reportError('guardar la tarea'));
       showToast('Tarea guardada.');
       setEditingTask(null);
     } else {
       const newTask: TaskItem = {
         ...taskData,
+        alarmSetAt: alarmSetAtFor(null, taskData, now),
         id: `task-${Date.now()}`,
         userId: uid,
         createdAt: now,

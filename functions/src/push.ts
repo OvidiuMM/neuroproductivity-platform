@@ -191,43 +191,43 @@ const sendWithFcm: SendMulticast = (message) => getMessaging().sendEachForMultic
 
 // Envía una alarma de la cola. La toma en una transacción, comprobando que sigue tocando: se vuelve a calcular con la
 // tarea tal como está ahora y, si ya no es la de la cola (la tarea cambió entretanto, o la regla: p. ej. las colas de
-// antes de 0.9.7, que sonaban la víspera), se pone la de ahora en su lugar, que espera a su hora. Apunta que se envió. Una alarma cuyo plazo ya venció no se envía, ni a un
-// dispositivo que lleva 30 días sin abrir CLAR. Si ningún dispositivo la recibe por un fallo pasajero, vuelve a la cola
+// antes de 0.9.7, que sonaban la víspera), se pone la de ahora en su lugar, que espera a su hora ('requeued'). Apunta
+// que se envió. Una alarma cuyo plazo ya venció no se envía, ni a un dispositivo que lleva 30 días sin abrir CLAR. Si ningún dispositivo la recibe por un fallo pasajero, vuelve a la cola
 // con una espera creciente (1, 2, 4, 8 min) y, tras cinco intentos, se deja.
 export const sendQueued = async (ref: DocumentReference, now: number, send: SendMulticast = sendWithFcm) => {
   const claimed = await db().runTransaction(async (tx) => {
     const snapshot = await tx.get(ref);
     const data = snapshot.data();
     if (!data || (data.at as Timestamp).toMillis() > now) return null;
-    const [task, devices] = await Promise.all([
-      tx.get(db().doc(`users/${data.uid as string}/tasks/${data.taskId as string}`)),
-      tx.get(devicesRef(data.uid as string))
+    const uid = data.uid as string;
+    const taskId = data.taskId as string;
+    // Un reintento no choca con la última enviada: al fallar se borra (ver abajo)
+    const [task, devices, sent] = await Promise.all([
+      tx.get(db().doc(`users/${uid}/tasks/${taskId}`)),
+      tx.get(devicesRef(uid)),
+      tx.get(sentRef(uid, taskId))
     ]);
-    // (sin comparar con la última enviada: un reintento lleva la misma alarma, que ya se apuntó como enviada)
-    const current = pendingAlarm(data.taskId as string, task.data(), devices.data()?.timeZone, undefined, now);
-    if (current?.key !== data.key) {
-      if (current) tx.set(ref, queueDoc(data.uid as string, data.taskId as string, current));
+    const current = pendingAlarm(taskId, task.data(), devices.data()?.timeZone, sent.data()?.key, now);
+    if (!current || current.key !== data.key) {
+      if (current) tx.set(ref, queueDoc(uid, taskId, current));
       else tx.delete(ref);
-      return null;
+      return current ? 'requeued' : null;
     }
     tx.delete(ref);
-    tx.set(sentRef(data.uid as string, data.taskId as string), {
-      uid: data.uid as string,
-      taskId: data.taskId as string,
-      key: data.key as string,
-      sentAt: Timestamp.fromMillis(now)
-    });
-    return data;
+    tx.set(sentRef(uid, taskId), { uid, taskId, key: current.key, sentAt: Timestamp.fromMillis(now) });
+    // Con el texto de ahora, por si el nombre o el plazo cambiaron y el trigger aún no ha pasado
+    return { ...queueDoc(uid, taskId, current), attempts: Number(data.attempts ?? 0) };
   });
-  if (!claimed || (claimed.due as Timestamp).toMillis() <= now) return 'skipped';
-  const uid = claimed.uid as string;
+  if (claimed === 'requeued') return 'requeued';
+  if (!claimed || claimed.due.toMillis() <= now) return 'skipped';
+  const uid = claimed.uid;
   const all = await tokensRef(uid).get();
   const stale = all.docs.filter((d) => Date.parse(String(d.data().updatedAt)) < now - STALE_TOKEN_MS);
   await Promise.all(stale.map((d) => dropToken(uid, d.id)));
   const tokens = all.docs.filter((d) => !stale.includes(d));
   if (tokens.length === 0) return 'skipped';
 
-  const ttl = Math.min(24 * 60 * 60, Math.max(60, Math.floor(((claimed.due as Timestamp).toMillis() - now) / 1000)));
+  const ttl = Math.min(24 * 60 * 60, Math.max(60, Math.floor((claimed.due.toMillis() - now) / 1000)));
   const alarm = { clock: String(claimed.clock), taskTitle: String(claimed.taskTitle) };
   // Un envío por cada forma del texto: con el nombre de la tarea solo a los dispositivos que lo piden
   const groups = [true, false]
@@ -266,7 +266,7 @@ export const sendQueued = async (ref: DocumentReference, now: number, send: Send
     await ref
       .create({ ...claimed, attempts, at: Timestamp.fromMillis(now + 2 ** (attempts - 1) * 60_000) })
       .catch(() => undefined);
-    await sentRef(uid, claimed.taskId as string).delete();
+    await sentRef(uid, claimed.taskId).delete();
   }
   return 'failed';
 };
@@ -310,6 +310,7 @@ export const sendDueAlarms = onSchedule(
       logger.info('Alarms processed', {
         sent: outcomes.filter((o) => o === 'sent').length,
         skipped: outcomes.filter((o) => o === 'skipped').length,
+        requeued: outcomes.filter((o) => o === 'requeued').length,
         failed: outcomes.filter((o) => o === 'failed').length,
         staleTokens: dropped
       });

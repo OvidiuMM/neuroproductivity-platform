@@ -1,7 +1,8 @@
-import { expect, test, type Page } from '@playwright/test';
+import { expect, test } from '@playwright/test';
 import {
   deleteDocument,
   listDocuments,
+  localDateFromToday,
   openSection,
   readDocument,
   signInWithGoogle,
@@ -14,16 +15,6 @@ import {
 // prepara un dispositivo registrado a mano y se hace de envío apuntando la alarma como enviada.
 test.use({ timezoneId: 'Europe/Madrid' });
 
-const fromNow = (page: Page, minutes: number) =>
-  page.evaluate((m) => {
-    const d = new Date(Date.now() + m * 60_000);
-    const pad = (n: number) => String(n).padStart(2, '0');
-    return {
-      date: `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`,
-      time: `${pad(d.getHours())}:${pad(d.getMinutes())}`
-    };
-  }, minutes);
-
 test('an alarm already sent is not queued again when the task is edited, only when its alarm changes', async ({
   page
 }) => {
@@ -35,14 +26,13 @@ test('an alarm already sent is not queued again when the task is edited, only wh
   await writeTextDocument(`push_devices/${uid}`, { timeZone: 'Europe/Madrid' });
   await openSection(page, 'Listas');
 
-  // Una tarea con una alarma que ya pasó, antes del plazo: entra en la cola
+  // Una tarea con alarma (mañana a las 10:00, antes del plazo de las 12:00): entra en la cola
   const title = `Pagar el alquiler ${Date.now().toString(36)}`;
-  const due = await fromNow(page, 60);
   await page.getByRole('button', { name: 'Nueva tarea', exact: true }).click();
   await page.getByPlaceholder('ej. Llamar al proveedor para acordar el plazo de entrega').fill(title);
-  await page.getByLabel('Fecha límite', { exact: true }).fill(due.date);
-  await page.getByLabel('Hora límite').fill(due.time);
-  await page.getByLabel(/^Alarma/).fill((await fromNow(page, -3)).time);
+  await page.getByLabel('Fecha límite', { exact: true }).fill(localDateFromToday(1));
+  await page.getByLabel('Hora límite').fill('12:00');
+  await page.getByLabel(/^Alarma/).fill('10:00');
   await page.getByRole('button', { name: 'Guardar la tarea' }).click();
 
   let taskId = '';
@@ -80,7 +70,7 @@ test('an alarm already sent is not queued again when the task is edited, only wh
 
   // Otra hora de alarma es otra alarma: vuelve a la cola
   await page.getByRole('heading', { name: title }).click();
-  await page.getByLabel(/^Alarma/).fill((await fromNow(page, 20)).time);
+  await page.getByLabel(/^Alarma/).fill('11:00');
   await page.getByRole('button', { name: 'Guardar los cambios' }).click();
   await expect
     .poll(
