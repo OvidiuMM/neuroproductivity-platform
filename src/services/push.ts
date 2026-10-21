@@ -6,7 +6,7 @@ import { usingEmulators, type FirebaseServices } from './firebase';
 // Messaging, su zona horaria y si quiere ver el nombre de la tarea, y el servidor (functions/src/push.ts) envía cada
 // alarma a su hora. El service worker (public/sw.js) la muestra. Sin la clave pública VAPID en la compilación
 // (VITE_FCM_VAPID_KEY) o con los emuladores, no se ofrece: las alarmas siguen avisando con CLAR abierta.
-const VAPID_KEY = import.meta.env.VITE_FCM_VAPID_KEY;
+const VAPID_KEY = import.meta.env.VITE_FCM_VAPID_KEY?.trim();
 // El registro se renueva una vez al día como mucho (FCM cambia el token de vez en cuando; el servidor borra los que no
 // se renuevan en 30 días)
 const REFRESH_MS = 24 * 60 * 60 * 1000;

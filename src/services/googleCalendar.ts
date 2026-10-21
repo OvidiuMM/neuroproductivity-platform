@@ -8,8 +8,9 @@ import type { FirebaseServices } from './firebase';
 // esta ventana, y la Cloud Function connectGoogleCalendar lo canjea, crea el calendario «CLAR» y sube las tareas
 // (functions/src/calendarSync.ts). La app solo lee el estado de la conexión (calendar_status/{uid}).
 // Sin el id del cliente OAuth en la compilación (VITE_GOOGLE_OAUTH_CLIENT_ID), no se ofrece.
-// (Fuera de Vite, p. ej. en las pruebas unitarias, no hay `import.meta.env`)
-const CLIENT_ID = (import.meta.env as ImportMetaEnv | undefined)?.VITE_GOOGLE_OAUTH_CLIENT_ID;
+// (Fuera de Vite, p. ej. en las pruebas unitarias, no hay `import.meta.env`). Sin espacios: con ellos Google no
+// reconoce el cliente («invalid_client»)
+const CLIENT_ID = (import.meta.env as ImportMetaEnv | undefined)?.VITE_GOOGLE_OAUTH_CLIENT_ID?.trim();
 const AUTH_URL = 'https://accounts.google.com/o/oauth2/v2/auth';
 export const CALENDAR_SCOPE = 'https://www.googleapis.com/auth/calendar.app.created';
 export const OAUTH_CALLBACK_PATH = '/oauth/google.html';
