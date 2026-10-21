@@ -94,7 +94,9 @@ const ProjectCard: React.FC<{
       aria-label={`Abrir el proyecto «${project.title}»`}
       className="block min-h-11 w-full text-left"
     >
-      <span className="block text-sm font-bold break-words text-slate-900 hover:text-indigo-700">{project.title}</span>
+      <span className="block text-sm font-bold wrap-anywhere text-slate-900 hover:text-indigo-700">
+        {project.title}
+      </span>
       <span className="mt-0.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] text-slate-600">
         <span className="inline-flex items-center gap-1 font-semibold text-indigo-700">
           <Target className="h-3 w-3" aria-hidden="true" />
@@ -174,7 +176,7 @@ export const ProjectsView: React.FC<ProjectsViewProps> = ({
               id="project-title"
               ref={headingRef}
               tabIndex={-1}
-              className="text-lg font-bold break-words text-slate-900 focus:outline-none"
+              className="text-lg font-bold wrap-anywhere text-slate-900 focus:outline-none"
             >
               {selected.title}
             </h2>
@@ -270,7 +272,7 @@ export const ProjectsView: React.FC<ProjectsViewProps> = ({
               <ul className="space-y-1 border-t border-slate-100 p-3">
                 {closed.map((task) => (
                   <li key={task.id} className="flex flex-wrap items-baseline justify-between gap-2 text-sm">
-                    <span className="break-words text-slate-700">{task.title}</span>
+                    <span className="wrap-anywhere text-slate-700">{task.title}</span>
                     <span className="text-[11px] text-slate-500">{statusLabel(task.status)}</span>
                   </li>
                 ))}

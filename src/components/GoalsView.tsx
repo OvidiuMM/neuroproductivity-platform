@@ -79,7 +79,7 @@ const GoalCard: React.FC<{
     <li className="space-y-3 rounded-xl border border-slate-200 bg-white p-4">
       <div className="flex items-start justify-between gap-2">
         <div className="min-w-0 space-y-1">
-          <h4 className={`text-sm font-bold break-words ${active ? 'text-slate-900' : 'text-slate-600'}`}>
+          <h4 className={`text-sm font-bold wrap-anywhere ${active ? 'text-slate-900' : 'text-slate-600'}`}>
             {goal.title}
           </h4>
           <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] text-slate-600">
@@ -150,7 +150,7 @@ const GoalCard: React.FC<{
                 aria-label={`Abrir el proyecto «${project.title}»`}
                 className="flex min-h-11 w-full items-center justify-between gap-2 rounded-lg px-2 text-left hover:bg-slate-50"
               >
-                <span className="flex min-w-0 items-center gap-1.5 text-sm break-words text-slate-800">
+                <span className="flex min-w-0 items-center gap-1.5 text-sm wrap-anywhere text-slate-800">
                   <FolderKanban className="h-4 w-4 shrink-0 text-indigo-600" aria-hidden="true" />
                   {project.title}
                 </span>
@@ -177,7 +177,7 @@ const GoalCard: React.FC<{
                   className="flex min-h-11 w-full flex-col justify-center rounded-lg px-2 text-left hover:bg-slate-50"
                 >
                   <span
-                    className={`text-sm break-words ${today ? 'font-bold' : ''} ${DEADLINE_TITLE_CLASS[deadline] || 'text-slate-800'}`}
+                    className={`text-sm wrap-anywhere ${today ? 'font-bold' : ''} ${DEADLINE_TITLE_CLASS[deadline] || 'text-slate-800'}`}
                   >
                     {task.title}
                   </span>
