@@ -1,5 +1,5 @@
 import { expect, test, type BrowserContext, type Page } from '@playwright/test';
-import { openSection, showMoreOptions, signInWithGoogle } from './helpers';
+import { installClockAwayFromMidnight, openSection, showMoreOptions, signInWithGoogle } from './helpers';
 
 test.use({ timezoneId: 'Europe/Madrid' });
 
@@ -61,7 +61,7 @@ const newTaskWithAlarm = async (page: Page, title: string, due: { date: string; 
 test('an alarm warns in CLAR and with a system notification, only once', async ({ page }) => {
   test.slow(); // Recarga la página
   await fakeNotifications(page);
-  await page.clock.install();
+  await installClockAwayFromMidnight(page);
   await page.goto('/');
   await signInWithGoogle(page);
   await openSection(page, 'Listas');
@@ -120,7 +120,7 @@ test('an alarm that passed with CLAR closed warns on opening while the task is n
       original.call(this, key, value);
     };
   });
-  await page.clock.install();
+  await installClockAwayFromMidnight(page);
   await page.goto('/');
   await signInWithGoogle(page);
   await openSection(page, 'Listas');
@@ -163,8 +163,9 @@ test('an alarm needs a due date; it rings that day, before the due time if there
   await alarmField.fill('20:00');
   await expect(alarmField).toHaveAccessibleDescription(/^Sonará el 15 jun a las 20:00\./);
 
-  // Repetida sin hora: también la lleva, cada repetición su día
+  // Repetida sin hora: también la lleva, cada repetición su día (desde el 10 de junio de 2030)
   await showMoreOptions(page);
+  await page.getByLabel('Fecha de inicio', { exact: true }).fill('2030-06-10');
   await page.getByLabel('Repetir').selectOption('WEEKLY');
   await expect(alarmField).toBeEnabled();
   await expect(alarmField).toHaveValue('20:00');
@@ -173,7 +174,9 @@ test('an alarm needs a due date; it rings that day, before the due time if there
   // Con hora límite, tiene que ser antes: si no, lo dice y no deja guardar
   await page.getByLabel('Hora límite').fill('09:00');
   await expect(
-    page.getByRole('alert').filter({ hasText: 'La alarma tiene que ser antes de la hora límite (09:00).' })
+    page
+      .getByRole('alert')
+      .filter({ hasText: 'La alarma tiene que ser antes de la hora límite (09:00): cámbiala o quítala.' })
   ).toBeVisible();
   await expect(page.getByRole('button', { name: 'Guardar la tarea' })).toBeDisabled();
   await alarmField.fill('08:30');
@@ -182,7 +185,7 @@ test('an alarm needs a due date; it rings that day, before the due time if there
 
 test('an alarm saved after its time says it will not ring, and does not', async ({ page }) => {
   await fakeNotifications(page, 'granted');
-  await page.clock.install();
+  await installClockAwayFromMidnight(page);
   await page.goto('/');
   await signInWithGoogle(page);
   await openSection(page, 'Listas');
@@ -190,7 +193,7 @@ test('an alarm saved after its time says it will not ring, and does not', async 
   const alarmTime = (await fromNow(page, -5)).time;
   await newTaskWithAlarm(page, title, await fromNow(page, 20), alarmTime);
   await expect(page.getByLabel(/^Alarma/)).toHaveAccessibleDescription(
-    new RegExp(`^Esa hora ya ha pasado \\((hoy|ayer|el .+) a las ${alarmTime}\\): no sonará\\.`)
+    new RegExp(`^Esa hora ya ha pasado \\((hoy|el .+) a las ${alarmTime}\\): no sonará\\.`)
   );
   await page.getByRole('button', { name: 'Guardar la tarea' }).click();
   await expect(page.getByRole('dialog')).toHaveCount(0);
@@ -204,12 +207,12 @@ test('with two tabs open, both show the alert and the system notification comes 
   test.slow(); // Dos pestañas
   await fakeNotifications(context, 'granted');
   const first = await context.newPage();
-  await first.clock.install();
+  await installClockAwayFromMidnight(first);
   await first.goto('/');
   await signInWithGoogle(first);
   await openSection(first, 'Listas');
   const second = await context.newPage();
-  await second.clock.install();
+  await installClockAwayFromMidnight(second);
   await second.goto('/');
   await openSection(second, 'Listas');
 
@@ -237,7 +240,7 @@ test('on Android the notification comes from the service worker, and the account
   });
   await fakeNotifications(context);
   const page = await context.newPage();
-  await page.clock.install();
+  await installClockAwayFromMidnight(page);
   await page.goto('/');
   await signInWithGoogle(page);
   await expect

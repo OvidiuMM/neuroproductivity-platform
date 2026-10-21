@@ -16,7 +16,7 @@ export interface AlarmTask {
   dueTime?: unknown;
   alarmTime?: unknown;
   recurrence?: unknown;
-  updatedAt?: unknown;
+  alarmSetAt?: unknown;
 }
 
 // Una zona horaria IANA que entiende el entorno (p. ej. «Europe/Madrid»)
@@ -115,15 +115,15 @@ const clock = (instant: number, timeZone: string) =>
 const day = (instant: number, timeZone: string) =>
   new Intl.DateTimeFormat('es-ES', { timeZone, day: 'numeric', month: 'short' }).format(instant);
 
-// La alarma por avisar de una tarea, o null: sin alarma, archivada, en «Algún día», con el plazo ya vencido o guardada
-// después de la hora de la alarma (se puso tarde, o se tocó la tarea después: como en la app, no suena)
+// La alarma por avisar de una tarea, o null: sin alarma, archivada, en «Algún día», con el plazo ya vencido o puesta
+// (o cambiada) después de su hora: como en la app, no suena
 export const queuedAlarm = (taskId: string, task: AlarmTask, timeZone: string, now: number): QueuedAlarm | null => {
   if (isArchived(task) || task.isSomeday === true) return null;
   const at = alarmInstant(task, timeZone);
   const due = dueInstant(task, timeZone);
   if (at === null || due === null || due <= now) return null;
-  const saved = typeof task.updatedAt === 'string' ? Date.parse(task.updatedAt) : NaN;
-  if (Number.isFinite(saved) && at <= saved) return null;
+  const set = typeof task.alarmSetAt === 'string' ? Date.parse(task.alarmSetAt) : NaN;
+  if (Number.isFinite(set) && at <= set) return null;
   const hasDueTime = typeof task.dueTime === 'string' && ALARM_TIME.test(task.dueTime);
   return {
     at,

@@ -6,6 +6,7 @@ import {
   alarmLabel,
   alarmLateNote,
   alarmMoment,
+  alarmSetAtFor,
   alarmUnavailableReason,
   describeAlarm,
   matchPendingAlerts,
@@ -120,6 +121,36 @@ test('with a due time, the form only takes an alarm before it', () => {
   assert.equal(alarmError({ dueTime: '11:00' }), null);
 });
 
+test('a late alarm still warns after other changes to the task; one set after its time does not', () => {
+  const now = new Date(2030, 5, 15, 10, 0);
+  const missed = { dueDate: '2030-06-15', dueTime: '12:00', alarmTime: '09:00' };
+  // Puesta el día antes; después se cambió el estado (o se borró su meta): avisa al abrir
+  const edited = task({
+    ...missed,
+    alarmSetAt: new Date(2030, 5, 14, 18, 0).toISOString(),
+    updatedAt: new Date(2030, 5, 15, 9, 30).toISOString(),
+    status: 'IN_PROGRESS'
+  });
+  assert.equal(scheduledAlarms([edited], now).length, 1);
+});
+
+test('the alarm is marked as set when it, the day or the repetition changes, not with other edits', () => {
+  const now = '2030-06-15T08:00:00.000Z';
+  const before = {
+    dueDate: '2030-06-15',
+    dueTime: '12:00',
+    alarmTime: '09:00',
+    alarmSetAt: '2030-06-14T18:00:00.000Z'
+  };
+  assert.equal(alarmSetAtFor(null, before, now), now);
+  assert.equal(alarmSetAtFor(before, { ...before }, now), before.alarmSetAt);
+  assert.equal(alarmSetAtFor(before, { ...before, alarmTime: '10:00' }, now), now);
+  assert.equal(alarmSetAtFor(before, { ...before, dueDate: '2030-06-16' }, now), now);
+  assert.equal(alarmSetAtFor(before, { ...before, dueTime: '13:00' }, now), now);
+  assert.equal(alarmSetAtFor(before, { ...before, recurrence: { frequency: 'DAILY', interval: 1 } }, now), now);
+  assert.equal(alarmSetAtFor(before, { ...before, alarmTime: undefined }, now), undefined);
+});
+
 test('the card says the day and time it will ring', () => {
   const now = new Date(2030, 5, 15, 9, 0);
   assert.equal(alarmLabel(new Date(2030, 5, 15, 17, 0), now), 'hoy 17:00');
@@ -139,13 +170,13 @@ test('scheduled alarms skip done, cancelled, someday and overdue tasks, and come
     task({ id: 'cancelled', dueDate: '2030-06-15', dueTime: '11:00', alarmTime: '10:57', status: 'CANCELLED' }),
     task({ id: 'someday', dueDate: '2030-06-15', dueTime: '11:00', alarmTime: '10:57', isSomeday: true }),
     task({ id: 'none', dueDate: '2030-06-15', dueTime: '11:00' }),
-    // Guardada después de la hora de su alarma (se puso tarde): no suena
+    // La alarma se puso después de su hora: no suena
     task({
       id: 'set-late',
       dueDate: '2030-06-15',
       dueTime: '12:00',
       alarmTime: '09:00',
-      updatedAt: new Date(2030, 5, 15, 9, 30).toISOString()
+      alarmSetAt: new Date(2030, 5, 15, 9, 30).toISOString()
     })
   ];
   const alarms = scheduledAlarms(tasks, now);

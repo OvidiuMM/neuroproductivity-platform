@@ -109,9 +109,10 @@ describe('queuedAlarm', () => {
     status: 'PENDING'
   };
 
-  it('skips an alarm whose time had passed when the task was saved, like the app', () => {
-    assert.equal(queuedAlarm('task-1', { ...task, updatedAt: '2026-10-17T08:45:00.000Z' }, MADRID, now), null);
-    assert.ok(queuedAlarm('task-1', { ...task, updatedAt: '2026-10-17T08:00:00.000Z' }, MADRID, now));
+  it('skips an alarm set (or changed) after its time, like the app; other changes to the task do not count', () => {
+    assert.equal(queuedAlarm('task-1', { ...task, alarmSetAt: '2026-10-17T08:45:00.000Z' }, MADRID, now), null);
+    assert.ok(queuedAlarm('task-1', { ...task, alarmSetAt: '2026-10-17T08:00:00.000Z' }, MADRID, now));
+    assert.ok(queuedAlarm('task-1', { ...task, updatedAt: '2026-10-17T08:45:00.000Z' }, MADRID, now));
   });
 
   it('builds the same key as the app, with the title and when it is due', () => {
