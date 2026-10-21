@@ -704,6 +704,7 @@ export const TaskModal: React.FC<TaskModalProps> = ({
                   setOverrideSyntaxWarning(false);
                 }}
                 autoStart={autoDictate && !editingTask}
+                pause={guard.confirming}
               />
             </div>
             {/* Debajo del campo y no encima: con títulos largos o texto ampliado taparía lo escrito */}
@@ -1405,7 +1406,7 @@ export const TaskModal: React.FC<TaskModalProps> = ({
                     value={newObsText}
                     onChange={(e) => setNewObsText(e.target.value)}
                     placeholder="Añade una nota o un enlace…"
-                    className="min-w-0 flex-1 rounded-xl border border-slate-300 px-3 py-1.5 text-xs focus:ring-2 focus:ring-indigo-400 focus:outline-none"
+                    className="min-w-32 flex-1 rounded-xl border border-slate-300 px-3 py-1.5 text-xs focus:ring-2 focus:ring-indigo-400 focus:outline-none"
                     onKeyDown={(e) => {
                       if (e.key === 'Enter') {
                         e.preventDefault();
@@ -1413,7 +1414,12 @@ export const TaskModal: React.FC<TaskModalProps> = ({
                       }
                     }}
                   />
-                  <DictateButton label="Dictar una nota" value={newObsText} onChange={setNewObsText} />
+                  <DictateButton
+                    label="Dictar una nota"
+                    value={newObsText}
+                    onChange={setNewObsText}
+                    pause={guard.confirming}
+                  />
                   <button
                     type="button"
                     onClick={handleAddObservation}

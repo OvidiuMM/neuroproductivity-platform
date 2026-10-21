@@ -913,8 +913,8 @@ export default function App({ user, services, isAdmin = false }: AppProps) {
   const [isFirstRunTour, setIsFirstRunTour] = useState(false);
 
   // «NUEVA TAREA POR VOZ», el acceso directo del icono de la app (public/manifest.json): /?nueva=voz abre el formulario
-  // con el micrófono escuchando, y /?nueva=1, sin él. Espera a que no haya otra ventana (la pantalla de inicio, la
-  // bienvenida o el recorrido) y se quita de la dirección, para que recargar no lo repita
+  // con el micrófono escuchando, y /?nueva=1, sin él. Se quita de la dirección al arrancar, para que recargar no lo
+  // repita, y se abre más abajo, cuando no hay otra ventana
   const [launchNewTask, setLaunchNewTask] = useState(() => new URLSearchParams(window.location.search).get('nueva'));
   const [dictateNewTask, setDictateNewTask] = useState(false);
   useEffect(() => {
@@ -923,11 +923,6 @@ export default function App({ user, services, isAdmin = false }: AppProps) {
     url.searchParams.delete('nueva');
     window.history.replaceState(window.history.state, '', url);
   }, []);
-  if (launchNewTask !== null && !showSplash && profileOnboarding.fromServer && !isWelcomeOpen && !isTourOpen) {
-    setLaunchNewTask(null);
-    openNewTask();
-    setDictateNewTask(launchNewTask === 'voz');
-  }
   const startTour = (firstRun = false) => {
     navigate('tasks');
     setIsFirstRunTour(firstRun);
@@ -1010,6 +1005,7 @@ export default function App({ user, services, isAdmin = false }: AppProps) {
     !releaseNotesShown &&
     !releaseNotesClosed &&
     !otherDialogOpen &&
+    launchNewTask === null &&
     profileOnboarding.fromServer &&
     shouldShowReleaseNotes({
       current: __APP_VERSION__,
@@ -1032,6 +1028,21 @@ export default function App({ user, services, isAdmin = false }: AppProps) {
     setIsReleaseNotesReplay(false);
   };
   const isDialogOpen = otherDialogOpen || isReleaseNotesOpen;
+
+  // El acceso directo se abre tras la pantalla de inicio, cuando no hay otra ventana (la bienvenida, el recorrido, la
+  // importación o las novedades, que esperan a que se cierre el formulario) y con el perfil sabido, aunque sea el del
+  // dispositivo (así también sin conexión). Si mientras tanto se abre el formulario de una tarea, el acceso se descarta:
+  // no se pisa lo que se está escribiendo
+  const launchReady =
+    !showSplash &&
+    (profileOnboarding.fromServer || hasSeenOnboarding(profileOnboarding.record, seenOnThisDevice)) &&
+    !isDialogOpen;
+  if (launchNewTask !== null && isTaskModalOpen) setLaunchNewTask(null);
+  else if (launchNewTask !== null && launchReady) {
+    setLaunchNewTask(null);
+    openNewTask();
+    setDictateNewTask(launchNewTask === 'voz');
+  }
 
   // El service worker de las notificaciones (Android solo las muestra desde él) y, con permiso, el registro de este
   // dispositivo para las notificaciones push (las alarmas suenan aunque CLAR esté cerrada)
