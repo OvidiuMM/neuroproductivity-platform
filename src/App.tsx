@@ -48,6 +48,7 @@ import {
   deleteEmail,
   saveTaskDraft,
   deleteTaskDraft,
+  saveTaskFromDraft,
   restoreDeletedEmail,
   saveMeeting,
   saveTask,
@@ -105,7 +106,7 @@ import type { SyncStatus } from './components/SyncIndicator';
 import { TaskList } from './components/TaskList';
 import { TaskModal, type TaskFormData } from './components/TaskModal';
 import { ArchivedTasksModal } from './components/ArchivedTasksModal';
-import { TaskDraftsModal } from './components/TaskDraftsModal';
+import { DRAFTS_BUTTON_ID, TaskDraftsModal } from './components/TaskDraftsModal';
 import { MeetingModal } from './components/MeetingModal';
 import { EmailModal, type EmailSaveKind } from './components/EmailModal';
 import { isDraft } from './services/email';
@@ -608,6 +609,8 @@ export default function App({ user, services, isAdmin = false }: AppProps) {
   const [continuingDraft, setContinuingDraft] = useState<TaskDraft | null>(null);
   const [isDraftsOpen, setIsDraftsOpen] = useState(false);
   const continueDraft = (draft: TaskDraft) => {
+    // El foco pasa al botón «Borradores» (la lista se cierra): al cerrar el formulario vuelve ahí
+    document.getElementById(DRAFTS_BUTTON_ID)?.focus();
     setIsDraftsOpen(false);
     setEditingTask(null);
     setContinuingDraft(draft);
@@ -616,7 +619,13 @@ export default function App({ user, services, isAdmin = false }: AppProps) {
   const handleSaveDraft = (form: TaskFormValues | null) => {
     const previous = continuingDraft;
     if (!form) {
-      if (previous) deleteTaskDraft(db, uid, previous.id).catch(reportError('borrar el borrador'));
+      // Un borrador que se vació deja de serlo (con «Deshacer», vuelve como estaba)
+      if (!previous) return;
+      deleteTaskDraft(db, uid, previous.id).catch(reportError('borrar el borrador'));
+      showToast('Borrador vacío: eliminado.', () => {
+        saveTaskDraft(db, uid, previous).catch(reportError('recuperar el borrador'));
+        showToast('Borrador recuperado.');
+      });
       return;
     }
     const now = new Date().toISOString();
@@ -635,17 +644,19 @@ export default function App({ user, services, isAdmin = false }: AppProps) {
       showToast(previous ? 'El borrador vuelve a estar como antes.' : 'Borrador quitado.');
     });
   };
+  // Eliminar desde la lista: la propia lista ofrece «Deshacer» (el aviso queda debajo de ella), y el aviso también, al
+  // cerrarla
   const handleDeleteDraft = (draft: TaskDraft) => {
     deleteTaskDraft(db, uid, draft.id).catch(reportError('eliminar el borrador'));
-    showToast('Borrador eliminado.', () => {
-      saveTaskDraft(db, uid, draft).catch(reportError('recuperar el borrador'));
-      showToast('Borrador recuperado.');
-    });
+    showToast('Borrador eliminado.', () => restoreDraft(draft));
+  };
+  const restoreDraft = (draft: TaskDraft) => {
+    saveTaskDraft(db, uid, draft).catch(reportError('recuperar el borrador'));
+    showToast('Borrador recuperado.');
   };
 
   const handleSaveTask = (taskData: TaskFormData) => {
     const now = new Date().toISOString();
-    if (continuingDraft) deleteTaskDraft(db, uid, continuingDraft.id).catch(reportError('borrar el borrador'));
     if (editingTask) {
       const current = tasks.find((t) => t.id === editingTask.id) ?? editingTask;
       saveTask(db, uid, {
@@ -666,7 +677,10 @@ export default function App({ user, services, isAdmin = false }: AppProps) {
         updatedAt: now,
         status: 'PENDING'
       };
-      saveTask(db, uid, newTask).catch(reportError('guardar la tarea'));
+      // Desde un borrador: la tarea y el borrador borrado van juntos
+      (continuingDraft ? saveTaskFromDraft(db, uid, newTask, continuingDraft.id) : saveTask(db, uid, newTask)).catch(
+        reportError('guardar la tarea')
+      );
       showToast(taskData.isSomeday ? 'Tarea guardada en «Algún día».' : 'Tarea añadida.');
     }
   };
@@ -1520,6 +1534,7 @@ export default function App({ user, services, isAdmin = false }: AppProps) {
           drafts={taskDrafts}
           onContinue={continueDraft}
           onDelete={handleDeleteDraft}
+          onRestore={restoreDraft}
         />
 
         {/* VENTANA DE TAREAS ARCHIVADAS (ESTADO HECHA) */}
