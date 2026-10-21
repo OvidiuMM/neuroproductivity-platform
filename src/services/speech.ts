@@ -1,6 +1,6 @@
 // DICTAR UNA TAREA: el reconocimiento de voz del navegador (Web Speech API). CLAR no recibe el audio, solo el texto
-// que devuelve el navegador. En Chrome, el audio va a los servidores de Google para pasarlo a texto (lo dice la
-// política de privacidad); Firefox no lo tiene, y entonces no se ofrece.
+// que devuelve el navegador, que para pasarlo a texto lo envía a su proveedor (Google en Chrome, Apple en Safari,
+// Microsoft en Edge; lo dice la política de privacidad). Firefox no lo tiene, y entonces no se ofrece.
 
 // Lo que se usa de la API (los navegadores la exponen como SpeechRecognition o, con prefijo, webkitSpeechRecognition)
 interface SpeechAlternative {
@@ -43,17 +43,19 @@ export const dictationAvailable = () => recognitionConstructor() !== null;
 
 // El texto dictado hasta ahora (lo definitivo y lo que aún se está reconociendo), en una línea
 export const transcriptOf = (results: SpeechResults) => {
-  let text = '';
-  for (let i = 0; i < results.length; i++) text += results[i][0]?.transcript ?? '';
-  return text.replace(/\s+/g, ' ').trim();
+  const parts: string[] = [];
+  for (let i = 0; i < results.length; i++) parts.push(results[i][0]?.transcript ?? '');
+  return parts.join(' ').replace(/\s+/g, ' ').trim();
 };
 
 // Lo que se dice si no se pudo dictar, por el código de error de la API
 export const dictationErrorMessage = (code: string) => {
   switch (code) {
     case 'not-allowed':
-    case 'service-not-allowed':
       return 'Para dictar, da permiso al micrófono en tu navegador.';
+    // Safari, con el dictado del dispositivo desactivado (o donde no lo deja usar)
+    case 'service-not-allowed':
+      return 'Aquí no se puede dictar. Activa el dictado del dispositivo o prueba en el navegador.';
     case 'audio-capture':
       return 'No se encuentra el micrófono.';
     case 'network':
@@ -67,12 +69,22 @@ export const dictationErrorMessage = (code: string) => {
   }
 };
 
-// Lo que dura un dictado como mucho
+// Lo que dura un dictado como mucho, desde que el navegador empieza a escuchar
 export const MAX_DICTATION_MS = 30_000;
 
+export interface Dictation {
+  // Parar, quedándose con lo dictado
+  stop: () => void;
+  // Cancelar (al cerrar el formulario, o al escribir a mano): lo que llegue después no se escribe
+  cancel: () => void;
+}
+
+// Un solo dictado a la vez en toda la app: empezar otro cancela el anterior
+let active: Dictation | null = null;
+
 // Empieza a dictar en español: `onStart` llega cuando el navegador ya escucha, `onText` recibe el texto según se
-// reconoce y `onEnd`, al terminar (con el mensaje si falló). Devuelve cómo pararlo (`stop`, quedándose con lo dictado) o cancelarlo (`cancel`, al cerrar el formulario).
-// Una frase cada vez: al callar termina solo y, si no, a los 30 segundos
+// reconoce y `onEnd`, al terminar (con el mensaje si falló), siempre después de volver de aquí. Una frase cada vez:
+// al callar termina solo y, si no, a los 30 segundos. Si la página se oculta (otra app), se para sin dar error
 export const startDictation = ({
   onStart,
   onText,
@@ -81,10 +93,11 @@ export const startDictation = ({
   onStart: () => void;
   onText: (text: string) => void;
   onEnd: (error: string | null) => void;
-}) => {
+}): Dictation => {
+  active?.cancel();
   const Constructor = recognitionConstructor();
   if (!Constructor) {
-    onEnd('Este navegador no permite dictar.');
+    queueMicrotask(() => onEnd('Este navegador no permite dictar.'));
     return { stop: () => undefined, cancel: () => undefined };
   }
   const recognition = new Constructor();
@@ -93,30 +106,50 @@ export const startDictation = ({
   recognition.continuous = false;
   recognition.maxAlternatives = 1;
   let error: string | null = null;
-  // Al llegar al límite se para, quedándose con lo dictado
-  const limit = setTimeout(() => recognition.stop(), MAX_DICTATION_MS);
-  recognition.onstart = onStart;
+  let limit: ReturnType<typeof setTimeout> | undefined;
+  let hidden = false;
+  const onHidden = () => {
+    if (document.visibilityState !== 'hidden') return;
+    hidden = true;
+    recognition.stop();
+  };
+  const detach = () => {
+    clearTimeout(limit);
+    if (typeof document !== 'undefined') document.removeEventListener('visibilitychange', onHidden);
+    recognition.onstart = null;
+    recognition.onresult = null;
+    recognition.onerror = null;
+    recognition.onend = null;
+    if (active === dictation) active = null;
+  };
+  recognition.onstart = () => {
+    // Al llegar al límite se para, quedándose con lo dictado
+    limit = setTimeout(() => recognition.stop(), MAX_DICTATION_MS);
+    onStart();
+  };
   recognition.onresult = (event) => onText(transcriptOf(event.results));
   recognition.onerror = (event) => {
-    error = dictationErrorMessage(event.error);
+    error = hidden ? null : dictationErrorMessage(event.error);
   };
   recognition.onend = () => {
-    clearTimeout(limit);
-    onEnd(error);
+    const message = error;
+    detach();
+    onEnd(message);
   };
-  try {
-    recognition.start();
-  } catch {
-    clearTimeout(limit);
-    onEnd('No se pudo dictar. Inténtalo de nuevo.');
-  }
-  return {
+  const dictation: Dictation = {
     stop: () => recognition.stop(),
     cancel: () => {
-      clearTimeout(limit);
-      recognition.onresult = null;
-      recognition.onend = null;
+      detach();
       recognition.abort();
     }
   };
+  active = dictation;
+  if (typeof document !== 'undefined') document.addEventListener('visibilitychange', onHidden);
+  try {
+    recognition.start();
+  } catch {
+    detach();
+    queueMicrotask(() => onEnd('No se pudo dictar. Inténtalo de nuevo.'));
+  }
+  return dictation;
 };

@@ -1,8 +1,9 @@
 import { expect, test, type Page } from '@playwright/test';
-import { openSection, showMoreOptions, signInWithGoogle } from './helpers';
+import { approveAccess, markOnboarded, openSection, showMoreOptions, signInWithGoogle, uniqueEmail } from './helpers';
 
 // Dictar con el micrófono (Web Speech API). El reconocimiento de voz de verdad necesita micrófono y conexión con
-// Google: aquí se sustituye por uno que «oye» la frase dada, primero a medias y después entera
+// Google: aquí se sustituye por uno que «oye» la frase dada, primero a medias y después entera, o que falla con el
+// error dado («error:not-allowed»)
 const fakeSpeech = (page: Page, phrase: string | null) =>
   page.addInitScript((text) => {
     type Results = {
@@ -27,6 +28,13 @@ const fakeSpeech = (page: Page, phrase: string | null) =>
       onend: (() => void) | null = null;
       start() {
         w.__dictations = (w.__dictations ?? 0) + 1;
+        if (text.startsWith('error:')) {
+          setTimeout(() => {
+            this.onerror?.({ error: text.slice('error:'.length) });
+            this.onend?.();
+          }, 50);
+          return;
+        }
         setTimeout(() => {
           this.onstart?.();
           this.onresult?.({ results: resultsOf(text.split(' ').slice(0, 2).join(' '), false) });
@@ -98,4 +106,42 @@ test('without speech recognition in the browser there is no microphone', async (
   const form = page.getByRole('dialog', { name: 'Nueva tarea' });
   await expect(form.getByLabel(/^Tarea/)).toBeVisible();
   await expect(form.getByRole('button', { name: /^Dictar/ })).toHaveCount(0);
+});
+
+test('a dictation that fails says what to do, and the microphone can be tried again', async ({ page }) => {
+  await fakeSpeech(page, 'error:not-allowed');
+  await page.goto('/');
+  await signInWithGoogle(page);
+  await openSection(page, 'Listas');
+  await page.getByRole('button', { name: 'Añadir la primera tarea' }).click();
+  const form = page.getByRole('dialog', { name: 'Nueva tarea' });
+  const mic = form.getByRole('button', { name: 'Dictar la tarea' });
+  await mic.click();
+  await expect(form.getByRole('alert').filter({ hasText: 'Para dictar, da permiso al micrófono' })).toBeVisible();
+  await expect(mic).toHaveAttribute('aria-pressed', 'false');
+  await expect(form.getByLabel(/^Tarea/)).toHaveValue('');
+});
+
+test('«Nueva tarea» opens a new task without dictating, and pending release notes wait until it closes', async ({
+  page
+}) => {
+  await fakeSpeech(page, 'Llamar al dentista mañana');
+  const email = uniqueEmail();
+  await page.goto('/');
+  // Una cuenta que aún no ha visto las novedades de esta versión
+  await signInWithGoogle(page, email, undefined, { approve: false, onboarded: false });
+  await markOnboarded(email, { releaseNotes: false });
+  await approveAccess(email, { onboarded: false });
+
+  await page.goto('/?nueva=1');
+  const form = page.getByRole('dialog', { name: 'Nueva tarea' });
+  await expect(form).toBeVisible({ timeout: 15_000 });
+  await expect(form.getByLabel(/^Tarea/)).toHaveValue('');
+  expect(await page.evaluate(() => (window as unknown as { __dictations?: number }).__dictations)).toBeUndefined();
+  // Las novedades no se abren encima: esperan a que se cierre el formulario
+  const notes = page.getByRole('dialog', { name: /^Novedades de la versión/ });
+  await expect(notes).toHaveCount(0);
+  await page.keyboard.press('Escape');
+  await expect(form).toHaveCount(0);
+  await expect(notes).toBeVisible({ timeout: 15_000 });
 });

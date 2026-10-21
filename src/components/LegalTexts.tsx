@@ -176,9 +176,9 @@ export const PrivacyPolicy: React.FC = () => (
           título, la descripción y las notas de la tarea van en el enlace; si conectas Google Calendar, los datos de tus
           tareas con fecha van al calendario «CLAR» de tu propia cuenta de Google, donde Google los trata según sus
           condiciones y su política de privacidad; «Abrir en mi correo» pasa el correo a tu programa de correo; si
-          dictas una tarea o una nota con el micrófono, tu navegador pasa tu voz a texto (en Chrome, enviando el audio a
-          Google, que lo trata según sus condiciones). CLAR no recibe ni guarda el audio: solo el texto, como si lo
-          hubieras escrito.
+          dictas una tarea o una nota con el micrófono, tu navegador pasa tu voz a texto enviando el audio a su
+          proveedor (Google en Chrome, Apple en Safari, Microsoft en Edge), que lo trata según sus condiciones. CLAR no
+          recibe ni guarda el audio: solo el texto, como si lo hubieras escrito.
         </li>
       </List>
       <p>CLAR no vende ni cede tus datos a nadie.</p>
@@ -286,9 +286,10 @@ export const PrivacyPolicy: React.FC = () => (
     <Section id="privacy-security" title="Seguridad">
       <p>
         Las conexiones van cifradas (HTTPS) y Google cifra los datos guardados. Las reglas de la base de datos solo
-        dejan a cada cuenta acceder a lo suyo, y la app le pide al navegador que no le dé acceso a la cámara, el
-        micrófono ni la ubicación, que no usa. Si hubiera una brecha de seguridad que afecte a tus datos, se notificará
-        a la AEPD y, si supone un riesgo alto para ti, también a ti.
+        dejan a cada cuenta acceder a lo suyo, y la app le pide al navegador que no le dé acceso a la cámara ni a la
+        ubicación, que no usa; el micrófono, solo a la propia app y solo cuando pulsas el de dictar. Si hubiera una
+        brecha de seguridad que afecte a tus datos, se notificará a la AEPD y, si supone un riesgo alto para ti, también
+        a ti.
       </p>
     </Section>
 
