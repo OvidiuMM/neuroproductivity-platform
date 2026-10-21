@@ -3,7 +3,7 @@ import { CalendarDays, ChevronLeft, ChevronRight, Repeat, Users } from 'lucide-r
 import { MeetingGuard, TaskItem } from '../types';
 import { AgendaItem, buildAgenda, daysFrom, overdueTasks, startOfWeek } from '../services/agenda';
 import { toDateString } from '../services/recurrence';
-import { formatTaskDates, toLocalDate } from '../services/tasks';
+import { DEADLINE_TITLE_CLASS, formatTaskDates, toLocalDate } from '../services/tasks';
 import { useNow } from '../hooks/useNow';
 
 interface AgendaViewProps {
@@ -24,15 +24,9 @@ const CONTEXT_STYLE = {
   PERSONAL: 'border-l-emerald-500'
 } as const;
 
-// El título según el plazo: las que vencen hoy, además, en negrita
+// El título según el plazo (el color, el de las listas): las que vencen hoy, además, en negrita
 const titleClass = (item: AgendaItem) =>
-  item.deadline === 'overdue'
-    ? 'font-semibold text-red-600'
-    : item.deadline === 'today'
-      ? 'font-bold text-violet-800'
-      : item.deadline === 'soon'
-        ? 'font-semibold text-violet-600'
-        : 'font-semibold text-slate-900';
+  `${item.deadline === 'today' ? 'font-bold' : 'font-semibold'} ${DEADLINE_TITLE_CLASS[item.deadline] || 'text-slate-900'}`;
 
 const AgendaEntry: React.FC<{ item: AgendaItem; onEditTask: (task: TaskItem) => void }> = ({ item, onEditTask }) => {
   const time = item.time ? `${item.time}${item.endTime ? `–${item.endTime}` : ''}` : 'Todo el día';
@@ -67,7 +61,7 @@ const AgendaEntry: React.FC<{ item: AgendaItem; onEditTask: (task: TaskItem) => 
     >
       <span className="block font-mono text-[10px] text-slate-600">{time}</span>
       <span
-        className={`flex items-center gap-1 break-words ${isOccurrence ? 'font-semibold text-slate-600' : titleClass(item)}`}
+        className={`flex min-w-0 items-center gap-1 [overflow-wrap:anywhere] ${isOccurrence ? 'font-semibold text-slate-600' : titleClass(item)}`}
       >
         {isOccurrence && <Repeat className="h-3 w-3 shrink-0" aria-hidden="true" />}
         {item.title}
