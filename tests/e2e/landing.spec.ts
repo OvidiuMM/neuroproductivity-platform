@@ -69,3 +69,26 @@ test('without a share menu, «Compartir CLAR» copies the link and says so', asy
   await expect(menu.getByRole('status').filter({ hasText: 'Enlace copiado' })).toBeVisible();
   expect(await page.evaluate(() => navigator.clipboard.readText())).toBe(new URL(page.url()).origin);
 });
+
+test('an address that does not exist says so and leads to CLAR; robots.txt keeps the internal paths out', async ({
+  page,
+  request
+}) => {
+  await page.goto('/esto-no-existe');
+  await expect(page.getByRole('heading', { level: 1, name: 'Página no encontrada' })).toBeVisible();
+  await page.getByRole('link', { name: 'Ir a CLAR' }).click();
+  await expect(page.getByRole('button', { name: 'Continuar con Google' })).toBeVisible();
+  const robots = await (await request.get('/robots.txt')).text();
+  expect(robots).toContain('Disallow: /oauth/');
+  expect(robots).toContain('Disallow: /__/');
+});
+
+test('creating an account with email asks to confirm the age and accept the terms', async ({ page }) => {
+  await page.goto('/');
+  await page.getByRole('button', { name: 'Crear cuenta gratis' }).click();
+  await page.getByLabel('Email', { exact: true }).fill('alguien@example.com');
+  await page.getByLabel('Contraseña', { exact: true }).fill('clave-segura-1');
+  await page.getByRole('button', { name: 'Crear cuenta', exact: true }).click();
+  await expect(page.getByRole('alert')).toContainText('acepta las condiciones de uso');
+  await expect(page.getByRole('link', { name: /\(leerlas\)/ })).toHaveAttribute('href', /condiciones/);
+});

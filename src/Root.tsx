@@ -4,14 +4,20 @@ import { LoadingScreen } from './components/BrandMark';
 
 const AuthGate = lazy(() => import('./AuthGate.tsx').then(({ AuthGate }) => ({ default: AuthGate })));
 const LegalPage = lazy(() => import('./components/LegalPage'));
+const NotFoundPage = lazy(() => import('./components/NotFoundPage'));
 
-// Los textos legales (/privacidad, /condiciones, /aviso-legal) se ven sin iniciar sesión; el resto es la app
+// Las direcciones de la app: la raíz (también /index.html); el resto, salvo los textos legales, no existe
+const isAppPath = (path: string) => path === '/' || path === '/index.html';
+
+// Los textos legales (/privacidad, /condiciones, /aviso-legal) se ven sin iniciar sesión; la raíz es la app, y una
+// dirección que no existe dice que no se encontró
 export const Root = () => {
-  const legal = legalPageFor(window.location.pathname);
+  const path = window.location.pathname;
+  const legal = legalPageFor(path);
   // Mientras se descarga la pantalla de entrada o el texto legal, el logo girando
   return (
     <Suspense fallback={<LoadingScreen text="Cargando…" />}>
-      {legal ? <LegalPage page={legal.id} /> : <AuthGate />}
+      {legal ? <LegalPage page={legal.id} /> : isAppPath(path) ? <AuthGate /> : <NotFoundPage />}
     </Suspense>
   );
 };

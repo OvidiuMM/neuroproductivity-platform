@@ -128,6 +128,26 @@ describe('push alarms', () => {
     assert.equal(fcm.sent.length, 0);
   });
 
+  it('keeps at most 100 alarms in the queue of an account', async () => {
+    await device('d1');
+    const batch = db.batch();
+    for (let i = 0; i < 100; i++)
+      batch.set(db.doc(`alarm_queue/${uid}__q${i}`), {
+        uid,
+        taskId: `q${i}`,
+        at: Timestamp.fromMillis(now + MINUTE),
+        key: `q${i}`
+      });
+    await batch.commit();
+    await task('t-extra', { dueDate: '2026-10-16', dueTime: '12:00', alarmTime: '11:30' });
+    await syncTaskAlarm(uid, 't-extra', now);
+    assert.equal(await queued('t-extra'), undefined);
+    // Una que ya estaba en la cola sí se pone al día
+    await task('q0', { dueDate: '2026-10-16', dueTime: '12:00', alarmTime: '11:30' });
+    await syncTaskAlarm(uid, 'q0', now);
+    assert.equal((await queued('q0'))?.key, 'q0@2026-10-16T09:30:00.000Z');
+  });
+
   it('puts the alarm back with a growing wait after a transient failure', async () => {
     await device('d1');
     await task('t1', { dueDate: '2026-10-16', dueTime: '12:00', alarmTime: '09:30' });
