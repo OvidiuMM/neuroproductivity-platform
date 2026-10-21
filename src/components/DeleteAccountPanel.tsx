@@ -41,8 +41,8 @@ export const DeleteAccountPanel: React.FC<DeleteAccountPanelProps> = ({ methods,
         Eliminar tu cuenta
       </h3>
       <p id="delete-account-help" className="text-xs leading-relaxed text-red-900">
-        Se eliminarán tu cuenta y todos tus datos (tareas, metas, proyectos, evaluaciones, reuniones, correos y tus
-        mensajes de «Escríbenos»). No se puede deshacer.
+        Se eliminarán tu cuenta y todos tus datos (tareas y sus borradores, metas, proyectos, evaluaciones, reuniones,
+        correos y tus mensajes de «Escríbenos»). No se puede deshacer.
         {needsPassword
           ? ' Escribe tu contraseña para confirmarlo.'
           : ' Para confirmarlo, Google te pedirá que vuelvas a entrar.'}

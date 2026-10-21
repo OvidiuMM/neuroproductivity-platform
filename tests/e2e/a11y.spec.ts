@@ -404,6 +404,22 @@ test('release notes of the version', async ({ page }) => {
   await expectNoViolations(page, 'novedades de la versión');
 });
 
+test('task drafts: the button in Listas and the list', async ({ page }) => {
+  await page.goto('/');
+  await signInWithGoogle(page);
+  await openSection(page, 'Listas');
+  await page.getByRole('button', { name: 'Añadir la primera tarea' }).click();
+  await page
+    .getByPlaceholder('ej. Llamar al proveedor para acordar el plazo de entrega')
+    .fill('Pedir cita en el taller');
+  await page.keyboard.press('Escape');
+  await expect(page.getByRole('button', { name: /^Borradores/ })).toBeVisible();
+  await expectNoViolations(page, 'listas con borradores');
+  await page.getByRole('button', { name: /^Borradores/ }).click();
+  await expect(page.getByRole('dialog', { name: /^Borradores de tareas/ })).toBeVisible();
+  await expectNoViolations(page, 'borradores de tareas');
+});
+
 test('the prompt before discarding unsaved changes', async ({ page }) => {
   await page.goto('/');
   await signInWithGoogle(page);
