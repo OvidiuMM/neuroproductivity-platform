@@ -1275,6 +1275,7 @@ export default function App({ user, services, isAdmin = false }: AppProps) {
                   onStartTour={() => startTour()}
                   onShowWelcome={() => setIsWelcomeReplay(true)}
                   onContact={() => setIsFeedbackOpen(true)}
+                  calendarSync={calendarActive && calendarSyncAvailable()}
                 />
               </DeferredSection>
             )}

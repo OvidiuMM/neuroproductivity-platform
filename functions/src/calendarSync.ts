@@ -385,7 +385,7 @@ export const connectGoogleCalendar = onCall(
   { region: REGION, secrets: calendarSecrets, timeoutSeconds: 540 },
   async (request) => {
     const auth = requireAuth(request);
-    if (isEmulator || !clientIdParam.value()) {
+    if (isEmulator || !clientIdParam.value().trim()) {
       throw new HttpsError(
         'failed-precondition',
         'La sincronización con Google Calendar no está disponible en esta instalación.'

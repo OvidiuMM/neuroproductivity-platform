@@ -34,8 +34,9 @@ export default defineConfig({
     url: 'http://127.0.0.1:3000',
     reuseExistingServer: !process.env.CI,
     timeout: 120_000,
-    // Un id de cliente de Google de mentira: la app ofrece conectar Google Calendar (las pruebas interceptan Google)
-    env: { VITE_GOOGLE_OAUTH_CLIENT_ID: 'e2e-client-id' },
+    // Un id de cliente de Google de mentira: la app ofrece conectar Google Calendar (las pruebas interceptan Google).
+    // Con espacios alrededor, como pueden venir de la variable del despliegue: la app los quita
+    env: { VITE_GOOGLE_OAUTH_CLIENT_ID: ' e2e-client-id ' },
     // SIGINT deja que la CLI de Firebase apague los emuladores; con SIGTERM el de Firestore (Java) se queda vivo
     gracefulShutdown: { signal: 'SIGINT', timeout: 15_000 }
   }

@@ -1,5 +1,13 @@
 import { expect, test, type Page } from '@playwright/test';
-import { patchDocument, readDocument, signInWithGoogle, uidOf, uniqueEmail, writeTextDocument } from './helpers';
+import {
+  openSection,
+  patchDocument,
+  readDocument,
+  signInWithGoogle,
+  uidOf,
+  uniqueEmail,
+  writeTextDocument
+} from './helpers';
 
 // Conexión con Google Calendar desde «Tu cuenta». Google no tiene emulador: la ventana de autorización se intercepta y
 // vuelve a la app con un código de mentira, y el estado de la conexión se prepara a mano. En los emuladores el
@@ -117,4 +125,20 @@ test('a connected account sees it and can disconnect; one whose permission Googl
   await writeTextDocument(`calendar_status/${uid}`, { state: 'needsReconnect', reason: 'revoked' });
   await expect(features).toContainText('El permiso de Google ya no vale');
   await expect(features.getByRole('button', { name: 'Volver a conectar' })).toBeVisible();
+});
+
+test('the help explains the sync only to accounts that have it: extra features are never announced', async ({
+  page
+}) => {
+  const email = uniqueEmail();
+  await page.goto('/');
+  await signInWithGoogle(page, email);
+  await openSection(page, 'Ayuda');
+  const help = page.getByRole('main');
+  await expect(help.getByRole('heading', { name: 'Ayuda', level: 2 })).toBeVisible();
+  await expect(help).not.toContainText(/funci[oó]n(es)? extra|calendario «CLAR»/i);
+
+  await grantCalendar(await uidOf(email));
+  await expect(help).toContainText(`Con «${CALENDAR}», si conectas tu cuenta de Google`, SERVER_CALL);
+  await expect(help).toContainText('Con Google Calendar conectado, los datos de tus tareas con fecha');
 });
