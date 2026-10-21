@@ -87,6 +87,9 @@ test('main sections, forms and dialogs', async ({ page }) => {
     dueDate: localDateFromToday(1),
     dueTime: '10:00'
   });
+  // Una que vence hoy: su etiqueta «Hoy» y su borde también se auditan
+  await page.getByRole('button', { name: 'Nueva Tarea' }).click();
+  await fillAndSaveTask(page, { title: 'Pagar el recibo de la luz', dueDate: localDateFromToday(0) });
   await expectNoViolations(page, 'listas duales');
 
   await page.getByRole('button', { name: 'Agenda', exact: true }).click();

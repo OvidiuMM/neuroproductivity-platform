@@ -16,7 +16,9 @@ import {
 } from 'lucide-react';
 import { Goal, GoalStatus, Project, TaskItem, WheelCategory } from '../types';
 import { WEAK_AREA_SCORE, areasWithGoals, pendingGoalTasks, sortGoals } from '../services/goals';
-import { formatDay, statusLabel } from '../services/tasks';
+import { formatDay, getDeadlineState, statusLabel } from '../services/tasks';
+import { TodayTag } from './TaskDates';
+import { useNow } from '../hooks/useNow';
 import { GoalProgress } from './GoalProgress';
 import { useAreas } from '../hooks/useAreas';
 import { projectProgress, projectsOfGoal, sortProjects } from '../services/projects';
@@ -47,6 +49,7 @@ const GoalCard: React.FC<{
   goal: Goal;
   tasks: TaskItem[];
   projects: Project[];
+  now: Date;
   onEdit: () => void;
   onSetStatus: (status: GoalStatus) => void;
   onAddTask: () => void;
@@ -58,6 +61,7 @@ const GoalCard: React.FC<{
   goal,
   tasks,
   projects,
+  now,
   onEdit,
   onSetStatus,
   onAddTask,
@@ -161,22 +165,33 @@ const GoalCard: React.FC<{
 
       {pending.length > 0 && (
         <ul aria-label={`Tareas por hacer de «${goal.title}»`} className="space-y-1">
-          {pending.map((task) => (
-            <li key={task.id}>
-              <button
-                type="button"
-                onClick={() => onEditTask(task)}
-                className="flex min-h-11 w-full flex-col justify-center rounded-lg px-2 text-left hover:bg-slate-50"
-              >
-                <span className="text-sm break-words text-slate-800">{task.title}</span>
-                <span className="text-[11px] text-slate-500">
-                  {task.listContext === 'WORK' ? 'Profesional' : 'Personal'}
-                  {task.dueDate && ` · Vence el ${formatDay(task.dueDate)}`}
-                  {task.status !== 'PENDING' && ` · ${statusLabel(task.status)}`}
-                </span>
-              </button>
-            </li>
-          ))}
+          {pending.map((task) => {
+            // Las que vencen hoy, como en las listas: en violeta oscuro, en negrita y con «Hoy»
+            const today = getDeadlineState(task, now) === 'today';
+            return (
+              <li key={task.id}>
+                <button
+                  type="button"
+                  onClick={() => onEditTask(task)}
+                  className="flex min-h-11 w-full flex-col justify-center rounded-lg px-2 text-left hover:bg-slate-50"
+                >
+                  <span className={`text-sm break-words ${today ? 'font-bold text-violet-800' : 'text-slate-800'}`}>
+                    {task.title}
+                  </span>
+                  <span className="text-[11px] text-slate-500">
+                    {today && (
+                      <>
+                        <TodayTag />{' '}
+                      </>
+                    )}
+                    {task.listContext === 'WORK' ? 'Profesional' : 'Personal'}
+                    {task.dueDate && ` · Vence el ${formatDay(task.dueDate)}`}
+                    {task.status !== 'PENDING' && ` · ${statusLabel(task.status)}`}
+                  </span>
+                </button>
+              </li>
+            );
+          })}
         </ul>
       )}
 
@@ -231,6 +246,7 @@ export const GoalsView: React.FC<GoalsViewProps> = ({
   onDownloadGoal
 }) => {
   const [showClosed, setShowClosed] = useState(false);
+  const now = useNow();
   // Botón «Nueva meta» de cada área: siempre está, así que es donde vuelve el foco al crear una meta desde «Necesitan
   // atención» (ese botón desaparece en cuanto el área tiene meta)
   const areaButtons = useRef<Partial<Record<WheelCategory, HTMLButtonElement | null>>>({});
@@ -248,6 +264,7 @@ export const GoalsView: React.FC<GoalsViewProps> = ({
       goal={goal}
       tasks={tasks}
       projects={projects}
+      now={now}
       onEdit={() => onEditGoal(goal)}
       onSetStatus={(status) => onSetGoalStatus(goal, status)}
       onAddTask={() => onAddTask(goal)}

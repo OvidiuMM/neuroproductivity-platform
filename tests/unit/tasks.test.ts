@@ -76,7 +76,20 @@ describe('getDeadlineState', () => {
   });
 
   it('treats a date without time as due at the end of that day', () => {
-    assert.equal(getDeadlineState(task({ dueDate: '2026-10-09' }), now), 'soon');
+    assert.equal(getDeadlineState(task({ dueDate: '2026-10-09' }), now), 'today');
+  });
+
+  it('is today while the task is due later today, also for a repetition or an interval', () => {
+    assert.equal(getDeadlineState(task({ dueDate: '2026-10-09', dueTime: '18:00' }), now), 'today');
+    assert.equal(getDeadlineState(task({ dueDate: '2026-10-09', dueTime: '23:59' }), now), 'today');
+    assert.equal(
+      getDeadlineState(task({ dueDate: '2026-10-09', recurrence: { frequency: 'DAILY', interval: 1 } }), now),
+      'today'
+    );
+    assert.equal(getDeadlineState(task({ startDate: '2026-10-01', dueDate: '2026-10-09' }), now), 'today');
+    // Mañana ya no es hoy, aunque falten menos de 24 horas
+    assert.equal(getDeadlineState(task({ dueDate: '2026-10-10', dueTime: '08:00' }), now), 'soon');
+    assert.equal(getDeadlineState(task({ dueDate: '2026-10-09', status: 'DONE' }), now), 'none');
   });
 
   it('is soon when less than a week remains, normal otherwise', () => {
