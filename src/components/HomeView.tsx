@@ -323,7 +323,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
               <ul className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
                 {activeGoals.slice(0, 6).map((goal) => (
                   <li key={goal.id} className="space-y-1.5">
-                    <p className="text-sm font-semibold break-words text-slate-900">{goal.title}</p>
+                    <p className="text-sm font-semibold wrap-anywhere text-slate-900">{goal.title}</p>
                     <p className="text-[11px] font-semibold text-indigo-700">{areaName(goal.area)}</p>
                     <GoalProgress goal={goal} tasks={tasks} />
                   </li>
@@ -371,7 +371,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
               <ul className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
                 {activeProjects.slice(0, 6).map(({ project, deadline }) => (
                   <li key={project.id} className="space-y-1.5">
-                    <p className="text-sm font-semibold break-words text-slate-900">{project.title}</p>
+                    <p className="text-sm font-semibold wrap-anywhere text-slate-900">{project.title}</p>
                     <p className="text-[11px] text-slate-600">
                       {deadline === 'overdue' ? 'Terminaba' : 'Termina'} el {formatDay(project.endDate)}
                       {deadline === 'overdue' && <span className="font-semibold text-red-700"> · Fuera de plazo</span>}
