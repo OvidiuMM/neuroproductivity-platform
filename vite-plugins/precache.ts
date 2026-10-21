@@ -9,8 +9,8 @@ import type { Plugin } from 'vite';
 
 // Lo que no se guarda: el propio service worker, la vuelta de la autorización de Google (necesita conexión), los
 // archivos ocultos, que Hosting no publica (firebase.json), y la imagen de la tarjeta al compartir el enlace (solo la
-// piden otros sitios)
-const SKIP = [/^sw\.js$/, /^oauth\//, /(^|\/)\./, /\.map$/, /^og-image\.png$/];
+// piden otros sitios), ni robots.txt
+const SKIP = [/^sw\.js$/, /^oauth\//, /(^|\/)\./, /\.map$/, /^og-image\.png$/, /^robots\.txt$/];
 
 // Las direcciones que se guardan, a partir de los archivos de la compilación (rutas relativas a dist)
 export const precacheList = (files: string[]) =>

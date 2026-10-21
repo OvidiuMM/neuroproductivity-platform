@@ -1,0 +1,5 @@
+# CLAR: la portada y los textos legales se pueden indexar; la vuelta de Google y lo interno de Firebase, no
+User-agent: *
+Allow: /
+Disallow: /oauth/
+Disallow: /__/

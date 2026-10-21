@@ -1,9 +1,9 @@
 # Requisitos del sistema — CLAR
 
-- **Versión:** 0.9.7
+- **Versión:** 1.0.0
 - **Última revisión:** 2026-10-21
 
-Este documento describe qué hace CLAR en la versión 0.9.7: sus requisitos funcionales y no funcionales tal como están implementados en el código de esta versión (la SPA de `src/`, las Cloud Functions de `functions/src/`, las reglas de Firestore, la configuración de Firebase Hosting y las pruebas). No recoge planes ni funciones futuras. Donde el README y el código no coinciden, manda el código.
+Este documento describe qué hace CLAR en la versión 1.0.0: sus requisitos funcionales y no funcionales tal como están implementados en el código de esta versión (la SPA de `src/`, las Cloud Functions de `functions/src/`, las reglas de Firestore, la configuración de Firebase Hosting y las pruebas). No recoge planes ni funciones futuras. Donde el README y el código no coinciden, manda el código.
 
 **Convenciones.** RF: requisito funcional. RNF: requisito no funcional. Los identificadores son estables: un requisito nuevo toma el siguiente número libre de su sección y uno retirado no se reutiliza. Los textos entre «» son etiquetas de la interfaz. «Origen» señala los archivos principales de cada sección.
 
@@ -249,6 +249,7 @@ Origen: `src/navigation.ts`, `src/components/Navbar.tsx`, `src/components/Bottom
 - **RF-NAV-11.** Si una sección o ventana no se puede descargar, la app muestra un aviso con «Reintentar» en su lugar y el resto sigue funcionando. Una ventana que aún se está descargando se puede cancelar.
 - **RF-NAV-12.** Al entrar después de una actualización, una ventana «Novedades de la versión N» cuenta los cambios de esa versión, una sola vez por cuenta, cuando no hay otra ventana abierta (la bienvenida, el recorrido o la importación). Lo visto se guarda en el perfil y en el dispositivo; como la bienvenida, espera al perfil confirmado por el servidor. Las cuentas nuevas empiezan por la bienvenida, que da por vistas las novedades de la versión.
 - **RF-NAV-13.** La versión de la cabecera (desde 640 px) y la del pie abren las novedades de la versión. «Ayuda» tiene el apartado «Novedades», con la versión actual a la vista y las anteriores plegadas. Cada versión publicada tiene su entrada, con la misma versión que la app (una prueba lo comprueba). Las novedades nunca anuncian las funciones extra (otra prueba lo comprueba).
+- **RF-NAV-14.** Una dirección que no es la de la app ni la de un texto legal muestra «Página no encontrada», con «Ir a CLAR» y los textos legales. `robots.txt` deja indexar la portada y los textos legales.
 
 ### 1.10 Cuentas y acceso (RF-CUE)
 
@@ -258,7 +259,7 @@ Origen: `src/AuthGate.tsx`, `src/AccessGate.tsx`, `src/services/auth.ts`, `src/s
 
 - **RF-CUE-01.** La app solo muestra datos con una sesión iniciada. Se entra con Google o con email y contraseña.
 - **RF-CUE-02.** «Continuar con Google» abre una ventana para elegir la cuenta. Si el navegador bloquea la ventana o no la admite (p. ej. dentro de la APK), usa una redirección.
-- **RF-CUE-03.** «Crear una cuenta» pide nombre (opcional), email y una contraseña de al menos 8 caracteres, y envía un email para confirmar la dirección. Los emails de la cuenta van en español.
+- **RF-CUE-03.** «Crear una cuenta» pide nombre (opcional), email, una contraseña de al menos 8 caracteres y marcar «Tengo 14 años o más… y acepto las condiciones de uso», y envía un email para confirmar la dirección. El perfil guarda cuándo se aceptaron las condiciones y su versión (también al entrar con Google, que acepta con el aviso de la pantalla de entrada). Los emails de la cuenta van en español.
 - **RF-CUE-04.** Una cuenta con contraseña tiene que confirmar su email antes de solicitar acceso. Su pantalla ofrece «Ya lo he confirmado», «Reenviar el email» y «Cerrar sesión».
 - **RF-CUE-05.** Al entrar, un email desconocido y una contraseña incorrecta dan el mismo mensaje: «Email o contraseña incorrectos.».
 - **RF-CUE-06.** «¿Olvidaste tu contraseña?» envía un enlace para crear otra. La respuesta es la misma tanto si el email tiene cuenta como si no.
@@ -309,7 +310,7 @@ Origen: `src/components/AdminView.tsx`, `src/components/AccessAdminView.tsx`, `s
 - **RF-ADM-02.** «Administración» tiene dos pestañas: «Solicitudes» y «Mensajes».
 - **RF-ADM-03.** «Aprobación obligatoria» activa o desactiva la aprobación de cuentas. Sin configuración guardada, está activada.
 - **RF-ADM-04.** Desactivarla pide confirmación y aprueba las solicitudes pendientes cuyo email no esté bloqueado. Cada persona aprobada recibe su email, y un aviso dice cuántas se aprobaron.
-- **RF-ADM-05.** Con la aprobación desactivada, una cuenta nueva o pendiente con el email confirmado entra sola. Las rechazadas, retiradas y bloqueadas siguen igual.
+- **RF-ADM-05.** Con la aprobación desactivada, una cuenta nueva o pendiente con el email confirmado entra sola. Las rechazadas, retiradas y bloqueadas siguen igual: si vuelven a pedir acceso (pasado un día), la solicitud queda pendiente de la persona administradora. Volver a activar la aprobación no quita el acceso a las cuentas que entraron mientras estaba desactivada.
 - **RF-ADM-06.** «Solicitudes» agrupa las cuentas en «Pendientes», «Con acceso», «Rechazadas o retiradas» y «Bloqueadas». Cada una muestra nombre, email, foto, estado, fechas de solicitud y de decisión, y el mensaje.
 - **RF-ADM-07.** Las acciones dependen del estado: pendiente, «Aprobar», «Rechazar» y «Bloquear»; con acceso, «Retirar acceso» y «Bloquear»; rechazada o retirada, «Aprobar» y «Bloquear»; bloqueada, «Desbloquear», que la deja retirada. El servidor admite además aprobar una cuenta bloqueada, que la interfaz no ofrece, y rechaza cualquier otro cambio.
 - **RF-ADM-08.** La persona administradora no puede cambiar su propio acceso.
@@ -338,7 +339,7 @@ Origen: `src/components/FeedbackDialog.tsx`, `src/services/feedback.ts`, `functi
 - **RF-CON-04.** Del sistema solo se da la versión de Android, iOS e iPadOS; de Windows, macOS, ChromeOS y Linux, solo el nombre. El dispositivo es móvil por debajo de 768 px, tableta por debajo de 1024 px y escritorio a partir de ahí.
 - **RF-CON-05.** Para enviar hace falta el email confirmado. Cada cuenta puede enviar como mucho 5 mensajes por hora.
 - **RF-CON-06.** El servidor quita los caracteres de control y recorta el texto a sus límites. Descarta la información técnica si no tiene el formato esperado.
-- **RF-CON-07.** El mensaje se guarda con el nombre y el email de la cuenta para poder responder. Al enviarlo, la app confirma «¡Gracias! Hemos recibido tu mensaje.».
+- **RF-CON-07.** El mensaje se guarda con el nombre y el email de la cuenta para poder responder. Al enviarlo, la app confirma «¡Gracias! Hemos recibido tu mensaje.». La persona administradora recibe como mucho un aviso por email cada 15 minutos: los mensajes que llegan antes van en un resumen («N mensajes nuevos»).
 - **RF-CON-08.** Los mensajes de una cuenta se borran al eliminarla.
 
 ### 1.13 Textos legales (RF-LEG)
@@ -393,6 +394,7 @@ Origen: `firestore.rules`, `firebase.json`, `functions/src/access.ts`, `function
 - **RNF-SEG-15.** El despliegue desde CI se autentica con Workload Identity Federation, sin claves de cuenta de servicio guardadas.
 - **RNF-SEG-16.** Los dispositivos de las notificaciones push (`push_devices`, `push_tokens`) y las alarmas pendientes y enviadas (`alarm_queue`, `alarm_sent`) solo los usan las Cloud Functions: las reglas no dejan leerlos ni escribirlos desde la app, tampoco a su dueño. Registrar un dispositivo exige sesión iniciada y acceso aprobado, y valida el token y la zona horaria.
 - **RNF-SEG-17.** La conexión con Google Calendar usa el permiso más pequeño (`calendar.app.created`), PKCE y un `state` propio. El permiso sin conexión se guarda cifrado con AES-256-GCM (la clave, `CALENDAR_TOKEN_KEY`, está en Secret Manager, y el uid va como dato asociado) en `calendar_tokens`, que ninguna cuenta puede leer ni escribir desde la app; `calendar_status` solo lo lee su dueño. El secreto del cliente OAuth está en Secret Manager (`GOOGLE_OAUTH_CLIENT_SECRET`).
+- **RNF-SEG-18.** Contra abusos, con el registro abierto: las reglas acotan lo que se escribe en cada documento de la cuenta (como mucho 60 campos; título hasta 2.000 caracteres, descripción hasta 50.000, cuerpo de un correo hasta 100.000, y listas de notas, puntos, destinatarios y adjuntos de unos cientos); cada Cloud Function tiene como mucho 5 instancias; cada cuenta tiene como mucho 100 alarmas en la cola push y se envían como mucho 10 de cada cuenta por minuto; y cada cuenta registra como mucho 20 dispositivos por hora.
 
 ### 2.2 Privacidad (RNF-PRI)
 

@@ -1,7 +1,7 @@
 # CLAR — Plataforma de Gestión del Tiempo y Neurociencia Aplicada
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
-[![Version](https://img.shields.io/badge/Version-0.9.7-indigo.svg)](#)
+[![Version](https://img.shields.io/badge/Version-1.0.0-indigo.svg)](#)
 [![React](https://img.shields.io/badge/React-19-61dafb.svg?logo=react&logoColor=black)](https://react.dev/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-7.x-3178c6.svg?logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
 [![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-4.x-38bdf8.svg?logo=tailwindcss&logoColor=white)](https://tailwindcss.com/)
@@ -196,6 +196,7 @@ La lista completa y numerada de lo que hace la app, con sus requisitos no funcio
 - **Dictar tareas** (`src/services/speech.ts`, `DictateButton`): micrófono en el título y en las notas, con el reconocimiento de voz del navegador, en español y hasta 30 s por dictado; un solo dictado a la vez. Accesos «Nueva tarea por voz» (`/?nueva=voz`) y «Nueva tarea» en el manifiesto. `Permissions-Policy` deja el micrófono a la propia app.
 - **Borradores de tareas** (`users/{uid}/taskDrafts`, `TaskDraftsModal`): una tarea nueva que se cierra sin guardar se queda en «Borradores», en Listas, con «Continuar» y «Eliminar»; se sincronizan, van en la descarga y se borran con la cuenta (no se importan).
 - **Compartir y presentación:** «Compartir CLAR» en el menú de la cuenta (`ShareAppButton`), tarjeta Open Graph (`public/og-image.png`, fuera de la copia sin conexión) y la pantalla de entrada como página de presentación (`LoginScreen`), con enlace al repositorio.
+- **Registro abierto:** con «Aprobación obligatoria» desactivada, una cuenta nueva con el email confirmado entra sola; una rechazada o retirada que vuelve a pedirlo espera a la administración (`newRequestStatus`). Al crear la cuenta con email se confirma la edad mínima y se aceptan las condiciones; el perfil guarda cuándo (`termsAcceptedAt`, `termsVersion`). Contra abusos: las reglas acotan el tamaño de lo que se escribe, cada función tiene como mucho 5 instancias (`functions/src/globalOptions.ts`), cada cuenta tiene como mucho 100 alarmas en cola y 20 registros de dispositivo por hora, y los avisos de «Escríbenos» a la administración salen como mucho cada 15 minutos (`flushFeedbackNotices`). Una dirección que no existe dice «Página no encontrada», y hay `robots.txt`.
 
 ---
 

@@ -4,7 +4,9 @@ import {
   DESCRIPTION_MAX_LENGTH,
   REPLY_MAX_LENGTH,
   SUBJECT_MAX_LENGTH,
+  buildFeedbackDigestEmail,
   buildFeedbackEmail,
+  noticeDue,
   buildReplyEmail,
   parseContext,
   parseFeedback,
@@ -161,5 +163,22 @@ describe('respuestas de la administración', () => {
       ].join('\n')
     );
     assert.match(buildReplyEmail({ ...ticket, name: '' }, 'Hola', 'https://clar.life').text, /^Hola:\n/);
+  });
+});
+
+describe('avisos a la administración', () => {
+  const now = new Date('2026-10-21T12:00:00.000Z');
+  it('notifies at most every 15 minutes', () => {
+    assert.equal(noticeDue(undefined, now), true);
+    assert.equal(noticeDue('2026-10-21T11:44:59.000Z', now), true);
+    assert.equal(noticeDue('2026-10-21T11:50:00.000Z', now), false);
+    assert.equal(noticeDue('no es una fecha', now), true);
+  });
+  it('the digest says how many messages arrived, without their content', () => {
+    const one = buildFeedbackDigestEmail(1, 'https://clar.example');
+    const many = buildFeedbackDigestEmail(4, 'https://clar.example');
+    assert.equal(one.subject, '[CLAR] Un mensaje nuevo');
+    assert.equal(many.subject, '[CLAR] 4 mensajes nuevos');
+    assert.match(many.text, /https:\/\/clar\.example/);
   });
 });

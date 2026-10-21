@@ -19,7 +19,8 @@ test('the precache list has the app at «/», its chunks and icons, without the 
       'oauth/google.html',
       'oauth/google.js',
       '.well-known/x',
-      'og-image.png'
+      'og-image.png',
+      'robots.txt'
     ]),
     ['/', '/assets/index-abc.css', '/assets/index-abc.js', '/icon-192.png', '/manifest.json']
   );
