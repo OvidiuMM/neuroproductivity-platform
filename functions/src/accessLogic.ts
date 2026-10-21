@@ -14,6 +14,8 @@ export interface AccessRecord {
   message: string;
   requestedAt: string;
   decidedAt?: string;
+  // Pendiente tras un rechazo o una retirada: la decide la administración también con la aprobación libre
+  review?: boolean;
 }
 
 export interface AuthToken {
@@ -65,8 +67,8 @@ export const decideRequest = (
 ): RequestDecision => {
   if (!current) return { action: 'create' };
   // Con la aprobación libre, una solicitud que seguía pendiente (p. ej. si el aprobado en bloque se interrumpió) se
-  // aprueba ya, como al entrar
-  if (current.status === 'pending' && !approvalRequired) return { action: 'approve' };
+  // aprueba ya, como al entrar; salvo si es la de una cuenta rechazada o retirada (review)
+  if (current.status === 'pending' && !approvalRequired && !current.review) return { action: 'approve' };
   if (current.status === 'pending' || current.status === 'approved' || current.status === 'blocked') {
     return { action: 'keep', status: current.status };
   }
@@ -90,7 +92,7 @@ export const canDecide = (from: AccessStatus, to: DecisionStatus) =>
 // Qué hacer con el acceso de una cuenta al entrar (syncAccess), según el modo de aprobación:
 // - email en la lista negra: se bloquea la cuenta (si aún no lo está);
 // - aprobación libre: una cuenta sin solicitud o pendiente, con el email confirmado, entra sola. Las rechazadas,
-//   retiradas o bloqueadas siguen así: son decisiones de la administración.
+//   retiradas o bloqueadas siguen así, también si vuelven a pedir acceso (review): son decisiones de la administración.
 // Inicio de sesión reciente (auth_time del token, en segundos): lo pide eliminar la cuenta, como Firebase en el navegador
 export const RECENT_SIGN_IN_SECONDS = 5 * 60;
 export const isRecentSignIn = (authTime: unknown, now: Date) =>
@@ -101,18 +103,20 @@ export const isRecentSignIn = (authTime: unknown, now: Date) =>
 export type SyncAction = 'keep' | 'approve' | 'block';
 export const decideOnSync = ({
   current,
+  review = false,
   approvalRequired,
   emailBlocked,
   emailVerified
 }: {
   current: AccessStatus | undefined;
+  review?: boolean;
   approvalRequired: boolean;
   emailBlocked: boolean;
   emailVerified: boolean;
 }): SyncAction => {
   if (emailBlocked) return current === 'blocked' ? 'keep' : 'block';
   if (approvalRequired || !emailVerified) return 'keep';
-  return current === undefined || current === 'pending' ? 'approve' : 'keep';
+  return current === undefined || (current === 'pending' && !review) ? 'approve' : 'keep';
 };
 
 // Dirección de la app en los emails: la configurada (APP_URL, p. ej. https://clar.life) si es una dirección https

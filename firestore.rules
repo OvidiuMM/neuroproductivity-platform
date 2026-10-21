@@ -77,8 +77,8 @@ service cloud.firestore {
       allow update: if hasAccess(uid) && onlyProfileFields(request.resource.data.diff(resource.data).affectedKeys());
 
       match /{collection}/{docId} {
-        // Tope de tamaño de lo que se escribe, contra abusos (con el registro abierto). Son holgados: los de la app,
-        // mucho más pequeños, los aplican el formulario y la importación
+        // Tope de tamaño de lo que se escribe, contra abusos (con el registro abierto). Son holgados: iguales o mayores
+        // que los de la importación (src/services/importData.ts), para que nunca rechacen lo que ella acepta
         function textAtMost(data, field, max) {
           return !(field in data) || (data[field] is string && data[field].size() <= max);
         }
@@ -88,14 +88,14 @@ service cloud.firestore {
         function withinLimits(data) {
           return data.keys().size() <= 60
             && textAtMost(data, 'title', 2000)
-            && textAtMost(data, 'description', 50000)
+            && textAtMost(data, 'description', 100000)
             && textAtMost(data, 'why', 5000)
-            && textAtMost(data, 'subject', 2000)
-            && textAtMost(data, 'body', 100000)
+            && textAtMost(data, 'subject', 5000)
+            && textAtMost(data, 'body', 200000)
             && listAtMost(data, 'observations', 1000)
-            && listAtMost(data, 'agendaPoints', 500)
-            && listAtMost(data, 'recipients', 500)
-            && listAtMost(data, 'attachments', 500)
+            && listAtMost(data, 'agendaPoints', 1000)
+            && listAtMost(data, 'recipients', 1000)
+            && listAtMost(data, 'attachments', 1000)
             && (!('form' in data) || (data.form is map && data.form.keys().size() <= 60));
         }
 

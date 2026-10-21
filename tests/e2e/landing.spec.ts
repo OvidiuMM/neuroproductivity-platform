@@ -76,6 +76,7 @@ test('an address that does not exist says so and leads to CLAR; robots.txt keeps
 }) => {
   await page.goto('/esto-no-existe');
   await expect(page.getByRole('heading', { level: 1, name: 'Página no encontrada' })).toBeVisible();
+  await expect(page.locator('head meta[name="robots"]')).toHaveAttribute('content', 'noindex');
   await page.getByRole('link', { name: 'Ir a CLAR' }).click();
   await expect(page.getByRole('button', { name: 'Continuar con Google' })).toBeVisible();
   const robots = await (await request.get('/robots.txt')).text();
@@ -90,5 +91,9 @@ test('creating an account with email asks to confirm the age and accept the term
   await page.getByLabel('Contraseña', { exact: true }).fill('clave-segura-1');
   await page.getByRole('button', { name: 'Crear cuenta', exact: true }).click();
   await expect(page.getByRole('alert')).toContainText('acepta las condiciones de uso');
-  await expect(page.getByRole('link', { name: /\(leerlas\)/ })).toHaveAttribute('href', /condiciones/);
+  await expect(page.getByRole('link', { name: /Leer las condiciones/ })).toHaveAttribute('href', /condiciones/);
+  await expect(page.getByRole('checkbox', { name: /acepto las condiciones de uso/ })).toHaveAttribute(
+    'aria-invalid',
+    'true'
+  );
 });

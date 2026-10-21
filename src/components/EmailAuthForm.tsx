@@ -87,10 +87,10 @@ export const EmailAuthForm: React.FC<EmailAuthFormProps> = ({
 
   return (
     <form onSubmit={handleSubmit} aria-labelledby="email-auth-title" className="space-y-3">
-      <h2 id="email-auth-title" className="flex items-center gap-2 text-sm font-bold text-slate-900">
+      <h3 id="email-auth-title" className="flex items-center gap-2 text-sm font-bold text-slate-900">
         <Mail className="h-4 w-4 text-indigo-600" aria-hidden="true" />
         {TITLES[mode]}
-      </h2>
+      </h3>
 
       {mode === 'signup' && (
         <div className="space-y-1">
@@ -169,20 +169,26 @@ export const EmailAuthForm: React.FC<EmailAuthFormProps> = ({
             type="checkbox"
             checked={accepted}
             onChange={(e) => setAccepted(e.target.checked)}
+            aria-invalid={Boolean(error) && !accepted}
+            aria-describedby={error && !accepted ? 'auth-error' : undefined}
             className="mt-0.5 h-4 w-4 shrink-0 rounded border-slate-300 text-indigo-600 focus:ring-indigo-400"
           />
           <label htmlFor="auth-accept">
             Tengo {MIN_AGE} años o más (o la edad mínima legal en mi país, si es mayor) y acepto las condiciones de uso
           </label>
           <LegalLink to="terms" newTab>
-            (leerlas)
+            Leer las condiciones
           </LegalLink>
         </div>
       )}
 
       <div aria-live="polite">
         {error && (
-          <p role="alert" className="rounded-xl border border-red-200 bg-red-50 p-3 text-xs text-red-700">
+          <p
+            id="auth-error"
+            role="alert"
+            className="rounded-xl border border-red-200 bg-red-50 p-3 text-xs text-red-700"
+          >
             {error}
           </p>
         )}

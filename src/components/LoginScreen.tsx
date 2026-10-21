@@ -96,7 +96,10 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
     setEmailMode((current) => ({ mode, key: current.key + 1 }));
     requestAnimationFrame(() => {
       const target = document.getElementById(mode === 'signup' ? 'email-auth' : 'entrar');
-      target?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      const reduceMotion =
+        window.matchMedia('(prefers-reduced-motion: reduce)').matches ||
+        document.documentElement.classList.contains('a11y-reduce-motion');
+      target?.scrollIntoView({ behavior: reduceMotion ? 'auto' : 'smooth', block: 'start' });
       target?.querySelector<HTMLElement>('input, button')?.focus({ preventScroll: true });
     });
   };
@@ -104,7 +107,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
     <AccessibleScreen>
       {(openAccessibility) => (
         <div className="min-h-screen bg-slate-50 antialiased">
-          <div className="mx-auto grid max-w-6xl gap-8 px-4 py-8 lg:grid-cols-[1fr_28rem] lg:items-start lg:gap-12 lg:py-14">
+          <main className="mx-auto grid max-w-6xl gap-8 px-4 py-8 lg:grid-cols-[1fr_28rem] lg:items-start lg:gap-12 lg:py-14">
             {/* Qué es CLAR */}
             <section aria-labelledby="landing-title" className="space-y-8">
               <div className="space-y-4">
@@ -226,7 +229,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
                 Europea (Bélgica).
               </p>
             </div>
-          </div>
+          </main>
 
           <footer className="space-y-2 border-t border-slate-200 bg-white px-4 py-6 text-center">
             <AccessibilityTrigger onClick={openAccessibility} />

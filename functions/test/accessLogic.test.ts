@@ -55,6 +55,8 @@ describe('aprobación de accesos', () => {
     assert.deepEqual(decideRequest(record({ status: 'approved' }), now), { action: 'keep', status: 'approved' });
     // Con la aprobación libre, la pendiente se aprueba; las demás siguen igual
     assert.deepEqual(decideRequest(record(), now, false), { action: 'approve' });
+    // La de una cuenta rechazada o retirada que vuelve a pedirlo espera a la administración
+    assert.deepEqual(decideRequest(record({ review: true }), now, false), { action: 'keep', status: 'pending' });
     assert.deepEqual(decideRequest(record({ status: 'approved' }), now, false), { action: 'keep', status: 'approved' });
     assert.deepEqual(decideRequest(undefined, now, false), { action: 'create' });
   });
@@ -136,6 +138,8 @@ describe('lista negra y aprobación libre', () => {
     assert.equal(decideOnSync({ ...open, current: 'rejected' }), 'keep');
     assert.equal(decideOnSync({ ...open, current: 'revoked' }), 'keep');
     assert.equal(decideOnSync({ ...open, current: 'blocked' }), 'keep');
+    // Tampoco si vuelven a pedir acceso
+    assert.equal(decideOnSync({ ...open, current: 'pending', review: true }), 'keep');
     // Sin el email confirmado, no
     assert.equal(decideOnSync({ ...open, current: undefined, emailVerified: false }), 'keep');
   });

@@ -14,11 +14,14 @@ export const ShareAppButton: React.FC<{ className: string }> = ({ className }) =
         await navigator.share({ title: BRAND_NAME, text: `${BRAND_NAME}: ${BRAND_TAGLINE}.`, url });
         return;
       }
+    } catch (error) {
+      // Cerrar el menú de compartir no es un error; si falla por otra cosa, se copia el enlace
+      if (error instanceof DOMException && error.name === 'AbortError') return;
+    }
+    try {
       await navigator.clipboard.writeText(url);
       setStatus('Enlace copiado: pégalo donde quieras compartirlo.');
-    } catch (error) {
-      // Cerrar el menú de compartir no es un error
-      if (error instanceof DOMException && error.name === 'AbortError') return;
+    } catch {
       setStatus(`No se pudo compartir. El enlace es ${url}`);
     }
   };
@@ -34,7 +37,8 @@ export const ShareAppButton: React.FC<{ className: string }> = ({ className }) =
         <Share2 className="h-4 w-4 text-indigo-600" aria-hidden="true" />
         Compartir CLAR
       </button>
-      <p role="status" className="text-[11px] text-slate-600 empty:hidden">
+      {/* Siempre en la página, también vacío: así los lectores de pantalla anuncian el mensaje al aparecer */}
+      <p role="status" className="text-[11px] text-slate-600">
         {status}
       </p>
     </>
