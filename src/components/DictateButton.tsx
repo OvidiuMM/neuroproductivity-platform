@@ -5,29 +5,26 @@ import { dictationAvailable, startDictation, type Dictation } from '../services/
 // MICRÓFONO para dictar un campo: lo dicho se añade a lo que ya había. Pulsarlo otra vez para el dictado (que si no
 // termina al callar, o a los 30 segundos), y escribir a mano lo cancela. Solo sale en los navegadores que pueden
 // dictar. `autoStart`: empieza a escuchar al abrirse (desde «Nueva tarea por voz»). `pause`: se deja de escuchar
-// mientras es true (p. ej. con la pregunta de descartar los cambios abierta)
+// mientras es true (p. ej. con la pregunta de descartar los cambios abierta). `typed`: cambia cada vez que la persona
+// escribe en el campo (no cuando escribe el dictado): entonces el dictado se deja, para no tapar lo escrito
 export const DictateButton: React.FC<{
   label: string;
   value: string;
   onChange: (value: string) => void;
   autoStart?: boolean;
   pause?: boolean;
-}> = ({ label, value, onChange, autoStart = false, pause = false }) => {
+  typed?: number;
+}> = ({ label, value, onChange, autoStart = false, pause = false, typed = 0 }) => {
   const [listening, setListening] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  // El dictado en marcha (también mientras el navegador aún no escucha, p. ej. con la pregunta del permiso) y lo
-  // último que escribió: si el campo cambia de otra forma, es que se escribe a mano
+  // El dictado en marcha (también mientras el navegador aún no escucha, p. ej. con la pregunta del permiso)
   const dictation = useRef<Dictation | null>(null);
-  const written = useRef<string | null>(null);
   // El onChange de ahora (el texto llega después, en las respuestas del navegador)
   const latestOnChange = useRef(onChange);
   useEffect(() => {
     latestOnChange.current = onChange;
   });
-  const write = (text: string) => {
-    written.current = text;
-    latestOnChange.current(text);
-  };
+  const write = (text: string) => latestOnChange.current(text);
 
   const start = (before: string) => {
     const current = startDictation({
@@ -42,7 +39,6 @@ export const DictateButton: React.FC<{
       onEnd: (message) => {
         if (dictation.current !== current) return;
         dictation.current = null;
-        written.current = null;
         setListening(false);
         setError(message);
       }
@@ -69,14 +65,13 @@ export const DictateButton: React.FC<{
       dictation.current = null;
     };
   }, []);
-  // Escribir a mano mientras se dicta lo cancela (si no, lo siguiente que se oyera lo taparía)
+  // Escribir a mano mientras se dicta lo deja (si no, lo siguiente que se oyera taparía lo escrito)
+  const lastTyped = useRef(typed);
   useEffect(() => {
-    if (dictation.current && written.current !== null && value !== written.current) {
-      dictation.current.cancel();
-      dictation.current = null;
-      written.current = null;
-    }
-  }, [value]);
+    if (typed === lastTyped.current) return;
+    lastTyped.current = typed;
+    dictation.current?.discard();
+  }, [typed]);
   useEffect(() => {
     if (pause) dictation.current?.stop();
   }, [pause]);
