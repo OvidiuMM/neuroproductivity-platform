@@ -23,8 +23,10 @@ test('tasks due today stand out in the lists and the agenda; those due tomorrow 
   await expect(card(page, tomorrow).getByText('Hoy', { exact: true })).toHaveCount(0);
   await expect(card(page, tomorrow)).toHaveCSS('border-left-width', '1px');
 
-  // En la Agenda, el título en negrita, y quien usa un lector de pantalla oye que vence hoy
+  // En la Agenda, el título en negrita, y quien usa un lector de pantalla oye que vence hoy. «Por días» empieza hoy
+  // (en la semana, un domingo, mañana ya sería la semana siguiente)
   await openSection(page, 'Agenda');
+  await page.getByRole('button', { name: 'Por días' }).click();
   const entry = page.getByRole('button', { name: new RegExp(today) }).first();
   await expect(entry).toHaveAccessibleName(/\(vence hoy\)/);
   // (el título lleva dentro, oculto, «(vence hoy)»: no se busca exacto)

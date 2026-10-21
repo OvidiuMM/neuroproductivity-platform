@@ -73,7 +73,10 @@ const AlarmBadge: React.FC<{ task: TaskItem; now: Date }> = ({ task, now }) => {
   const at = isArchived(task) ? null : alarmMoment(task);
   if (!at) return null;
   return (
-    <span className="inline-flex items-center gap-1" title={describeAlarm(task, now) ?? undefined}>
+    <span
+      className="inline-flex items-center gap-1"
+      title={(at > now ? describeAlarm(task, now) : `Alarma de ${alarmLabel(at, now)}.`) ?? undefined}
+    >
       <Bell className="h-3 w-3" aria-hidden="true" />
       <span className="sr-only">Alarma:</span>
       {alarmLabel(at, now)}
