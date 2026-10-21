@@ -24,8 +24,15 @@ const CONTEXT_STYLE = {
   PERSONAL: 'border-l-emerald-500'
 } as const;
 
-const titleColor = (item: AgendaItem) =>
-  item.deadline === 'overdue' ? 'text-red-600' : item.deadline === 'soon' ? 'text-violet-600' : 'text-slate-900';
+// El título según el plazo: las que vencen hoy, además, en negrita
+const titleClass = (item: AgendaItem) =>
+  item.deadline === 'overdue'
+    ? 'font-semibold text-red-600'
+    : item.deadline === 'today'
+      ? 'font-bold text-violet-800'
+      : item.deadline === 'soon'
+        ? 'font-semibold text-violet-600'
+        : 'font-semibold text-slate-900';
 
 const AgendaEntry: React.FC<{ item: AgendaItem; onEditTask: (task: TaskItem) => void }> = ({ item, onEditTask }) => {
   const time = item.time ? `${item.time}${item.endTime ? `–${item.endTime}` : ''}` : 'Todo el día';
@@ -60,10 +67,11 @@ const AgendaEntry: React.FC<{ item: AgendaItem; onEditTask: (task: TaskItem) => 
     >
       <span className="block font-mono text-[10px] text-slate-600">{time}</span>
       <span
-        className={`flex items-center gap-1 font-semibold break-words ${isOccurrence ? 'text-slate-600' : titleColor(item)}`}
+        className={`flex items-center gap-1 break-words ${isOccurrence ? 'font-semibold text-slate-600' : titleClass(item)}`}
       >
         {isOccurrence && <Repeat className="h-3 w-3 shrink-0" aria-hidden="true" />}
         {item.title}
+        {!isOccurrence && item.deadline === 'today' && <span className="sr-only">(vence hoy)</span>}
       </span>
       <span className="block text-[10px] text-slate-500">{meta}</span>
     </button>
