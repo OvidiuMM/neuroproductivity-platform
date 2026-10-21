@@ -17,6 +17,28 @@ export interface ReleaseNote {
 
 export const RELEASE_NOTES: readonly ReleaseNote[] = [
   {
+    version: '0.9.7',
+    month: 'octubre de 2026',
+    changes: [
+      {
+        title: 'Lo de hoy, a la vista',
+        text: 'Las tareas que vencen hoy llevan la etiqueta «Hoy» y el título en negrita y, en las listas, un borde violeta. Así ves de un vistazo lo que toca hoy, también en Metas y en la Agenda.'
+      },
+      {
+        title: 'Alarmas a su hora',
+        text: 'Una tarea con solo fecha te avisa ese mismo día a la hora de su alarma (antes sonaba la víspera). Con hora límite, la alarma tiene que ser antes. La tarjeta dice cuándo sonará («hoy 17:00»), el formulario te avisa si esa hora ya ha pasado, y las tareas que se repiten pueden llevar alarma sin hora límite.'
+      },
+      {
+        title: 'Sin conexión, también al abrirla',
+        text: 'CLAR se abre sin conexión, también la app instalada en Android, una vez abierta con conexión en ese dispositivo. Y mientras carga, el brillo del logo da vueltas dentro del círculo.'
+      },
+      {
+        title: 'Al calendario, con su hora',
+        text: '«Añadir al calendario» pone una tarea con solo fecha a la hora de su alarma o, si no tiene, a las 09:00, durante una hora. Con el archivo .ics, el aviso del calendario suena a la vez que el de CLAR.'
+      }
+    ]
+  },
+  {
     version: '0.9.6',
     month: 'octubre de 2026',
     changes: [

@@ -64,17 +64,20 @@ export const dueMoment = (task: Pick<TaskItem, 'dueDate' | 'dueTime'>): Date | n
   return endOfDay;
 };
 
-export type DeadlineState = 'overdue' | 'soon' | 'normal' | 'none';
+export type DeadlineState = 'overdue' | 'today' | 'soon' | 'normal' | 'none';
 
 export const WEEK_MS = 7 * 24 * 60 * 60 * 1000;
 
-// Vencida: título en rojo. Vence en menos de una semana: título en violeta. Las tareas hechas no se colorean.
+// Vencida: título en rojo. Vence hoy (y aún no ha vencido): violeta oscuro, en negrita y con la etiqueta «Hoy». Vence
+// en menos de una semana: violeta. Las tareas hechas no se colorean.
 export const getDeadlineState = (task: TaskItem, now = new Date()): DeadlineState => {
   if (isArchived(task)) return 'none';
   const due = dueMoment(task);
   if (!due) return 'none';
   const remaining = due.getTime() - now.getTime();
   if (remaining < 0) return 'overdue';
+  if (due.getFullYear() === now.getFullYear() && due.getMonth() === now.getMonth() && due.getDate() === now.getDate())
+    return 'today';
   if (remaining < WEEK_MS) return 'soon';
   return 'normal';
 };
@@ -92,8 +95,10 @@ export const effectivePriority = (
   return PRIORITY_LEVELS[Math.max(0, PRIORITY_LEVELS.indexOf(task.priority) - 1)];
 };
 
+// El color del título según el plazo (las que vencen hoy, además, en negrita: lo decide cada vista)
 export const DEADLINE_TITLE_CLASS: Record<DeadlineState, string> = {
   overdue: 'text-red-600',
+  today: 'text-violet-800',
   soon: 'text-violet-600',
   normal: '',
   none: ''

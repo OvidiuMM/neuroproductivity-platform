@@ -66,7 +66,7 @@ import { pushAvailable } from '../services/push';
 import { DiscardChangesPrompt } from './DiscardChangesPrompt';
 import { TimeField } from './TimeField';
 import { NewGoalInline } from './NewGoalInline';
-import { alarmUnavailableReason, describeAlarm } from '../services/alarms';
+import { alarmError, alarmUnavailableReason, describeAlarm } from '../services/alarms';
 import { suggestGoal } from '../services/goals';
 import { areasInUse } from '../services/wheel';
 import { useAreas } from '../hooks/useAreas';
@@ -530,9 +530,11 @@ export const TaskModal: React.FC<TaskModalProps> = ({
         dueTime: (dueDate && dueTime) || undefined
       };
   const datesError = isRepeating ? null : validateTaskDates(dates);
-  // ALARMA: necesita fecha límite (y hora, si la tarea se repite); si deja de poder tenerla, no se guarda
+  // ALARMA: necesita fecha límite (si deja de poder tenerla, no se guarda) y, con hora límite, ser antes de ella
   const alarmBlocked = alarmUnavailableReason({ ...dates, recurrence });
-  const alarmDescription = alarmTime && !alarmBlocked ? describeAlarm({ ...dates, recurrence, alarmTime }) : null;
+  const alarmProblem = alarmTime && !alarmBlocked ? alarmError({ dueTime: dates.dueTime, alarmTime }) : null;
+  const alarmDescription =
+    alarmTime && !alarmBlocked && !alarmProblem ? describeAlarm({ ...dates, recurrence, alarmTime }) : null;
 
   const isFormValid =
     !isTitleEmpty &&
@@ -541,6 +543,7 @@ export const TaskModal: React.FC<TaskModalProps> = ({
     !datesError &&
     !recurrenceError &&
     !dependencyError &&
+    !alarmProblem &&
     Boolean(listContext) &&
     Boolean(priority);
 
@@ -905,7 +908,8 @@ export const TaskModal: React.FC<TaskModalProps> = ({
               {isRepeating && 'Al repetir, cada repetición vence su propio día, con las horas indicadas. '}
               Sin hora, el plazo termina al final del día. El título se pone{' '}
               <span className="font-semibold text-violet-600">violeta</span> cuando falta menos de una semana y{' '}
-              <span className="font-semibold text-red-600">rojo</span> cuando ha vencido.
+              <span className="font-semibold text-red-600">rojo</span> cuando ha vencido. El día que vence lleva además
+              la etiqueta «Hoy».
             </p>
           </div>
 
@@ -926,7 +930,7 @@ export const TaskModal: React.FC<TaskModalProps> = ({
                 onChange={setAlarmTime}
                 onDraftChange={draftOf('alarmTime')}
                 disabled={Boolean(alarmBlocked)}
-                aria-describedby="task-alarm-help"
+                aria-describedby={alarmProblem ? 'task-alarm-error task-alarm-help' : 'task-alarm-help'}
                 className="w-28 rounded-lg border border-slate-300 px-2 py-1.5 text-xs focus:ring-2 focus:ring-indigo-400 focus:outline-none disabled:bg-slate-100 disabled:text-slate-400"
               />
               {alarmTime && !alarmBlocked && (
@@ -940,10 +944,20 @@ export const TaskModal: React.FC<TaskModalProps> = ({
                 </button>
               )}
             </div>
+            {alarmProblem && (
+              <p
+                id="task-alarm-error"
+                role="alert"
+                className="mt-1 flex items-center gap-1 text-xs font-medium text-red-600"
+              >
+                <AlertTriangle className="h-3.5 w-3.5" />
+                {alarmProblem}
+              </p>
+            )}
             <p id="task-alarm-help" className="mt-1 text-[11px] leading-relaxed text-slate-500">
               {alarmBlocked ??
                 alarmDescription ??
-                'Una hora dentro de las 24 h anteriores al plazo; sin hora límite, suena la víspera.'}{' '}
+                'Suena el día límite a esa hora; con hora límite, tiene que ser antes de ella.'}{' '}
               {pushAvailable()
                 ? 'Suena mientras CLAR esté abierta y, con «Avisarme también con CLAR cerrada» activado en el menú de tu cuenta, aunque esté cerrada. Si no, el aviso sale al abrirla.'
                 : 'Suena mientras CLAR esté abierta: en el ordenador, también en segundo plano; en el móvil, mientras esté a la vista. Con CLAR cerrada o el móvil bloqueado, el aviso sale al abrirla: para no perderla, añade la tarea al calendario (.ics), que lleva la alarma.'}
