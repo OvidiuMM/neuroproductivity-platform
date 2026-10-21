@@ -15,7 +15,7 @@ export const alarmUnavailableReason = (task: Pick<TaskItem, 'dueDate' | 'dueTime
 // Lo que impide guardar la alarma, o null: con hora límite, tiene que sonar antes de ella
 export const alarmError = (task: Pick<TaskItem, 'dueTime' | 'alarmTime'>) =>
   task.dueTime && task.alarmTime && task.alarmTime >= task.dueTime
-    ? `La alarma tiene que ser antes de la hora límite (${task.dueTime}).`
+    ? `La alarma tiene que ser antes de la hora límite (${task.dueTime}): cámbiala o quítala.`
     : null;
 
 // Las de antes de 0.9.7 con la alarma a la hora límite o más tarde suenan la víspera, como entonces (el formulario ya
@@ -33,11 +33,29 @@ export const alarmMoment = (task: AlarmFields): Date | null => {
   return alarmInstant(toDateString(eve), task.alarmTime);
 };
 
-// Si la alarma ya había pasado cuando se guardó la tarea (se puso tarde, o se tocó la tarea después de su hora): no
-// suena, ni aquí ni con CLAR cerrada (functions/src/alarmLogic.ts hace lo mismo)
-const setAfterItsTime = (task: Pick<TaskItem, 'updatedAt'>, at: Date) => {
-  const saved = Date.parse(task.updatedAt);
-  return Number.isFinite(saved) && at.getTime() <= saved;
+// Si la alarma ya había pasado cuando se puso o se cambió (ella o el día de la tarea): no suena, ni aquí ni con CLAR
+// cerrada (functions/src/alarmLogic.ts hace lo mismo). Otros cambios de la tarea (el estado, una meta borrada) no la
+// tocan: una alarma que pasó con CLAR cerrada avisa al abrirla
+const setAfterItsTime = (task: Pick<TaskItem, 'alarmSetAt'>, at: Date) => {
+  const set = task.alarmSetAt ? Date.parse(task.alarmSetAt) : NaN;
+  return Number.isFinite(set) && at.getTime() <= set;
+};
+
+// Cuándo se puso la alarma, al guardar la tarea desde el formulario: ahora, si es nueva o cambian ella, el día, la hora
+// límite o la repetición; si no, la de antes
+export const alarmSetAtFor = (
+  before: Pick<TaskItem, 'alarmTime' | 'dueDate' | 'dueTime' | 'recurrence' | 'alarmSetAt'> | null,
+  after: Pick<TaskItem, 'alarmTime' | 'dueDate' | 'dueTime' | 'recurrence'>,
+  now: string
+) => {
+  if (!after.alarmTime) return undefined;
+  const changed =
+    !before ||
+    before.alarmTime !== after.alarmTime ||
+    before.dueDate !== after.dueDate ||
+    before.dueTime !== after.dueTime ||
+    JSON.stringify(before.recurrence ?? null) !== JSON.stringify(after.recurrence ?? null);
+  return changed ? now : before.alarmSetAt;
 };
 
 // Hora local de la alarma. Si no existe ese día (el salto al horario de verano, p. ej. las 02:30 del 31 de marzo en

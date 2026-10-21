@@ -104,7 +104,7 @@ const notesText = (observations: unknown) => {
 
 const escapeHtml = (value: string) =>
   value.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
-const htmlLines = (value: string) => escapeHtml(value).replace(/\n/g, '<br>');
+const htmlLines = (value: string) => escapeHtml(value).replace(/\r\n|\r|\n/g, '<br>');
 const isWebUrl = (url: string) => /^https?:\/\/[^\s]+$/i.test(url);
 
 // Las notas, en HTML (Google Calendar lo muestra): una lista con viñetas, las de casilla con ☐ o ☑, y los enlaces, que

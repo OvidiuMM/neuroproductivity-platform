@@ -60,7 +60,7 @@ test('agenda shows dated tasks of both lists, projected repetitions, and opens a
   await expect(projected).toContainText('Repetición prevista');
 
   // Pulsar una tarea abre el formulario para editarla
-  await page.getByRole('button', { name: 'Hoy' }).click();
+  await page.getByRole('button', { name: 'Hoy', exact: true }).click();
   await page.getByRole('button', { name: 'Por días' }).click();
   await tomorrow.getByRole('button', { name: new RegExp(work) }).click();
   await expect(page.getByRole('heading', { name: 'Editar la tarea' })).toBeVisible();

@@ -88,6 +88,35 @@ describe('calendar events on the server', () => {
     assert.deepEqual(allDay?.start, { dateTime: '2026-10-16T07:00:00.000Z', timeZone: MADRID });
   });
 
+  it('keeps a closed task with only a date at its alarm hour, without the reminder', () => {
+    const open = buildTaskEvent({ title: 'x', dueDate: '2026-10-16', alarmTime: '17:00' }, MADRID, URL)!;
+    assert.deepEqual(open.start, { dateTime: '2026-10-16T15:00:00.000Z', timeZone: MADRID });
+    assert.deepEqual(open.reminders.overrides, [{ method: 'popup', minutes: 0 }]);
+    for (const status of ['DONE', 'CANCELLED']) {
+      const closed = buildTaskEvent({ title: 'x', dueDate: '2026-10-16', alarmTime: '17:00', status }, MADRID, URL)!;
+      assert.deepEqual(closed.start, open.start);
+      assert.deepEqual(closed.reminders.overrides, []);
+    }
+  });
+
+  it('sends the notes as text when the HTML list does not fit', () => {
+    const observations = Array.from({ length: 300 }, (_, i) => ({
+      type: 'checklist',
+      text: `Punto ${i} ${'x'.repeat(20)}`
+    }));
+    const event = buildTaskEvent({ title: 'x', dueDate: '2026-10-16', observations }, MADRID, URL)!;
+    assert.doesNotMatch(event.description, /<ul>/);
+    assert.match(event.description, /^Notas:\n- \[ \] Punto 0/);
+    assert.ok(Array.from(event.description).length <= 8_000);
+    // Con pocas, en HTML; un salto de línea de Windows también es un salto
+    const short = buildTaskEvent(
+      { title: 'x', dueDate: '2026-10-16', description: 'a\r\nb', observations: observations.slice(0, 2) },
+      MADRID,
+      URL
+    )!;
+    assert.ok(short.description.startsWith('a<br>b<br><br>Notas:<ul><li>☐ Punto 0'));
+  });
+
   it('gives each task the same event id, with only the characters Google accepts', () => {
     assert.equal(eventIdFor('task-1'), eventIdFor('task-1'));
     assert.notEqual(eventIdFor('task-1'), eventIdFor('task-2'));
