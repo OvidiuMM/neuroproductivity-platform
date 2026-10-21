@@ -70,14 +70,14 @@ test('an alarm warns in CLAR and with a system notification, only once', async (
   const due = await fromNow(page, 30);
   const alarm = await fromNow(page, 2);
   await newTaskWithAlarm(page, title, due, alarm.time);
-  await expect(page.getByText(new RegExp(`^Sonará (el|la víspera).*${alarm.time}\\.`))).toBeVisible();
+  await expect(page.getByText(new RegExp(`^Sonará (hoy|mañana) a las ${alarm.time}\\.`))).toBeVisible();
   await page.getByRole('button', { name: 'Activar también las notificaciones del sistema' }).click();
   await expect(page.getByText('También recibirás una notificación del sistema.')).toBeVisible();
   await page.getByRole('button', { name: 'Guardar la tarea' }).click();
 
-  // La tarjeta lleva la campana con la hora
+  // La tarjeta lleva la campana con el día y la hora
   const card = page.getByRole('listitem').filter({ has: page.getByRole('heading', { name: title }) });
-  await expect(card).toContainText(`Alarma:${alarm.time}`);
+  await expect(card).toContainText(new RegExp(`Alarma:(hoy|mañana) ${alarm.time}`));
   const alert = page.getByRole('region', { name: `Alarma: ${title}` });
   await expect(alert).toHaveCount(0);
 
@@ -111,7 +111,7 @@ test('an alarm warns in CLAR and with a system notification, only once', async (
   expect(await notifications(page)).toEqual([]);
 });
 
-test('an alarm whose time already passed warns at once while the task is not due yet', async ({ page }) => {
+test('an alarm that passed with CLAR closed warns on opening while the task is not due yet', async ({ page }) => {
   // Aunque el navegador no deje guardar las alarmas ya avisadas (almacenamiento lleno o bloqueado), avisa igual
   await page.addInitScript(() => {
     const original = Object.getOwnPropertyDescriptor(Storage.prototype, 'setItem')!.value as Storage['setItem'];
@@ -120,13 +120,21 @@ test('an alarm whose time already passed warns at once while the task is not due
       original.call(this, key, value);
     };
   });
+  await page.clock.install();
   await page.goto('/');
   await signInWithGoogle(page);
   await openSection(page, 'Listas');
   const title = `Enviar el informe ${Date.now().toString(36)}`;
-  const alarmTime = (await fromNow(page, -5)).time;
+  const alarmTime = (await fromNow(page, 2)).time;
   await newTaskWithAlarm(page, title, await fromNow(page, 20), alarmTime);
   await page.getByRole('button', { name: 'Guardar la tarea' }).click();
+  await expect(page.getByRole('dialog')).toHaveCount(0);
+
+  // CLAR se cierra antes de la hora de la alarma y se vuelve a abrir 5 minutos después
+  await page.goto('about:blank');
+  await page.clock.fastForward('05:00');
+  await page.goto('/');
+  await openSection(page, 'Listas');
 
   // El aviso dice su hora y, como llega tarde, cuándo era
   const alert = page.getByRole('region', { name: `Alarma: ${title}` });
@@ -138,7 +146,9 @@ test('an alarm whose time already passed warns at once while the task is not due
   await expect(alert).toHaveCount(0);
 });
 
-test('a repeating task needs a due time for an alarm; with only a date it rings the day before', async ({ page }) => {
+test('an alarm needs a due date; it rings that day, before the due time if there is one, also when repeating', async ({
+  page
+}) => {
   await page.goto('/');
   await signInWithGoogle(page);
   await openSection(page, 'Listas');
@@ -147,23 +157,47 @@ test('a repeating task needs a due time for an alarm; with only a date it rings 
   await expect(alarmField).toBeDisabled();
   await expect(alarmField).toHaveAccessibleDescription(/Pon una fecha límite para poder añadir una alarma\./);
 
-  // Solo con fecha: la víspera
+  // Solo con fecha: ese día, a su hora
   await page.getByLabel('Fecha límite', { exact: true }).fill('2030-06-15');
   await expect(alarmField).toBeEnabled();
   await alarmField.fill('20:00');
-  await expect(alarmField).toHaveAccessibleDescription(/^Sonará la víspera, el 14 jun, a las 20:00\./);
+  await expect(alarmField).toHaveAccessibleDescription(/^Sonará el 15 jun a las 20:00\./);
 
-  // Repetida sin hora: no puede llevar alarma hasta tener hora límite
+  // Repetida sin hora: también la lleva, cada repetición su día
   await showMoreOptions(page);
   await page.getByLabel('Repetir').selectOption('WEEKLY');
-  await expect(alarmField).toBeDisabled();
-  await expect(alarmField).toHaveAccessibleDescription(
-    /Pon una hora límite para añadir una alarma a una tarea que se repite\./
-  );
-  await page.getByLabel('Hora límite').fill('09:00');
   await expect(alarmField).toBeEnabled();
   await expect(alarmField).toHaveValue('20:00');
-  await expect(alarmField).toHaveAccessibleDescription(/^Sonará /);
+  await expect(alarmField).toHaveAccessibleDescription(/^Sonará el .+ a las 20:00\./);
+
+  // Con hora límite, tiene que ser antes: si no, lo dice y no deja guardar
+  await page.getByLabel('Hora límite').fill('09:00');
+  await expect(
+    page.getByRole('alert').filter({ hasText: 'La alarma tiene que ser antes de la hora límite (09:00).' })
+  ).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Guardar la tarea' })).toBeDisabled();
+  await alarmField.fill('08:30');
+  await expect(alarmField).toHaveAccessibleDescription(/^Sonará el .+ a las 08:30\./);
+});
+
+test('an alarm saved after its time says it will not ring, and does not', async ({ page }) => {
+  await fakeNotifications(page, 'granted');
+  await page.clock.install();
+  await page.goto('/');
+  await signInWithGoogle(page);
+  await openSection(page, 'Listas');
+  const title = `Pagar la factura ${Date.now().toString(36)}`;
+  const alarmTime = (await fromNow(page, -5)).time;
+  await newTaskWithAlarm(page, title, await fromNow(page, 20), alarmTime);
+  await expect(page.getByLabel(/^Alarma/)).toHaveAccessibleDescription(
+    new RegExp(`^Esa hora ya ha pasado \\((hoy|ayer|el .+) a las ${alarmTime}\\): no sonará\\.`)
+  );
+  await page.getByRole('button', { name: 'Guardar la tarea' }).click();
+  await expect(page.getByRole('dialog')).toHaveCount(0);
+  // Pasa un minuto: el aviso no sale
+  await page.clock.fastForward('01:00');
+  await expect(page.getByRole('region', { name: `Alarma: ${title}` })).toHaveCount(0);
+  expect(await notifications(page)).toEqual([]);
 });
 
 test('with two tabs open, both show the alert and the system notification comes once', async ({ context }) => {
@@ -246,15 +280,17 @@ test('times are written in 24 hours; half-written or impossible ones are not sav
   await form.getByRole('button', { name: 'Guardar la tarea' }).click();
   await expect(form).toBeVisible();
 
-  // 930 se lee como 09:30, y una alarma a las 23:00 suena a las 23:00 (la víspera)
+  // 930 se lee como 09:30, y 915 como 09:15: la alarma suena ese día a las 09:15
   await dueTime.fill('930');
   await dueTime.blur();
   await expect(dueTime).toHaveValue('09:30');
   const alarm = page.getByLabel(/^Alarma/);
-  await alarm.fill('23:00');
-  await expect(alarm).toHaveAccessibleDescription(/^Sonará la víspera, el 14 jun, a las 23:00\./);
+  await alarm.fill('915');
+  await alarm.blur();
+  await expect(alarm).toHaveValue('09:15');
+  await expect(alarm).toHaveAccessibleDescription(/^Sonará el 15 jun a las 09:15\./);
   await form.getByRole('button', { name: 'Guardar la tarea' }).click();
   await expect(form).toBeHidden();
   const card = page.getByRole('listitem').filter({ has: page.getByRole('heading', { name: title }) });
-  await expect(card).toContainText('Alarma:23:00');
+  await expect(card).toContainText('Alarma:15 jun 09:15');
 });

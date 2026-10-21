@@ -189,8 +189,9 @@ const INVALID_TOKEN = new Set([
 export type SendMulticast = (message: MulticastMessage) => Promise<BatchResponse>;
 const sendWithFcm: SendMulticast = (message) => getMessaging().sendEachForMulticast(message);
 
-// Envía una alarma de la cola. La toma en una transacción, comprobando que sigue tocando (si la tarea cambió entretanto,
-// la nueva alarma espera a su hora), y apunta que se envió. Una alarma cuyo plazo ya venció no se envía, ni a un
+// Envía una alarma de la cola. La toma en una transacción, comprobando que sigue tocando: se vuelve a calcular con la
+// tarea tal como está ahora y, si ya no es la de la cola (la tarea cambió entretanto, o la regla: p. ej. las colas de
+// antes de 0.9.7, que sonaban la víspera), se pone la de ahora en su lugar, que espera a su hora. Apunta que se envió. Una alarma cuyo plazo ya venció no se envía, ni a un
 // dispositivo que lleva 30 días sin abrir CLAR. Si ningún dispositivo la recibe por un fallo pasajero, vuelve a la cola
 // con una espera creciente (1, 2, 4, 8 min) y, tras cinco intentos, se deja.
 export const sendQueued = async (ref: DocumentReference, now: number, send: SendMulticast = sendWithFcm) => {
@@ -198,6 +199,17 @@ export const sendQueued = async (ref: DocumentReference, now: number, send: Send
     const snapshot = await tx.get(ref);
     const data = snapshot.data();
     if (!data || (data.at as Timestamp).toMillis() > now) return null;
+    const [task, devices] = await Promise.all([
+      tx.get(db().doc(`users/${data.uid as string}/tasks/${data.taskId as string}`)),
+      tx.get(devicesRef(data.uid as string))
+    ]);
+    // (sin comparar con la última enviada: un reintento lleva la misma alarma, que ya se apuntó como enviada)
+    const current = pendingAlarm(data.taskId as string, task.data(), devices.data()?.timeZone, undefined, now);
+    if (current?.key !== data.key) {
+      if (current) tx.set(ref, queueDoc(data.uid as string, data.taskId as string, current));
+      else tx.delete(ref);
+      return null;
+    }
     tx.delete(ref);
     tx.set(sentRef(data.uid as string, data.taskId as string), {
       uid: data.uid as string,

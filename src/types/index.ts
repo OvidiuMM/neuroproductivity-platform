@@ -55,7 +55,7 @@ export interface TaskItem {
   goalId?: string; // meta a la que contribuye; el área de la Rueda se hereda de la meta
   dependsOn?: string; // tarea a la que espera: hasta que esté hecha o cancelada, esta queda bloqueada
   projectId?: string; // proyecto al que pertenece; la meta (y el área) se heredan del proyecto
-  alarmTime?: string; // HH:mm: aviso antes del plazo (en las 24 h anteriores, o la víspera si no tiene hora)
+  alarmTime?: string; // HH:mm: aviso el día límite (con hora límite, antes de ella; ver src/services/alarms.ts)
 }
 
 // Meta: un objetivo concreto dentro de un área de la Rueda, al que se vinculan tareas (áreas → metas → tareas)

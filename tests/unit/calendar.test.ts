@@ -250,21 +250,22 @@ describe('alarms in calendars', () => {
       alarmTime: '23:00'
     });
     assert.match(interval, /TRIGGER;RELATED=END:-PT720M/);
-    // Solo fecha: la víspera a las 20:00, contada desde el final del día límite (28 h antes)
-    assert.match(ics({ dueDate: '2030-06-15', alarmTime: '20:00' }), /TRIGGER;RELATED=END:-PT1680M/);
+    // Solo fecha: ese día a las 20:00, contada desde el final del día límite (4 h antes)
+    assert.match(ics({ dueDate: '2030-06-15', alarmTime: '20:00' }), /TRIGGER;RELATED=END:-PT240M/);
   });
 
   it('counts the alarm of a one-hour event from its start, also when it comes after it', () => {
-    // Plazo sin hora el 15: la alarma de las 18:00 es la víspera, 9 h después del inicio del 14 a las 09:00
+    // Plazo sin hora el 15: la alarma de las 18:00 suena el 15, 33 h después del inicio del 14 a las 09:00
     const file = ics({ startDate: '2030-06-14', startTime: '09:00', dueDate: '2030-06-15', alarmTime: '18:00' });
     assert.match(file, /DTSTART:\d{8}T\d{6}Z\r\nDTEND:/);
-    assert.match(file, /TRIGGER:PT540M/);
+    assert.match(file, /TRIGGER:PT1980M/);
   });
 
-  it('has no alarm without one, or when the task cannot have it', () => {
+  it('has no alarm without one; a repeating task with only a date carries it on each repetition', () => {
     assert.doesNotMatch(ics({ dueDate: '2030-06-15', dueTime: '11:00' }), /VALARM/);
     const recurrence = { frequency: 'WEEKLY' as const, interval: 1, weekdays: [6] };
-    assert.doesNotMatch(ics({ dueDate: '2030-06-15', recurrence, alarmTime: '08:00' }), /VALARM/);
+    // Cada sábado a las 08:00: 16 h antes del final del día
+    assert.match(ics({ dueDate: '2030-06-15', recurrence, alarmTime: '08:00' }), /TRIGGER;RELATED=END:-PT960M/);
   });
 });
 

@@ -98,6 +98,36 @@ describe('push alarms', () => {
     assert.equal((await db.doc(`alarm_sent/${uid}__t1`).get()).data()?.key, 't1@2026-10-16T07:30:00.000Z');
   });
 
+  it('recomputes a queued alarm when sending: one queued before 0.9.7 for the day before waits for its day', async () => {
+    await device('d1');
+    // Solo con fecha (el 17) y alarma a las 09:30: antes sonaba la víspera, el 16; ahora, el 17
+    await task('t1', { dueDate: '2026-10-17', alarmTime: '09:30' });
+    await db.doc(`alarm_queue/${uid}__t1`).set({
+      uid,
+      taskId: 't1',
+      at: Timestamp.fromMillis(Date.parse('2026-10-16T07:30:00.000Z')),
+      due: Timestamp.fromMillis(Date.parse('2026-10-17T21:59:59.999Z')),
+      key: 't1@2026-10-16T07:30:00.000Z',
+      clock: '09:30',
+      taskTitle: 'Pagar el alquiler',
+      body: 'Vence el 17 oct',
+      attempts: 0
+    });
+    const fcm = fakeFcm();
+    assert.equal(await sendQueued(db.doc(`alarm_queue/${uid}__t1`), now, fcm.send), 'skipped');
+    assert.equal(fcm.sent.length, 0);
+    assert.equal((await queued('t1'))?.key, 't1@2026-10-17T07:30:00.000Z');
+    assert.equal((await db.doc(`alarm_sent/${uid}__t1`).get()).exists, false);
+
+    // Y una cuya tarea se guardó después de su hora ya no suena: sale de la cola
+    await task('t2', { dueDate: '2026-10-16', dueTime: '12:00', alarmTime: '09:30' });
+    await syncTaskAlarm(uid, 't2', now - 60 * MINUTE);
+    await task('t2', { dueDate: '2026-10-16', dueTime: '12:00', alarmTime: '09:30', updatedAt: fresh });
+    assert.equal(await sendQueued(db.doc(`alarm_queue/${uid}__t2`), now, fcm.send), 'skipped');
+    assert.equal(await queued('t2'), undefined);
+    assert.equal(fcm.sent.length, 0);
+  });
+
   it('puts the alarm back with a growing wait after a transient failure', async () => {
     await device('d1');
     await task('t1', { dueDate: '2026-10-16', dueTime: '12:00', alarmTime: '09:30' });

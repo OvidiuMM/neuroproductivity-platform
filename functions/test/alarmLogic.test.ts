@@ -73,7 +73,7 @@ describe('dueInstant', () => {
 });
 
 describe('alarmInstant', () => {
-  it('rings the same day before the due time, otherwise the day before', () => {
+  it('rings on the due day: before the due time, or at its time with only a date; older ones after it, the day before', () => {
     assert.equal(
       iso(alarmInstant({ dueDate: '2026-10-17', dueTime: '11:00', alarmTime: '10:57' }, MADRID)),
       '2026-10-17T08:57:00.000Z'
@@ -82,15 +82,15 @@ describe('alarmInstant', () => {
       iso(alarmInstant({ dueDate: '2026-10-17', dueTime: '11:00', alarmTime: '11:00' }, MADRID)),
       '2026-10-16T09:00:00.000Z'
     );
-    assert.equal(iso(alarmInstant({ dueDate: '2026-10-17', alarmTime: '20:00' }, MADRID)), '2026-10-16T18:00:00.000Z');
+    assert.equal(iso(alarmInstant({ dueDate: '2026-10-17', alarmTime: '20:00' }, MADRID)), '2026-10-17T18:00:00.000Z');
   });
 
-  it('has no alarm without a valid time or due date, or on a repeating task without a due time', () => {
+  it('has no alarm without a valid time or due date; a repeating task with only a date has one', () => {
     assert.equal(alarmInstant({ dueDate: '2026-10-17', alarmTime: '25:00' }, MADRID), null);
     assert.equal(alarmInstant({ alarmTime: '10:00' }, MADRID), null);
     assert.equal(
-      alarmInstant({ dueDate: '2026-10-17', alarmTime: '10:00', recurrence: { frequency: 'DAILY' } }, MADRID),
-      null
+      iso(alarmInstant({ dueDate: '2026-10-17', alarmTime: '10:00', recurrence: { frequency: 'DAILY' } }, MADRID)),
+      '2026-10-17T08:00:00.000Z'
     );
   });
 
@@ -108,6 +108,11 @@ describe('queuedAlarm', () => {
     alarmTime: '10:30',
     status: 'PENDING'
   };
+
+  it('skips an alarm whose time had passed when the task was saved, like the app', () => {
+    assert.equal(queuedAlarm('task-1', { ...task, updatedAt: '2026-10-17T08:45:00.000Z' }, MADRID, now), null);
+    assert.ok(queuedAlarm('task-1', { ...task, updatedAt: '2026-10-17T08:00:00.000Z' }, MADRID, now));
+  });
 
   it('builds the same key as the app, with the title and when it is due', () => {
     const alarm = queuedAlarm('task-1', task, MADRID, now)!;
