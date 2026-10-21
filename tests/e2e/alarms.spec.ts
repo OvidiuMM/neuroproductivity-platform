@@ -129,12 +129,16 @@ test('an alarm that passed with CLAR closed warns on opening while the task is n
   await newTaskWithAlarm(page, title, await fromNow(page, 20), alarmTime);
   await page.getByRole('button', { name: 'Guardar la tarea' }).click();
   await expect(page.getByRole('dialog')).toHaveCount(0);
+  // Antes de cerrar, la tarea está en el servidor (si no, al salir de la página se podría perder lo que aún no se
+  // había escrito: en el CI, más lento, pasaba)
+  await expect(page.getByRole('button', { name: /^Sincronizado con el servidor/ })).toBeVisible({ timeout: 15_000 });
 
   // CLAR se cierra antes de la hora de la alarma y se vuelve a abrir 5 minutos después
   await page.goto('about:blank');
   await page.clock.fastForward('05:00');
   await page.goto('/');
   await openSection(page, 'Listas');
+  await expect(page.getByRole('heading', { name: title })).toBeVisible({ timeout: 15_000 });
 
   // El aviso dice su hora y, como llega tarde, cuándo era
   const alert = page.getByRole('region', { name: `Alarma: ${title}` });
