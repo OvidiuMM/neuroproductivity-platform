@@ -23,7 +23,7 @@ test('signed out, the start screen presents CLAR and leads to creating an accoun
 
   await page.getByRole('button', { name: 'Crear cuenta gratis' }).click();
   await expect(page.getByRole('heading', { name: 'Crear una cuenta' })).toBeVisible();
-  await page.getByRole('button', { name: 'Ya tengo cuenta' }).click();
+  await page.getByRole('button', { name: 'Ya tengo cuenta', exact: true }).click();
   await expect(page.getByRole('heading', { name: 'Entrar con tu email' })).toBeVisible();
   await expect(page.getByRole('button', { name: 'Continuar con Google' })).toBeVisible();
 });
