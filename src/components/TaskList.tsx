@@ -18,7 +18,7 @@ import { useAreas } from '../hooks/useAreas';
 import { PHONE_QUERY, useMediaQuery } from '../hooks/useMediaQuery';
 import { TaskCard } from './TaskCard';
 import { BottomSheet } from './BottomSheet';
-import { Plus, Archive, Layers, ArrowUpDown, CheckCircle2, SlidersHorizontal, X } from 'lucide-react';
+import { Plus, Archive, Layers, ArrowUpDown, CheckCircle2, FilePen, SlidersHorizontal, X } from 'lucide-react';
 
 const DEADLINE_FILTERS: { value: DeadlineFilter; label: string }[] = [
   { value: 'ALL', label: 'Todas' },
@@ -52,6 +52,9 @@ interface TaskListProps {
   prefs: ListPrefs;
   onPrefsChange: (update: (prefs: ListPrefs) => ListPrefs) => void;
   archivedCount: number;
+  // Borradores de tareas (las nuevas que se cerraron sin guardar): su botón sale si hay alguno
+  draftsCount: number;
+  onOpenDrafts: () => void;
   onChangeStatus: (task: TaskItem, status: TaskStatus) => void;
   onDeleteTask: (id: string) => void;
   onEditTask: (task: TaskItem) => void;
@@ -67,6 +70,8 @@ export const TaskList: React.FC<TaskListProps> = ({
   prefs,
   onPrefsChange,
   archivedCount,
+  draftsCount,
+  onOpenDrafts,
   onChangeStatus,
   onDeleteTask,
   onEditTask,
@@ -283,6 +288,19 @@ export const TaskList: React.FC<TaskListProps> = ({
               {archivedCount}
             </span>
           </button>
+
+          {draftsCount > 0 && (
+            <button
+              onClick={onOpenDrafts}
+              className="flex items-center gap-2 rounded-xl border border-indigo-200 px-3.5 py-2 text-xs font-bold text-indigo-700 transition-all hover:bg-indigo-50"
+            >
+              <FilePen className="h-3.5 w-3.5" aria-hidden="true" />
+              <span>Borradores</span>
+              <span className="py-0.2 rounded-full bg-indigo-100 px-2 font-mono text-[10px] text-indigo-800">
+                {draftsCount}
+              </span>
+            </button>
+          )}
         </div>
 
         {/* Orden y filtros del Top 10: en línea en tableta y escritorio, en una hoja en el móvil */}

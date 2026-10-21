@@ -16,13 +16,21 @@ import {
   type Firestore
 } from 'firebase/firestore';
 import type { User } from 'firebase/auth';
-import { EmailDraft, Goal, MeetingGuard, Project, TaskItem, WheelArea, WheelOfLifeLog } from '../types';
+import { EmailDraft, Goal, MeetingGuard, Project, TaskDraft, TaskItem, WheelArea, WheelOfLifeLog } from '../types';
 import { isUnchanged, normalizeTask } from './tasks';
 import { onboardingRecord, type OnboardingOutcome, type OnboardingRecord } from './onboarding';
 
 // Datos de cada persona en users/{uid}/<colección>/<id>. Las reglas (firestore.rules) solo dejan acceder al propio uid.
-export type UserCollection = 'tasks' | 'wheelLogs' | 'meetings' | 'emails' | 'goals' | 'projects';
-export const USER_COLLECTIONS: UserCollection[] = ['tasks', 'wheelLogs', 'meetings', 'emails', 'goals', 'projects'];
+export type UserCollection = 'tasks' | 'wheelLogs' | 'meetings' | 'emails' | 'goals' | 'projects' | 'taskDrafts';
+export const USER_COLLECTIONS: UserCollection[] = [
+  'tasks',
+  'wheelLogs',
+  'meetings',
+  'emails',
+  'goals',
+  'projects',
+  'taskDrafts'
+];
 
 export interface UserData {
   tasks: TaskItem[];
@@ -31,6 +39,7 @@ export interface UserData {
   emails: EmailDraft[];
   goals: Goal[];
   projects: Project[];
+  taskDrafts: TaskDraft[];
 }
 
 const userCollection = (db: Firestore, uid: string, name: UserCollection) => collection(db, 'users', uid, name);
@@ -44,7 +53,8 @@ const SORTERS = {
   meetings: (a: MeetingGuard, b: MeetingGuard) => byDateDesc(a.createdAt, b.createdAt),
   emails: (a: EmailDraft, b: EmailDraft) => byDateDesc(a.updatedAt ?? a.sentAt, b.updatedAt ?? b.sentAt),
   goals: (a: Goal, b: Goal) => byDateDesc(a.createdAt, b.createdAt),
-  projects: (a: Project, b: Project) => byDateDesc(a.createdAt, b.createdAt)
+  projects: (a: Project, b: Project) => byDateDesc(a.createdAt, b.createdAt),
+  taskDrafts: (a: TaskDraft, b: TaskDraft) => byDateDesc(a.updatedAt, b.updatedAt)
 };
 
 export interface SnapshotInfo {
@@ -195,6 +205,12 @@ export const saveEmail = (db: Firestore, uid: string, email: EmailDraft) =>
 export const deleteEmail = (db: Firestore, uid: string, emailId: string) =>
   deleteDoc(doc(userCollection(db, uid, 'emails'), emailId));
 
+export const saveTaskDraft = (db: Firestore, uid: string, draft: TaskDraft) =>
+  setDoc(doc(userCollection(db, uid, 'taskDrafts'), draft.id), { ...draft, userId: uid });
+
+export const deleteTaskDraft = (db: Firestore, uid: string, draftId: string) =>
+  deleteDoc(doc(userCollection(db, uid, 'taskDrafts'), draftId));
+
 // Recuperar un correo eliminado, solo si nadie lo ha vuelto a guardar entretanto (p. ej. desde otra pestaña)
 export const restoreDeletedEmail = async (db: Firestore, uid: string, email: EmailDraft) => {
   await whenSynced(db);
@@ -314,7 +330,7 @@ export const importUserData = (db: Firestore, uid: string, data: UserData) =>
   commitInBatches(
     db,
     USER_COLLECTIONS.flatMap((name) =>
-      (data[name] as { id: string }[]).map(
+      ((data[name] ?? []) as { id: string }[]).map(
         (item) => (batch: ReturnType<typeof writeBatch>) =>
           batch.set(doc(userCollection(db, uid, name), item.id), { ...item, userId: uid })
       )

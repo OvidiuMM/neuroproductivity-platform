@@ -21,6 +21,8 @@ import {
   GoalStatus,
   Project,
   ProjectStatus,
+  TaskDraft,
+  TaskFormValues,
   UserProfile
 } from './types';
 import { formatTaskDates, isArchived, isArchivedStatus, withStatus } from './services/tasks';
@@ -44,6 +46,8 @@ import {
   importUserData,
   saveEmail,
   deleteEmail,
+  saveTaskDraft,
+  deleteTaskDraft,
   restoreDeletedEmail,
   saveMeeting,
   saveTask,
@@ -101,6 +105,7 @@ import type { SyncStatus } from './components/SyncIndicator';
 import { TaskList } from './components/TaskList';
 import { TaskModal, type TaskFormData } from './components/TaskModal';
 import { ArchivedTasksModal } from './components/ArchivedTasksModal';
+import { TaskDraftsModal } from './components/TaskDraftsModal';
 import { MeetingModal } from './components/MeetingModal';
 import { EmailModal, type EmailSaveKind } from './components/EmailModal';
 import { isDraft } from './services/email';
@@ -223,6 +228,7 @@ export default function App({ user, services, isAdmin = false }: AppProps) {
   const [wheelSynced, setWheelSynced] = useState(false);
   const [meetings, setMeetings] = useState<MeetingGuard[]>([]);
   const [emails, setEmails] = useState<EmailDraft[]>([]);
+  const [taskDrafts, setTaskDrafts] = useState<TaskDraft[]>([]);
   const [goals, setGoals] = useState<Goal[]>([]);
   const [projects, setProjects] = useState<Project[]>([]);
   // Las tareas de un proyecto tienen la meta del proyecto, y las vinculadas a una meta, el área de la meta
@@ -572,6 +578,16 @@ export default function App({ user, services, isAdmin = false }: AppProps) {
           trackSync('projects', info);
         },
         onError
+      ),
+      subscribeToCollection(
+        db,
+        uid,
+        'taskDrafts',
+        (items, info) => {
+          setTaskDrafts(items);
+          trackSync('taskDrafts', info);
+        },
+        onError
       )
     ];
     return () => unsubscribers.forEach((unsubscribe) => unsubscribe());
@@ -580,14 +596,56 @@ export default function App({ user, services, isAdmin = false }: AppProps) {
   // Las escrituras se reflejan al instante (caché local) y se sincronizan con el servidor en segundo plano
   const openNewTask = (options?: { someday?: boolean; goalId?: string; project?: Project }) => {
     setEditingTask(null);
+    setContinuingDraft(null);
     setNewTaskIsSomeday(Boolean(options?.someday));
     setNewTaskGoalId(options?.project?.goalId ?? options?.goalId);
     setNewTaskProjectId(options?.project?.id);
     setIsTaskModalOpen(true);
   };
 
+  // BORRADORES: una tarea nueva cerrada sin guardar se guarda sola (TaskModal), y al guardarla como tarea se borra. Con
+  // «Deshacer», el borrador vuelve a como estaba o, si era nuevo, desaparece
+  const [continuingDraft, setContinuingDraft] = useState<TaskDraft | null>(null);
+  const [isDraftsOpen, setIsDraftsOpen] = useState(false);
+  const continueDraft = (draft: TaskDraft) => {
+    setIsDraftsOpen(false);
+    setEditingTask(null);
+    setContinuingDraft(draft);
+    setIsTaskModalOpen(true);
+  };
+  const handleSaveDraft = (form: TaskFormValues | null) => {
+    const previous = continuingDraft;
+    if (!form) {
+      if (previous) deleteTaskDraft(db, uid, previous.id).catch(reportError('borrar el borrador'));
+      return;
+    }
+    const now = new Date().toISOString();
+    const draft: TaskDraft = {
+      id: previous?.id ?? `draft-${Date.now()}`,
+      userId: uid,
+      form,
+      createdAt: previous?.createdAt ?? now,
+      updatedAt: now
+    };
+    saveTaskDraft(db, uid, draft).catch(reportError('guardar el borrador'));
+    showToast(previous ? 'Borrador guardado.' : 'Guardada en «Borradores», en Listas: puedes seguir con ella.', () => {
+      (previous ? saveTaskDraft(db, uid, previous) : deleteTaskDraft(db, uid, draft.id)).catch(
+        reportError('deshacer el borrador')
+      );
+      showToast(previous ? 'El borrador vuelve a estar como antes.' : 'Borrador quitado.');
+    });
+  };
+  const handleDeleteDraft = (draft: TaskDraft) => {
+    deleteTaskDraft(db, uid, draft.id).catch(reportError('eliminar el borrador'));
+    showToast('Borrador eliminado.', () => {
+      saveTaskDraft(db, uid, draft).catch(reportError('recuperar el borrador'));
+      showToast('Borrador recuperado.');
+    });
+  };
+
   const handleSaveTask = (taskData: TaskFormData) => {
     const now = new Date().toISOString();
+    if (continuingDraft) deleteTaskDraft(db, uid, continuingDraft.id).catch(reportError('borrar el borrador'));
     if (editingTask) {
       const current = tasks.find((t) => t.id === editingTask.id) ?? editingTask;
       saveTask(db, uid, {
@@ -989,6 +1047,7 @@ export default function App({ user, services, isAdmin = false }: AppProps) {
     projectEditor !== null ||
     isTaskModalOpen ||
     isArchiveOpen ||
+    isDraftsOpen ||
     isMeetingModalOpen ||
     emailEditor !== null ||
     isAccountMenuOpen ||
@@ -1194,6 +1253,8 @@ export default function App({ user, services, isAdmin = false }: AppProps) {
                 prefs={listPrefs}
                 onPrefsChange={setListPrefs}
                 archivedCount={archivedTasks.length}
+                draftsCount={taskDrafts.length}
+                onOpenDrafts={() => setIsDraftsOpen(true)}
                 onChangeStatus={handleChangeStatus}
                 onDeleteTask={handleDeleteTask}
                 onDownloadTask={handleDownloadTask}
@@ -1435,7 +1496,10 @@ export default function App({ user, services, isAdmin = false }: AppProps) {
             setIsTaskModalOpen(false);
             setEditingTask(null);
             setDictateNewTask(false);
+            setContinuingDraft(null);
           }}
+          draft={continuingDraft}
+          onSaveDraft={handleSaveDraft}
           onSaveTask={handleSaveTask}
           initialContext={activeContext}
           initialSomeday={newTaskIsSomeday}
@@ -1447,6 +1511,15 @@ export default function App({ user, services, isAdmin = false }: AppProps) {
           projects={projects}
           tasks={tasks}
           onCreateGoal={handleCreateGoalFromTask}
+        />
+
+        {/* BORRADORES DE TAREAS */}
+        <TaskDraftsModal
+          isOpen={isDraftsOpen}
+          onClose={() => setIsDraftsOpen(false)}
+          drafts={taskDrafts}
+          onContinue={continueDraft}
+          onDelete={handleDeleteDraft}
         />
 
         {/* VENTANA DE TAREAS ARCHIVADAS (ESTADO HECHA) */}
