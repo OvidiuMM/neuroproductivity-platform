@@ -78,7 +78,8 @@ service cloud.firestore {
 
       match /{collection}/{docId} {
         // Tope de tamaño de lo que se escribe, contra abusos (con el registro abierto). Son holgados: iguales o mayores
-        // que los de la importación (src/services/importData.ts), para que nunca rechacen lo que ella acepta
+        // que los de la importación (src/services/importData.ts), para que nunca rechacen lo que ella acepta. Los
+        // formularios no dejan escribir más (maxLength)
         function textAtMost(data, field, max) {
           return !(field in data) || (data[field] is string && data[field].size() <= max);
         }

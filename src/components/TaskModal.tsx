@@ -711,6 +711,7 @@ export const TaskModal: React.FC<TaskModalProps> = ({
             <div className="relative flex flex-wrap items-center gap-1">
               <input
                 id="task-title"
+                maxLength={2_000}
                 aria-describedby="task-title-hint"
                 type="text"
                 value={title}
@@ -1071,6 +1072,7 @@ export const TaskModal: React.FC<TaskModalProps> = ({
                 </div>
                 <textarea
                   id="task-description"
+                  maxLength={100_000}
                   rows={3}
                   value={description}
                   onChange={(e) => setDescription(e.target.value)}
