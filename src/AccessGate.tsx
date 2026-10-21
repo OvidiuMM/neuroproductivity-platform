@@ -17,7 +17,8 @@ import {
 } from './services/access';
 import { deleteAccount, downloadAccountData } from './services/account';
 import { signOutAndClearCache, type FirebaseServices } from './services/firebase';
-import { saveUserProfile } from './services/repository';
+import { recordTermsAcceptance, saveUserProfile } from './services/repository';
+import { LEGAL_UPDATED } from './services/legal';
 
 interface AccessGateProps {
   user: User;
@@ -28,6 +29,12 @@ const REQUEST_ERRORS: Record<string, string> = {
   'functions/resource-exhausted': 'Podrás volver a pedir acceso más adelante.',
   'functions/failed-precondition': 'Tu cuenta no tiene un email con el que avisarte.',
   'functions/permission-denied': 'Confirma tu email antes de solicitar acceso.'
+};
+
+// Si el email ya está confirmado (p. ej. en otra pestaña) pero el token aún no lo dice, que es lo que lee el servidor y
+// puede tardar hasta una hora, se renueva antes de preguntar por el acceso
+const refreshVerifiedToken = async (user: User) => {
+  if (user.emailVerified && (await user.getIdTokenResult()).claims.email_verified !== true) await user.getIdToken(true);
 };
 
 // La app solo se abre con el acceso aprobado por la administración. El estado llega en vivo desde
@@ -52,11 +59,12 @@ export const AccessGate: React.FC<AccessGateProps> = ({ user, services }) => {
   // (isChecking empieza en true, así que la primera comprobación no necesita marcarlo)
   const confirmWithServer = useCallback(
     () =>
-      syncAccess(services.functions)
+      refreshVerifiedToken(user)
+        .then(() => syncAccess(services.functions))
         .then((result) => setCheckedStatus(result.status))
         .catch((e) => console.warn('Could not check access:', e))
         .finally(() => setIsChecking(false)),
-    [services.functions]
+    [services.functions, user]
   );
   const check = () => {
     setIsChecking(true);
@@ -68,7 +76,10 @@ export const AccessGate: React.FC<AccessGateProps> = ({ user, services }) => {
   }, [confirmWithServer]);
 
   useEffect(() => {
-    if (isApproved) saveUserProfile(services.db, user).catch((e) => console.error('Error saving user profile:', e));
+    if (!isApproved) return;
+    saveUserProfile(services.db, user)
+      .then(() => recordTermsAcceptance(services.db, user.uid, LEGAL_UPDATED))
+      .catch((e) => console.error('Error saving user profile:', e));
   }, [isApproved, services.db, user]);
 
   const handleRequest = async (message: string) => {

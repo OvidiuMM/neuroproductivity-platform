@@ -1,7 +1,7 @@
 {
   "name": "CLAR",
   "short_name": "CLAR",
-  "version": "0.9.7",
+  "version": "1.0.0",
   "description": "Decide qué hacer ahora, con claridad",
   "lang": "es",
   "start_url": "/",
@@ -9,6 +9,20 @@
   "background_color": "#0f172a",
   "theme_color": "#0f172a",
   "orientation": "portrait-primary",
+  "shortcuts": [
+    {
+      "name": "Nueva tarea por voz",
+      "short_name": "Tarea por voz",
+      "description": "Abre una tarea nueva con el micrófono escuchando",
+      "url": "/?nueva=voz",
+      "icons": [{ "src": "/icon-192.png", "sizes": "192x192", "type": "image/png" }]
+    },
+    {
+      "name": "Nueva tarea",
+      "url": "/?nueva=1",
+      "icons": [{ "src": "/icon-192.png", "sizes": "192x192", "type": "image/png" }]
+    }
+  ],
   "icons": [
     {
       "src": "/icon.svg",

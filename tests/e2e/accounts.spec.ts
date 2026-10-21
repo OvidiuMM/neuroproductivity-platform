@@ -20,7 +20,8 @@ const signUp = async (page: Page, email: string) => {
   await page.getByLabel('Nombre (opcional)').fill('Lucía Prueba');
   await page.getByLabel('Email', { exact: true }).fill(email);
   await page.getByLabel('Contraseña', { exact: true }).fill(PASSWORD);
-  await page.getByRole('button', { name: 'Crear cuenta' }).click();
+  await page.getByLabel(/^Tengo \d+ años o más/).check();
+  await page.getByRole('button', { name: 'Crear cuenta', exact: true }).click();
 };
 
 const signIn = async (page: Page, email: string, password: string) => {

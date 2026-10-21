@@ -61,12 +61,13 @@ service cloud.firestore {
     }
 
     // Campos del perfil que escribe la app (datos de la cuenta, si ya vio la bienvenida y las novedades, sus áreas de la
-    // Rueda y qué funciones extra tiene encendidas, que solo cuenta para la administración); cualquier otro se rechaza
+    // Rueda, qué funciones extra tiene encendidas, que solo cuenta para la administración, y cuándo aceptó las
+    // condiciones); cualquier otro se rechaza
     function onlyProfileFields(keys) {
       return keys.hasOnly([
         'name', 'email', 'photoUrl', 'createdAt', 'lastLoginAt',
         'hasSeenOnboarding', 'onboardingVersion', 'onboardingSeenAt', 'onboardingOutcome',
-        'wheelAreas', 'featurePrefs', 'releaseNotesSeen'
+        'wheelAreas', 'featurePrefs', 'releaseNotesSeen', 'termsAcceptedAt', 'termsVersion'
       ]);
     }
 
@@ -76,15 +77,40 @@ service cloud.firestore {
       allow update: if hasAccess(uid) && onlyProfileFields(request.resource.data.diff(resource.data).affectedKeys());
 
       match /{collection}/{docId} {
+        // Tope de tamaño de lo que se escribe, contra abusos (con el registro abierto). Son holgados: iguales o mayores
+        // que los de la importación (src/services/importData.ts), para que nunca rechacen lo que ella acepta. Los
+        // formularios no dejan escribir más (maxLength)
+        function textAtMost(data, field, max) {
+          return !(field in data) || (data[field] is string && data[field].size() <= max);
+        }
+        function listAtMost(data, field, max) {
+          return !(field in data) || (data[field] is list && data[field].size() <= max);
+        }
+        function withinLimits(data) {
+          return data.keys().size() <= 60
+            && textAtMost(data, 'title', 2000)
+            && textAtMost(data, 'description', 100000)
+            && textAtMost(data, 'why', 5000)
+            && textAtMost(data, 'subject', 5000)
+            && textAtMost(data, 'body', 200000)
+            && listAtMost(data, 'observations', 1000)
+            && listAtMost(data, 'agendaPoints', 1000)
+            && listAtMost(data, 'recipients', 1000)
+            && listAtMost(data, 'attachments', 1000)
+            && (!('form' in data) || (data.form is map && data.form.keys().size() <= 60));
+        }
+
         allow read, delete: if isOwner(uid)
-          && collection in ['tasks', 'wheelLogs', 'meetings', 'emails', 'goals', 'projects'];
+          && collection in ['tasks', 'wheelLogs', 'meetings', 'emails', 'goals', 'projects', 'taskDrafts'];
         allow create: if hasAccess(uid)
-          && collection in ['tasks', 'wheelLogs', 'meetings', 'emails', 'goals', 'projects'];
+          && collection in ['tasks', 'wheelLogs', 'meetings', 'emails', 'goals', 'projects', 'taskDrafts']
+          && withinLimits(request.resource.data);
 
         // Las evaluaciones de la Rueda de la Vida son append-only: no se modifican.
         // Reescribir el mismo contenido sí se permite para que una importación pueda reintentarse.
         allow update: if hasAccess(uid)
-          && collection in ['tasks', 'wheelLogs', 'meetings', 'emails', 'goals', 'projects']
+          && collection in ['tasks', 'wheelLogs', 'meetings', 'emails', 'goals', 'projects', 'taskDrafts']
+          && withinLimits(request.resource.data)
           && (collection != 'wheelLogs' || request.resource.data == resource.data);
       }
     }

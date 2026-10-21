@@ -6,7 +6,7 @@ import { adminAuth, adminDb } from './adminApp';
 import { HttpsError, onCall, type CallableRequest } from 'firebase-functions/https';
 import * as logger from 'firebase-functions/logger';
 import { defineSecret, defineString } from 'firebase-functions/params';
-import type { DocumentReference, Transaction } from 'firebase-admin/firestore';
+import { FieldValue, type DocumentReference, type Transaction } from 'firebase-admin/firestore';
 import nodemailer from 'nodemailer';
 import {
   canDecide,
@@ -14,6 +14,7 @@ import {
   decideRequest,
   DECISIONS,
   isRecentSignIn,
+  newRequestStatus,
   DEMO_ADMIN_EMAIL,
   buildEmail,
   isAdminToken,
@@ -174,6 +175,7 @@ export const syncAccess = onCall({ region: REGION }, async (request) => {
     const current = access.data() as AccessRecord | undefined;
     const action = decideOnSync({
       current: current?.status,
+      review: current?.review === true,
       approvalRequired,
       emailBlocked,
       emailVerified: auth.token.email_verified === true
@@ -230,11 +232,18 @@ export const requestAccess = onCall({ region: REGION, secrets: emailSecrets }, a
         retryAt: decision.retryAt
       });
     }
-    // Con la aprobación libre, la solicitud se aprueba al momento
+    // Con la aprobación libre, una cuenta nueva se aprueba al momento; una rechazada o retirada, no (ver newRequestStatus)
     const now = new Date().toISOString();
-    const record: AccessRecord = approvalRequired
-      ? { ...profileOf(auth.token), message, status: 'pending', requestedAt: now }
-      : { ...profileOf(auth.token), message, status: 'approved', requestedAt: now, decidedAt: now };
+    const record: AccessRecord =
+      newRequestStatus(current.data() as AccessRecord | undefined, approvalRequired) === 'pending'
+        ? {
+            ...profileOf(auth.token),
+            message,
+            status: 'pending',
+            requestedAt: now,
+            ...(current.exists && { review: true })
+          }
+        : { ...profileOf(auth.token), message, status: 'approved', requestedAt: now, decidedAt: now };
     tx.set(ref, record);
     return { status: record.status, record };
   });
@@ -268,7 +277,8 @@ export const setAccess = onCall({ region: REGION, secrets: emailSecrets }, async
       throw new HttpsError('failed-precondition', 'Ese cambio no es posible desde el estado actual.');
     }
     const decidedAt = new Date().toISOString();
-    tx.update(ref, { status, decidedAt });
+    // Ya decidida: deja de ser una solicitud a revisar
+    tx.update(ref, { status, decidedAt, review: FieldValue.delete() });
     // Bloquear también bloquea el email; desbloquear (retirar o aprobar a una cuenta bloqueada) lo quita
     if (status === 'blocked' && data.email) {
       tx.set(blockedEmailRef(normalizeEmail(data.email)), { uid, since: decidedAt });
@@ -304,7 +314,8 @@ const approveIfStillPending = (ref: DocumentReference, decidedAt: string) =>
   db().runTransaction(async (tx) => {
     const snapshot = await tx.get(ref);
     const current = snapshot.data() as AccessRecord | undefined;
-    if (current?.status !== 'pending') return null;
+    // Las de cuentas rechazadas o retiradas siguen esperando a la administración
+    if (current?.status !== 'pending' || current.review) return null;
     const { approvalRequired, emailBlocked } = await readPolicy(tx, normalizeEmail(current.email));
     if (approvalRequired || emailBlocked) return null;
     tx.update(ref, { status: 'approved', decidedAt });

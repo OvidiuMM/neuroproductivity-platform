@@ -29,7 +29,9 @@ export const IMPORT_LABELS: Record<UserCollection, string> = {
   tasks: 'Tareas',
   wheelLogs: 'Evaluaciones de la Rueda',
   meetings: 'Reuniones',
-  emails: 'Correos'
+  emails: 'Correos',
+  // Los borradores van en la descarga, pero no se importan (son lo que se estaba escribiendo en otro momento)
+  taskDrafts: 'Borradores de tareas'
 };
 
 type Obj = Record<string, unknown>;
@@ -269,7 +271,9 @@ const SANITIZERS: Record<UserCollection, (raw: Obj) => { id: string } | undefine
   projects: project,
   wheelLogs: wheelLog,
   meetings: meeting,
-  emails: email
+  emails: email,
+  // No se importan (ver IMPORT_LABELS)
+  taskDrafts: () => undefined
 };
 
 const area = (raw: unknown): WheelArea | undefined => {

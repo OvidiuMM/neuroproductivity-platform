@@ -32,7 +32,8 @@ const none = (): Record<UserCollection, Set<string>> => ({
   projects: new Set(),
   wheelLogs: new Set(),
   meetings: new Set(),
-  emails: new Set()
+  emails: new Set(),
+  taskDrafts: new Set()
 });
 
 test('reads a full download and keeps only known fields, without the source account', () => {
@@ -256,4 +257,14 @@ test('long or invalid user text in goals, meetings, emails and evaluations makes
   assert.equal(parsed.invalid.emails, 2);
   assert.equal(parsed.invalid.wheelLogs, 1);
   assert.equal(parsed.invalid.tasks, 1);
+});
+
+test('a download with task drafts imports everything else and leaves the drafts out', () => {
+  const draft = { id: 'draft-1', userId: 'other', form: { title: 'Pedir cita' }, createdAt, updatedAt: createdAt };
+  const parsed = parseAccountExport(file({ taskDrafts: [draft] }));
+  assert.equal(parsed.data.tasks.length, 1);
+  assert.equal('taskDrafts' in parsed.data && parsed.data.taskDrafts.length > 0, false);
+  const plan = planImport(parsed, none(), DEFAULT_AREAS);
+  assert.equal(plan.counts.tasks.new, 1);
+  assert.equal('taskDrafts' in plan.counts, false);
 });

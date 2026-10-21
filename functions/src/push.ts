@@ -23,6 +23,11 @@ import { forgetPushDevices } from './pushCleanup';
 const db = adminDb;
 const BATCH_LIMIT = 450;
 const SEND_CONCURRENCY = 10;
+// Contra abusos (con el registro abierto): alarmas en cola por cuenta, alarmas de una misma cuenta en cada envío (así
+// una no retrasa las de las demás) y registros de dispositivo por hora
+export const MAX_QUEUED_PER_ACCOUNT = 100;
+const MAX_SENT_PER_ACCOUNT_PER_RUN = 10;
+const MAX_REGISTRATIONS_PER_HOUR = 20;
 const MAX_DEVICES = 10;
 const STALE_TOKEN_MS = 30 * 24 * 60 * 60 * 1000;
 const MAX_ATTEMPTS = 5;
@@ -72,12 +77,18 @@ export const requeueAccount = async (uid: string, timeZone: string, now = Date.n
   const sentKey = new Map(sent.docs.map((d) => [d.data().taskId as string, d.data().key as unknown]));
   const writes: ((batch: WriteBatch) => void)[] = [];
   const withAlarm = new Set<string>();
-  for (const task of tasks.docs) {
-    const alarm = pendingAlarm(task.id, task.data(), timeZone, sentKey.get(task.id), now, true);
-    if (!alarm) continue;
-    withAlarm.add(task.id);
-    if (queuedKey.get(task.id) !== alarm.key)
-      writes.push((batch) => batch.set(queueRef(uid, task.id), queueDoc(uid, task.id, alarm)));
+  // Las más próximas primero, y como mucho 100 (ver MAX_QUEUED_PER_ACCOUNT)
+  const pending = tasks.docs
+    .flatMap((task) => {
+      const alarm = pendingAlarm(task.id, task.data(), timeZone, sentKey.get(task.id), now, true);
+      return alarm ? [{ taskId: task.id, alarm }] : [];
+    })
+    .sort((a, b) => a.alarm.at - b.alarm.at)
+    .slice(0, MAX_QUEUED_PER_ACCOUNT);
+  for (const { taskId, alarm } of pending) {
+    withAlarm.add(taskId);
+    if (queuedKey.get(taskId) !== alarm.key)
+      writes.push((batch) => batch.set(queueRef(uid, taskId), queueDoc(uid, taskId, alarm)));
   }
   for (const taskId of queuedKey.keys())
     if (!withAlarm.has(taskId)) writes.push((batch) => batch.delete(queueRef(uid, taskId)));
@@ -110,6 +121,17 @@ export const registerPushDevice = onCall({ region: REGION }, async (request) => 
   if (!isValidToken(token) || !isTimeZone(timeZone)) throw new HttpsError('invalid-argument', 'Solicitud no válida.');
   const access = await db().doc(`access/${auth.uid}`).get();
   if (access.data()?.status !== 'approved') throw new HttpsError('permission-denied', 'Tu cuenta aún no tiene acceso.');
+  // Cada registro vuelve a poner al día la cola de la cuenta: como mucho 20 por hora
+  const limitRef = db().doc(`push_limits/${auth.uid}`);
+  await db().runTransaction(async (tx) => {
+    const hourAgo = Date.now() - 60 * 60 * 1000;
+    const recent = (((await tx.get(limitRef)).data()?.at as string[] | undefined) ?? []).filter(
+      (at) => Date.parse(at) > hourAgo
+    );
+    if (recent.length >= MAX_REGISTRATIONS_PER_HOUR)
+      throw new HttpsError('resource-exhausted', 'Demasiados intentos seguidos. Inténtalo de nuevo en un rato.');
+    tx.set(limitRef, { at: [...recent, new Date().toISOString()] });
+  });
 
   const id = tokenId(token);
   const [devices, existing, index] = await Promise.all([
@@ -152,8 +174,12 @@ export const unregisterPushDevice = onCall({ region: REGION }, async (request) =
 
 // Pone al día la alarma de una tarea en la cola. En una transacción, con la tarea tal como está ahora (los eventos del
 // trigger pueden llegar desordenados, p. ej. «Hecha» y «Deshacer» seguidos) y la última enviada.
-export const syncTaskAlarm = (uid: string, taskId: string, now = Date.now()) =>
-  db().runTransaction(async (tx) => {
+export const syncTaskAlarm = async (uid: string, taskId: string, now = Date.now()) => {
+  // Como mucho 100 alarmas en cola por cuenta: una más no entra (la app sigue avisando con CLAR abierta). Se cuentan
+  // fuera de la transacción: leer ahí la cola de la cuenta la haría chocar con las demás tareas que se ponen al día a
+  // la vez (p. ej. al importar). Contra abusos basta un tope aproximado
+  const { count: queuedCount } = (await db().collection('alarm_queue').where('uid', '==', uid).count().get()).data();
+  await db().runTransaction(async (tx) => {
     const [current, devices, sent] = await Promise.all([
       tx.get(db().doc(`users/${uid}/tasks/${taskId}`)),
       tx.get(devicesRef(uid)),
@@ -161,11 +187,16 @@ export const syncTaskAlarm = (uid: string, taskId: string, now = Date.now()) =>
     ]);
     const task = current.data() as AlarmTask | undefined;
     const alarm = pendingAlarm(taskId, task, devices.data()?.timeZone, sent.data()?.key, now);
-    if (alarm) tx.set(queueRef(uid, taskId), queueDoc(uid, taskId, alarm));
-    else tx.delete(queueRef(uid, taskId));
+    if (alarm) {
+      const queued = await tx.get(queueRef(uid, taskId));
+      if (queued.exists || queuedCount < MAX_QUEUED_PER_ACCOUNT)
+        tx.set(queueRef(uid, taskId), queueDoc(uid, taskId, alarm));
+      else logger.warn('Alarm queue full for an account');
+    } else tx.delete(queueRef(uid, taskId));
     // Tarea borrada: su última alarma enviada ya no hace falta
     if (!task) tx.delete(sentRef(uid, taskId));
   });
+};
 
 export const queueTaskAlarm = onDocumentWritten(
   { document: 'users/{uid}/tasks/{taskId}', region: REGION },
@@ -286,17 +317,27 @@ export const sendDueAlarms = onSchedule(
   { schedule: 'every 1 minutes', region: REGION, timeoutSeconds: 120, retryCount: 0 },
   async () => {
     const now = Date.now();
-    const due = await db()
+    const found = await db()
       .collection('alarm_queue')
       .where('at', '<=', Timestamp.fromMillis(now))
       .orderBy('at')
-      .limit(200)
+      .limit(500)
       .get();
+    // Como mucho 10 de cada cuenta por vuelta, y 200 en total: las demás, en la siguiente (cada minuto)
+    const perAccount = new Map<string, number>();
+    const due = found.docs
+      .filter((d) => {
+        const uid = String(d.data().uid);
+        const count = perAccount.get(uid) ?? 0;
+        perAccount.set(uid, count + 1);
+        return count < MAX_SENT_PER_ACCOUNT_PER_RUN;
+      })
+      .slice(0, 200);
     const outcomes: string[] = [];
-    for (let i = 0; i < due.docs.length; i += SEND_CONCURRENCY) {
+    for (let i = 0; i < due.length; i += SEND_CONCURRENCY) {
       outcomes.push(
         ...(await Promise.all(
-          due.docs.slice(i, i + SEND_CONCURRENCY).map((d) =>
+          due.slice(i, i + SEND_CONCURRENCY).map((d) =>
             sendQueued(d.ref, now).catch((e: unknown) => {
               logger.error('Alarm push error', { code: (e as { code?: string }).code ?? 'unknown' });
               return 'failed';

@@ -17,6 +17,28 @@ export interface ReleaseNote {
 
 export const RELEASE_NOTES: readonly ReleaseNote[] = [
   {
+    version: '1.0.0',
+    month: 'octubre de 2026',
+    changes: [
+      {
+        title: 'Dicta tus tareas',
+        text: 'En los navegadores que lo permiten, el micrófono del formulario escribe la tarea o una nota mientras hablas, hasta 30 segundos cada vez. En Android, al mantener pulsado el icono de la app, «Nueva tarea por voz» abre una tarea nueva con el micrófono escuchando.'
+      },
+      {
+        title: 'Borradores',
+        text: 'Si cierras una tarea nueva con algo escrito sin guardarla, se queda en «Borradores», en Listas, tal como estaba. Con «Continuar» sigues con ella cuando quieras; al guardarla, pasa a tu lista.'
+      },
+      {
+        title: 'Comparte CLAR',
+        text: '«Compartir CLAR», en el menú de tu cuenta, manda el enlace a quien quieras. Quien entra por primera vez ve antes qué es CLAR y cómo se tratan sus datos.'
+      },
+      {
+        title: 'Otros cambios',
+        text: 'Al crear una cuenta con email se confirma la edad mínima y se aceptan las condiciones, y una dirección que no existe ahora lo dice en lugar de abrir la app.'
+      }
+    ]
+  },
+  {
     version: '0.9.7',
     month: 'octubre de 2026',
     changes: [

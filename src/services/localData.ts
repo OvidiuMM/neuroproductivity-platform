@@ -80,7 +80,8 @@ const readRecords = (storage: Storage): UserData => {
     emails: keep<EmailDraft>(KEYS.EMAILS),
     // Las versiones sin cuentas no tenían metas
     goals: [],
-    projects: []
+    projects: [],
+    taskDrafts: []
   };
 };
 
@@ -136,7 +137,8 @@ export const buildImport = (profileIds: string[], storage: Storage = localStorag
     meetings: pick(records.meetings),
     emails: pick(records.emails),
     goals: [],
-    projects: []
+    projects: [],
+    taskDrafts: []
   };
 };
 

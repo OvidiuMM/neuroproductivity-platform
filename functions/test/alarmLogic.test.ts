@@ -112,7 +112,9 @@ describe('queuedAlarm', () => {
   it('skips an alarm set (or changed) after its time, like the app; other changes to the task do not count', () => {
     assert.equal(queuedAlarm('task-1', { ...task, alarmSetAt: '2026-10-17T08:45:00.000Z' }, MADRID, now), null);
     assert.ok(queuedAlarm('task-1', { ...task, alarmSetAt: '2026-10-17T08:00:00.000Z' }, MADRID, now));
-    assert.ok(queuedAlarm('task-1', { ...task, updatedAt: '2026-10-17T08:45:00.000Z' }, MADRID, now));
+    // (updatedAt no es parte de AlarmTask: es otro cambio cualquiera de la tarea)
+    const edited = { ...task, updatedAt: '2026-10-17T08:45:00.000Z' };
+    assert.ok(queuedAlarm('task-1', edited, MADRID, now));
   });
 
   it('does not push late a pre-0.9.7 date-only alarm that already rang the day before', () => {

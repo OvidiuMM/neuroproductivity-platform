@@ -259,6 +259,7 @@ export const EmailModal: React.FC<EmailModalProps> = ({ email, onClose, onSave }
 
             <textarea
               id="email-body"
+              maxLength={200_000}
               rows={4}
               value={body}
               onChange={(e) => setBody(e.target.value)}
@@ -298,6 +299,7 @@ export const EmailModal: React.FC<EmailModalProps> = ({ email, onClose, onSave }
             </label>
             <input
               id="email-subject"
+              maxLength={5_000}
               type="text"
               value={subject}
               onChange={(e) => setSubject(e.target.value)}

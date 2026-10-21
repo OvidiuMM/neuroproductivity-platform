@@ -52,21 +52,23 @@ export const PrivacyPolicy: React.FC = () => (
       <List>
         <li>
           <strong>Tu cuenta:</strong> nombre, email, foto de perfil (si entras con Google), fecha de alta y del último
-          acceso. Si entras con email, la contraseña la guarda Firebase Authentication de forma que nadie, tampoco CLAR,
-          puede leerla. Sirven para crear tu cuenta y dejarte entrar.
+          acceso, y cuándo aceptaste estas condiciones (y su versión). Si entras con email, la contraseña la guarda
+          Firebase Authentication de forma que nadie, tampoco CLAR, puede leerla. Sirven para crear tu cuenta y dejarte
+          entrar.
         </li>
         <li>
           <strong>Lo que escribes en CLAR:</strong> tareas (títulos, descripciones, notas, enlaces, fechas, alarmas y de
-          qué otra tarea dependen), metas, proyectos (nombre, meta, fecha de fin y descripción), evaluaciones de la
-          Rueda de la Vida (tu puntuación de 0 a 10 en cada área, y los nombres de tus áreas si las cambias o añades),
-          reuniones y correos de «Tiempo protegido» (asunto, texto, destinatarios y el nombre y el tamaño de los
-          adjuntos: los archivos no salen de tu dispositivo). Sirven para que la app funcione. Las reuniones y los
-          correos pueden incluir el nombre y el email de otras personas: añádelos solo si tienes motivo para ello.
+          qué otra tarea dependen) y sus borradores (las tareas nuevas que cierras sin guardar, hasta que las guardas o
+          las eliminas), metas, proyectos (nombre, meta, fecha de fin y descripción), evaluaciones de la Rueda de la
+          Vida (tu puntuación de 0 a 10 en cada área, y los nombres de tus áreas si las cambias o añades), reuniones y
+          correos de «Tiempo protegido» (asunto, texto, destinatarios y el nombre y el tamaño de los adjuntos: los
+          archivos no salen de tu dispositivo). Sirven para que la app funcione. Las reuniones y los correos pueden
+          incluir el nombre y el email de otras personas: añádelos solo si tienes motivo para ello.
         </li>
         <li>
-          <strong>Solicitud de acceso:</strong> si la administración aprueba las cuentas una a una, tu nombre, email,
-          foto y el mensaje que escribas, con el estado y la fecha de la decisión. Sirven para decidir el acceso y
-          evitar abusos.
+          <strong>Registro de acceso:</strong> tu nombre, email y foto, el estado de tu acceso y sus fechas y, si pides
+          acceso, el mensaje que escribas. Sirven para gestionar el acceso (aprobarlo cuando se revisan las cuentas,
+          retirarlo o bloquearlo) y evitar abusos.
         </li>
         <li>
           <strong>Mensajes de «Escríbenos»:</strong> el tipo, el asunto y el texto, con tu nombre y tu email, y las
@@ -160,11 +162,12 @@ export const PrivacyPolicy: React.FC = () => (
       <List>
         <li>Tú, desde cualquier dispositivo con tu cuenta.</li>
         <li>
-          Desde la app, la administración de CLAR (su titular) ve solo las solicitudes de acceso, las funciones extra de
-          cada cuenta y los mensajes de «Escríbenos»: las reglas de la base de datos no le dejan leer tus tareas, metas,
-          proyectos, evaluaciones, reuniones ni correos. Como responsable del proyecto en Google Cloud, el titular
-          podría acceder técnicamente a todos los datos desde la consola; solo lo hará cuando sea imprescindible para
-          mantener el servicio, resolver una incidencia o atender una petición tuya.
+          Desde la app, la administración de CLAR (su titular) ve solo la lista de cuentas (nombre, email, foto y estado
+          de acceso), las funciones extra de cada cuenta y los mensajes de «Escríbenos»: las reglas de la base de datos
+          no le dejan leer tus tareas, metas, proyectos, evaluaciones, reuniones, correos ni borradores. Como
+          responsable del proyecto en Google Cloud, el titular podría acceder técnicamente a todos los datos desde la
+          consola; solo lo hará cuando sea imprescindible para mantener el servicio, resolver una incidencia o atender
+          una petición tuya.
         </li>
         <li>
           Encargados del tratamiento, que tratan los datos solo para prestar su servicio: Google, con Firebase
@@ -175,7 +178,10 @@ export const PrivacyPolicy: React.FC = () => (
           Otros servicios, solo cuando tú lo decides: al usar «Añadir al calendario» con Google Calendar u Outlook, el
           título, la descripción y las notas de la tarea van en el enlace; si conectas Google Calendar, los datos de tus
           tareas con fecha van al calendario «CLAR» de tu propia cuenta de Google, donde Google los trata según sus
-          condiciones y su política de privacidad; «Abrir en mi correo» pasa el correo a tu programa de correo.
+          condiciones y su política de privacidad; «Abrir en mi correo» pasa el correo a tu programa de correo; si
+          dictas una tarea o una nota con el micrófono, tu navegador pasa tu voz a texto enviando el audio a su
+          proveedor (Google en Chrome, Apple en Safari, Microsoft en Edge), que lo trata según sus condiciones. CLAR no
+          recibe ni guarda el audio: solo el texto, como si lo hubieras escrito.
         </li>
       </List>
       <p>CLAR no vende ni cede tus datos a nadie.</p>
@@ -196,7 +202,7 @@ export const PrivacyPolicy: React.FC = () => (
     <Section id="privacy-retention" title="Cuánto tiempo se guardan">
       <List>
         <li>Tu cuenta y lo que escribes: hasta que lo borres o elimines la cuenta.</li>
-        <li>Solicitud de acceso y mensajes de «Escríbenos»: hasta que elimines la cuenta.</li>
+        <li>Registro de acceso y mensajes de «Escríbenos»: hasta que elimines la cuenta.</li>
         <li>
           Funciones extra: hasta que la administración te las quite o te retire o bloquee el acceso, o elimines la
           cuenta.
@@ -283,9 +289,10 @@ export const PrivacyPolicy: React.FC = () => (
     <Section id="privacy-security" title="Seguridad">
       <p>
         Las conexiones van cifradas (HTTPS) y Google cifra los datos guardados. Las reglas de la base de datos solo
-        dejan a cada cuenta acceder a lo suyo, y la app le pide al navegador que no le dé acceso a la cámara, el
-        micrófono ni la ubicación, que no usa. Si hubiera una brecha de seguridad que afecte a tus datos, se notificará
-        a la AEPD y, si supone un riesgo alto para ti, también a ti.
+        dejan a cada cuenta acceder a lo suyo, y la app le pide al navegador que no le dé acceso a la cámara ni a la
+        ubicación, que no usa; el micrófono, solo a la propia app y solo cuando pulsas el de dictar. Si hubiera una
+        brecha de seguridad que afecte a tus datos, se notificará a la AEPD y, si supone un riesgo alto para ti, también
+        a ti.
       </p>
     </Section>
 
