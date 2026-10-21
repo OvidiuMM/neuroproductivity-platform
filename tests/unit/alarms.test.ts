@@ -134,6 +134,20 @@ test('a late alarm still warns after other changes to the task; one set after it
   assert.equal(scheduledAlarms([edited], now).length, 1);
 });
 
+test('an alarm from before 0.9.7 on a date-only task that already rang the day before is not repeated late', () => {
+  const now = new Date(2030, 5, 15, 13, 0);
+  // Sin alarmSetAt, solo con fecha, alarma a las 12:00 de hoy: con la regla de antes sonó ayer a las 12:00
+  assert.equal(scheduledAlarms([task({ dueDate: '2030-06-15', alarmTime: '12:00' })], now).length, 0);
+  // La de más tarde, sí; y una puesta ya con esta versión avisa con retraso
+  assert.equal(scheduledAlarms([task({ dueDate: '2030-06-15', alarmTime: '18:00' })], now).length, 1);
+  const recent = task({
+    dueDate: '2030-06-15',
+    alarmTime: '12:00',
+    alarmSetAt: new Date(2030, 5, 15, 9, 0).toISOString()
+  });
+  assert.equal(scheduledAlarms([recent], now).length, 1);
+});
+
 test('the alarm is marked as set when it, the day or the repetition changes, not with other edits', () => {
   const now = '2030-06-15T08:00:00.000Z';
   const before = {
@@ -149,6 +163,16 @@ test('the alarm is marked as set when it, the day or the repetition changes, not
   assert.equal(alarmSetAtFor(before, { ...before, dueTime: '13:00' }, now), now);
   assert.equal(alarmSetAtFor(before, { ...before, recurrence: { frequency: 'DAILY', interval: 1 } }, now), now);
   assert.equal(alarmSetAtFor(before, { ...before, alarmTime: undefined }, now), undefined);
+  // La misma repetición con sus campos en otro orden no es un cambio
+  const monthly = {
+    ...before,
+    recurrence: { frequency: 'MONTHLY' as const, interval: 1, monthlyMode: 'DAY_OF_MONTH' as const, monthDay: 15 }
+  };
+  const reordered = {
+    ...before,
+    recurrence: { monthDay: 15, monthlyMode: 'DAY_OF_MONTH' as const, interval: 1, frequency: 'MONTHLY' as const }
+  };
+  assert.equal(alarmSetAtFor(monthly, reordered, now), before.alarmSetAt);
 });
 
 test('the card says the day and time it will ring', () => {

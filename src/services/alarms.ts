@@ -41,6 +41,18 @@ const setAfterItsTime = (task: Pick<TaskItem, 'alarmSetAt'>, at: Date) => {
   return Number.isFinite(set) && at.getTime() <= set;
 };
 
+// Una alarma de antes de 0.9.7 (sin alarmSetAt) en una tarea solo con fecha sonaba la víspera: si su hora de ahora
+// ya pasó, ya sonó entonces y no se avisa otra vez con retraso
+const rangTheEveBefore = (task: Pick<TaskItem, 'alarmSetAt' | 'dueTime'>, at: Date, now: Date) =>
+  !task.alarmSetAt && !task.dueTime && at <= now;
+
+// La repetición, sin depender del orden de sus campos (así se compara la de antes con la de ahora)
+const sameRecurrence = (a: TaskItem['recurrence'], b: TaskItem['recurrence']) => {
+  const sorted = (value: TaskItem['recurrence']) =>
+    JSON.stringify(value ? Object.fromEntries(Object.entries(value).sort(([x], [y]) => x.localeCompare(y))) : null);
+  return sorted(a) === sorted(b);
+};
+
 // Cuándo se puso la alarma, al guardar la tarea desde el formulario: ahora, si es nueva o cambian ella, el día, la hora
 // límite o la repetición; si no, la de antes
 export const alarmSetAtFor = (
@@ -54,7 +66,7 @@ export const alarmSetAtFor = (
     before.alarmTime !== after.alarmTime ||
     before.dueDate !== after.dueDate ||
     before.dueTime !== after.dueTime ||
-    JSON.stringify(before.recurrence ?? null) !== JSON.stringify(after.recurrence ?? null);
+    !sameRecurrence(before.recurrence, after.recurrence);
   return changed ? now : before.alarmSetAt;
 };
 
@@ -133,7 +145,7 @@ export const scheduledAlarms = (tasks: TaskItem[], now: Date): ScheduledAlarm[] 
       if (isArchived(task) || task.isSomeday) return [];
       const at = alarmMoment(task);
       const due = dueMoment(task);
-      if (!at || !due || due <= now || setAfterItsTime(task, at)) return [];
+      if (!at || !due || due <= now || setAfterItsTime(task, at) || rangTheEveBefore(task, at, now)) return [];
       return [{ task, at, due, key: `${task.id}@${at.toISOString()}` }];
     })
     .sort((a, b) => a.at.getTime() - b.at.getTime());
