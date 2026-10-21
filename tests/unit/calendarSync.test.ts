@@ -57,7 +57,7 @@ const expectSameEvent = (source: TaskItem, { notesAsHtml = false } = {}) => {
   );
 };
 
-test('dates without time: one day or several, all day', () => {
+test('dates without time: one day at the alarm hour (or 09:00), several all day', () => {
   expectSameEvent(task({ dueDate: '2026-10-16' }));
   expectSameEvent(task({ startDate: '2026-10-14', dueDate: '2026-10-16' }));
   expectSameEvent(task({ dueDate: '2026-10-16', alarmTime: '20:00' }));
@@ -125,7 +125,21 @@ test('hours around the changes of time of Madrid and New York', () => {
     expectSameEvent(task({ dueDate, dueTime: '03:00', alarmTime: '02:30' }));
     expectSameEvent(task({ startDate: dueDate, startTime: '01:30', dueDate }));
     expectSameEvent(task({ dueDate, alarmTime: '23:00' }));
+    // Solo con fecha y la alarma en la hora que no existe (o que se repite): el mismo instante en los dos
+    expectSameEvent(task({ dueDate, alarmTime: '02:30' }));
   }
+});
+
+test('date-only shapes: a series with alarm and end, start equal to or after the deadline', () => {
+  expectSameEvent(
+    task({
+      dueDate: '2026-10-16',
+      alarmTime: '07:45',
+      recurrence: { frequency: 'DAILY', interval: 1, until: '2026-12-31' }
+    })
+  );
+  expectSameEvent(task({ startDate: '2026-10-16', dueDate: '2026-10-16', alarmTime: '18:00' }));
+  expectSameEvent(task({ startDate: '2026-10-20', dueDate: '2026-10-16' }));
 });
 
 test('the description carries the notes, with their checkboxes and links; synced, as a list', () => {
