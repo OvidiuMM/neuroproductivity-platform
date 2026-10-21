@@ -30,7 +30,7 @@ export const RELEASE_NOTES: readonly ReleaseNote[] = [
       },
       {
         title: 'Al calendario, con su hora',
-        text: '«Añadir al calendario» pone una tarea con solo fecha a la hora de su alarma o, si no tiene, a las 09:00, durante una hora: el aviso del calendario suena a la vez que el de CLAR.'
+        text: '«Añadir al calendario» pone una tarea con solo fecha a la hora de su alarma o, si no tiene, a las 09:00, durante una hora. Con el archivo .ics, el aviso del calendario suena a la vez que el de CLAR.'
       }
     ]
   },
