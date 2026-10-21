@@ -1,11 +1,10 @@
 import React from 'react';
 import { CalendarClock, Repeat, Sun } from 'lucide-react';
 import { TaskItem } from '../types';
-import { formatTaskDates, getDeadlineState } from '../services/tasks';
+import { DEADLINE_TITLE_CLASS, formatTaskDates, getDeadlineState } from '../services/tasks';
 import { describeRecurrence } from '../services/recurrence';
 
 const DEADLINE_LABEL = { overdue: 'Vencida', soon: 'Vence en menos de una semana' } as const;
-const DEADLINE_COLOR = { overdue: 'text-red-600', today: 'text-violet-800', soon: 'text-violet-600' } as const;
 
 // «Hoy»: las tareas que vencen hoy se ven de un vistazo, con texto y no solo con color
 export const TodayTag: React.FC = () => (
@@ -21,7 +20,7 @@ export const TaskDates: React.FC<{ task: TaskItem; now?: Date }> = ({ task, now 
   const text = formatTaskDates(task);
   if (!text) return null;
   const state = getDeadlineState(task, now);
-  const color = state === 'overdue' || state === 'today' || state === 'soon' ? DEADLINE_COLOR[state] : 'text-slate-500';
+  const color = DEADLINE_TITLE_CLASS[state] || 'text-slate-500';
   return (
     <>
       {state === 'today' && <TodayTag />}

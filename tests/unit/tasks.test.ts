@@ -90,6 +90,14 @@ describe('getDeadlineState', () => {
     // Mañana ya no es hoy, aunque falten menos de 24 horas
     assert.equal(getDeadlineState(task({ dueDate: '2026-10-10', dueTime: '08:00' }), now), 'soon');
     assert.equal(getDeadlineState(task({ dueDate: '2026-10-09', status: 'DONE' }), now), 'none');
+    // Un intervalo que empieza hoy y termina después no vence hoy
+    assert.equal(getDeadlineState(task({ startDate: '2026-10-09', dueDate: '2026-10-11' }), now), 'soon');
+  });
+
+  it('keeps a task without time as today until the end of the day, then overdue', () => {
+    const dateOnly = task({ dueDate: '2026-10-09' });
+    assert.equal(getDeadlineState(dateOnly, new Date(2026, 9, 9, 23, 59, 59)), 'today');
+    assert.equal(getDeadlineState(dateOnly, new Date(2026, 9, 10, 0, 0)), 'overdue');
   });
 
   it('is soon when less than a week remains, normal otherwise', () => {
