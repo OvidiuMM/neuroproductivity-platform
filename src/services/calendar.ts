@@ -23,6 +23,9 @@ export interface CalendarEvent {
 const DEADLINE_EVENT_MS = 30 * 60 * 1000;
 // Con hora de inicio y sin hora límite, el evento dura una hora (no hasta el final del día límite)
 const DEFAULT_EVENT_MS = 60 * 60 * 1000;
+// Solo con fecha (un día, sin horas): el evento de una hora empieza a la hora de la alarma o, sin alarma, a las 09:00.
+// Así el recordatorio del calendario suena justo con la alarma de CLAR
+const DEFAULT_EVENT_TIME = '09:00';
 
 // Las notas de la tarea, una por línea; las de lista, con su casilla
 const notesText = (observations: TaskObservation[] = []) => {
@@ -52,7 +55,9 @@ export const buildCalendarEvent = (
   // Así el evento empieza el mismo día en que se ancla la regla (las de antes de 0.8 podían tener inicio).
   const dueDate = source.dueDate;
   const task = source.recurrence ? { ...source, startDate: source.startTime ? dueDate : undefined } : source;
-  const allDay = !task.startTime && !task.dueTime;
+  // De día completo, solo un intervalo de varios días sin horas; un día sin horas va a la hora de su alarma
+  const allDay = !task.startTime && !task.dueTime && Boolean(task.startDate && task.startDate < dueDate);
+  const dateOnly = !task.startTime && !task.dueTime && !allDay;
   // Con inicio y sin hora límite, el evento (de una hora) no llega al día límite: se dice en la descripción
   const oneHour = Boolean(task.startTime && !task.dueTime);
   const deadlineNote = oneHour && (task.startDate ?? dueDate) !== dueDate ? `Fecha límite: ${formatDay(dueDate)}` : '';
@@ -70,15 +75,26 @@ export const buildCalendarEvent = (
   };
 
   // La alarma se cuenta desde un borde del evento (en una serie, la misma para cada repetición): el que marca el plazo
-  // o, en un evento de una hora, su inicio (la alarma puede caer después)
+  // o, en un evento de una hora, su inicio (la alarma puede caer después; en uno solo con fecha, es su inicio)
   const alarmAt = alarmMoment(source);
   const alarm = (edge: Date, related: 'START' | 'END') =>
     alarmAt ? { alarm: { related, minutesBefore: Math.round((edge.getTime() - alarmAt.getTime()) / 60_000) } } : {};
 
-  // Sin horas: evento de día completo (de varios días si la tarea tiene intervalo)
+  // Intervalo de varios días sin horas: evento de día completo
   if (allDay) {
     const end = addDays(toLocalDate(dueDate), 1);
-    return { ...base, allDay: true, start: toLocalDate(task.startDate ?? dueDate), end, ...alarm(end, 'END') };
+    return { ...base, allDay: true, start: toLocalDate(task.startDate!), end, ...alarm(end, 'END') };
+  }
+
+  if (dateOnly) {
+    const start = alarmAt ?? toLocalDate(dueDate, DEFAULT_EVENT_TIME);
+    return {
+      ...base,
+      allDay: false,
+      start,
+      end: new Date(start.getTime() + DEFAULT_EVENT_MS),
+      ...alarm(start, 'START')
+    };
   }
 
   if (oneHour) {

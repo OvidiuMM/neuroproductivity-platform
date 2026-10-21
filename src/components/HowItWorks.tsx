@@ -97,7 +97,7 @@ const screensFor = (
       'Si cierras con cambios sin guardar el formulario de una tarea, una meta o un proyecto, o el editor de áreas, CLAR te pregunta antes de descartarlos; si cierras la pestaña, te avisa el navegador.',
       'Puedes darle una fecha límite o un intervalo, con hora opcional: el título se pone violeta cuando falta menos de una semana y rojo cuando ha vencido. El día que vence, destaca con la etiqueta «Hoy», el título en negrita y un borde violeta. Las fechas se escriben como dd/mm/aaaa o se eligen en el calendario, con la semana empezando en lunes.',
       'Pulsa el título de una tarea, o su lápiz, para editarla. El menú «⋯» tiene el estado, el calendario, la descarga y eliminar.',
-      'Con fecha límite, «Añadir al calendario», en el menú «⋯» de la tarea, la lleva a Google Calendar, Outlook o cualquier calendario (archivo .ics), con su descripción y sus notas. Si tiene hora de inicio y no hora límite, el evento dura una hora.' +
+      'Con fecha límite, «Añadir al calendario», en el menú «⋯» de la tarea, la lleva a Google Calendar, Outlook o cualquier calendario (archivo .ics), con su descripción y sus notas. Con solo fecha, el evento dura una hora y empieza a la hora de su alarma o, sin alarma, a las 09:00. Si tiene hora de inicio y no hora límite, el evento dura una hora.' +
         (calendarSync
           ? ' Con «Sincronizar con Google Calendar», si conectas tu cuenta de Google (en el menú de tu cuenta), tus tareas con fecha aparecen solas en un calendario «CLAR» y se actualizan al cambiarlas (las de «Algún día», no); lo que cambies en Google no vuelve a CLAR.'
           : ''),

@@ -10,6 +10,8 @@ const MINUTE_MS = 60_000;
 const DEADLINE_EVENT_MS = 30 * MINUTE_MS;
 // Con hora de inicio y sin hora límite, el evento dura una hora
 const DEFAULT_EVENT_MS = 60 * MINUTE_MS;
+// Solo con fecha (un día, sin horas): el evento de una hora empieza a la hora de la alarma o, sin alarma, a las 09:00
+const DEFAULT_EVENT_TIME = '09:00';
 // Google admite recordatorios de 0 a 4 semanas antes del inicio
 const MAX_REMINDER_MINUTES = 40_320;
 // Topes de lo que se envía, en caracteres (la descripción de un evento de Google admite unos 8.000)
@@ -82,19 +84,60 @@ export const taskIdForEvent = (eventId: string) => {
   return hex && hex.length % 2 === 0 && /^[0-9a-f]+$/.test(hex) ? Buffer.from(hex, 'hex').toString('utf8') : null;
 };
 
+const notesOf = (observations: unknown) =>
+  Array.isArray(observations)
+    ? observations
+        .filter((o): o is Record<string, unknown> => Boolean(o) && typeof o === 'object')
+        .filter((o) => text(o.text).trim() || text(o.url))
+    : [];
+
 // Las notas de la tarea, una por línea; las de lista, con su casilla (como en la app)
 const notesText = (observations: unknown) => {
-  if (!Array.isArray(observations)) return '';
-  const lines = observations
-    .filter((o): o is Record<string, unknown> => Boolean(o) && typeof o === 'object')
-    .filter((o) => text(o.text).trim() || text(o.url))
-    .map((o) => {
-      const box = o.type === 'checklist' ? (o.completed === true ? '[x] ' : '[ ] ') : '';
-      const url = text(o.url);
-      const link = url && url !== text(o.text) ? ` (${url})` : '';
-      return `- ${box}${text(o.text).trim()}${link}`;
-    });
+  const lines = notesOf(observations).map((o) => {
+    const box = o.type === 'checklist' ? (o.completed === true ? '[x] ' : '[ ] ') : '';
+    const url = text(o.url);
+    const link = url && url !== text(o.text) ? ` (${url})` : '';
+    return `- ${box}${text(o.text).trim()}${link}`;
+  });
   return lines.length ? `Notas:\n${lines.join('\n')}` : '';
+};
+
+const escapeHtml = (value: string) =>
+  value.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+const htmlLines = (value: string) => escapeHtml(value).replace(/\n/g, '<br>');
+const isWebUrl = (url: string) => /^https?:\/\/[^\s]+$/i.test(url);
+
+// Las notas, en HTML (Google Calendar lo muestra): una lista con viñetas, las de casilla con ☐ o ☑, y los enlaces, que
+// se pueden pulsar. Todo el texto de la tarea va escapado
+const notesHtml = (observations: unknown) => {
+  const items = notesOf(observations).map((o) => {
+    const box = o.type === 'checklist' ? (o.completed === true ? '☑ ' : '☐ ') : '';
+    const label = text(o.text).trim();
+    const url = text(o.url);
+    if (url && isWebUrl(url)) return `<li>${box}<a href="${escapeHtml(url)}">${htmlLines(label || url)}</a></li>`;
+    return `<li>${box}${htmlLines(label)}${url && url !== text(o.text) ? ` (${escapeHtml(url)})` : ''}</li>`;
+  });
+  return items.length ? `Notas:<ul>${items.join('')}</ul>` : '';
+};
+
+// La descripción del evento, en texto (la misma que «Añadir al calendario» de la app, que compara
+// tests/unit/calendarSync.test.ts) y la que se envía: con notas, en HTML, para que se vean como lista (si no cabe, en
+// texto). Si hay que recortar, se recorta lo de la tarea: el enlace a CLAR del final se queda
+export const eventDescription = (task: SyncTask, appUrl: string, deadlineNote: string) => {
+  const link = `Tarea de CLAR: ${appUrl}`;
+  const body = [text(task.description), notesText(task.observations), deadlineNote].filter(Boolean).join('\n\n');
+  const plain = body ? `${cap(body, DESCRIPTION_MAX - Array.from(link).length - 2)}\n\n${link}` : link;
+  const notes = notesHtml(task.observations);
+  if (!notes) return { text: plain, sent: plain };
+  const html = [
+    text(task.description) && htmlLines(text(task.description)),
+    notes,
+    deadlineNote && escapeHtml(deadlineNote),
+    `Tarea de CLAR: <a href="${escapeHtml(appUrl)}">${escapeHtml(appUrl)}</a>`
+  ]
+    .filter(Boolean)
+    .join('<br><br>');
+  return { text: plain, sent: Array.from(html).length <= DESCRIPTION_MAX ? html : plain };
 };
 
 const parseDay = (date: string) => date.split('-').map(Number) as [number, number, number];
@@ -178,30 +221,34 @@ export const buildTaskEvent = (task: SyncTask, timeZone: string, appUrl: string)
   // Una tarea repetida no es un intervalo: cada repetición ocupa su día, de la hora de inicio a la límite
   const startTime = time(task.startTime);
   const startDate = task.recurrence ? (startTime ? dueDate : undefined) : day(task.startDate);
-  const allDay = !startTime && !dueTime;
+  // De día completo, solo un intervalo de varios días sin horas; un día sin horas va a la hora de su alarma
+  const allDay = !startTime && !dueTime && Boolean(startDate && startDate < dueDate);
+  const dateOnly = !startTime && !dueTime && !allDay;
   const oneHour = Boolean(startTime && !dueTime);
   const deadlineNote = oneHour && (startDate ?? dueDate) !== dueDate ? `Fecha límite: ${formatDay(dueDate)}` : '';
-  // Si hay que recortar, se recorta lo de la tarea: el enlace a CLAR del final se queda
-  const link = `Tarea de CLAR: ${appUrl}`;
-  const body = [text(task.description), notesText(task.observations), deadlineNote].filter(Boolean).join('\n\n');
-  const description = body ? `${cap(body, DESCRIPTION_MAX - Array.from(link).length - 2)}\n\n${link}` : link;
+  const description = eventDescription(task, appUrl, deadlineNote).sent;
   const rule = repeats ? recurrenceRule(task.recurrence, allDay, dueDate, timeZone) : null;
+  // La hora de la alarma, también en una tarea hecha o cancelada: al cerrarla, su evento no se mueve
+  const alarmAt = alarmInstant(task, timeZone);
 
   // Inicio y final, como en la app: las horas locales se pasan a instantes en la zona de la cuenta
   const at = (date: string, clock: string) => zonedInstant(date, clock, timeZone, 'later');
+  const dayStart = alarmAt ?? at(dueDate, DEFAULT_EVENT_TIME);
   const span: { start: number; end: number } | { startDate: string; endDate: string } = allDay
-    ? { startDate: startDate && startDate < dueDate ? startDate : dueDate, endDate: nextDay(dueDate) }
-    : oneHour
-      ? { start: at(startDate ?? dueDate, startTime!), end: at(startDate ?? dueDate, startTime!) + DEFAULT_EVENT_MS }
-      : !startDate
-        ? { start: at(dueDate, dueTime!), end: at(dueDate, dueTime!) + DEADLINE_EVENT_MS }
-        : { start: at(startDate, startTime ?? '00:00'), end: at(dueDate, dueTime!) };
+    ? { startDate: startDate!, endDate: nextDay(dueDate) }
+    : dateOnly
+      ? { start: dayStart, end: dayStart + DEFAULT_EVENT_MS }
+      : oneHour
+        ? { start: at(startDate ?? dueDate, startTime!), end: at(startDate ?? dueDate, startTime!) + DEFAULT_EVENT_MS }
+        : !startDate
+          ? { start: at(dueDate, dueTime!), end: at(dueDate, dueTime!) + DEADLINE_EVENT_MS }
+          : { start: at(startDate, startTime ?? '00:00'), end: at(dueDate, dueTime!) };
   // Un inicio después del plazo (datos incoherentes) haría que Google rechazara el evento: se queda en el plazo
   if ('start' in span && span.end <= span.start) span.start = span.end - DEADLINE_EVENT_MS;
 
   // La alarma, como recordatorio: Google lo cuenta desde el inicio del evento (si cae después, no se pone). Una tarea
   // hecha o cancelada no avisa, como en la app
-  const alarm = closed ? null : alarmInstant(task, timeZone);
+  const alarm = closed ? null : alarmAt;
   const startInstant = 'start' in span ? span.start : at(span.startDate, '00:00');
   const minutes = alarm === null ? null : Math.round((startInstant - alarm) / MINUTE_MS);
   const reminders =

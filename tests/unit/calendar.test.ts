@@ -31,13 +31,17 @@ describe('buildCalendarEvent', () => {
     assert.equal(buildCalendarEvent(task(), APP), null);
   });
 
-  it('creates an all-day event when there are no times, spanning the interval', () => {
+  it('puts a task with only a date at its alarm time, or at 09:00, for an hour; an interval without times is all day', () => {
     const single = buildCalendarEvent(task({ dueDate: '2026-10-15' }), APP)!;
-    assert.equal(single.allDay, true);
-    assert.deepEqual(single.start, new Date(2026, 9, 15));
-    assert.deepEqual(single.end, new Date(2026, 9, 16));
+    assert.equal(single.allDay, false);
+    assert.deepEqual(single.start, new Date(2026, 9, 15, 9, 0));
+    assert.deepEqual(single.end, new Date(2026, 9, 15, 10, 0));
+    const withAlarm = buildCalendarEvent(task({ dueDate: '2026-10-15', alarmTime: '17:30' }), APP)!;
+    assert.deepEqual(withAlarm.start, new Date(2026, 9, 15, 17, 30));
+    assert.deepEqual(withAlarm.end, new Date(2026, 9, 15, 18, 30));
 
     const interval = buildCalendarEvent(task({ startDate: '2026-10-12', dueDate: '2026-10-15' }), APP)!;
+    assert.equal(interval.allDay, true);
     assert.deepEqual(interval.start, new Date(2026, 9, 12));
     assert.deepEqual(interval.end, new Date(2026, 9, 16));
   });
@@ -107,7 +111,7 @@ describe('buildCalendarEvent', () => {
 });
 
 describe('calendar links', () => {
-  const allDay = buildCalendarEvent(task({ dueDate: '2026-10-15' }), APP)!;
+  const allDay = buildCalendarEvent(task({ startDate: '2026-10-14', dueDate: '2026-10-15' }), APP)!;
   const timed = buildCalendarEvent(task({ dueDate: '2026-10-15', dueTime: '15:00' }), APP)!;
 
   it('builds a Google Calendar template link', () => {
@@ -115,7 +119,7 @@ describe('calendar links', () => {
     assert.equal(url.origin + url.pathname, 'https://calendar.google.com/calendar/render');
     assert.equal(url.searchParams.get('action'), 'TEMPLATE');
     assert.equal(url.searchParams.get('text'), allDay.title);
-    assert.equal(url.searchParams.get('dates'), '20261015/20261016');
+    assert.equal(url.searchParams.get('dates'), '20261014/20261016');
 
     const timedDates = new URL(googleCalendarUrl(timed)).searchParams.get('dates')!;
     assert.match(timedDates, /^\d{8}T\d{6}Z\/\d{8}T\d{6}Z$/);
@@ -125,7 +129,7 @@ describe('calendar links', () => {
     const personal = new URL(outlookCalendarUrl(allDay, 'personal'));
     assert.equal(personal.origin, 'https://outlook.live.com');
     assert.equal(personal.searchParams.get('allday'), 'true');
-    assert.equal(personal.searchParams.get('startdt'), '2026-10-15');
+    assert.equal(personal.searchParams.get('startdt'), '2026-10-14');
     assert.equal(personal.searchParams.get('enddt'), '2026-10-16');
 
     const work = new URL(outlookCalendarUrl(timed, 'work'));
@@ -137,11 +141,14 @@ describe('calendar links', () => {
 
 describe('buildIcs', () => {
   it('produces a valid all-day VEVENT with escaped text and CRLF lines', () => {
-    const ics = buildIcs(buildCalendarEvent(task({ dueDate: '2026-10-15' }), APP)!, new Date(Date.UTC(2026, 9, 9, 10)));
+    const ics = buildIcs(
+      buildCalendarEvent(task({ startDate: '2026-10-14', dueDate: '2026-10-15' }), APP)!,
+      new Date(Date.UTC(2026, 9, 9, 10))
+    );
 
     assert.ok(ics.startsWith('BEGIN:VCALENDAR\r\nVERSION:2.0\r\n'));
     assert.ok(ics.endsWith('END:VCALENDAR\r\n'));
-    assert.match(ics, /\r\nDTSTART;VALUE=DATE:20261015\r\n/);
+    assert.match(ics, /\r\nDTSTART;VALUE=DATE:20261014\r\n/);
     assert.match(ics, /\r\nDTEND;VALUE=DATE:20261016\r\n/);
     assert.match(ics, /\r\nSUMMARY:Entregar el informe\\, versión final\\; revisar\r\n/);
     assert.match(ics, /\r\nDTSTAMP:20261009T100000Z\r\n/);
@@ -177,8 +184,10 @@ describe('recurring tasks in calendars', () => {
     // Las tareas repetidas de antes de 0.8 podían tener inicio: ya no se exportan como intervalo
     const event = buildCalendarEvent({ ...recurring, startDate: '2026-10-09' }, APP)!;
     assert.equal(event.rrule, 'RRULE:FREQ=MONTHLY;INTERVAL=1;BYDAY=2MO');
-    assert.equal(event.allDay, true);
+    // Solo con fecha: cada repetición, a las 09:00 (sin alarma)
+    assert.equal(event.allDay, false);
     assert.equal(event.start.getDate(), 12);
+    assert.equal(event.start.getHours(), 9);
     // Con horas, el evento va de la hora de inicio a la límite del mismo día
     const timed = buildCalendarEvent({ ...recurring, startTime: '09:00', dueTime: '10:00' }, APP)!;
     assert.equal(timed.start.getHours(), 9);
@@ -216,10 +225,11 @@ describe('recurring tasks in calendars', () => {
     const google = new URL(googleCalendarUrl(event)).searchParams;
     assert.equal(google.get('dates'), '20261019T003000/20261019T010000');
     assert.equal(google.get('ctz'), 'Europe/Madrid');
-    // Las de día completo y las que no se repiten siguen igual
+    // Una serie solo con fecha también va a su hora, con su zona; las que no se repiten no la llevan
     assert.equal(
-      buildCalendarEvent(task({ dueDate: '2026-10-19', recurrence: weekly.recurrence }), APP)!.timeZone,
-      undefined
+      buildCalendarEvent(task({ dueDate: '2026-10-19', recurrence: weekly.recurrence }), APP, 'Europe/Madrid')!
+        .timeZone,
+      'Europe/Madrid'
     );
     assert.equal(buildCalendarEvent(task({ dueDate: '2026-10-19', dueTime: '10:00' }), APP)!.timeZone, undefined);
   });
@@ -250,8 +260,13 @@ describe('alarms in calendars', () => {
       alarmTime: '23:00'
     });
     assert.match(interval, /TRIGGER;RELATED=END:-PT720M/);
-    // Solo fecha: ese día a las 20:00, contada desde el final del día límite (4 h antes)
-    assert.match(ics({ dueDate: '2030-06-15', alarmTime: '20:00' }), /TRIGGER;RELATED=END:-PT240M/);
+    // Varios días sin horas: el 15 a las 20:00, contada desde el final del día límite (4 h antes)
+    assert.match(
+      ics({ startDate: '2030-06-13', dueDate: '2030-06-15', alarmTime: '20:00' }),
+      /TRIGGER;RELATED=END:-PT240M/
+    );
+    // Solo fecha: el evento empieza a la hora de la alarma, que suena al empezar
+    assert.match(ics({ dueDate: '2030-06-15', alarmTime: '20:00' }), /TRIGGER:-PT0M/);
   });
 
   it('counts the alarm of a one-hour event from its start, also when it comes after it', () => {
@@ -264,8 +279,8 @@ describe('alarms in calendars', () => {
   it('has no alarm without one; a repeating task with only a date carries it on each repetition', () => {
     assert.doesNotMatch(ics({ dueDate: '2030-06-15', dueTime: '11:00' }), /VALARM/);
     const recurrence = { frequency: 'WEEKLY' as const, interval: 1, weekdays: [6] };
-    // Cada sábado a las 08:00: 16 h antes del final del día
-    assert.match(ics({ dueDate: '2030-06-15', recurrence, alarmTime: '08:00' }), /TRIGGER;RELATED=END:-PT960M/);
+    // Cada sábado a las 08:00: el evento empieza a esa hora y la alarma suena al empezar
+    assert.match(ics({ dueDate: '2030-06-15', recurrence, alarmTime: '08:00' }), /TRIGGER:-PT0M/);
   });
 });
 
