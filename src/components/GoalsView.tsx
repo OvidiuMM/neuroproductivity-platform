@@ -16,7 +16,9 @@ import {
 } from 'lucide-react';
 import { Goal, GoalStatus, Project, TaskItem, WheelCategory } from '../types';
 import { WEAK_AREA_SCORE, areasWithGoals, pendingGoalTasks, sortGoals } from '../services/goals';
-import { formatDay, statusLabel } from '../services/tasks';
+import { DEADLINE_TITLE_CLASS, formatDay, getDeadlineState, statusLabel } from '../services/tasks';
+import { TodayTag } from './TaskDates';
+import { useNow } from '../hooks/useNow';
 import { GoalProgress } from './GoalProgress';
 import { useAreas } from '../hooks/useAreas';
 import { projectProgress, projectsOfGoal, sortProjects } from '../services/projects';
@@ -47,6 +49,7 @@ const GoalCard: React.FC<{
   goal: Goal;
   tasks: TaskItem[];
   projects: Project[];
+  now: Date;
   onEdit: () => void;
   onSetStatus: (status: GoalStatus) => void;
   onAddTask: () => void;
@@ -58,6 +61,7 @@ const GoalCard: React.FC<{
   goal,
   tasks,
   projects,
+  now,
   onEdit,
   onSetStatus,
   onAddTask,
@@ -75,7 +79,7 @@ const GoalCard: React.FC<{
     <li className="space-y-3 rounded-xl border border-slate-200 bg-white p-4">
       <div className="flex items-start justify-between gap-2">
         <div className="min-w-0 space-y-1">
-          <h4 className={`text-sm font-bold break-words ${active ? 'text-slate-900' : 'text-slate-600'}`}>
+          <h4 className={`text-sm font-bold wrap-anywhere ${active ? 'text-slate-900' : 'text-slate-600'}`}>
             {goal.title}
           </h4>
           <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] text-slate-600">
@@ -146,7 +150,7 @@ const GoalCard: React.FC<{
                 aria-label={`Abrir el proyecto «${project.title}»`}
                 className="flex min-h-11 w-full items-center justify-between gap-2 rounded-lg px-2 text-left hover:bg-slate-50"
               >
-                <span className="flex min-w-0 items-center gap-1.5 text-sm break-words text-slate-800">
+                <span className="flex min-w-0 items-center gap-1.5 text-sm wrap-anywhere text-slate-800">
                   <FolderKanban className="h-4 w-4 shrink-0 text-indigo-600" aria-hidden="true" />
                   {project.title}
                 </span>
@@ -161,22 +165,36 @@ const GoalCard: React.FC<{
 
       {pending.length > 0 && (
         <ul aria-label={`Tareas por hacer de «${goal.title}»`} className="space-y-1">
-          {pending.map((task) => (
-            <li key={task.id}>
-              <button
-                type="button"
-                onClick={() => onEditTask(task)}
-                className="flex min-h-11 w-full flex-col justify-center rounded-lg px-2 text-left hover:bg-slate-50"
-              >
-                <span className="text-sm break-words text-slate-800">{task.title}</span>
-                <span className="text-[11px] text-slate-500">
-                  {task.listContext === 'WORK' ? 'Profesional' : 'Personal'}
-                  {task.dueDate && ` · Vence el ${formatDay(task.dueDate)}`}
-                  {task.status !== 'PENDING' && ` · ${statusLabel(task.status)}`}
-                </span>
-              </button>
-            </li>
-          ))}
+          {pending.map((task) => {
+            // Con los colores del plazo de las listas; las que vencen hoy, además, en negrita y con «Hoy»
+            const deadline = getDeadlineState(task, now);
+            const today = deadline === 'today';
+            return (
+              <li key={task.id}>
+                <button
+                  type="button"
+                  onClick={() => onEditTask(task)}
+                  className="flex min-h-11 w-full flex-col justify-center rounded-lg px-2 text-left hover:bg-slate-50"
+                >
+                  <span
+                    className={`text-sm wrap-anywhere ${today ? 'font-bold' : ''} ${DEADLINE_TITLE_CLASS[deadline] || 'text-slate-800'}`}
+                  >
+                    {task.title}
+                  </span>
+                  <span className="text-[11px] text-slate-500">
+                    {today && (
+                      <>
+                        <TodayTag />{' '}
+                      </>
+                    )}
+                    {task.listContext === 'WORK' ? 'Profesional' : 'Personal'}
+                    {task.dueDate && ` · Vence el ${formatDay(task.dueDate)}`}
+                    {task.status !== 'PENDING' && ` · ${statusLabel(task.status)}`}
+                  </span>
+                </button>
+              </li>
+            );
+          })}
         </ul>
       )}
 
@@ -231,6 +249,7 @@ export const GoalsView: React.FC<GoalsViewProps> = ({
   onDownloadGoal
 }) => {
   const [showClosed, setShowClosed] = useState(false);
+  const now = useNow();
   // Botón «Nueva meta» de cada área: siempre está, así que es donde vuelve el foco al crear una meta desde «Necesitan
   // atención» (ese botón desaparece en cuanto el área tiene meta)
   const areaButtons = useRef<Partial<Record<WheelCategory, HTMLButtonElement | null>>>({});
@@ -248,6 +267,7 @@ export const GoalsView: React.FC<GoalsViewProps> = ({
       goal={goal}
       tasks={tasks}
       projects={projects}
+      now={now}
       onEdit={() => onEditGoal(goal)}
       onSetStatus={(status) => onSetGoalStatus(goal, status)}
       onAddTask={() => onAddTask(goal)}

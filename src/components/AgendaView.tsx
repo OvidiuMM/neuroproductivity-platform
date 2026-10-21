@@ -3,7 +3,7 @@ import { CalendarDays, ChevronLeft, ChevronRight, Repeat, Users } from 'lucide-r
 import { MeetingGuard, TaskItem } from '../types';
 import { AgendaItem, buildAgenda, daysFrom, overdueTasks, startOfWeek } from '../services/agenda';
 import { toDateString } from '../services/recurrence';
-import { formatTaskDates, toLocalDate } from '../services/tasks';
+import { DEADLINE_TITLE_CLASS, formatTaskDates, toLocalDate } from '../services/tasks';
 import { useNow } from '../hooks/useNow';
 
 interface AgendaViewProps {
@@ -24,8 +24,9 @@ const CONTEXT_STYLE = {
   PERSONAL: 'border-l-emerald-500'
 } as const;
 
-const titleColor = (item: AgendaItem) =>
-  item.deadline === 'overdue' ? 'text-red-600' : item.deadline === 'soon' ? 'text-violet-600' : 'text-slate-900';
+// El título según el plazo (el color, el de las listas): las que vencen hoy, además, en negrita
+const titleClass = (item: AgendaItem) =>
+  `${item.deadline === 'today' ? 'font-bold' : 'font-semibold'} ${DEADLINE_TITLE_CLASS[item.deadline] || 'text-slate-900'}`;
 
 const AgendaEntry: React.FC<{ item: AgendaItem; onEditTask: (task: TaskItem) => void }> = ({ item, onEditTask }) => {
   const time = item.time ? `${item.time}${item.endTime ? `–${item.endTime}` : ''}` : 'Todo el día';
@@ -40,7 +41,7 @@ const AgendaEntry: React.FC<{ item: AgendaItem; onEditTask: (task: TaskItem) => 
     return (
       <div className="space-y-0.5 rounded-lg border border-l-4 border-slate-200 border-l-amber-500 bg-amber-50/50 p-2 text-xs">
         <span className="block font-mono text-[10px] text-slate-600">{time}</span>
-        <span className="flex items-center gap-1 font-semibold break-words text-slate-900">
+        <span className="flex items-center gap-1 font-semibold wrap-anywhere text-slate-900">
           <Users className="h-3 w-3 shrink-0 text-amber-600" aria-hidden="true" />
           {item.title}
         </span>
@@ -60,10 +61,11 @@ const AgendaEntry: React.FC<{ item: AgendaItem; onEditTask: (task: TaskItem) => 
     >
       <span className="block font-mono text-[10px] text-slate-600">{time}</span>
       <span
-        className={`flex items-center gap-1 font-semibold break-words ${isOccurrence ? 'text-slate-600' : titleColor(item)}`}
+        className={`flex min-w-0 items-center gap-1 [overflow-wrap:anywhere] ${isOccurrence ? 'font-semibold text-slate-600' : titleClass(item)}`}
       >
         {isOccurrence && <Repeat className="h-3 w-3 shrink-0" aria-hidden="true" />}
         {item.title}
+        {!isOccurrence && item.deadline === 'today' && <span className="sr-only">(vence hoy)</span>}
       </span>
       <span className="block text-[10px] text-slate-500">{meta}</span>
     </button>
@@ -89,7 +91,9 @@ export const AgendaView: React.FC<AgendaViewProps> = ({ tasks, meetings, onEditT
     setWeekStart((start) => new Date(start.getFullYear(), start.getMonth(), start.getDate() + 7 * weeks));
 
   return (
-    <div className="space-y-5">
+    // Un texto sin espacios (p. ej. un enlace en el título de una tarea) se parte donde haga falta: si no, ensancha la
+    // página en el móvil y la barra de abajo se va con ella
+    <div className="min-w-0 space-y-5 [overflow-wrap:anywhere]">
       <div className="flex flex-col justify-between gap-4 rounded-2xl border border-slate-200 bg-white p-5 shadow-xs lg:flex-row lg:items-center">
         <div>
           <h2 className="flex items-center gap-2 text-xl font-bold text-slate-900">
@@ -185,7 +189,7 @@ export const AgendaView: React.FC<AgendaViewProps> = ({ tasks, meetings, onEditT
                 key={date}
                 aria-current={isToday ? 'date' : undefined}
                 aria-label={longDayFormat.format(toLocalDate(date))}
-                className={`min-h-28 space-y-2 rounded-2xl border p-2 ${isToday ? 'border-indigo-400 bg-indigo-50/40' : 'border-slate-200 bg-slate-50/60'}`}
+                className={`min-h-28 min-w-0 space-y-2 rounded-2xl border p-2 ${isToday ? 'border-indigo-400 bg-indigo-50/40' : 'border-slate-200 bg-slate-50/60'}`}
               >
                 <div className="flex items-baseline justify-between px-0.5">
                   <span className="text-[11px] font-bold text-slate-600 uppercase">
@@ -228,7 +232,7 @@ export const AgendaView: React.FC<AgendaViewProps> = ({ tasks, meetings, onEditT
                       onClick={() => onEditTask(task)}
                       className={`w-full rounded-lg border border-l-4 border-slate-200 bg-white p-2 text-left text-xs hover:bg-slate-50 ${CONTEXT_STYLE[task.listContext]}`}
                     >
-                      <span className="block font-semibold break-words text-red-600">{task.title}</span>
+                      <span className="block font-semibold wrap-anywhere text-red-600">{task.title}</span>
                       <span className="block text-[10px] text-slate-500">{formatTaskDates(task)}</span>
                     </button>
                   </li>
@@ -261,7 +265,7 @@ export const AgendaView: React.FC<AgendaViewProps> = ({ tasks, meetings, onEditT
                 {items.length > 0 && (
                   <ul className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3">
                     {items.map((item) => (
-                      <li key={item.key}>
+                      <li key={item.key} className="min-w-0">
                         <AgendaEntry item={item} onEditTask={onEditTask} />
                       </li>
                     ))}

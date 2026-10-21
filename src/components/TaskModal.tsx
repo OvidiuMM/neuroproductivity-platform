@@ -905,7 +905,8 @@ export const TaskModal: React.FC<TaskModalProps> = ({
               {isRepeating && 'Al repetir, cada repetición vence su propio día, con las horas indicadas. '}
               Sin hora, el plazo termina al final del día. El título se pone{' '}
               <span className="font-semibold text-violet-600">violeta</span> cuando falta menos de una semana y{' '}
-              <span className="font-semibold text-red-600">rojo</span> cuando ha vencido.
+              <span className="font-semibold text-red-600">rojo</span> cuando ha vencido. El día que vence lleva además
+              la etiqueta «Hoy».
             </p>
           </div>
 
