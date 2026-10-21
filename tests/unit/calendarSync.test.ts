@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { buildTaskEvent } from '../../functions/src/calendarLogic';
+import { buildTaskEvent, eventDescription } from '../../functions/src/calendarLogic';
 import { buildCalendarEvent } from '../../src/services/calendar.ts';
 import type { TaskItem } from '../../src/types/index.ts';
 
@@ -29,12 +29,14 @@ const pad = (n: number) => String(n).padStart(2, '0');
 const localDay = (d: Date) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
 const MAX_REMINDER = 40_320;
 
-const expectSameEvent = (source: TaskItem) => {
+// Con notas, la sincronización manda la descripción en HTML, para que se vean como lista: se compara su texto
+const expectSameEvent = (source: TaskItem, { notesAsHtml = false } = {}) => {
   const client = buildCalendarEvent(source, URL, timeZone);
   const server = buildTaskEvent(source, timeZone, URL);
   assert.ok(client && server, `evento de ${JSON.stringify(source)}`);
   assert.equal(server.summary, client.title);
-  assert.equal(server.description, client.description);
+  if (notesAsHtml) assert.equal(eventDescription(source, URL, '').text, client.description);
+  else assert.equal(server.description, client.description);
   if (client.allDay) {
     assert.deepEqual(server.start, { date: localDay(client.start) });
     assert.deepEqual(server.end, { date: localDay(client.end) });
@@ -126,28 +128,62 @@ test('hours around the changes of time of Madrid and New York', () => {
   }
 });
 
-test('the description carries the notes, with their checkboxes and links', () => {
-  expectSameEvent(
-    task({
-      dueDate: '2026-10-16',
-      description: 'Cláusula 4',
-      observations: [
-        { id: 'o1', type: 'note', text: 'Pedir la copia firmada', createdAt: '2026-10-01T09:00:00.000Z' },
-        {
-          id: 'o2',
-          type: 'checklist',
-          text: 'Revisar anexos',
-          completed: true,
-          createdAt: '2026-10-01T09:00:00.000Z'
-        },
-        {
-          id: 'o3',
-          type: 'note',
-          text: 'Borrador',
-          url: 'https://example.com/borrador',
-          createdAt: '2026-10-01T09:00:00.000Z'
-        }
-      ]
-    })
+test('the description carries the notes, with their checkboxes and links; synced, as a list', () => {
+  const source = task({
+    dueDate: '2026-10-16',
+    description: 'Cláusula 4',
+    observations: [
+      { id: 'o1', type: 'note', text: 'Pedir la copia firmada', createdAt: '2026-10-01T09:00:00.000Z' },
+      {
+        id: 'o2',
+        type: 'checklist',
+        text: 'Revisar anexos',
+        completed: true,
+        createdAt: '2026-10-01T09:00:00.000Z'
+      },
+      {
+        id: 'o3',
+        type: 'note',
+        text: 'Borrador',
+        url: 'https://example.com/borrador',
+        createdAt: '2026-10-01T09:00:00.000Z'
+      }
+    ]
+  });
+  expectSameEvent(source, { notesAsHtml: true });
+  assert.equal(
+    buildTaskEvent(source, timeZone, URL)!.description,
+    'Cláusula 4<br><br>Notas:<ul><li>Pedir la copia firmada</li><li>☑ Revisar anexos</li>' +
+      '<li><a href="https://example.com/borrador">Borrador</a></li></ul><br><br>' +
+      'Tarea de CLAR: <a href="https://clar.example">https://clar.example</a>'
   );
+  // Sin notas, en texto, como siempre
+  assert.equal(
+    buildTaskEvent(task({ dueDate: '2026-10-16' }), timeZone, URL)!.description,
+    'Tarea de CLAR: https://clar.example'
+  );
+});
+
+test('synced notes escape the text of the task, and only http(s) links can be clicked', () => {
+  const source = task({
+    dueDate: '2026-10-16',
+    description: 'Precio <b>final</b> & "IVA"\nSegunda línea',
+    observations: [
+      {
+        id: 'o1',
+        type: 'checklist',
+        text: '<script>x</script>',
+        completed: false,
+        createdAt: '2026-10-01T09:00:00.000Z'
+      },
+      { id: 'o2', type: 'note', text: 'Raro', url: 'javascript:alert(1)', createdAt: '2026-10-01T09:00:00.000Z' }
+    ]
+  });
+  const html = buildTaskEvent(source, timeZone, URL)!.description;
+  assert.ok(
+    html.startsWith('Precio &lt;b&gt;final&lt;/b&gt; &amp; &quot;IVA&quot;<br>Segunda línea<br><br>Notas:<ul>')
+  );
+  assert.match(html, /<li>☐ &lt;script&gt;x&lt;\/script&gt;<\/li>/);
+  assert.match(html, /<li>Raro \(javascript:alert\(1\)\)<\/li>/);
+  assert.doesNotMatch(html, /href="javascript/);
 });

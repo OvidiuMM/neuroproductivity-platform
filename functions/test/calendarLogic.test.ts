@@ -84,7 +84,8 @@ describe('calendar events on the server', () => {
     assert.ok(reversed && 'dateTime' in reversed.start && 'dateTime' in reversed.end);
     assert.ok(Date.parse(reversed.start.dateTime) < Date.parse(reversed.end.dateTime));
     const allDay = buildTaskEvent({ title: 'x', startDate: '2026-10-20', dueDate: '2026-10-16' }, MADRID, URL);
-    assert.deepEqual(allDay?.start, { date: '2026-10-16' });
+    // Un inicio después del plazo no cuenta: es una tarea solo con fecha, el día límite a las 09:00
+    assert.deepEqual(allDay?.start, { dateTime: '2026-10-16T07:00:00.000Z', timeZone: MADRID });
   });
 
   it('gives each task the same event id, with only the characters Google accepts', () => {
