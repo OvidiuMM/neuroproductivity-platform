@@ -35,6 +35,8 @@ const rejectedAccount = async () => {
 test('without mandatory approval, pending requests are approved and new accounts get in on their own', async ({
   browser
 }) => {
+  // Varias cuentas y llamadas al servidor
+  test.slow();
   // Una solicitud pendiente
   const pending = await browser.newPage();
   await pending.goto('/');
@@ -68,6 +70,8 @@ test('without mandatory approval, pending requests are approved and new accounts
       expect(await statusOf(await callFunction('syncAccess', idToken, {}))).toBe('pending');
       expect(await statusOf(await callFunction('requestAccess', idToken, { message: '' }))).toBe('pending');
       expect(await readDocument(`access/${uid}`)).toMatchObject({ status: 'pending', review: true });
+      // Se vuelven a rechazar: así no cuentan en el aviso de la administración de abajo
+      await writeTextDocument(`access/${uid}`, { status: 'rejected' });
     }
 
     // Una cuenta nueva entra directamente, sin pantalla de solicitud…
