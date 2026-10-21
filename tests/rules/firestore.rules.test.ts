@@ -154,6 +154,21 @@ describe('firestore.rules', () => {
     await assertSucceeds(deleteDoc(ref));
   });
 
+  it('rejects oversized writes (many fields, huge texts or lists) but accepts generous ones', async () => {
+    const ana = env.authenticatedContext('ana').firestore();
+    const ref = doc(ana, 'users/ana/tasks/task-big');
+    await assertSucceeds(setDoc(ref, { ...task, description: 'x'.repeat(20_000) }));
+    await assertFails(setDoc(ref, { ...task, title: 'x'.repeat(2_001) }));
+    await assertFails(setDoc(ref, { ...task, description: 'x'.repeat(50_001) }));
+    await assertFails(
+      setDoc(ref, { ...task, observations: Array.from({ length: 1_001 }, (_, i) => ({ id: `o${i}` })) })
+    );
+    await assertFails(
+      setDoc(ref, { ...task, ...Object.fromEntries(Array.from({ length: 60 }, (_, i) => [`extra${i}`, i])) })
+    );
+    await assertFails(setDoc(doc(ana, 'users/ana/emails/e1'), { id: 'e1', subject: 's', body: 'x'.repeat(100_001) }));
+  });
+
   it('rejects collections outside the allowed list', async () => {
     const ana = env.authenticatedContext('ana').firestore();
 

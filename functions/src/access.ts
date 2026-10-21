@@ -14,6 +14,7 @@ import {
   decideRequest,
   DECISIONS,
   isRecentSignIn,
+  newRequestStatus,
   DEMO_ADMIN_EMAIL,
   buildEmail,
   isAdminToken,
@@ -230,11 +231,12 @@ export const requestAccess = onCall({ region: REGION, secrets: emailSecrets }, a
         retryAt: decision.retryAt
       });
     }
-    // Con la aprobación libre, la solicitud se aprueba al momento
+    // Con la aprobación libre, una cuenta nueva se aprueba al momento; una rechazada o retirada, no (ver newRequestStatus)
     const now = new Date().toISOString();
-    const record: AccessRecord = approvalRequired
-      ? { ...profileOf(auth.token), message, status: 'pending', requestedAt: now }
-      : { ...profileOf(auth.token), message, status: 'approved', requestedAt: now, decidedAt: now };
+    const record: AccessRecord =
+      newRequestStatus(current.data() as AccessRecord | undefined, approvalRequired) === 'pending'
+        ? { ...profileOf(auth.token), message, status: 'pending', requestedAt: now }
+        : { ...profileOf(auth.token), message, status: 'approved', requestedAt: now, decidedAt: now };
     tx.set(ref, record);
     return { status: record.status, record };
   });

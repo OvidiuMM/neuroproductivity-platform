@@ -235,6 +235,15 @@ export const saveUserProfile = (db: Firestore, user: User) =>
     { merge: true }
   );
 
+// Cuándo aceptó las condiciones de uso (al crear la cuenta con email, con su casilla; con Google, al continuar tras el
+// aviso de la pantalla de entrada): se apunta una vez, con la fecha de los textos legales de entonces. Sin conexión se
+// deja para la próxima vez
+export const recordTermsAcceptance = async (db: Firestore, uid: string, version: string) => {
+  const ref = doc(db, 'users', uid);
+  if ((await getDoc(ref)).data()?.termsAcceptedAt) return;
+  await setDoc(ref, { termsAcceptedAt: new Date().toISOString(), termsVersion: version }, { merge: true });
+};
+
 // Perfil (users/{uid}) en vivo: por ahora solo interesa si ya vio la bienvenida. `fromServer` dice si el dato ya
 // está confirmado por el servidor (al principio puede venir solo de la caché, o no existir aún)
 // Lo que la app lee del perfil: si ya vio la bienvenida, sus áreas de la Rueda (sin validar: ver resolveAreas), qué

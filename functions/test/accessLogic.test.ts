@@ -4,6 +4,7 @@ import {
   buildEmail,
   canDecide,
   decideRequest,
+  newRequestStatus,
   isAdminToken,
   isCurrentAdminMarker,
   normalizeMessage,
@@ -193,5 +194,17 @@ describe('isRecentSignIn', () => {
     assert.equal(isRecentSignIn(undefined, now), false);
     assert.equal(isRecentSignIn(String(seconds), now), false);
     assert.equal(isRecentSignIn(seconds + 3600, now), false);
+  });
+});
+
+describe('newRequestStatus', () => {
+  it('lets a new account in with open sign-up, but a rejected or revoked one waits for the admin', () => {
+    const previous = { status: 'rejected', requestedAt: '2026-10-01T00:00:00.000Z' } as Parameters<
+      typeof newRequestStatus
+    >[0];
+    assert.equal(newRequestStatus(undefined, false), 'approved');
+    assert.equal(newRequestStatus(previous, false), 'pending');
+    assert.equal(newRequestStatus({ ...previous!, status: 'revoked' }, false), 'pending');
+    assert.equal(newRequestStatus(undefined, true), 'pending');
   });
 });

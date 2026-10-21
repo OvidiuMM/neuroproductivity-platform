@@ -221,9 +221,9 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
                 <LegalLink to="privacy">política de privacidad</LegalLink>.
               </p>
               <p className="text-[11px] leading-relaxed text-slate-600">
-                Si el acceso se aprueba cuenta a cuenta, al entrar por primera vez podrás solicitarlo (con email y
-                contraseña, después de confirmar tu email). Tus tareas, metas, proyectos, evaluaciones, agenda y correos
-                se guardan en tu cuenta, en servidores de Google Cloud en la Unión Europea (Bélgica).
+                Si entras con email y contraseña, primero confirmarás tu email. Tus tareas, metas, proyectos,
+                evaluaciones, agenda y correos se guardan en tu cuenta, en servidores de Google Cloud en la Unión
+                Europea (Bélgica).
               </p>
             </div>
           </div>
