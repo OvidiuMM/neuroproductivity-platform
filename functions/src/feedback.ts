@@ -31,6 +31,7 @@ import {
 const db = adminDb;
 // Cuándo se avisó por última vez a la administración y cuántos mensajes esperan al resumen (solo lo usa el servidor)
 const NOTICE_DOC = 'feedback_notice/state';
+const FLUSH_SLACK_MS = 60 * 1000;
 
 // Contacto: guarda el mensaje (feedback_tickets, solo lo lee la administración) y avisa por email. Funciona también
 // con una cuenta pendiente de aprobación, pero exige el email confirmado para poder responder. Como mucho 5 por hora.
@@ -56,8 +57,8 @@ export const submitFeedback = onCall({ region: REGION, secrets: emailSecrets }, 
     updatedAt: now.toISOString()
   };
 
-  const notifyNow = await db().runTransaction(async (tx) => {
-    const [limit, notice] = await Promise.all([tx.get(limitRef), tx.get(noticeRef)]);
+  await db().runTransaction(async (tx) => {
+    const limit = await tx.get(limitRef);
     const sent = recentSends((limit.data()?.sent as string[] | undefined) ?? [], now);
     if (sent.length >= FEEDBACK_LIMIT) {
       throw new HttpsError(
@@ -67,15 +68,29 @@ export const submitFeedback = onCall({ region: REGION, secrets: emailSecrets }, 
     }
     tx.set(limitRef, { sent: [...sent, now.toISOString()] });
     tx.set(ticketRef, ticket);
-    // Un aviso cada 15 minutos como mucho: si hubo uno hace menos, este va en el resumen siguiente
-    const due = noticeDue(notice.data()?.lastSentAt, now);
-    if (due) tx.set(noticeRef, { lastSentAt: now.toISOString(), pending: 0 });
-    else tx.set(noticeRef, { pending: FieldValue.increment(1) }, { merge: true });
-    return due;
   });
 
-  logger.info('Feedback received', { type: input.type, hasContext: Boolean(input.context), notifyNow });
-  if (notifyNow) await sendEmail('feedback', adminEmail(), buildFeedbackEmail(ticket, appUrl()));
+  // El aviso, aparte y sin que un fallo afecte al mensaje, que ya está guardado (y se ve en «Administración»): un
+  // documento para todas las cuentas, que no debe hacer fallar los envíos si llegan muchos a la vez. Uno cada 15
+  // minutos como mucho: si hubo uno hace menos, este va en el resumen siguiente; si toca, lleva también los que
+  // esperaban
+  const notice = await db()
+    .runTransaction(async (tx) => {
+      const state = (await tx.get(noticeRef)).data();
+      if (!noticeDue(state?.lastSentAt, now)) {
+        tx.set(noticeRef, { pending: FieldValue.increment(1) }, { merge: true });
+        return null;
+      }
+      tx.set(noticeRef, { lastSentAt: now.toISOString(), pending: 0 });
+      return { earlier: Math.max(0, Number(state?.pending ?? 0)) };
+    })
+    .catch((error: unknown) => {
+      logger.error('Feedback notice not updated', { error: error instanceof Error ? error.message : String(error) });
+      return null;
+    });
+
+  logger.info('Feedback received', { type: input.type, hasContext: Boolean(input.context), notifyNow: !!notice });
+  if (notice) await sendEmail('feedback', adminEmail(), buildFeedbackEmail(ticket, appUrl(), notice.earlier));
   return { id: ticketRef.id };
 });
 
@@ -88,7 +103,8 @@ export const flushFeedbackNotices = onSchedule(
     const count = await db().runTransaction(async (tx) => {
       const notice = (await tx.get(ref)).data();
       const pending = Number(notice?.pending ?? 0);
-      if (pending <= 0 || !noticeDue(notice?.lastSentAt, now)) return 0;
+      // Con un minuto de margen: si no, un aviso de hace casi 15 minutos haría esperar al resumen 15 más
+      if (pending <= 0 || !noticeDue(notice?.lastSentAt, now, FLUSH_SLACK_MS)) return 0;
       tx.set(ref, { lastSentAt: now.toISOString(), pending: 0 });
       return pending;
     });

@@ -109,6 +109,10 @@ describe('firestore.rules', () => {
     );
     // La última versión cuyas novedades vio
     await assertSucceeds(setDoc(doc(ana, 'users/ana'), { releaseNotesSeen: '0.9.6' }, { merge: true }));
+    // La aceptación de las condiciones de uso
+    await assertSucceeds(
+      setDoc(doc(ana, 'users/ana'), { termsAcceptedAt: '2026-10-21', termsVersion: '2026-10-21' }, { merge: true })
+    );
     // Qué funciones extra tiene encendidas (solo cuenta para la administración)
     await assertSucceeds(setDoc(doc(ana, 'users/ana'), { featurePrefs: { googleCalendar: true } }, { merge: true }));
     await assertFails(updateDoc(doc(ana, 'users/ana'), { isAdmin: true }));
@@ -157,16 +161,30 @@ describe('firestore.rules', () => {
   it('rejects oversized writes (many fields, huge texts or lists) but accepts generous ones', async () => {
     const ana = env.authenticatedContext('ana').firestore();
     const ref = doc(ana, 'users/ana/tasks/task-big');
-    await assertSucceeds(setDoc(ref, { ...task, description: 'x'.repeat(20_000) }));
+    // Lo que acepta la importación (src/services/importData.ts) cabe siempre
+    await assertSucceeds(setDoc(ref, { ...task, description: 'x'.repeat(100_000) }));
     await assertFails(setDoc(ref, { ...task, title: 'x'.repeat(2_001) }));
-    await assertFails(setDoc(ref, { ...task, description: 'x'.repeat(50_001) }));
+    await assertFails(setDoc(ref, { ...task, description: 'x'.repeat(100_001) }));
+    // También al editar
+    await assertSucceeds(updateDoc(ref, { why: 'x'.repeat(5_000) }));
+    await assertFails(updateDoc(ref, { why: 'x'.repeat(5_001) }));
     await assertFails(
       setDoc(ref, { ...task, observations: Array.from({ length: 1_001 }, (_, i) => ({ id: `o${i}` })) })
     );
     await assertFails(
       setDoc(ref, { ...task, ...Object.fromEntries(Array.from({ length: 60 }, (_, i) => [`extra${i}`, i])) })
     );
-    await assertFails(setDoc(doc(ana, 'users/ana/emails/e1'), { id: 'e1', subject: 's', body: 'x'.repeat(100_001) }));
+    const email = doc(ana, 'users/ana/emails/e1');
+    await assertSucceeds(setDoc(email, { id: 'e1', subject: 'x'.repeat(5_000), body: 'x'.repeat(200_000) }));
+    await assertFails(setDoc(email, { id: 'e1', subject: 's', body: 'x'.repeat(200_001) }));
+    await assertFails(setDoc(email, { id: 'e1', recipients: Array.from({ length: 1_001 }, (_, i) => `p${i}@x.es`) }));
+    const meeting = doc(ana, 'users/ana/meetings/m1');
+    await assertSucceeds(setDoc(meeting, { id: 'm1', agendaPoints: Array.from({ length: 1_000 }, () => 'Punto') }));
+    await assertFails(setDoc(meeting, { id: 'm1', agendaPoints: Array.from({ length: 1_001 }, () => 'Punto') }));
+    const draft = doc(ana, 'users/ana/taskDrafts/d1');
+    const form = (keys: number) => Object.fromEntries(Array.from({ length: keys }, (_, i) => [`k${i}`, '']));
+    await assertSucceeds(setDoc(draft, { id: 'd1', form: form(60) }));
+    await assertFails(setDoc(draft, { id: 'd1', form: form(61) }));
   });
 
   it('rejects collections outside the allowed list', async () => {

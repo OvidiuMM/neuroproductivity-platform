@@ -5,6 +5,8 @@ import { LegalLinks } from './LegalLinks';
 // Una dirección que no existe en CLAR (Hosting sirve la app para cualquiera): lo dice y lleva a la app
 const NotFoundPage: React.FC = () => (
   <main className="flex min-h-screen items-center justify-center bg-slate-50 p-4 antialiased">
+    {/* Hosting la sirve con estado 200: que los buscadores no la indexen (React la lleva al <head>) */}
+    <meta name="robots" content="noindex" />
     <div className="w-full max-w-md space-y-5 rounded-3xl border border-slate-200 bg-white p-8 text-center shadow-xl">
       <div className="flex justify-center">
         <BrandMark size={56} />

@@ -33,7 +33,7 @@ export const RELEASE_NOTES: readonly ReleaseNote[] = [
         text: '«Compartir CLAR», en el menú de tu cuenta, manda el enlace a quien quieras. Quien entra por primera vez ve antes qué es CLAR y cómo se tratan sus datos.'
       },
       {
-        title: 'Más cuidado con tu cuenta',
+        title: 'Otros cambios',
         text: 'Al crear una cuenta con email se confirma la edad mínima y se aceptan las condiciones, y una dirección que no existe ahora lo dice en lugar de abrir la app.'
       }
     ]

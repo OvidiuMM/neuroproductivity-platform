@@ -153,10 +153,10 @@ export const AccessAdminView: React.FC<AccessAdminViewProps> = ({
     panel.addEventListener('keydown', onKeyDown);
     return () => panel.removeEventListener('keydown', onKeyDown);
   }, [editingUid]);
-  // Pasar a aprobación libre aprueba también las pendientes: se confirma antes
+  // Pasar a aprobación libre aprueba también las pendientes (no las que vuelven tras un rechazo): se confirma antes
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [modeBusy, setModeBusy] = useState(false);
-  const pendingCount = requests.filter((r) => r.status === 'pending').length;
+  const pendingCount = requests.filter((r) => r.status === 'pending' && !r.review).length;
   const setMode = async (required: boolean) => {
     setModeBusy(true);
     try {
@@ -193,8 +193,9 @@ export const AccessAdminView: React.FC<AccessAdminViewProps> = ({
     <div className="space-y-5">
       <p className="text-xs text-slate-600">
         Aprueba quién puede usar la app. Cada solicitud nueva te llega también por email, y la persona recibe otro
-        cuando la apruebas. Con la aprobación desactivada no llegan emails: las cuentas nuevas salen aquí como «Nueva».
-        Una cuenta retirada puede eliminarse y volver con el mismo email; para impedirlo, bloquéala.
+        cuando la apruebas. Con la aprobación desactivada, las cuentas nuevas entran solas y salen aquí como «Nueva»;
+        solo te llega un email si una cuenta rechazada o retirada vuelve a pedir acceso. Una cuenta retirada puede
+        eliminarse y volver con el mismo email; para impedirlo, bloquéala.
       </p>
 
       <section
@@ -322,7 +323,8 @@ export const AccessAdminView: React.FC<AccessAdminViewProps> = ({
                             </p>
                             <p className="text-xs break-all text-slate-600">{request.email}</p>
                             <p className="text-[11px] text-slate-500">
-                              {STATUS_LABEL[request.status]} · solicitado el{' '}
+                              {STATUS_LABEL[request.status]}
+                              {request.status === 'pending' && request.review && ' · vuelve a pedirlo'} · solicitado el{' '}
                               {dateFormat.format(new Date(request.requestedAt))}
                               {request.decidedAt && request.status !== 'pending' && (
                                 <> · decidido el {dateFormat.format(new Date(request.decidedAt))}</>

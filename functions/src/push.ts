@@ -174,8 +174,12 @@ export const unregisterPushDevice = onCall({ region: REGION }, async (request) =
 
 // Pone al día la alarma de una tarea en la cola. En una transacción, con la tarea tal como está ahora (los eventos del
 // trigger pueden llegar desordenados, p. ej. «Hecha» y «Deshacer» seguidos) y la última enviada.
-export const syncTaskAlarm = (uid: string, taskId: string, now = Date.now()) =>
-  db().runTransaction(async (tx) => {
+export const syncTaskAlarm = async (uid: string, taskId: string, now = Date.now()) => {
+  // Como mucho 100 alarmas en cola por cuenta: una más no entra (la app sigue avisando con CLAR abierta). Se cuentan
+  // fuera de la transacción: leer ahí la cola de la cuenta la haría chocar con las demás tareas que se ponen al día a
+  // la vez (p. ej. al importar). Contra abusos basta un tope aproximado
+  const { count: queuedCount } = (await db().collection('alarm_queue').where('uid', '==', uid).count().get()).data();
+  await db().runTransaction(async (tx) => {
     const [current, devices, sent] = await Promise.all([
       tx.get(db().doc(`users/${uid}/tasks/${taskId}`)),
       tx.get(devicesRef(uid)),
@@ -184,18 +188,15 @@ export const syncTaskAlarm = (uid: string, taskId: string, now = Date.now()) =>
     const task = current.data() as AlarmTask | undefined;
     const alarm = pendingAlarm(taskId, task, devices.data()?.timeZone, sent.data()?.key, now);
     if (alarm) {
-      // Como mucho 100 alarmas en cola por cuenta: una más no entra (la app sigue avisando con CLAR abierta)
-      const [queued, mine] = await Promise.all([
-        tx.get(queueRef(uid, taskId)),
-        tx.get(db().collection('alarm_queue').where('uid', '==', uid).limit(MAX_QUEUED_PER_ACCOUNT))
-      ]);
-      if (queued.exists || mine.size < MAX_QUEUED_PER_ACCOUNT)
+      const queued = await tx.get(queueRef(uid, taskId));
+      if (queued.exists || queuedCount < MAX_QUEUED_PER_ACCOUNT)
         tx.set(queueRef(uid, taskId), queueDoc(uid, taskId, alarm));
       else logger.warn('Alarm queue full for an account');
     } else tx.delete(queueRef(uid, taskId));
     // Tarea borrada: su última alarma enviada ya no hace falta
     if (!task) tx.delete(sentRef(uid, taskId));
   });
+};
 
 export const queueTaskAlarm = onDocumentWritten(
   { document: 'users/{uid}/tasks/{taskId}', region: REGION },

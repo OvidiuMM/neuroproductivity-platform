@@ -92,6 +92,12 @@ describe('mensajes de contacto', () => {
     });
     // Sin datos de quien escribe ni su mensaje: se leen en la app
     assert.doesNotMatch(JSON.stringify(email), /Ana|ana@example\.com|Modo oscuro|Estaría bien|Chrome/);
+    // Con los que esperaban al resumen
+    assert.match(
+      buildFeedbackEmail(ticket, 'https://example.web.app', 1).text,
+      /^Hay un mensaje nuevo \(Sugerencia\) y otro de antes\. /
+    );
+    assert.match(buildFeedbackEmail(ticket, 'https://example.web.app', 3).text, / y 3 más de antes\. /);
   });
 });
 
@@ -173,6 +179,9 @@ describe('avisos a la administración', () => {
     assert.equal(noticeDue('2026-10-21T11:44:59.000Z', now), true);
     assert.equal(noticeDue('2026-10-21T11:50:00.000Z', now), false);
     assert.equal(noticeDue('no es una fecha', now), true);
+    // El resumen programado, con margen
+    assert.equal(noticeDue('2026-10-21T11:45:30.000Z', now), false);
+    assert.equal(noticeDue('2026-10-21T11:45:30.000Z', now, 60_000), true);
   });
   it('the digest says how many messages arrived, without their content', () => {
     const one = buildFeedbackDigestEmail(1, 'https://clar.example');

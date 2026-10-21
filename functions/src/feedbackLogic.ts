@@ -123,17 +123,21 @@ const TYPE_LABEL: Record<FeedbackType, string> = {
 
 // Aviso a la administración, en texto plano y sin datos de quien escribe ni su mensaje (minimización): se leen y se
 // contestan en la app
-export const buildFeedbackEmail = (ticket: FeedbackTicket, appUrl: string) => ({
+// earlier: los que llegaron desde el aviso anterior y aún esperaban al resumen; van en este
+export const buildFeedbackEmail = (ticket: FeedbackTicket, appUrl: string, earlier = 0) => ({
   subject: `[CLAR] Mensaje nuevo: ${TYPE_LABEL[ticket.type]}`,
-  text: `Hay un mensaje nuevo (${TYPE_LABEL[ticket.type]}). Léelo y contesta en «Administración» → «Mensajes»: ${appUrl}`
+  text: `Hay un mensaje nuevo (${TYPE_LABEL[ticket.type]})${
+    earlier > 0 ? ` y ${earlier === 1 ? 'otro de antes' : `${earlier} más de antes`}` : ''
+  }. Léelo y contesta en «Administración» → «Mensajes»: ${appUrl}`
 });
 
 // Avisos a la administración: como mucho uno cada 15 minutos (con el registro abierto podrían llegar muchos). Un mensaje
 // que llega antes se apunta y sale en el resumen siguiente (flushFeedbackNotices)
 export const NOTICE_INTERVAL_MS = 15 * 60 * 1000;
-export const noticeDue = (lastSentAt: unknown, now: Date) => {
+// slackMs: margen para el resumen programado, que también va cada 15 minutos y no arranca siempre al mismo segundo
+export const noticeDue = (lastSentAt: unknown, now: Date, slackMs = 0) => {
   const last = typeof lastSentAt === 'string' ? Date.parse(lastSentAt) : NaN;
-  return !Number.isFinite(last) || now.getTime() - last >= NOTICE_INTERVAL_MS;
+  return !Number.isFinite(last) || now.getTime() - last >= NOTICE_INTERVAL_MS - slackMs;
 };
 
 export const buildFeedbackDigestEmail = (count: number, appUrl: string) => ({
