@@ -51,6 +51,14 @@ test('reads a full download and keeps only known fields, without the source acco
   assert.deepEqual(parsed.data.wheelLogs[0].scores, { Salud: 7, Ocio: 4 });
 });
 
+test('keeps when an alarm was set, but not a date in the future', () => {
+  const withAlarm = { ...task, dueDate: '2026-10-20', alarmTime: '09:00' };
+  const past = parseAccountExport(file({ tasks: [{ ...withAlarm, alarmSetAt: '2026-10-19T10:00:00.000Z' }] }));
+  assert.equal(past.data.tasks[0].alarmSetAt, '2026-10-19T10:00:00.000Z');
+  const future = parseAccountExport(file({ tasks: [{ ...withAlarm, alarmSetAt: '2999-01-01T00:00:00.000Z' }] }));
+  assert.equal(future.data.tasks[0].alarmSetAt, undefined);
+});
+
 test('accepts downloads from before 0.9.5, which have no type, and old tasks with `completed`', () => {
   const old = JSON.parse(file()) as Record<string, unknown>;
   delete old.app;

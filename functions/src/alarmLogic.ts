@@ -125,6 +125,8 @@ export const queuedAlarm = (taskId: string, task: AlarmTask, timeZone: string, n
   const set = typeof task.alarmSetAt === 'string' ? Date.parse(task.alarmSetAt) : NaN;
   if (Number.isFinite(set) && at <= set) return null;
   const hasDueTime = typeof task.dueTime === 'string' && ALARM_TIME.test(task.dueTime);
+  // Una de antes de 0.9.7 (sin alarmSetAt) solo con fecha sonaba la víspera: si su hora de ahora ya pasó, ya sonó
+  if (task.alarmSetAt === undefined && !hasDueTime && at <= now) return null;
   return {
     at,
     due,
