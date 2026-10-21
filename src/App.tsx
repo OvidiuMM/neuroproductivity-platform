@@ -911,6 +911,23 @@ export default function App({ user, services, isAdmin = false }: AppProps) {
   // Solo el recorrido de la primera vez (tras la bienvenida automática) acaba en la Rueda; al repetirlo desde la
   // ayuda, se vuelve a donde se estaba
   const [isFirstRunTour, setIsFirstRunTour] = useState(false);
+
+  // «NUEVA TAREA POR VOZ», el acceso directo del icono de la app (public/manifest.json): /?nueva=voz abre el formulario
+  // con el micrófono escuchando, y /?nueva=1, sin él. Espera a que no haya otra ventana (la pantalla de inicio, la
+  // bienvenida o el recorrido) y se quita de la dirección, para que recargar no lo repita
+  const [launchNewTask, setLaunchNewTask] = useState(() => new URLSearchParams(window.location.search).get('nueva'));
+  const [dictateNewTask, setDictateNewTask] = useState(false);
+  useEffect(() => {
+    const url = new URL(window.location.href);
+    if (!url.searchParams.has('nueva')) return;
+    url.searchParams.delete('nueva');
+    window.history.replaceState(window.history.state, '', url);
+  }, []);
+  if (launchNewTask !== null && !showSplash && profileOnboarding.fromServer && !isWelcomeOpen && !isTourOpen) {
+    setLaunchNewTask(null);
+    openNewTask();
+    setDictateNewTask(launchNewTask === 'voz');
+  }
   const startTour = (firstRun = false) => {
     navigate('tasks');
     setIsFirstRunTour(firstRun);
@@ -1406,12 +1423,14 @@ export default function App({ user, services, isAdmin = false }: AppProps) {
           onClose={() => {
             setIsTaskModalOpen(false);
             setEditingTask(null);
+            setDictateNewTask(false);
           }}
           onSaveTask={handleSaveTask}
           initialContext={activeContext}
           initialSomeday={newTaskIsSomeday}
           initialGoalId={newTaskGoalId}
           initialProjectId={newTaskProjectId}
+          autoDictate={dictateNewTask}
           editingTask={editingTask}
           goals={goals}
           projects={projects}

@@ -67,6 +67,7 @@ import { DiscardChangesPrompt } from './DiscardChangesPrompt';
 import { TimeField } from './TimeField';
 import { NewGoalInline } from './NewGoalInline';
 import { alarmError, alarmUnavailableReason, describeAlarm } from '../services/alarms';
+import { DictateButton } from './DictateButton';
 import { suggestGoal } from '../services/goals';
 import { areasInUse } from '../services/wheel';
 import { useAreas } from '../hooks/useAreas';
@@ -84,6 +85,8 @@ interface TaskModalProps {
   initialGoalId?: string;
   // Al abrir desde un proyecto, la tarea nueva ya pertenece a él (y a su meta)
   initialProjectId?: string;
+  // Abierto desde «Nueva tarea por voz»: el micrófono del título empieza a escuchar solo
+  autoDictate?: boolean;
   editingTask?: TaskItem | null;
   // Metas a las que se puede vincular la tarea (el área de la Rueda se hereda de la meta)
   goals: Goal[];
@@ -192,6 +195,7 @@ export const TaskModal: React.FC<TaskModalProps> = ({
   initialSomeday = false,
   initialGoalId,
   initialProjectId,
+  autoDictate = false,
   editingTask,
   goals,
   tasks,
@@ -672,7 +676,7 @@ export const TaskModal: React.FC<TaskModalProps> = ({
               ya (Llamar, Enviar, Reservar…).
             </p>
 
-            <div className="relative">
+            <div className="relative flex flex-wrap items-center gap-1">
               <input
                 id="task-title"
                 aria-describedby="task-title-hint"
@@ -684,13 +688,22 @@ export const TaskModal: React.FC<TaskModalProps> = ({
                 }}
                 onBlur={() => setTouched({ ...touched, title: true })}
                 placeholder="ej. Llamar al proveedor para acordar el plazo de entrega"
-                className={`w-full rounded-xl border px-3.5 py-2.5 text-sm transition-all focus:ring-2 focus:outline-none ${
+                className={`min-w-0 flex-1 rounded-xl border px-3.5 py-2.5 text-sm transition-all focus:ring-2 focus:outline-none ${
                   touched.title && (isTitleEmpty || isTitleTooLong || isSyntaxInvalid)
                     ? 'border-red-400 bg-red-50/20 focus:ring-red-400'
                     : syntaxResult.isValid
                       ? 'border-emerald-300 bg-emerald-50/10 focus:ring-emerald-400'
                       : 'border-slate-300 focus:ring-indigo-400'
                 }`}
+              />
+              <DictateButton
+                label="Dictar la tarea"
+                value={title}
+                onChange={(value) => {
+                  setTitle(value);
+                  setOverrideSyntaxWarning(false);
+                }}
+                autoStart={autoDictate && !editingTask}
               />
             </div>
             {/* Debajo del campo y no encima: con títulos largos o texto ampliado taparía lo escrito */}
@@ -1385,7 +1398,7 @@ export const TaskModal: React.FC<TaskModalProps> = ({
                 >
                   Notas
                 </label>
-                <div className="mb-2 flex gap-2">
+                <div className="mb-2 flex flex-wrap items-center gap-2">
                   <input
                     id="task-note"
                     type="text"
@@ -1400,6 +1413,7 @@ export const TaskModal: React.FC<TaskModalProps> = ({
                       }
                     }}
                   />
+                  <DictateButton label="Dictar una nota" value={newObsText} onChange={setNewObsText} />
                   <button
                     type="button"
                     onClick={handleAddObservation}
