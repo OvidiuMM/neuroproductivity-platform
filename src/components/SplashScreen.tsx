@@ -84,7 +84,7 @@ export const SplashScreen: React.FC<SplashScreenProps> = ({
         <div className="relative">
           <div className="absolute -inset-4 animate-pulse rounded-full bg-indigo-500/20 blur-xl" />
           <div className="relative rounded-3xl shadow-2xl shadow-indigo-500/30">
-            <BrandMark size={96} />
+            <BrandMark size={96} spinning />
           </div>
         </div>
 
