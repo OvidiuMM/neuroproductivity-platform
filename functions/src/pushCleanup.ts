@@ -18,9 +18,13 @@ export const forgetPushDevices = async (uid: string) => {
   ]);
 };
 
-// Todo, también las alarmas ya enviadas: al eliminar la cuenta
+// Todo, también las alarmas ya enviadas y las horas de sus registros (push_limits): al eliminar la cuenta
 export const forgetPushData = async (uid: string) => {
   const db = adminDb();
   const sent = await db.collection('alarm_sent').where('uid', '==', uid).get();
-  await Promise.all([forgetPushDevices(uid), ...sent.docs.map((d) => d.ref.delete())]);
+  await Promise.all([
+    forgetPushDevices(uid),
+    db.doc(`push_limits/${uid}`).delete(),
+    ...sent.docs.map((d) => d.ref.delete())
+  ]);
 };

@@ -1,3 +1,5 @@
+// Primero las opciones de todas las funciones (ver globalOptions.ts)
+import './globalOptions';
 import { onRequest } from 'firebase-functions/https';
 import { app } from './app';
 
@@ -8,7 +10,7 @@ export const api = onRequest({ region: 'europe-west1', maxInstances: 10 }, app);
 // Aprobación de accesos (solicitud, decisión de la administración y avisos por email) y mensajes de contacto, con sus
 // respuestas
 export { forgetAccess, requestAccess, revokeSessions, setAccess, setAccessMode, syncAccess } from './access';
-export { replyToFeedback, submitFeedback } from './feedback';
+export { flushFeedbackNotices, replyToFeedback, submitFeedback } from './feedback';
 
 // Funciones extra que la administración activa a cada cuenta
 export { setFeatures } from './features';

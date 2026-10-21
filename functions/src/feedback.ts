@@ -1,4 +1,5 @@
 import { HttpsError, onCall } from 'firebase-functions/https';
+import { onSchedule } from 'firebase-functions/scheduler';
 import * as logger from 'firebase-functions/logger';
 import { FieldPath, FieldValue } from 'firebase-admin/firestore';
 import { adminDb } from './adminApp';
@@ -15,7 +16,9 @@ import {
 } from './access';
 import {
   FEEDBACK_LIMIT,
+  buildFeedbackDigestEmail,
   buildFeedbackEmail,
+  noticeDue,
   buildReplyEmail,
   parseFeedback,
   parseReply,
@@ -26,6 +29,9 @@ import {
 } from './feedbackLogic';
 
 const db = adminDb;
+// Cuándo se avisó por última vez a la administración y cuántos mensajes esperan al resumen (solo lo usa el servidor)
+const NOTICE_DOC = 'feedback_notice/state';
+const FLUSH_SLACK_MS = 60 * 1000;
 
 // Contacto: guarda el mensaje (feedback_tickets, solo lo lee la administración) y avisa por email. Funciona también
 // con una cuenta pendiente de aprobación, pero exige el email confirmado para poder responder. Como mucho 5 por hora.
@@ -40,6 +46,7 @@ export const submitFeedback = onCall({ region: REGION, secrets: emailSecrets }, 
   const now = new Date();
   const ticketRef = db().collection('feedback_tickets').doc();
   const limitRef = db().doc(`feedback_limits/${auth.uid}`);
+  const noticeRef = db().doc(NOTICE_DOC);
   const ticket: FeedbackTicket = {
     ...input,
     uid: auth.uid,
@@ -63,10 +70,47 @@ export const submitFeedback = onCall({ region: REGION, secrets: emailSecrets }, 
     tx.set(ticketRef, ticket);
   });
 
-  logger.info('Feedback received', { type: input.type, hasContext: Boolean(input.context) });
-  await sendEmail('feedback', adminEmail(), buildFeedbackEmail(ticket, appUrl()));
+  // El aviso, aparte y sin que un fallo afecte al mensaje, que ya está guardado (y se ve en «Administración»): un
+  // documento para todas las cuentas, que no debe hacer fallar los envíos si llegan muchos a la vez. Uno cada 15
+  // minutos como mucho: si hubo uno hace menos, este va en el resumen siguiente; si toca, lleva también los que
+  // esperaban
+  const notice = await db()
+    .runTransaction(async (tx) => {
+      const state = (await tx.get(noticeRef)).data();
+      if (!noticeDue(state?.lastSentAt, now)) {
+        tx.set(noticeRef, { pending: FieldValue.increment(1) }, { merge: true });
+        return null;
+      }
+      tx.set(noticeRef, { lastSentAt: now.toISOString(), pending: 0 });
+      return { earlier: Math.max(0, Number(state?.pending ?? 0)) };
+    })
+    .catch((error: unknown) => {
+      logger.error('Feedback notice not updated', { error: error instanceof Error ? error.message : String(error) });
+      return null;
+    });
+
+  logger.info('Feedback received', { type: input.type, hasContext: Boolean(input.context), notifyNow: !!notice });
+  if (notice) await sendEmail('feedback', adminEmail(), buildFeedbackEmail(ticket, appUrl(), notice.earlier));
   return { id: ticketRef.id };
 });
+
+// Avisos de mensajes pendientes (ver noticeDue): cada 15 minutos, uno con cuántos llegaron desde el último aviso
+export const flushFeedbackNotices = onSchedule(
+  { schedule: 'every 15 minutes', region: REGION, secrets: emailSecrets, retryCount: 0 },
+  async () => {
+    const now = new Date();
+    const ref = db().doc(NOTICE_DOC);
+    const count = await db().runTransaction(async (tx) => {
+      const notice = (await tx.get(ref)).data();
+      const pending = Number(notice?.pending ?? 0);
+      // Con un minuto de margen: si no, un aviso de hace casi 15 minutos haría esperar al resumen 15 más
+      if (pending <= 0 || !noticeDue(notice?.lastSentAt, now, FLUSH_SLACK_MS)) return 0;
+      tx.set(ref, { lastSentAt: now.toISOString(), pending: 0 });
+      return pending;
+    });
+    if (count > 0) await sendEmail('feedback', adminEmail(), buildFeedbackDigestEmail(count, appUrl()));
+  }
+);
 
 // Respuesta de la administración: se envía por email a quien escribió (si contesta, le llega a la administración) y se
 // guarda en el mensaje. En tres pasos, para que una respuesta nunca salga dos veces:

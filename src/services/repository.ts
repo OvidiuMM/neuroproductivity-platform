@@ -16,13 +16,21 @@ import {
   type Firestore
 } from 'firebase/firestore';
 import type { User } from 'firebase/auth';
-import { EmailDraft, Goal, MeetingGuard, Project, TaskItem, WheelArea, WheelOfLifeLog } from '../types';
+import { EmailDraft, Goal, MeetingGuard, Project, TaskDraft, TaskItem, WheelArea, WheelOfLifeLog } from '../types';
 import { isUnchanged, normalizeTask } from './tasks';
 import { onboardingRecord, type OnboardingOutcome, type OnboardingRecord } from './onboarding';
 
 // Datos de cada persona en users/{uid}/<colección>/<id>. Las reglas (firestore.rules) solo dejan acceder al propio uid.
-export type UserCollection = 'tasks' | 'wheelLogs' | 'meetings' | 'emails' | 'goals' | 'projects';
-export const USER_COLLECTIONS: UserCollection[] = ['tasks', 'wheelLogs', 'meetings', 'emails', 'goals', 'projects'];
+export type UserCollection = 'tasks' | 'wheelLogs' | 'meetings' | 'emails' | 'goals' | 'projects' | 'taskDrafts';
+export const USER_COLLECTIONS: UserCollection[] = [
+  'tasks',
+  'wheelLogs',
+  'meetings',
+  'emails',
+  'goals',
+  'projects',
+  'taskDrafts'
+];
 
 export interface UserData {
   tasks: TaskItem[];
@@ -31,6 +39,7 @@ export interface UserData {
   emails: EmailDraft[];
   goals: Goal[];
   projects: Project[];
+  taskDrafts: TaskDraft[];
 }
 
 const userCollection = (db: Firestore, uid: string, name: UserCollection) => collection(db, 'users', uid, name);
@@ -44,7 +53,8 @@ const SORTERS = {
   meetings: (a: MeetingGuard, b: MeetingGuard) => byDateDesc(a.createdAt, b.createdAt),
   emails: (a: EmailDraft, b: EmailDraft) => byDateDesc(a.updatedAt ?? a.sentAt, b.updatedAt ?? b.sentAt),
   goals: (a: Goal, b: Goal) => byDateDesc(a.createdAt, b.createdAt),
-  projects: (a: Project, b: Project) => byDateDesc(a.createdAt, b.createdAt)
+  projects: (a: Project, b: Project) => byDateDesc(a.createdAt, b.createdAt),
+  taskDrafts: (a: TaskDraft, b: TaskDraft) => byDateDesc(a.updatedAt, b.updatedAt)
 };
 
 export interface SnapshotInfo {
@@ -77,6 +87,15 @@ export const subscribeToCollection = <K extends UserCollection>(
 // Las escrituras se aplican al instante en la caché local; la promesa se resuelve cuando el servidor las confirma
 export const saveTask = (db: Firestore, uid: string, task: TaskItem) =>
   setDoc(doc(userCollection(db, uid, 'tasks'), task.id), { ...task, userId: uid });
+
+// Un borrador que se guarda como tarea: la tarea y el borrador borrado en un mismo lote, así nunca se pierde el
+// borrador sin que exista la tarea (también sin conexión)
+export const saveTaskFromDraft = (db: Firestore, uid: string, task: TaskItem, draftId: string) => {
+  const batch = writeBatch(db);
+  batch.set(doc(userCollection(db, uid, 'tasks'), task.id), { ...task, userId: uid });
+  batch.delete(doc(userCollection(db, uid, 'taskDrafts'), draftId));
+  return batch.commit();
+};
 
 // Tarea recurrente hecha: la tarea archivada (con el id de la siguiente) y la siguiente repetición se guardan
 // en un mismo lote, así nunca queda una sin la otra
@@ -195,6 +214,12 @@ export const saveEmail = (db: Firestore, uid: string, email: EmailDraft) =>
 export const deleteEmail = (db: Firestore, uid: string, emailId: string) =>
   deleteDoc(doc(userCollection(db, uid, 'emails'), emailId));
 
+export const saveTaskDraft = (db: Firestore, uid: string, draft: TaskDraft) =>
+  setDoc(doc(userCollection(db, uid, 'taskDrafts'), draft.id), { ...draft, userId: uid });
+
+export const deleteTaskDraft = (db: Firestore, uid: string, draftId: string) =>
+  deleteDoc(doc(userCollection(db, uid, 'taskDrafts'), draftId));
+
 // Recuperar un correo eliminado, solo si nadie lo ha vuelto a guardar entretanto (p. ej. desde otra pestaña)
 export const restoreDeletedEmail = async (db: Firestore, uid: string, email: EmailDraft) => {
   await whenSynced(db);
@@ -218,6 +243,15 @@ export const saveUserProfile = (db: Firestore, user: User) =>
     },
     { merge: true }
   );
+
+// Cuándo aceptó las condiciones de uso (al crear la cuenta con email, con su casilla; con Google, al continuar tras el
+// aviso de la pantalla de entrada): se apunta una vez, con la fecha de los textos legales de entonces. Sin conexión se
+// deja para la próxima vez
+export const recordTermsAcceptance = async (db: Firestore, uid: string, version: string) => {
+  const ref = doc(db, 'users', uid);
+  if ((await getDoc(ref)).data()?.termsAcceptedAt) return;
+  await setDoc(ref, { termsAcceptedAt: new Date().toISOString(), termsVersion: version }, { merge: true });
+};
 
 // Perfil (users/{uid}) en vivo: por ahora solo interesa si ya vio la bienvenida. `fromServer` dice si el dato ya
 // está confirmado por el servidor (al principio puede venir solo de la caché, o no existir aún)
@@ -314,7 +348,7 @@ export const importUserData = (db: Firestore, uid: string, data: UserData) =>
   commitInBatches(
     db,
     USER_COLLECTIONS.flatMap((name) =>
-      (data[name] as { id: string }[]).map(
+      ((data[name] ?? []) as { id: string }[]).map(
         (item) => (batch: ReturnType<typeof writeBatch>) =>
           batch.set(doc(userCollection(db, uid, name), item.id), { ...item, userId: uid })
       )

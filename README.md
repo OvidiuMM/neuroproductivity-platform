@@ -1,7 +1,7 @@
 # CLAR — Plataforma de Gestión del Tiempo y Neurociencia Aplicada
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
-[![Version](https://img.shields.io/badge/Version-0.9.7-indigo.svg)](#)
+[![Version](https://img.shields.io/badge/Version-1.0.0-indigo.svg)](#)
 [![React](https://img.shields.io/badge/React-19-61dafb.svg?logo=react&logoColor=black)](https://react.dev/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-7.x-3178c6.svg?logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
 [![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-4.x-38bdf8.svg?logo=tailwindcss&logoColor=white)](https://tailwindcss.com/)
@@ -191,6 +191,13 @@ La lista completa y numerada de lo que hace la app, con sus requisitos no funcio
 - **El logo gira mientras carga:** el brillo blanco da vueltas dentro del anillo (`BrandMark spinning`, `LoadingScreen`) en las pantallas de arranque y en la de inicio; con «menos movimiento», quieto.
 - **Calendario:** una tarea con solo fecha es un evento de una hora a la hora de su alarma o, sin alarma, a las 09:00 (los intervalos de varios días sin horas siguen de día completo). En la sincronización con Google Calendar, las notas van en HTML, como lista con viñetas (`eventDescription` en `functions/src/calendarLogic.ts`); los eventos ya sincronizados cambian al cambiar su tarea o al volver a conectar.
 
+### Dictado, borradores, presentación y registro abierto (1.0.0)
+
+- **Dictar tareas** (`src/services/speech.ts`, `DictateButton`): micrófono en el título y en las notas, con el reconocimiento de voz del navegador, en español y hasta 30 s por dictado; un solo dictado a la vez. Accesos «Nueva tarea por voz» (`/?nueva=voz`) y «Nueva tarea» en el manifiesto. `Permissions-Policy` deja el micrófono a la propia app.
+- **Borradores de tareas** (`users/{uid}/taskDrafts`, `TaskDraftsModal`): una tarea nueva que se cierra sin guardar se queda en «Borradores», en Listas, con «Continuar» y «Eliminar»; se sincronizan, van en la descarga y se borran con la cuenta (no se importan).
+- **Compartir y presentación:** «Compartir CLAR» en el menú de la cuenta (`ShareAppButton`), tarjeta Open Graph (`public/og-image.png`, fuera de la copia sin conexión) y la pantalla de entrada como página de presentación (`LoginScreen`), con enlace al repositorio.
+- **Registro abierto:** con «Aprobación obligatoria» desactivada, una cuenta nueva con el email confirmado entra sola; una rechazada o retirada que vuelve a pedirlo espera a la administración (`newRequestStatus`). Al crear la cuenta con email se confirma la edad mínima y se aceptan las condiciones; el perfil guarda cuándo (`termsAcceptedAt`, `termsVersion`). Contra abusos: las reglas acotan el tamaño de lo que se escribe, cada función tiene como mucho 5 instancias (`functions/src/globalOptions.ts`), cada cuenta tiene como mucho 100 alarmas en cola y 20 registros de dispositivo por hora, y los avisos de «Escríbenos» a la administración salen como mucho cada 15 minutos (`flushFeedbackNotices`). Una dirección que no existe dice «Página no encontrada», y hay `robots.txt`.
+
 ---
 
 ## 🛠️ Stack Tecnológico
@@ -267,7 +274,7 @@ Firebase Hosting sirve la SPA compilada (`dist/`), la app lee y escribe directam
 | `/.well-known/assetlinks.json` | Función `api` (Digital Asset Links de la APK Android) |
 | `**`                           | `index.html` (fallback de la SPA)                     |
 
-Todas las respuestas llevan cabeceras de seguridad, definidas en `firebase.json`: `X-Content-Type-Options`, `Referrer-Policy`, `Permissions-Policy` (sin cámara, micrófono, ubicación, pagos ni USB) y una política de seguridad de contenidos (CSP) que solo permite el propio dominio, el inicio de sesión de Google, las APIs de Firebase (`*.googleapis.com`), las Cloud Functions (`*.cloudfunctions.net`) y las fotos de perfil de Google. Por ahora la CSP y la `Cross-Origin-Opener-Policy` van en modo «solo informar» (`…-Report-Only`): no bloquean nada y avisan en la consola del navegador. Un servicio externo nuevo hay que añadirlo a la CSP.
+Todas las respuestas llevan cabeceras de seguridad, definidas en `firebase.json`: `X-Content-Type-Options`, `Referrer-Policy`, `Permissions-Policy` (sin cámara, ubicación, pagos ni USB; el micrófono, solo para la propia app, para dictar) y una política de seguridad de contenidos (CSP) que solo permite el propio dominio, el inicio de sesión de Google, las APIs de Firebase (`*.googleapis.com`), las Cloud Functions (`*.cloudfunctions.net`) y las fotos de perfil de Google. Por ahora la CSP y la `Cross-Origin-Opener-Policy` van en modo «solo informar» (`…-Report-Only`): no bloquean nada y avisan en la consola del navegador. Un servicio externo nuevo hay que añadirlo a la CSP.
 
 Requisitos: un proyecto de Firebase en plan Blaze (Cloud Functions lo exige), una base de datos de Firestore `(default)` en `europe-west1`, los proveedores de inicio de sesión **Google** y **Correo electrónico/contraseña** activados en Authentication y la Firebase CLI con sesión iniciada (`npx firebase login`).
 
@@ -320,7 +327,7 @@ Con CLAR cerrada, las alarmas llegan por Firebase Cloud Messaging a los disposit
 
 1. **Clave VAPID:** Firebase → Configuración del proyecto → Cloud Messaging → Certificados web push → «Generar par de claves». La clave pública va en la variable del repositorio `FCM_VAPID_KEY` (`gh variable set FCM_VAPID_KEY`). La compilación la lee como `VITE_FCM_VAPID_KEY`; sin ella, la app no usa push.
 2. **APIs y permisos (una vez, con una cuenta propietaria):** activar `cloudscheduler.googleapis.com`, `eventarc.googleapis.com`, `pubsub.googleapis.com` y `run.googleapis.com`; dar a `github-deployer` los roles `roles/cloudscheduler.admin` y `roles/eventarc.developer`; y dar a los agentes de servicio los que pide el primer despliegue: `roles/iam.serviceAccountTokenCreator` al de Pub/Sub, y `roles/run.invoker` y `roles/eventarc.eventReceiver` a la cuenta de Compute (ver la configuración inicial). El primer despliegue del trigger puede fallar con «Permission denied while using the Eventarc Service Agent» mientras se propagan los permisos: basta con volver a lanzarlo unos minutos después.
-3. **APK (TWA):** generarla con la delegación de notificaciones (Bubblewrap: `enableNotifications: true`) y el permiso `POST_NOTIFICATIONS` de Android 13+.
+3. **APK (TWA):** generarla con la delegación de notificaciones (Bubblewrap: `enableNotifications: true`) y el permiso `POST_NOTIFICATIONS` de Android 13+. Los accesos directos del manifiesto («Nueva tarea por voz», desde 1.0.0) se incluyen al generarla: con una APK anterior, hay que regenerarla (`bubblewrap update`) para que salgan. En la app instalada desde Chrome, salen solos tras la siguiente comprobación del manifiesto (como mucho, un día).
 4. **Emuladores:** FCM no tiene emulador, así que con ellos no se usa push; el trigger funciona y la tarea programada no se ejecuta.
 
 #### Sincronización con Google Calendar

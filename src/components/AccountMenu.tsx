@@ -20,6 +20,7 @@ import { LegalLink } from './LegalLinks';
 import { NotificationPermission } from './NotificationPermission';
 import type { ExtraFeature, FeatureId } from '../services/features';
 import { CalendarConnection, type CalendarConnectionProps } from './CalendarConnection';
+import { ShareAppButton } from './ShareApp';
 
 interface AccountMenuProps {
   isOpen: boolean;
@@ -372,6 +373,7 @@ export const AccountMenu: React.FC<AccountMenuProps> = ({
               <MessageSquare className="h-4 w-4 text-indigo-600" aria-hidden="true" />
               Escríbenos: ideas, fallos o dudas
             </button>
+            <ShareAppButton className={actionClass} />
           </div>
 
           {/* SEGURIDAD */}

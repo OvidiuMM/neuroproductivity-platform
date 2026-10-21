@@ -1,9 +1,9 @@
 # Requisitos del sistema — CLAR
 
-- **Versión:** 0.9.7
+- **Versión:** 1.0.0
 - **Última revisión:** 2026-10-21
 
-Este documento describe qué hace CLAR en la versión 0.9.7: sus requisitos funcionales y no funcionales tal como están implementados en el código de esta versión (la SPA de `src/`, las Cloud Functions de `functions/src/`, las reglas de Firestore, la configuración de Firebase Hosting y las pruebas). No recoge planes ni funciones futuras. Donde el README y el código no coinciden, manda el código.
+Este documento describe qué hace CLAR en la versión 1.0.0: sus requisitos funcionales y no funcionales tal como están implementados en el código de esta versión (la SPA de `src/`, las Cloud Functions de `functions/src/`, las reglas de Firestore, la configuración de Firebase Hosting y las pruebas). No recoge planes ni funciones futuras. Donde el README y el código no coinciden, manda el código.
 
 **Convenciones.** RF: requisito funcional. RNF: requisito no funcional. Los identificadores son estables: un requisito nuevo toma el siguiente número libre de su sección y uno retirado no se reutiliza. Los textos entre «» son etiquetas de la interfaz. «Origen» señala los archivos principales de cada sección.
 
@@ -111,7 +111,7 @@ Origen: `src/components/TaskList.tsx`, `src/components/TaskCard.tsx`, `src/compo
 - **RF-TAR-19.** La sugerencia compara el texto con las áreas a la vista: las de partida, con su vocabulario propio (más las palabras de su nombre si se renombraron); las añadidas, con las palabras de su nombre. El cálculo se hace en el navegador.
 - **RF-TAR-20.** Con una meta elegida, el área es la de la meta y su selector se desactiva. Sin meta, el área se elige a mano o se acepta la sugerida, y el formulario dice cuál de las dos es.
 - **RF-TAR-21.** Las notas son textos cortos que se añaden con «Añadir» o Intro y se quitan una a una.
-- **RF-TAR-22.** Cerrar el formulario con cambios sin guardar pregunta «¿Descartar los cambios?», con «Seguir editando» y «Descartar». Una fecha o una hora a medio escribir también cuenta como cambio.
+- **RF-TAR-22.** Cerrar el formulario de una tarea que ya existe con cambios sin guardar (una tarea nueva se guarda como borrador: RF-TAR-56) pregunta «¿Descartar los cambios?», con «Seguir editando» y «Descartar». Una fecha o una hora a medio escribir también cuenta como cambio.
 - **RF-TAR-23.** Cerrar o recargar la pestaña con el formulario cambiado hace que el navegador pida confirmación.
 
 **Estados y archivo**
@@ -156,6 +156,8 @@ Origen: `src/components/TaskList.tsx`, `src/components/TaskCard.tsx`, `src/compo
 - **RF-TAR-52.** Una tarea recurrente se exporta como serie (RRULE, con la semana empezando en lunes) a Google Calendar y al .ics; los enlaces de Outlook no la admiten. Una serie va en hora local con la zona horaria del dispositivo (TZID en el .ics, `ctz` en Google), así el día de la semana y la hora no cambian con el horario de verano. El .ics incluye la alarma de la tarea.
 - **RF-TAR-53.** «Descargar (JSON)» descarga una tarea, una meta o un proyecto con todos sus datos y los nombres de lo relacionado. La tarea incluye su área, su meta, su proyecto y las tareas a las que espera o que esperan a ella; la meta, su avance, sus proyectos y sus tareas; el proyecto, su avance, el estado de su plazo y sus tareas.
 - **RF-TAR-54.** El archivo se genera en el navegador y se llama `clar-<tipo>-<nombre>-<fecha>.json`. Incluye la versión de la app y la fecha de la descarga.
+- **RF-TAR-55.** En los navegadores con reconocimiento de voz, el título y las notas del formulario tienen un micrófono para dictar en español: lo dicho se añade a lo escrito, se ve según se reconoce y el dictado termina al callar, al volver a pulsarlo o a los 30 segundos. Si falta el permiso, la conexión o el micrófono, lo dice. El manifiesto ofrece los accesos «Nueva tarea por voz» (`/?nueva=voz`, el formulario con el micrófono del título escuchando) y «Nueva tarea» (`/?nueva=1`); salen al mantener pulsado el icono de la app instalada en Android o con el botón derecho en el ordenador (no en el iPhone). La app los abre cuando no hay otra ventana abierta (la pantalla de inicio, la bienvenida, el recorrido, la importación o las novedades, que esperan a que se cierre el formulario), también sin conexión si el perfil ya está en el dispositivo; si se abre antes otra ventana, el acceso se descarta. Quita el parámetro de la dirección. Hay un solo dictado a la vez, los 30 segundos cuentan desde que el navegador escucha, escribir a mano lo cancela y, si la página se oculta, se para.
+- **RF-TAR-56.** Cerrar el formulario de una tarea nueva con algo escrito (título, descripción, notas, fechas, alarma, estimación, repetición o dependencia) la guarda sola como borrador, sin preguntar, con un aviso y «Deshacer». Los borradores se guardan en la cuenta (se sincronizan y funcionan sin conexión) y salen en «Borradores (N)», junto a «Archivadas», del más reciente al más antiguo, con «Continuar» (abre el formulario tal como estaba) y «Eliminar» (con «Deshacer»). Continuar un borrador y cerrarlo con cambios lo actualiza, y vaciarlo lo borra; guardarlo como tarea lo borra. Los cambios de una tarea que ya existe no se guardan como borrador: se pregunta antes de descartarlos (RF-TAR-22).
 
 ### 1.5 Alarmas (RF-ALA)
 
@@ -247,6 +249,7 @@ Origen: `src/navigation.ts`, `src/components/Navbar.tsx`, `src/components/Bottom
 - **RF-NAV-11.** Si una sección o ventana no se puede descargar, la app muestra un aviso con «Reintentar» en su lugar y el resto sigue funcionando. Una ventana que aún se está descargando se puede cancelar.
 - **RF-NAV-12.** Al entrar después de una actualización, una ventana «Novedades de la versión N» cuenta los cambios de esa versión, una sola vez por cuenta, cuando no hay otra ventana abierta (la bienvenida, el recorrido o la importación). Lo visto se guarda en el perfil y en el dispositivo; como la bienvenida, espera al perfil confirmado por el servidor. Las cuentas nuevas empiezan por la bienvenida, que da por vistas las novedades de la versión.
 - **RF-NAV-13.** La versión de la cabecera (desde 640 px) y la del pie abren las novedades de la versión. «Ayuda» tiene el apartado «Novedades», con la versión actual a la vista y las anteriores plegadas. Cada versión publicada tiene su entrada, con la misma versión que la app (una prueba lo comprueba). Las novedades nunca anuncian las funciones extra (otra prueba lo comprueba).
+- **RF-NAV-14.** Una dirección que no es la de la app ni la de un texto legal muestra «Página no encontrada», con «Ir a CLAR» y los textos legales. `robots.txt` deja indexar la portada y los textos legales.
 
 ### 1.10 Cuentas y acceso (RF-CUE)
 
@@ -256,7 +259,7 @@ Origen: `src/AuthGate.tsx`, `src/AccessGate.tsx`, `src/services/auth.ts`, `src/s
 
 - **RF-CUE-01.** La app solo muestra datos con una sesión iniciada. Se entra con Google o con email y contraseña.
 - **RF-CUE-02.** «Continuar con Google» abre una ventana para elegir la cuenta. Si el navegador bloquea la ventana o no la admite (p. ej. dentro de la APK), usa una redirección.
-- **RF-CUE-03.** «Crear una cuenta» pide nombre (opcional), email y una contraseña de al menos 8 caracteres, y envía un email para confirmar la dirección. Los emails de la cuenta van en español.
+- **RF-CUE-03.** «Crear una cuenta» pide nombre (opcional), email, una contraseña de al menos 8 caracteres y marcar «Tengo 14 años o más… y acepto las condiciones de uso», y envía un email para confirmar la dirección. El perfil guarda cuándo se aceptaron las condiciones y su versión (también al entrar con Google, que acepta con el aviso de la pantalla de entrada). Los emails de la cuenta van en español.
 - **RF-CUE-04.** Una cuenta con contraseña tiene que confirmar su email antes de solicitar acceso. Su pantalla ofrece «Ya lo he confirmado», «Reenviar el email» y «Cerrar sesión».
 - **RF-CUE-05.** Al entrar, un email desconocido y una contraseña incorrecta dan el mismo mensaje: «Email o contraseña incorrectos.».
 - **RF-CUE-06.** «¿Olvidaste tu contraseña?» envía un enlace para crear otra. La respuesta es la misma tanto si el email tiene cuenta como si no.
@@ -274,7 +277,7 @@ Origen: `src/AuthGate.tsx`, `src/AccessGate.tsx`, `src/services/auth.ts`, `src/s
 **Gestión de la cuenta**
 
 - **RF-CUE-14.** El menú de la cuenta muestra el nombre, la foto o las iniciales y cómo se entró en esta sesión (Google o email). Da acceso a «Notificaciones de las alarmas» (activar el permiso y, si la instalación tiene push, «Avisarme también con CLAR cerrada» y «Mostrar el nombre de la tarea»), «Accesibilidad», «Descargar mis datos (JSON)», «Importar datos (JSON)», «Funciones extra» (si la cuenta tiene alguna; la persona administradora, siempre), «Escríbenos», la seguridad, «Cerrar sesión» y la eliminación de la cuenta.
-- **RF-CUE-15.** «Descargar mis datos (JSON)» descarga los datos de la app: tareas, evaluaciones, reuniones, correos, metas, proyectos, áreas de la Rueda, nombre y email. No incluye el resto del perfil, la solicitud de acceso, las funciones extra ni los mensajes de «Escríbenos».
+- **RF-CUE-15.** «Descargar mis datos (JSON)» descarga los datos de la app: tareas, borradores de tareas, evaluaciones, reuniones, correos, metas, proyectos, áreas de la Rueda, nombre y email (los borradores no se importan). No incluye el resto del perfil, la solicitud de acceso, las funciones extra ni los mensajes de «Escríbenos».
 - **RF-CUE-16.** Una cuenta con contraseña puede «Cambiar la contraseña» escribiendo la actual y una nueva de al menos 8 caracteres.
 - **RF-CUE-17.** «Cerrar sesión en todos los dispositivos» invalida las sesiones de la cuenta y cierra la de este dispositivo. Los demás pierden el acceso en menos de una hora.
 - **RF-CUE-18.** «Cerrar sesión» borra la copia local de los datos del dispositivo. Si hay otras pestañas de la app abiertas, la copia se queda hasta cerrar sesión con una sola.
@@ -296,6 +299,8 @@ Origen: `src/AuthGate.tsx`, `src/AccessGate.tsx`, `src/services/auth.ts`, `src/s
 - **RF-CUE-28.** Solo se guarda lo que falta: lo que ya está en la cuenta no se modifica, así importar dos veces el mismo archivo no duplica nada. Cada registro se comprueba campo a campo y se guardan solo los campos conocidos, con la cuenta actual como propietaria. Un registro cuenta entero como no válido si le falta algo obligatorio, si un texto o una lista pasa su tope (100.000 caracteres de descripción, 20.000 por nota, 200.000 de cuerpo de correo, 5.000 en los demás textos y 1.000 elementos por lista), si un elemento de una lista no vale o si es un proyecto cuya meta no está ni en la cuenta ni en el archivo: nunca se recorta nada. Los campos opcionales de formato (fechas, horas, referencias a otros registros) que no valen se omiten. Si la cuenta aún tiene las áreas de partida tal cual, se recupera la configuración de áreas del archivo (nombres, orden, ocultas y propias); si no, las que faltan se añaden al final, un nombre repetido lleva un número y, pasado el máximo de áreas a la vista, entran ocultas.
 - **RF-CUE-29.** La importación muestra su avance y no se puede cerrar mientras escribe. Sin conexión no empieza. Si la conexión se pierde o la importación lleva un minuto sin avanzar, lo dice y deja cerrar la ventana: sigue sola al volver la conexión, y si se cierra CLAR antes, volver a importar el archivo completa el resto. Si falla, dice cuántos registros entraron.
 - **RF-CUE-30.** «Funciones extra», en el menú de la cuenta, muestra las que la persona administradora le ha activado, con su descripción y sin interruptor. La persona administradora las tiene todas, con un interruptor por función: empiezan apagadas y lo que elige se guarda en su perfil.
+- **RF-CUE-31.** «Compartir CLAR», en el menú de la cuenta, abre el menú de compartir del dispositivo con el nombre, la frase de la app y su dirección; donde no lo hay, copia la dirección y lo dice. Cerrar el menú de compartir no es un error.
+- **RF-CUE-32.** Sin sesión iniciada, la pantalla de entrada es también la página de presentación: qué es CLAR (la Rueda, las metas y proyectos, el Top 10, la agenda y las alarmas, el tiempo protegido, el dictado y el uso sin conexión), cómo se tratan los datos, que es de código abierto (con enlace al repositorio) y, al lado (debajo en el móvil), cómo entrar. «Crear cuenta gratis» lleva al formulario en «Crear una cuenta», y «Ya tengo cuenta», a «Entrar». Las funciones extra no se anuncian. Al compartir el enlace, se ve una tarjeta con el logo, el nombre y la frase (Open Graph, `public/og-image.png`).
 
 ### 1.11 Administración (RF-ADM)
 
@@ -305,7 +310,7 @@ Origen: `src/components/AdminView.tsx`, `src/components/AccessAdminView.tsx`, `s
 - **RF-ADM-02.** «Administración» tiene dos pestañas: «Solicitudes» y «Mensajes».
 - **RF-ADM-03.** «Aprobación obligatoria» activa o desactiva la aprobación de cuentas. Sin configuración guardada, está activada.
 - **RF-ADM-04.** Desactivarla pide confirmación y aprueba las solicitudes pendientes cuyo email no esté bloqueado. Cada persona aprobada recibe su email, y un aviso dice cuántas se aprobaron.
-- **RF-ADM-05.** Con la aprobación desactivada, una cuenta nueva o pendiente con el email confirmado entra sola. Las rechazadas, retiradas y bloqueadas siguen igual.
+- **RF-ADM-05.** Con la aprobación desactivada, una cuenta nueva o pendiente con el email confirmado entra sola. Las rechazadas, retiradas y bloqueadas siguen igual: si vuelven a pedir acceso (pasado un día), la solicitud queda pendiente de la persona administradora. Volver a activar la aprobación no quita el acceso a las cuentas que entraron mientras estaba desactivada.
 - **RF-ADM-06.** «Solicitudes» agrupa las cuentas en «Pendientes», «Con acceso», «Rechazadas o retiradas» y «Bloqueadas». Cada una muestra nombre, email, foto, estado, fechas de solicitud y de decisión, y el mensaje.
 - **RF-ADM-07.** Las acciones dependen del estado: pendiente, «Aprobar», «Rechazar» y «Bloquear»; con acceso, «Retirar acceso» y «Bloquear»; rechazada o retirada, «Aprobar» y «Bloquear»; bloqueada, «Desbloquear», que la deja retirada. El servidor admite además aprobar una cuenta bloqueada, que la interfaz no ofrece, y rechaza cualquier otro cambio.
 - **RF-ADM-08.** La persona administradora no puede cambiar su propio acceso.
@@ -334,7 +339,7 @@ Origen: `src/components/FeedbackDialog.tsx`, `src/services/feedback.ts`, `functi
 - **RF-CON-04.** Del sistema solo se da la versión de Android, iOS e iPadOS; de Windows, macOS, ChromeOS y Linux, solo el nombre. El dispositivo es móvil por debajo de 768 px, tableta por debajo de 1024 px y escritorio a partir de ahí.
 - **RF-CON-05.** Para enviar hace falta el email confirmado. Cada cuenta puede enviar como mucho 5 mensajes por hora.
 - **RF-CON-06.** El servidor quita los caracteres de control y recorta el texto a sus límites. Descarta la información técnica si no tiene el formato esperado.
-- **RF-CON-07.** El mensaje se guarda con el nombre y el email de la cuenta para poder responder. Al enviarlo, la app confirma «¡Gracias! Hemos recibido tu mensaje.».
+- **RF-CON-07.** El mensaje se guarda con el nombre y el email de la cuenta para poder responder. Al enviarlo, la app confirma «¡Gracias! Hemos recibido tu mensaje.». La persona administradora recibe como mucho un aviso por email cada 15 minutos: los mensajes que llegan antes van en un resumen («N mensajes nuevos»).
 - **RF-CON-08.** Los mensajes de una cuenta se borran al eliminarla.
 
 ### 1.13 Textos legales (RF-LEG)
@@ -374,14 +379,14 @@ Origen: `firestore.rules`, `firebase.json`, `functions/src/access.ts`, `function
 
 - **RNF-SEG-01.** Las reglas de Firestore solo dejan a cada cuenta leer y escribir en `users/{uid}` y sus subcolecciones. Lo que no coincide con ninguna regla queda denegado.
 - **RNF-SEG-02.** Crear y modificar datos exige el acceso aprobado. Leer y borrar los propios datos se permite siempre, para que una cuenta sin acceso pueda llevárselos o eliminarlos.
-- **RNF-SEG-03.** Las subcolecciones permitidas son seis: tareas, evaluaciones, reuniones, correos, metas y proyectos. El perfil solo admite sus campos conocidos (datos de la cuenta, bienvenida, novedades vistas, áreas de la Rueda y funciones extra encendidas).
+- **RNF-SEG-03.** Las subcolecciones permitidas son siete: tareas, borradores de tareas, evaluaciones, reuniones, correos, metas y proyectos. El perfil solo admite sus campos conocidos (datos de la cuenta, bienvenida, novedades vistas, áreas de la Rueda y funciones extra encendidas).
 - **RNF-SEG-04.** Las solicitudes de acceso, las marcas de administración, la configuración, las funciones extra de cada cuenta, la lista negra y el contador de mensajes solo los escriben las Cloud Functions. Ningún cliente puede escribirlos, tampoco la persona administradora.
 - **RNF-SEG-05.** Cada cuenta lee solo su propia solicitud de acceso y sus funciones extra, y la persona administradora, todas. Nadie lee desde la app la lista negra ni el contador de mensajes.
 - **RNF-SEG-06.** Las reglas reconocen a la persona administradora solo si existe su marca y el email guardado en ella coincide con el del token de quien lee.
 - **RNF-SEG-07.** La persona administradora solo puede leer los mensajes de contacto y cambiar su estado a nuevo, leído o cerrado. No puede escribir su contenido ni sus respuestas desde la app.
 - **RNF-SEG-08.** Las funciones invocables exigen sesión iniciada. Las de administración comprueban además que el email verificado del token es el configurado.
 - **RNF-SEG-09.** Las funciones validan y recortan lo que reciben: estados permitidos, longitudes, formato de los identificadores y caracteres de control. Los cambios de acceso van en transacciones: al entrar y al solicitar acceso se leen también el modo de aprobación y la lista negra; una decisión de la administración comprueba el estado actual.
-- **RNF-SEG-10.** Hosting añade a todas las respuestas `X-Content-Type-Options: nosniff`, `Referrer-Policy: strict-origin-when-cross-origin` y una `Permissions-Policy` que deniega cámara, micrófono, ubicación, pagos, USB y `browsing-topics`.
+- **RNF-SEG-10.** Hosting añade a todas las respuestas `X-Content-Type-Options: nosniff`, `Referrer-Policy: strict-origin-when-cross-origin` y una `Permissions-Policy` que deniega cámara, ubicación, pagos, USB y `browsing-topics`, y deja el micrófono solo a la propia app (para dictar).
 - **RNF-SEG-11.** La política de seguridad de contenidos (CSP) y la `Cross-Origin-Opener-Policy` están en modo solo informar (`Report-Only`): avisan en la consola del navegador, pero no bloquean.
 - **RNF-SEG-12.** Eliminar la cuenta exige volver a autenticarse, y cambiar la contraseña exige la actual.
 - **RNF-SEG-13.** La app descarga su configuración de Firebase del propio Hosting al arrancar, así que el identificador del proyecto no está en el código. La contraseña del buzón de correo está en Secret Manager.
@@ -389,6 +394,7 @@ Origen: `firestore.rules`, `firebase.json`, `functions/src/access.ts`, `function
 - **RNF-SEG-15.** El despliegue desde CI se autentica con Workload Identity Federation, sin claves de cuenta de servicio guardadas.
 - **RNF-SEG-16.** Los dispositivos de las notificaciones push (`push_devices`, `push_tokens`) y las alarmas pendientes y enviadas (`alarm_queue`, `alarm_sent`) solo los usan las Cloud Functions: las reglas no dejan leerlos ni escribirlos desde la app, tampoco a su dueño. Registrar un dispositivo exige sesión iniciada y acceso aprobado, y valida el token y la zona horaria.
 - **RNF-SEG-17.** La conexión con Google Calendar usa el permiso más pequeño (`calendar.app.created`), PKCE y un `state` propio. El permiso sin conexión se guarda cifrado con AES-256-GCM (la clave, `CALENDAR_TOKEN_KEY`, está en Secret Manager, y el uid va como dato asociado) en `calendar_tokens`, que ninguna cuenta puede leer ni escribir desde la app; `calendar_status` solo lo lee su dueño. El secreto del cliente OAuth está en Secret Manager (`GOOGLE_OAUTH_CLIENT_SECRET`).
+- **RNF-SEG-18.** Contra abusos, con el registro abierto: las reglas acotan lo que se escribe en cada documento de la cuenta (como mucho 60 campos; título hasta 2.000 caracteres, descripción hasta 100.000, asunto de un correo hasta 5.000 y su cuerpo hasta 200.000, y listas de notas, puntos, destinatarios y adjuntos de hasta 1.000; nunca menos de lo que admite la importación); cada Cloud Function tiene como mucho 5 instancias; cada cuenta tiene como mucho 100 alarmas en la cola push y se envían como mucho 10 de cada cuenta por minuto; y cada cuenta registra como mucho 20 dispositivos por hora.
 
 ### 2.2 Privacidad (RNF-PRI)
 
@@ -409,6 +415,7 @@ Origen: `functions/src/accessLogic.ts`, `functions/src/calendarCleanup.ts`, `fun
 - **RNF-PRI-13.** Cada cuenta puede descargar sus datos de la app en JSON en cualquier momento, también sin acceso aprobado (ver RF-CUE-15).
 - **RNF-PRI-14.** Las alarmas con CLAR cerrada son opcionales en cada dispositivo (consentimiento). Se guardan el token de cada dispositivo, su zona horaria y si quiere ver el nombre de la tarea y, de cada alarma pendiente, su hora, el nombre de la tarea y cuándo vence; de las enviadas, cuál fue. Por FCM y el servicio push del navegador solo viaja la hora de la alarma y cuándo vence, y el nombre de la tarea solo si el dispositivo lo pide. Los registros del servidor no llevan datos de la persona, solo recuentos y códigos de error.
 - **RNF-PRI-15.** La sincronización con Google Calendar es opcional (consentimiento al conectar). Envía a la cuenta de Google de la persona el título, la descripción, las notas, las fechas, la repetición y la alarma de sus tareas con fecha, y no lee nada de su cuenta de Google. Al desconectar, al perder la función o el acceso y al eliminar la cuenta se retira el permiso; el calendario y sus eventos se quedan en Google. La política de privacidad incluye la declaración de uso limitado de las API de Google.
+- **RNF-PRI-16.** Dictar es opcional y lo hace el navegador: CLAR no recibe ni guarda el audio, solo el texto que resulta. El navegador envía el audio a su proveedor para pasarlo a texto (Google en Chrome, Apple en Safari, Microsoft en Edge); la política de privacidad lo dice.
 
 ### 2.3 Accesibilidad (RNF-ACC)
 

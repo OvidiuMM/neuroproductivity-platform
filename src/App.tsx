@@ -21,6 +21,8 @@ import {
   GoalStatus,
   Project,
   ProjectStatus,
+  TaskDraft,
+  TaskFormValues,
   UserProfile
 } from './types';
 import { formatTaskDates, isArchived, isArchivedStatus, withStatus } from './services/tasks';
@@ -44,6 +46,9 @@ import {
   importUserData,
   saveEmail,
   deleteEmail,
+  saveTaskDraft,
+  deleteTaskDraft,
+  saveTaskFromDraft,
   restoreDeletedEmail,
   saveMeeting,
   saveTask,
@@ -101,6 +106,7 @@ import type { SyncStatus } from './components/SyncIndicator';
 import { TaskList } from './components/TaskList';
 import { TaskModal, type TaskFormData } from './components/TaskModal';
 import { ArchivedTasksModal } from './components/ArchivedTasksModal';
+import { DRAFTS_BUTTON_ID, TaskDraftsModal } from './components/TaskDraftsModal';
 import { MeetingModal } from './components/MeetingModal';
 import { EmailModal, type EmailSaveKind } from './components/EmailModal';
 import { isDraft } from './services/email';
@@ -223,6 +229,7 @@ export default function App({ user, services, isAdmin = false }: AppProps) {
   const [wheelSynced, setWheelSynced] = useState(false);
   const [meetings, setMeetings] = useState<MeetingGuard[]>([]);
   const [emails, setEmails] = useState<EmailDraft[]>([]);
+  const [taskDrafts, setTaskDrafts] = useState<TaskDraft[]>([]);
   const [goals, setGoals] = useState<Goal[]>([]);
   const [projects, setProjects] = useState<Project[]>([]);
   // Las tareas de un proyecto tienen la meta del proyecto, y las vinculadas a una meta, el área de la meta
@@ -572,6 +579,16 @@ export default function App({ user, services, isAdmin = false }: AppProps) {
           trackSync('projects', info);
         },
         onError
+      ),
+      subscribeToCollection(
+        db,
+        uid,
+        'taskDrafts',
+        (items, info) => {
+          setTaskDrafts(items);
+          trackSync('taskDrafts', info);
+        },
+        onError
       )
     ];
     return () => unsubscribers.forEach((unsubscribe) => unsubscribe());
@@ -580,10 +597,62 @@ export default function App({ user, services, isAdmin = false }: AppProps) {
   // Las escrituras se reflejan al instante (caché local) y se sincronizan con el servidor en segundo plano
   const openNewTask = (options?: { someday?: boolean; goalId?: string; project?: Project }) => {
     setEditingTask(null);
+    setContinuingDraft(null);
     setNewTaskIsSomeday(Boolean(options?.someday));
     setNewTaskGoalId(options?.project?.goalId ?? options?.goalId);
     setNewTaskProjectId(options?.project?.id);
     setIsTaskModalOpen(true);
+  };
+
+  // BORRADORES: una tarea nueva cerrada sin guardar se guarda sola (TaskModal), y al guardarla como tarea se borra. Con
+  // «Deshacer», el borrador vuelve a como estaba o, si era nuevo, desaparece
+  const [continuingDraft, setContinuingDraft] = useState<TaskDraft | null>(null);
+  const [isDraftsOpen, setIsDraftsOpen] = useState(false);
+  const continueDraft = (draft: TaskDraft) => {
+    // El foco pasa al botón «Borradores» (la lista se cierra): al cerrar el formulario vuelve ahí
+    document.getElementById(DRAFTS_BUTTON_ID)?.focus();
+    setIsDraftsOpen(false);
+    setEditingTask(null);
+    setContinuingDraft(draft);
+    setIsTaskModalOpen(true);
+  };
+  const handleSaveDraft = (form: TaskFormValues | null) => {
+    const previous = continuingDraft;
+    if (!form) {
+      // Un borrador que se vació deja de serlo (con «Deshacer», vuelve como estaba)
+      if (!previous) return;
+      deleteTaskDraft(db, uid, previous.id).catch(reportError('borrar el borrador'));
+      showToast('Borrador vacío: eliminado.', () => {
+        saveTaskDraft(db, uid, previous).catch(reportError('recuperar el borrador'));
+        showToast('Borrador recuperado.');
+      });
+      return;
+    }
+    const now = new Date().toISOString();
+    const draft: TaskDraft = {
+      id: previous?.id ?? `draft-${Date.now()}`,
+      userId: uid,
+      form,
+      createdAt: previous?.createdAt ?? now,
+      updatedAt: now
+    };
+    saveTaskDraft(db, uid, draft).catch(reportError('guardar el borrador'));
+    showToast(previous ? 'Borrador guardado.' : 'Guardada en «Borradores», en Listas: puedes seguir con ella.', () => {
+      (previous ? saveTaskDraft(db, uid, previous) : deleteTaskDraft(db, uid, draft.id)).catch(
+        reportError('deshacer el borrador')
+      );
+      showToast(previous ? 'El borrador vuelve a estar como antes.' : 'Borrador quitado.');
+    });
+  };
+  // Eliminar desde la lista: la propia lista ofrece «Deshacer» (el aviso queda debajo de ella), y el aviso también, al
+  // cerrarla
+  const handleDeleteDraft = (draft: TaskDraft) => {
+    deleteTaskDraft(db, uid, draft.id).catch(reportError('eliminar el borrador'));
+    showToast('Borrador eliminado.', () => restoreDraft(draft));
+  };
+  const restoreDraft = (draft: TaskDraft) => {
+    saveTaskDraft(db, uid, draft).catch(reportError('recuperar el borrador'));
+    showToast('Borrador recuperado.');
   };
 
   const handleSaveTask = (taskData: TaskFormData) => {
@@ -608,7 +677,10 @@ export default function App({ user, services, isAdmin = false }: AppProps) {
         updatedAt: now,
         status: 'PENDING'
       };
-      saveTask(db, uid, newTask).catch(reportError('guardar la tarea'));
+      // Desde un borrador: la tarea y el borrador borrado van juntos
+      (continuingDraft ? saveTaskFromDraft(db, uid, newTask, continuingDraft.id) : saveTask(db, uid, newTask)).catch(
+        reportError('guardar la tarea')
+      );
       showToast(taskData.isSomeday ? 'Tarea guardada en «Algún día».' : 'Tarea añadida.');
     }
   };
@@ -911,6 +983,18 @@ export default function App({ user, services, isAdmin = false }: AppProps) {
   // Solo el recorrido de la primera vez (tras la bienvenida automática) acaba en la Rueda; al repetirlo desde la
   // ayuda, se vuelve a donde se estaba
   const [isFirstRunTour, setIsFirstRunTour] = useState(false);
+
+  // «NUEVA TAREA POR VOZ», el acceso directo del icono de la app (public/manifest.json): /?nueva=voz abre el formulario
+  // con el micrófono escuchando, y /?nueva=1, sin él. Se quita de la dirección al arrancar, para que recargar no lo
+  // repita, y se abre más abajo, cuando no hay otra ventana
+  const [launchNewTask, setLaunchNewTask] = useState(() => new URLSearchParams(window.location.search).get('nueva'));
+  const [dictateNewTask, setDictateNewTask] = useState(false);
+  useEffect(() => {
+    const url = new URL(window.location.href);
+    if (!url.searchParams.has('nueva')) return;
+    url.searchParams.delete('nueva');
+    window.history.replaceState(window.history.state, '', url);
+  }, []);
   const startTour = (firstRun = false) => {
     navigate('tasks');
     setIsFirstRunTour(firstRun);
@@ -977,6 +1061,7 @@ export default function App({ user, services, isAdmin = false }: AppProps) {
     projectEditor !== null ||
     isTaskModalOpen ||
     isArchiveOpen ||
+    isDraftsOpen ||
     isMeetingModalOpen ||
     emailEditor !== null ||
     isAccountMenuOpen ||
@@ -993,6 +1078,7 @@ export default function App({ user, services, isAdmin = false }: AppProps) {
     !releaseNotesShown &&
     !releaseNotesClosed &&
     !otherDialogOpen &&
+    launchNewTask === null &&
     profileOnboarding.fromServer &&
     shouldShowReleaseNotes({
       current: __APP_VERSION__,
@@ -1015,6 +1101,21 @@ export default function App({ user, services, isAdmin = false }: AppProps) {
     setIsReleaseNotesReplay(false);
   };
   const isDialogOpen = otherDialogOpen || isReleaseNotesOpen;
+
+  // El acceso directo se abre tras la pantalla de inicio, cuando no hay otra ventana (la bienvenida, el recorrido, la
+  // importación o las novedades, que esperan a que se cierre el formulario) y con el perfil sabido, aunque sea el del
+  // dispositivo (así también sin conexión). Si mientras tanto se abre el formulario de una tarea, el acceso se descarta:
+  // no se pisa lo que se está escribiendo
+  const launchReady =
+    !showSplash &&
+    (profileOnboarding.fromServer || hasSeenOnboarding(profileOnboarding.record, seenOnThisDevice)) &&
+    !isDialogOpen;
+  if (launchNewTask !== null && isTaskModalOpen) setLaunchNewTask(null);
+  else if (launchNewTask !== null && launchReady) {
+    setLaunchNewTask(null);
+    openNewTask();
+    setDictateNewTask(launchNewTask === 'voz');
+  }
 
   // El service worker de las notificaciones (Android solo las muestra desde él) y, con permiso, el registro de este
   // dispositivo para las notificaciones push (las alarmas suenan aunque CLAR esté cerrada)
@@ -1166,6 +1267,8 @@ export default function App({ user, services, isAdmin = false }: AppProps) {
                 prefs={listPrefs}
                 onPrefsChange={setListPrefs}
                 archivedCount={archivedTasks.length}
+                draftsCount={taskDrafts.length}
+                onOpenDrafts={() => setIsDraftsOpen(true)}
                 onChangeStatus={handleChangeStatus}
                 onDeleteTask={handleDeleteTask}
                 onDownloadTask={handleDownloadTask}
@@ -1406,17 +1509,32 @@ export default function App({ user, services, isAdmin = false }: AppProps) {
           onClose={() => {
             setIsTaskModalOpen(false);
             setEditingTask(null);
+            setDictateNewTask(false);
+            setContinuingDraft(null);
           }}
+          draft={continuingDraft}
+          onSaveDraft={handleSaveDraft}
           onSaveTask={handleSaveTask}
           initialContext={activeContext}
           initialSomeday={newTaskIsSomeday}
           initialGoalId={newTaskGoalId}
           initialProjectId={newTaskProjectId}
+          autoDictate={dictateNewTask}
           editingTask={editingTask}
           goals={goals}
           projects={projects}
           tasks={tasks}
           onCreateGoal={handleCreateGoalFromTask}
+        />
+
+        {/* BORRADORES DE TAREAS */}
+        <TaskDraftsModal
+          isOpen={isDraftsOpen}
+          onClose={() => setIsDraftsOpen(false)}
+          drafts={taskDrafts}
+          onContinue={continueDraft}
+          onDelete={handleDeleteDraft}
+          onRestore={restoreDraft}
         />
 
         {/* VENTANA DE TAREAS ARCHIVADAS (ESTADO HECHA) */}

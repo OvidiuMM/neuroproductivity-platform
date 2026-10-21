@@ -17,6 +17,8 @@ export interface AccessRequest {
   message: string;
   requestedAt: string;
   decidedAt?: string;
+  // Vuelve a pedir acceso tras un rechazo o una retirada: no entra sola con la aprobación libre
+  review?: boolean;
 }
 
 export const ACCESS_MESSAGE_MAX_LENGTH = 500;

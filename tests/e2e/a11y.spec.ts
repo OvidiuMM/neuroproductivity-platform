@@ -347,7 +347,8 @@ test('email sign-up and email confirmation screens', async ({ page }) => {
   await page.getByRole('button', { name: 'Crear una cuenta' }).click();
   await page.getByLabel('Email', { exact: true }).fill(uniqueEmail());
   await page.getByLabel('Contraseña', { exact: true }).fill('clave-segura-1');
-  await page.getByRole('button', { name: 'Crear cuenta' }).click();
+  await page.getByLabel(/^Tengo \d+ años o más/).check();
+  await page.getByRole('button', { name: 'Crear cuenta', exact: true }).click();
   await expect(page.getByRole('heading', { name: 'Confirma tu email' })).toBeVisible();
   await expectNoViolations(page, 'confirmar el email');
 });
@@ -404,11 +405,33 @@ test('release notes of the version', async ({ page }) => {
   await expectNoViolations(page, 'novedades de la versión');
 });
 
+test('task drafts: the button in Listas and the list', async ({ page }) => {
+  await page.goto('/');
+  await signInWithGoogle(page);
+  await openSection(page, 'Listas');
+  await page.getByRole('button', { name: 'Añadir la primera tarea' }).click();
+  await page
+    .getByPlaceholder('ej. Llamar al proveedor para acordar el plazo de entrega')
+    .fill('Pedir cita en el taller');
+  await page.keyboard.press('Escape');
+  await expect(page.getByRole('button', { name: /^Borradores/ })).toBeVisible();
+  await expectNoViolations(page, 'listas con borradores');
+  await page.getByRole('button', { name: /^Borradores/ }).click();
+  await expect(page.getByRole('dialog', { name: /^Borradores de tareas/ })).toBeVisible();
+  await expectNoViolations(page, 'borradores de tareas');
+});
+
 test('the prompt before discarding unsaved changes', async ({ page }) => {
   await page.goto('/');
   await signInWithGoogle(page);
+  // Al editar una tarea que ya existe (una nueva se guarda sola como borrador)
   await page.getByRole('button', { name: 'Nueva Tarea' }).click();
-  await page.getByPlaceholder('ej. Llamar al proveedor para acordar el plazo de entrega').fill('Llamar a la gestoría');
+  await fillAndSaveTask(page, { title: 'Llamar a la gestoría' });
+  await openSection(page, 'Listas');
+  await page.getByRole('button', { name: 'Llamar a la gestoría', exact: true }).click();
+  await page
+    .getByPlaceholder('ej. Llamar al proveedor para acordar el plazo de entrega')
+    .fill('Llamar a la gestoría hoy');
   await page.keyboard.press('Escape');
   await expect(page.getByRole('alertdialog', { name: '¿Descartar los cambios?' })).toBeVisible();
   await expectNoViolations(page, 'aviso de cambios sin guardar');

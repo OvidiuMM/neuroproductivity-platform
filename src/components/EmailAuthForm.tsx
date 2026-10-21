@@ -1,13 +1,18 @@
 import React, { useState } from 'react';
 import { Eye, EyeOff, Mail } from 'lucide-react';
 import { describeAuthError, MIN_PASSWORD_LENGTH } from '../services/auth';
+import { MIN_AGE } from '../services/legal';
+import { LegalLink } from './LegalLinks';
 
-type Mode = 'signin' | 'signup' | 'reset';
+export type EmailAuthMode = 'signin' | 'signup' | 'reset';
+type Mode = EmailAuthMode;
 
 interface EmailAuthFormProps {
   onSignIn: (email: string, password: string) => Promise<void>;
   onSignUp: (account: { name: string; email: string; password: string }) => Promise<void>;
   onReset: (email: string) => Promise<void>;
+  // Con qué empieza (la página de presentación abre «Crear una cuenta» desde su botón)
+  initialMode?: Mode;
 }
 
 const TITLES: Record<Mode, string> = {
@@ -27,8 +32,13 @@ const inputClass =
 const linkClass = 'text-xs font-semibold text-indigo-700 hover:text-indigo-900 underline-offset-2 hover:underline';
 
 // Acceso con email y contraseña: entrar, crear cuenta (con verificación del email) y recuperar la contraseña
-export const EmailAuthForm: React.FC<EmailAuthFormProps> = ({ onSignIn, onSignUp, onReset }) => {
-  const [mode, setMode] = useState<Mode>('signin');
+export const EmailAuthForm: React.FC<EmailAuthFormProps> = ({
+  onSignIn,
+  onSignUp,
+  onReset,
+  initialMode = 'signin'
+}) => {
+  const [mode, setMode] = useState<Mode>(initialMode);
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -36,6 +46,8 @@ export const EmailAuthForm: React.FC<EmailAuthFormProps> = ({ onSignIn, onSignUp
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [info, setInfo] = useState<string | null>(null);
+  // Al crear la cuenta se confirma la edad y se aceptan las condiciones (con el registro abierto no hay quien lo revise)
+  const [accepted, setAccepted] = useState(false);
 
   const switchTo = (next: Mode) => {
     setMode(next);
@@ -50,6 +62,10 @@ export const EmailAuthForm: React.FC<EmailAuthFormProps> = ({ onSignIn, onSignUp
     setInfo(null);
     if (mode === 'signup' && password.length < MIN_PASSWORD_LENGTH) {
       setError(`La contraseña debe tener al menos ${MIN_PASSWORD_LENGTH} caracteres.`);
+      return;
+    }
+    if (mode === 'signup' && !accepted) {
+      setError(`Para crear la cuenta, confirma que tienes ${MIN_AGE} años o más y acepta las condiciones de uso.`);
       return;
     }
     setBusy(true);
@@ -71,10 +87,10 @@ export const EmailAuthForm: React.FC<EmailAuthFormProps> = ({ onSignIn, onSignUp
 
   return (
     <form onSubmit={handleSubmit} aria-labelledby="email-auth-title" className="space-y-3">
-      <h2 id="email-auth-title" className="flex items-center gap-2 text-sm font-bold text-slate-900">
+      <h3 id="email-auth-title" className="flex items-center gap-2 text-sm font-bold text-slate-900">
         <Mail className="h-4 w-4 text-indigo-600" aria-hidden="true" />
         {TITLES[mode]}
-      </h2>
+      </h3>
 
       {mode === 'signup' && (
         <div className="space-y-1">
@@ -146,9 +162,33 @@ export const EmailAuthForm: React.FC<EmailAuthFormProps> = ({ onSignIn, onSignUp
         </div>
       )}
 
+      {mode === 'signup' && (
+        <div className="flex items-start gap-2 text-xs leading-relaxed text-slate-700">
+          <input
+            id="auth-accept"
+            type="checkbox"
+            checked={accepted}
+            onChange={(e) => setAccepted(e.target.checked)}
+            aria-invalid={Boolean(error) && !accepted}
+            aria-describedby={error && !accepted ? 'auth-error' : undefined}
+            className="mt-0.5 h-4 w-4 shrink-0 rounded border-slate-300 text-indigo-600 focus:ring-indigo-400"
+          />
+          <label htmlFor="auth-accept">
+            Tengo {MIN_AGE} años o más (o la edad mínima legal en mi país, si es mayor) y acepto las condiciones de uso
+          </label>
+          <LegalLink to="terms" newTab>
+            Leer las condiciones
+          </LegalLink>
+        </div>
+      )}
+
       <div aria-live="polite">
         {error && (
-          <p role="alert" className="rounded-xl border border-red-200 bg-red-50 p-3 text-xs text-red-700">
+          <p
+            id="auth-error"
+            role="alert"
+            className="rounded-xl border border-red-200 bg-red-50 p-3 text-xs text-red-700"
+          >
             {error}
           </p>
         )}

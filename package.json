@@ -2,7 +2,7 @@
   "name": "clar",
   "description": "CLAR: decide qué hacer ahora, con claridad. Rueda de la Vida, metas, proyectos y tareas con Top 10, agenda y tiempo protegido.",
   "private": true,
-  "version": "0.9.7",
+  "version": "1.0.0",
   "type": "module",
   "scripts": {
     "dev": "npm --prefix functions run build && firebase emulators:exec --only auth,firestore,functions --project demo-neuroproductivity \"npm run dev:app\"",

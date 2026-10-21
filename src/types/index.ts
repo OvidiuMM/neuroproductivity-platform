@@ -161,3 +161,41 @@ export interface FormValidationError {
   ruleCode: string;
   suggestion?: string;
 }
+
+// Lo que se escribe o elige en el formulario de una tarea (lo demás es estado de la interfaz). Un borrador lo guarda
+// tal cual, también a medias
+export interface TaskFormValues {
+  title: string;
+  projectId: string;
+  goalId: string;
+  dependsOn: string;
+  description: string;
+  listContext: ListContext;
+  priority: TaskPriority;
+  isSomeday: boolean;
+  wheelCategory?: WheelCategory;
+  wheelCategoryConfidence?: number;
+  linkedBy: 'MANUAL' | 'AUTO_TFIDF';
+  observations: TaskObservation[];
+  newObsText: string;
+  startDate: string;
+  startTime: string;
+  dueDate: string;
+  dueTime: string;
+  alarmTime: string;
+  estimateMinutes?: number;
+  repeatFrequency: RecurrenceFrequency | '';
+  repeatInterval: number;
+  repeatWeekdays: number[];
+  repeatMonthlyMode: MonthlyMode;
+}
+
+// BORRADOR DE TAREA: una tarea nueva que se cerró sin guardar. Se guarda sola en «Borradores» (en la cuenta) para
+// seguirla después; al guardarla como tarea, se borra
+export interface TaskDraft {
+  id: string;
+  userId: string;
+  form: TaskFormValues;
+  createdAt: string;
+  updatedAt: string;
+}
