@@ -16,7 +16,7 @@ import {
 } from 'lucide-react';
 import { Goal, GoalStatus, Project, TaskItem, WheelCategory } from '../types';
 import { WEAK_AREA_SCORE, areasWithGoals, pendingGoalTasks, sortGoals } from '../services/goals';
-import { formatDay, getDeadlineState, statusLabel } from '../services/tasks';
+import { DEADLINE_TITLE_CLASS, formatDay, getDeadlineState, statusLabel } from '../services/tasks';
 import { TodayTag } from './TaskDates';
 import { useNow } from '../hooks/useNow';
 import { GoalProgress } from './GoalProgress';
@@ -166,8 +166,9 @@ const GoalCard: React.FC<{
       {pending.length > 0 && (
         <ul aria-label={`Tareas por hacer de «${goal.title}»`} className="space-y-1">
           {pending.map((task) => {
-            // Las que vencen hoy, como en las listas: en violeta oscuro, en negrita y con «Hoy»
-            const today = getDeadlineState(task, now) === 'today';
+            // Con los colores del plazo de las listas; las que vencen hoy, además, en negrita y con «Hoy»
+            const deadline = getDeadlineState(task, now);
+            const today = deadline === 'today';
             return (
               <li key={task.id}>
                 <button
@@ -175,7 +176,9 @@ const GoalCard: React.FC<{
                   onClick={() => onEditTask(task)}
                   className="flex min-h-11 w-full flex-col justify-center rounded-lg px-2 text-left hover:bg-slate-50"
                 >
-                  <span className={`text-sm break-words ${today ? 'font-bold text-violet-800' : 'text-slate-800'}`}>
+                  <span
+                    className={`text-sm break-words ${today ? 'font-bold' : ''} ${DEADLINE_TITLE_CLASS[deadline] || 'text-slate-800'}`}
+                  >
                     {task.title}
                   </span>
                   <span className="text-[11px] text-slate-500">

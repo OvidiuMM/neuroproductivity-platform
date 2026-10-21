@@ -98,7 +98,7 @@ Origen: `src/components/TaskList.tsx`, `src/components/TaskCard.tsx`, `src/compo
 - **RF-TAR-09.** La prioridad es Crítica, Alta, Media (por defecto) o Baja. Con la fecha límite a más de una semana, la tarea cuenta un nivel menos, y la tarjeta lo indica con «plazo > 1 semana».
 - **RF-TAR-10.** La estimación es opcional: 15 min, 30 min, 1 h, 2 h, medio día (4 h), 1 día (8 h) o más de 1 día. Se muestra en las tarjetas.
 - **RF-TAR-11.** Las tareas de «Algún día» no entran en el Top 10 y tienen su propia pestaña. Una tarea creada desde esa pestaña va a «Algún día».
-- **RF-TAR-12.** El título de una tarea abierta se pone violeta si vence en menos de una semana y rojo si ha vencido. El día que vence, mientras no haya vencido, destaca: el título en violeta oscuro y en negrita y la etiqueta «Hoy», con un borde violeta a la izquierda en Listas y Proyectos. En Metas lleva el título y la etiqueta, y en la Agenda, el título. Los colores se actualizan cada minuto con la página abierta.
+- **RF-TAR-12.** El título de una tarea abierta se pone violeta si vence en menos de una semana y rojo si ha vencido. El día que vence, mientras no haya vencido, destaca: el título en violeta oscuro y en negrita y la etiqueta «Hoy», con un borde violeta a la izquierda en Listas y Proyectos. En Metas lleva el título y la etiqueta (sus tareas llevan también los colores del plazo), y en la Agenda, el título. Los colores se actualizan cada minuto con la página abierta.
 - **RF-TAR-13.** La tarjeta muestra fechas, repetición, alarma, estimación, prioridad, meta (o área, si no tiene meta) y el estado cuando no es «Pendiente».
 
 **Formulario de la tarea**
