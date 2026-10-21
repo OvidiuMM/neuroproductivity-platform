@@ -1,5 +1,13 @@
 import { expect, test, type BrowserContext, type Page } from '@playwright/test';
-import { installClockAwayFromMidnight, openSection, showMoreOptions, signInWithGoogle } from './helpers';
+import {
+  installClockAwayFromMidnight,
+  openSection,
+  patchDocument,
+  showMoreOptions,
+  signInWithGoogle,
+  uidOf,
+  uniqueEmail
+} from './helpers';
 
 test.use({ timezoneId: 'Europe/Madrid' });
 
@@ -120,24 +128,37 @@ test('an alarm that passed with CLAR closed warns on opening while the task is n
       original.call(this, key, value);
     };
   });
-  await installClockAwayFromMidnight(page);
+  const email = uniqueEmail();
   await page.goto('/');
-  await signInWithGoogle(page);
+  await signInWithGoogle(page, email);
   await openSection(page, 'Listas');
-  const title = `Enviar el informe ${Date.now().toString(36)}`;
-  const alarmTime = (await fromNow(page, 2)).time;
-  await newTaskWithAlarm(page, title, await fromNow(page, 20), alarmTime);
-  await page.getByRole('button', { name: 'Guardar la tarea' }).click();
-  await expect(page.getByRole('dialog')).toHaveCount(0);
-  // Antes de cerrar, la tarea está en el servidor (si no, al salir de la página se podría perder lo que aún no se
-  // había escrito: en el CI, más lento, pasaba)
-  await expect(page.getByRole('button', { name: /^Sincronizado con el servidor/ })).toBeVisible({ timeout: 15_000 });
 
-  // CLAR se cierra antes de la hora de la alarma y se vuelve a abrir 5 minutos después
-  await page.goto('about:blank');
-  await page.clock.fastForward('05:00');
-  await page.goto('/');
-  await openSection(page, 'Listas');
+  // La alarma se puso hace diez minutos y su hora pasó hace cinco, con CLAR cerrada: la tarea llega así (como al abrir
+  // CLAR, o desde otro dispositivo), sin recargar ni adelantar el reloj
+  const uid = await uidOf(email);
+  const title = `Enviar el informe ${Date.now().toString(36)}`;
+  const id = `task-qa-${Date.now()}`;
+  const alarmTime = (await fromNow(page, -5)).time;
+  const due = await fromNow(page, 20);
+  const setAt = await page.evaluate(() => new Date(Date.now() - 10 * 60_000).toISOString());
+  const text = (value: string) => ({ stringValue: value });
+  await patchDocument(`users/${uid}/tasks/${id}`, {
+    id: text(id),
+    userId: text(uid),
+    listContext: text('WORK'),
+    title: text(title),
+    description: text(''),
+    priority: text('MEDIUM'),
+    status: text('PENDING'),
+    isSomeday: { booleanValue: false },
+    observations: { arrayValue: {} },
+    createdAt: text(setAt),
+    updatedAt: text(setAt),
+    dueDate: text(due.date),
+    dueTime: text(due.time),
+    alarmTime: text(alarmTime),
+    alarmSetAt: text(setAt)
+  });
   await expect(page.getByRole('heading', { name: title })).toBeVisible({ timeout: 15_000 });
 
   // El aviso dice su hora y, como llega tarde, cuándo era
