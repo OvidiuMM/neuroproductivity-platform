@@ -96,6 +96,7 @@ const screensFor = (
       'Cada tarea tiene un estado: Pendiente, En progreso, Bloqueada, Hecha o Cancelada. Mientras espera a otra tarea no se puede poner «En progreso» ni «Hecha». Hecha y Cancelada la archivan; una cancelada no cuenta como hecha en las estadísticas ni en el avance de las metas. Desde «Archivadas» la reactivas cambiando su estado.',
       'Si cierras con cambios sin guardar el formulario de una tarea, una meta o un proyecto, o el editor de áreas, CLAR te pregunta antes de descartarlos; si cierras la pestaña, te avisa el navegador.',
       'Puedes darle una fecha límite o un intervalo, con hora opcional: el título se pone violeta cuando falta menos de una semana y rojo cuando ha vencido. El día que vence, hasta su hora límite, destaca con la etiqueta «Hoy» y el título en negrita (en las listas, también con un borde violeta). Las fechas se escriben como dd/mm/aaaa o se eligen en el calendario, con la semana empezando en lunes.',
+      'Borradores: si cierras una tarea nueva sin guardarla, se guarda sola en «Borradores» (junto a «Archivadas»), tal como estaba, con «Deshacer» por si no la querías. Con «Continuar» sigues con ella; al guardarla, pasa a tu lista. Los cambios de una tarea que ya existe no se guardan solos: al cerrar con cambios, CLAR te pregunta.',
       'Dictar: en los navegadores que lo permiten, el micrófono del formulario escribe la tarea o una nota mientras hablas (hasta 30 segundos cada vez; vuelve a pulsarlo para parar). En Android, al mantener pulsado el icono de la app instalada (en el ordenador, con el botón derecho), «Nueva tarea por voz» abre una tarea nueva con el micrófono escuchando; tras instalar una versión nueva, puede tardar un día en salir.',
       'Pulsa el título de una tarea, o su lápiz, para editarla. El menú «⋯» tiene el estado, el calendario, la descarga y eliminar.',
       'Con fecha límite, «Añadir al calendario», en el menú «⋯» de la tarea, la lleva a Google Calendar, Outlook o cualquier calendario (archivo .ics), con su descripción y sus notas. Con solo fecha, el evento dura una hora y empieza a la hora de su alarma o, sin alarma, a las 09:00. Si tiene hora de inicio y no hora límite, el evento dura una hora.' +
@@ -283,18 +284,19 @@ export const HowItWorks: React.FC<HowItWorksProps> = ({
         </h3>
         <p className="text-sm leading-relaxed text-amber-950">
           Todo se guarda en tu cuenta de CLAR, en servidores de Google Cloud en la Unión Europea (Bélgica), y solo tú
-          puedes acceder: tus tareas, metas, proyectos, evaluaciones, reuniones y correos (de los adjuntos, solo el
-          nombre y el tamaño). Si la administración tiene activada la aprobación de cuentas, revisa cada una antes de su
-          primer uso; para ello ve tu nombre, tu email, tu foto de perfil (si entras con Google) y el mensaje de la
-          solicitud, nunca tus datos. Los mensajes de «Escríbenos» se guardan con tu nombre y tu email para responderte
-          por email. Se sincroniza entre tus dispositivos y la app sigue funcionando sin conexión: los cambios se envían
-          al recuperarla. El indicador de la cabecera está verde cuando todo está guardado en el servidor y naranja
-          cuando hay cambios pendientes o no hay conexión; púlsalo para forzar la sincronización. Desde el menú de tu
-          cuenta puedes descargar tus datos e importar una descarga anterior (se añade lo que falta; lo que ya tienes no
-          se toca), cambiar la contraseña (si entras con email), cerrar la sesión en todos tus dispositivos o eliminar
-          la cuenta con todo su contenido. Si activas «Avisarme también con CLAR cerrada» en un dispositivo, se guardan
-          además su identificador de notificaciones y su zona horaria, y tus alarmas pendientes con el nombre de la
-          tarea; la notificación pasa por Firebase Cloud Messaging y solo lleva el nombre si lo pides.
+          puedes acceder: tus tareas (y sus borradores), metas, proyectos, evaluaciones, reuniones y correos (de los
+          adjuntos, solo el nombre y el tamaño). Si la administración tiene activada la aprobación de cuentas, revisa
+          cada una antes de su primer uso; para ello ve tu nombre, tu email, tu foto de perfil (si entras con Google) y
+          el mensaje de la solicitud, nunca tus datos. Los mensajes de «Escríbenos» se guardan con tu nombre y tu email
+          para responderte por email. Se sincroniza entre tus dispositivos y la app sigue funcionando sin conexión: los
+          cambios se envían al recuperarla. El indicador de la cabecera está verde cuando todo está guardado en el
+          servidor y naranja cuando hay cambios pendientes o no hay conexión; púlsalo para forzar la sincronización.
+          Desde el menú de tu cuenta puedes descargar tus datos e importar una descarga anterior (se añade lo que falta;
+          lo que ya tienes no se toca), cambiar la contraseña (si entras con email), cerrar la sesión en todos tus
+          dispositivos o eliminar la cuenta con todo su contenido. Si activas «Avisarme también con CLAR cerrada» en un
+          dispositivo, se guardan además su identificador de notificaciones y su zona horaria, y tus alarmas pendientes
+          con el nombre de la tarea; la notificación pasa por Firebase Cloud Messaging y solo lleva el nombre si lo
+          pides.
           {calendarSync &&
             ' Con Google Calendar conectado, los datos de tus tareas con fecha se envían a un calendario «CLAR» de tu cuenta de Google.'}{' '}
           Todo el detalle, en la{' '}

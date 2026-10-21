@@ -32,7 +32,8 @@ const none = (): Record<UserCollection, Set<string>> => ({
   projects: new Set(),
   wheelLogs: new Set(),
   meetings: new Set(),
-  emails: new Set()
+  emails: new Set(),
+  taskDrafts: new Set()
 });
 
 test('reads a full download and keeps only known fields, without the source account', () => {

@@ -10,7 +10,9 @@ import {
   WheelCategory,
   TaskObservation,
   MonthlyMode,
-  RecurrenceFrequency
+  RecurrenceFrequency,
+  TaskDraft,
+  TaskFormValues
 } from '../types';
 import { analyzeImmediateActionSyntax, SyntaxAnalysisResult } from '../services/syntaxAnalyzer';
 import { inferWheelCategory, NLPSuggestionResult } from '../services/nlpEngine';
@@ -87,6 +89,11 @@ interface TaskModalProps {
   initialProjectId?: string;
   // Abierto desde «Nueva tarea por voz»: el micrófono del título empieza a escuchar solo
   autoDictate?: boolean;
+  // Un borrador que se continúa: el formulario se abre como estaba (es una tarea nueva)
+  draft?: TaskDraft | null;
+  // Una tarea nueva que se cierra con algo escrito se guarda sola como borrador (sin él, se pregunta si descartarla).
+  // null: se cerró sin nada escrito (un borrador que se vació deja de serlo)
+  onSaveDraft?: (form: TaskFormValues | null) => void;
   editingTask?: TaskItem | null;
   // Metas a las que se puede vincular la tarea (el área de la Rueda se hereda de la meta)
   goals: Goal[];
@@ -98,33 +105,6 @@ interface TaskModalProps {
   onCreateGoal?: (goal: Goal) => void;
 }
 
-// Valores del formulario: los que escribe o elige la persona (lo demás es estado de la interfaz)
-interface FormValues {
-  title: string;
-  projectId: string;
-  goalId: string;
-  dependsOn: string;
-  description: string;
-  listContext: ListContext;
-  priority: TaskPriority;
-  isSomeday: boolean;
-  wheelCategory?: WheelCategory;
-  wheelCategoryConfidence?: number;
-  linkedBy: 'MANUAL' | 'AUTO_TFIDF';
-  observations: TaskObservation[];
-  newObsText: string;
-  startDate: string;
-  startTime: string;
-  dueDate: string;
-  dueTime: string;
-  alarmTime: string;
-  estimateMinutes?: number;
-  repeatFrequency: RecurrenceFrequency | '';
-  repeatInterval: number;
-  repeatWeekdays: number[];
-  repeatMonthlyMode: MonthlyMode;
-}
-
 // El formulario al abrirse: vacío para una tarea nueva, o con los datos de la que se edita. Las claves van en el mismo
 // orden que en el formulario actual, para compararlos.
 const formFor = (
@@ -133,7 +113,7 @@ const formFor = (
   initialSomeday: boolean,
   initialGoalId: string | undefined,
   initialProjectId: string | undefined
-): FormValues =>
+): TaskFormValues =>
   editingTask
     ? {
         title: editingTask.title,
@@ -187,6 +167,24 @@ const formFor = (
         repeatMonthlyMode: 'DAY_OF_MONTH'
       };
 
+// Si el formulario tiene algo escrito o elegido que valga la pena guardar como borrador (la lista, la prioridad o la
+// meta de partida no cuentan)
+const hasContent = (form: TaskFormValues) =>
+  Boolean(
+    form.title.trim() ||
+    form.description.trim() ||
+    form.observations.length ||
+    form.newObsText.trim() ||
+    form.startDate ||
+    form.startTime ||
+    form.dueDate ||
+    form.dueTime ||
+    form.alarmTime ||
+    form.estimateMinutes ||
+    form.repeatFrequency ||
+    form.dependsOn
+  );
+
 export const TaskModal: React.FC<TaskModalProps> = ({
   isOpen,
   onClose,
@@ -196,6 +194,8 @@ export const TaskModal: React.FC<TaskModalProps> = ({
   initialGoalId,
   initialProjectId,
   autoDictate = false,
+  draft = null,
+  onSaveDraft,
   editingTask,
   goals,
   tasks,
@@ -256,10 +256,13 @@ export const TaskModal: React.FC<TaskModalProps> = ({
 
   // Formulario tal como se abre (vacío o con la tarea): con él se sabe si hay cambios sin guardar
   const initialForm = useMemo(
-    () => formFor(editingTask, initialContext, initialSomeday, initialGoalId, initialProjectId),
+    () =>
+      draft && !editingTask
+        ? { ...formFor(null, initialContext, false, undefined, undefined), ...draft.form }
+        : formFor(editingTask, initialContext, initialSomeday, initialGoalId, initialProjectId),
     // isOpen: cada vez que se abre, el formulario vuelve a empezar
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [isOpen, editingTask, initialContext, initialSomeday, initialGoalId, initialProjectId]
+    [isOpen, editingTask, draft, initialContext, initialSomeday, initialGoalId, initialProjectId]
   );
 
   // Inicializar o limpiar al abrir modal
@@ -309,15 +312,30 @@ export const TaskModal: React.FC<TaskModalProps> = ({
       );
       setOverrideSyntaxWarning(true);
     } else {
-      setShowMore(initialSomeday);
+      // Un borrador abre «Más opciones» si usa alguno de sus campos
+      setShowMore(
+        draft
+          ? Boolean(
+              form.description ||
+              form.estimateMinutes ||
+              (form.wheelCategory && !form.goalId) ||
+              form.startDate ||
+              form.repeatFrequency ||
+              form.isSomeday ||
+              form.dependsOn ||
+              form.observations.length ||
+              form.newObsText
+            )
+          : initialSomeday
+      );
       setNlpResult(null);
       setTouched({});
       setOverrideSyntaxWarning(false);
     }
-  }, [initialForm, editingTask, initialSomeday]);
+  }, [initialForm, editingTask, initialSomeday, draft]);
 
   // CAMBIOS SIN GUARDAR: lo que hay en el formulario frente a como se abrió
-  const currentForm: FormValues = {
+  const currentForm: TaskFormValues = {
     title,
     projectId,
     goalId,
@@ -348,7 +366,16 @@ export const TaskModal: React.FC<TaskModalProps> = ({
     setDateDrafts((drafts) => (Boolean(drafts[field]) === pending ? drafts : { ...drafts, [field]: pending }));
   const isDirty =
     isOpen && (JSON.stringify(currentForm) !== JSON.stringify(initialForm) || Object.values(dateDrafts).some(Boolean));
-  const guard = useDiscardGuard(isDirty, onClose);
+  // BORRADOR: una tarea nueva con algo escrito no pregunta al cerrarse; se guarda sola en «Borradores» (también la que
+  // se continuaba, con lo nuevo). Una tarea que se edita sí pregunta si descartar los cambios
+  const savesAsDraft = !editingTask && Boolean(onSaveDraft);
+  const closeForm = () => {
+    if (savesAsDraft && isDirty) onSaveDraft?.(hasContent(currentForm) ? currentForm : null);
+    onClose();
+  };
+  const guard = useDiscardGuard(isDirty, closeForm);
+  // (al cerrar la pestaña sí avisa el navegador: un borrador se guarda al cerrar el formulario)
+  const requestClose = savesAsDraft ? closeForm : guard.requestClose;
 
   // Sugerencia de área (TF-IDF, en el navegador) al salir de la descripción, si hay texto
   const triggerNLPInference = () => {
@@ -586,7 +613,7 @@ export const TaskModal: React.FC<TaskModalProps> = ({
   };
 
   const dialogRef = useRef<HTMLDivElement>(null);
-  useModalFocus(isOpen, dialogRef, guard.requestClose);
+  useModalFocus(isOpen, dialogRef, requestClose);
 
   if (!isOpen) return null;
 
@@ -612,7 +639,7 @@ export const TaskModal: React.FC<TaskModalProps> = ({
             <p className="mt-0.5 text-xs text-slate-500">Empieza por un verbo: así sabrás exactamente qué hacer.</p>
           </div>
           <button
-            onClick={guard.requestClose}
+            onClick={requestClose}
             aria-label="Cerrar"
             className="rounded-lg p-1.5 text-slate-500 transition-colors hover:bg-slate-200/60 hover:text-slate-600"
           >
@@ -1490,7 +1517,7 @@ export const TaskModal: React.FC<TaskModalProps> = ({
           <div className="flex items-center justify-end gap-3 border-t border-slate-100 pt-2">
             <button
               type="button"
-              onClick={guard.requestClose}
+              onClick={requestClose}
               className="rounded-xl px-4 py-2 text-xs font-semibold text-slate-600 transition-colors hover:bg-slate-100 hover:text-slate-900"
             >
               Cancelar

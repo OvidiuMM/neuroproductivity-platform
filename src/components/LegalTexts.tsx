@@ -57,11 +57,12 @@ export const PrivacyPolicy: React.FC = () => (
         </li>
         <li>
           <strong>Lo que escribes en CLAR:</strong> tareas (títulos, descripciones, notas, enlaces, fechas, alarmas y de
-          qué otra tarea dependen), metas, proyectos (nombre, meta, fecha de fin y descripción), evaluaciones de la
-          Rueda de la Vida (tu puntuación de 0 a 10 en cada área, y los nombres de tus áreas si las cambias o añades),
-          reuniones y correos de «Tiempo protegido» (asunto, texto, destinatarios y el nombre y el tamaño de los
-          adjuntos: los archivos no salen de tu dispositivo). Sirven para que la app funcione. Las reuniones y los
-          correos pueden incluir el nombre y el email de otras personas: añádelos solo si tienes motivo para ello.
+          qué otra tarea dependen) y sus borradores (las tareas nuevas que cierras sin guardar, hasta que las guardas o
+          las eliminas), metas, proyectos (nombre, meta, fecha de fin y descripción), evaluaciones de la Rueda de la
+          Vida (tu puntuación de 0 a 10 en cada área, y los nombres de tus áreas si las cambias o añades), reuniones y
+          correos de «Tiempo protegido» (asunto, texto, destinatarios y el nombre y el tamaño de los adjuntos: los
+          archivos no salen de tu dispositivo). Sirven para que la app funcione. Las reuniones y los correos pueden
+          incluir el nombre y el email de otras personas: añádelos solo si tienes motivo para ello.
         </li>
         <li>
           <strong>Solicitud de acceso:</strong> si la administración aprueba las cuentas una a una, tu nombre, email,
@@ -162,9 +163,9 @@ export const PrivacyPolicy: React.FC = () => (
         <li>
           Desde la app, la administración de CLAR (su titular) ve solo las solicitudes de acceso, las funciones extra de
           cada cuenta y los mensajes de «Escríbenos»: las reglas de la base de datos no le dejan leer tus tareas, metas,
-          proyectos, evaluaciones, reuniones ni correos. Como responsable del proyecto en Google Cloud, el titular
-          podría acceder técnicamente a todos los datos desde la consola; solo lo hará cuando sea imprescindible para
-          mantener el servicio, resolver una incidencia o atender una petición tuya.
+          proyectos, evaluaciones, reuniones, correos ni borradores. Como responsable del proyecto en Google Cloud, el
+          titular podría acceder técnicamente a todos los datos desde la consola; solo lo hará cuando sea imprescindible
+          para mantener el servicio, resolver una incidencia o atender una petición tuya.
         </li>
         <li>
           Encargados del tratamiento, que tratan los datos solo para prestar su servicio: Google, con Firebase

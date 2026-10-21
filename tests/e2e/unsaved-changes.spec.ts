@@ -8,20 +8,27 @@ test('closing a task form with unsaved changes asks first; Escape keeps editing'
   await page.goto('/');
   await signInWithGoogle(page);
   await page.getByRole('button', { name: 'Listas', exact: true }).click();
-  const form = page.getByRole('dialog', { name: 'Nueva tarea' });
   const prompt = page.getByRole('alertdialog', { name: '¿Descartar los cambios?' });
+  // Una tarea que ya existe (una nueva se guarda sola como borrador: ver drafts.spec.ts)
+  const title = `Comprar los billetes del viaje ${unique()}`;
+  await page.getByRole('button', { name: 'Añadir la primera tarea' }).click();
+  await fillAndSaveTask(page, { title });
+  const form = page.getByRole('dialog', { name: 'Editar la tarea' });
+  const edit = async () => {
+    await openTaskActions(page, title);
+    await page.getByRole('button', { name: `Editar «${title}»` }).click();
+  };
 
   // Sin cambios se cierra sin preguntar
-  await page.getByRole('button', { name: 'Añadir la primera tarea' }).click();
+  await edit();
   await page.keyboard.press('Escape');
   await expect(form).toBeHidden();
 
   // Con cambios, Escape pregunta; el foco empieza en «Seguir editando» y no sale del aviso
-  const title = `Comprar los billetes del viaje ${unique()}`;
-  await page.getByRole('button', { name: 'Añadir la primera tarea' }).click();
-  await page.getByPlaceholder(TITLE_FIELD).fill(title);
+  await edit();
+  await page.getByPlaceholder(TITLE_FIELD).fill(`${title} en tren`);
   await page.keyboard.press('Escape');
-  await expect(prompt).toContainText('Has empezado una tarea nueva y no la has guardado.');
+  await expect(prompt).toContainText('Has cambiado esta tarea y no has guardado los cambios.');
   await expect(prompt.getByRole('button', { name: 'Seguir editando' })).toBeFocused();
   await page.keyboard.press('Tab');
   await expect(prompt.getByRole('button', { name: 'Descartar' })).toBeFocused();
@@ -31,14 +38,15 @@ test('closing a task form with unsaved changes asks first; Escape keeps editing'
   // Escape sobre el aviso es seguir editando: el formulario sigue igual y el foco vuelve al título
   await page.keyboard.press('Escape');
   await expect(prompt).toBeHidden();
-  await expect(page.getByPlaceholder(TITLE_FIELD)).toHaveValue(title);
+  await expect(page.getByPlaceholder(TITLE_FIELD)).toHaveValue(`${title} en tren`);
   await expect(page.getByPlaceholder(TITLE_FIELD)).toBeFocused();
 
   // «Cancelar» también pregunta; «Descartar» cierra sin guardar
   await form.getByRole('button', { name: 'Cancelar' }).click();
   await prompt.getByRole('button', { name: 'Descartar' }).click();
   await expect(form).toBeHidden();
-  await expect(page.getByRole('heading', { name: title })).toHaveCount(0);
+  await expect(page.getByRole('heading', { name: `${title} en tren` })).toHaveCount(0);
+  await expect(page.getByRole('heading', { name: title })).toBeVisible();
 });
 
 test('editing a task asks before discarding, and saving does not ask', async ({ page }) => {
@@ -107,8 +115,12 @@ test('an unfinished or impossible date also counts as a change, in the task and 
   await page.getByRole('button', { name: 'Listas', exact: true }).click();
   const prompt = page.getByRole('alertdialog', { name: '¿Descartar los cambios?' });
 
-  // Solo una fecha a medio escribir: el valor no cambia, pero lo escrito se perdería
+  // Solo una fecha a medio escribir en una tarea que ya existe: el valor no cambia, pero lo escrito se perdería
+  const title = `Renovar el pasaporte ${unique()}`;
   await page.getByRole('button', { name: 'Añadir la primera tarea' }).click();
+  await fillAndSaveTask(page, { title });
+  await openTaskActions(page, title);
+  await page.getByRole('button', { name: `Editar «${title}»` }).click();
   await page.getByLabel('Fecha límite', { exact: true }).fill('20/10/');
   await page.keyboard.press('Escape');
   await expect(prompt).toBeVisible();

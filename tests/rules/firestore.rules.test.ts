@@ -141,6 +141,19 @@ describe('firestore.rules', () => {
     await assertSucceeds(deleteDoc(doc(ana, 'users/ana/projects/project-1')));
   });
 
+  it('keeps task drafts private to their owner, who can create, change and delete them', async () => {
+    const ana = env.authenticatedContext('ana').firestore();
+    const bruno = env.authenticatedContext('bruno').firestore();
+    const draft = { id: 'draft-1', userId: 'ana', form: { title: 'Pedir cita' }, createdAt: '', updatedAt: '' };
+    const ref = doc(ana, 'users/ana/taskDrafts/draft-1');
+
+    await assertSucceeds(setDoc(ref, draft));
+    await assertSucceeds(updateDoc(ref, { form: { title: 'Pedir cita en el taller' } }));
+    await assertFails(getDoc(doc(bruno, 'users/ana/taskDrafts/draft-1')));
+    await assertFails(setDoc(doc(bruno, 'users/ana/taskDrafts/draft-2'), draft));
+    await assertSucceeds(deleteDoc(ref));
+  });
+
   it('rejects collections outside the allowed list', async () => {
     const ana = env.authenticatedContext('ana').firestore();
 

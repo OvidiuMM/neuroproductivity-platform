@@ -407,8 +407,14 @@ test('release notes of the version', async ({ page }) => {
 test('the prompt before discarding unsaved changes', async ({ page }) => {
   await page.goto('/');
   await signInWithGoogle(page);
+  // Al editar una tarea que ya existe (una nueva se guarda sola como borrador)
   await page.getByRole('button', { name: 'Nueva Tarea' }).click();
-  await page.getByPlaceholder('ej. Llamar al proveedor para acordar el plazo de entrega').fill('Llamar a la gestoría');
+  await fillAndSaveTask(page, { title: 'Llamar a la gestoría' });
+  await openSection(page, 'Listas');
+  await page.getByRole('button', { name: 'Llamar a la gestoría', exact: true }).click();
+  await page
+    .getByPlaceholder('ej. Llamar al proveedor para acordar el plazo de entrega')
+    .fill('Llamar a la gestoría hoy');
   await page.keyboard.press('Escape');
   await expect(page.getByRole('alertdialog', { name: '¿Descartar los cambios?' })).toBeVisible();
   await expectNoViolations(page, 'aviso de cambios sin guardar');

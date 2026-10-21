@@ -85,12 +85,10 @@ test('«Nueva tarea por voz» opens a new task with the microphone already liste
   // Se quita de la dirección: recargar no lo repite
   expect(new URL(page.url()).searchParams.has('nueva')).toBe(false);
 
-  // Cerrado (descartando lo dictado) y vuelto a abrir a mano, el micrófono no escucha solo
+  // Cerrado (lo dictado se queda en «Borradores») y vuelto a abrir a mano, el micrófono no escucha solo
   await page.keyboard.press('Escape');
-  await page
-    .getByRole('alertdialog', { name: '¿Descartar los cambios?' })
-    .getByRole('button', { name: 'Descartar' })
-    .click();
+  await openSection(page, 'Listas');
+  await expect(page.getByRole('button', { name: /^Borradores/ })).toBeVisible();
   await page.getByRole('button', { name: 'Nueva tarea', exact: true }).click();
   await expect(page.getByRole('dialog', { name: 'Nueva tarea' }).getByLabel(/^Tarea/)).toHaveValue('');
   expect(await page.evaluate(() => (window as unknown as { __dictations?: number }).__dictations)).toBe(1);
