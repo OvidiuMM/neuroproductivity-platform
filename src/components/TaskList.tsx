@@ -18,6 +18,7 @@ import { useAreas } from '../hooks/useAreas';
 import { PHONE_QUERY, useMediaQuery } from '../hooks/useMediaQuery';
 import { TaskCard } from './TaskCard';
 import { BottomSheet } from './BottomSheet';
+import { DRAFTS_BUTTON_ID } from './TaskDraftsModal';
 import { Plus, Archive, Layers, ArrowUpDown, CheckCircle2, FilePen, SlidersHorizontal, X } from 'lucide-react';
 
 const DEADLINE_FILTERS: { value: DeadlineFilter; label: string }[] = [
@@ -291,6 +292,7 @@ export const TaskList: React.FC<TaskListProps> = ({
 
           {draftsCount > 0 && (
             <button
+              id={DRAFTS_BUTTON_ID}
               onClick={onOpenDrafts}
               className="flex items-center gap-2 rounded-xl border border-indigo-200 px-3.5 py-2 text-xs font-bold text-indigo-700 transition-all hover:bg-indigo-50"
             >
