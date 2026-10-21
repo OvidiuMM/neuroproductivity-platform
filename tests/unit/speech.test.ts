@@ -115,15 +115,35 @@ test('without the API it ends right after, with a message', async () => {
   assert.match(ended!, /no permite dictar/);
 });
 
-test('only one dictation at a time: starting another cancels the previous one', () => {
+test('only one dictation at a time: starting another ends the previous one, so its button is ready again', async () => {
   withWindow({ SpeechRecognition: FakeRecognition });
   const first: string[] = [];
-  startDictation({ onStart: () => undefined, onText: (t) => first.push(t), onEnd: () => undefined });
+  const ended: (string | null)[] = [];
+  startDictation({ onStart: () => undefined, onText: (t) => first.push(t), onEnd: (e) => ended.push(e) });
   const previous = FakeRecognition.last!;
   startDictation({ onStart: () => undefined, onText: () => undefined, onEnd: () => undefined });
   assert.equal(previous.aborted, true);
   assert.equal(previous.onresult, null);
   assert.deepEqual(first, []);
+  await Promise.resolve();
+  assert.deepEqual(ended, [null]);
+});
+
+test('discarding (typing by hand) drops what comes after and ends without an error', async () => {
+  withWindow({ SpeechRecognition: FakeRecognition });
+  const seen: string[] = [];
+  const ended: (string | null)[] = [];
+  const dictation = startDictation({
+    onStart: () => undefined,
+    onText: (t) => seen.push(t),
+    onEnd: (e) => ended.push(e)
+  });
+  const recognition = FakeRecognition.last!;
+  dictation.discard();
+  recognition.onresult?.({ results: results('tarde') });
+  await Promise.resolve();
+  assert.deepEqual(seen, []);
+  assert.deepEqual(ended, [null]);
 });
 
 test('the 30 seconds count from when the browser listens (after the permission prompt)', () => {

@@ -75,7 +75,10 @@ export const MAX_DICTATION_MS = 30_000;
 export interface Dictation {
   // Parar, quedándose con lo dictado
   stop: () => void;
-  // Cancelar (al cerrar el formulario, o al escribir a mano): lo que llegue después no se escribe
+  // Dejarlo (al escribir a mano, o al empezar otro dictado): lo que llegue después no se escribe, y termina como
+  // siempre (onEnd, sin error), así su botón vuelve a estar listo
+  discard: () => void;
+  // Cancelar en silencio, sin onEnd (al cerrar el formulario)
   cancel: () => void;
 }
 
@@ -94,11 +97,11 @@ export const startDictation = ({
   onText: (text: string) => void;
   onEnd: (error: string | null) => void;
 }): Dictation => {
-  active?.cancel();
+  active?.discard();
   const Constructor = recognitionConstructor();
   if (!Constructor) {
     queueMicrotask(() => onEnd('Este navegador no permite dictar.'));
-    return { stop: () => undefined, cancel: () => undefined };
+    return { stop: () => undefined, discard: () => undefined, cancel: () => undefined };
   }
   const recognition = new Constructor();
   recognition.lang = 'es-ES';
@@ -138,6 +141,11 @@ export const startDictation = ({
   };
   const dictation: Dictation = {
     stop: () => recognition.stop(),
+    discard: () => {
+      detach();
+      recognition.abort();
+      queueMicrotask(() => onEnd(null));
+    },
     cancel: () => {
       detach();
       recognition.abort();
