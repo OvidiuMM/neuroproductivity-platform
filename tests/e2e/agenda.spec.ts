@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test';
-import { fillAndSaveTask, localDateFromToday, showMoreOptions, signInWithGoogle } from './helpers';
+import { fillAndSaveTask, localDateFromToday, openSection, showMoreOptions, signInWithGoogle } from './helpers';
 
 const longDay = new Intl.DateTimeFormat('es-ES', { weekday: 'long', day: 'numeric', month: 'long' });
 const dayLabel = (days: number) => {
@@ -129,4 +129,23 @@ test('a repeated task with a start and a due date shows only its days, from the 
   // La serie termina en la fecha límite
   await page.getByRole('button', { name: 'Semana siguiente' }).click();
   await expect.poll(countPerDay).toEqual([0, 0, 0, 0, 0, 0, 0]);
+});
+
+test('on a phone, a title with a long link wraps and the page does not get wider than the screen', async ({ page }) => {
+  await page.setViewportSize({ width: 375, height: 812 });
+  await page.goto('/');
+  await signInWithGoogle(page);
+  await openSection(page, 'Listas');
+  const title = 'Revisar https://deardoc.example/boards/9929382056/views/2108790123456789012345678901234567';
+  await page.getByRole('button', { name: 'Añadir la primera tarea' }).click();
+  await fillAndSaveTask(page, { title, dueDate: localDateFromToday(0), dueTime: '23:59' });
+  const widerBy = () => page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
+  expect(await widerBy()).toBeLessThanOrEqual(0);
+
+  await openSection(page, 'Agenda');
+  await expect(page.getByRole('button', { name: /^23:59 Revisar https/ }).first()).toBeVisible();
+  expect(await widerBy()).toBeLessThanOrEqual(0);
+  await page.getByRole('button', { name: 'Por días' }).click();
+  await expect(page.getByRole('button', { name: /^23:59 Revisar https/ }).first()).toBeVisible();
+  expect(await widerBy()).toBeLessThanOrEqual(0);
 });

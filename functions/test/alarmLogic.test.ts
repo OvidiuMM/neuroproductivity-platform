@@ -115,6 +115,14 @@ describe('queuedAlarm', () => {
     assert.ok(queuedAlarm('task-1', { ...task, updatedAt: '2026-10-17T08:45:00.000Z' }, MADRID, now));
   });
 
+  it('does not push late a pre-0.9.7 date-only alarm that already rang the day before', () => {
+    const dateOnly = { title: 'x', dueDate: '2026-10-16', alarmTime: '09:00', status: 'PENDING' };
+    // Las 09:00 del 16 ya pasaron (son las 10:00): sonó el 15
+    assert.equal(queuedAlarm('t', dateOnly, MADRID, now), null);
+    assert.ok(queuedAlarm('t', { ...dateOnly, alarmTime: '11:00' }, MADRID, now));
+    assert.ok(queuedAlarm('t', { ...dateOnly, alarmSetAt: '2026-10-16T06:00:00.000Z' }, MADRID, now));
+  });
+
   it('builds the same key as the app, with the title and when it is due', () => {
     const alarm = queuedAlarm('task-1', task, MADRID, now)!;
     assert.equal(alarm.key, 'task-1@2026-10-17T08:30:00.000Z');

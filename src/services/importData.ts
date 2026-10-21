@@ -53,6 +53,7 @@ const text = (value: unknown, max: number) => {
 const ISO_INSTANT = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(:\d{2}(\.\d{1,3})?)?(Z|[+-]\d{2}:\d{2})$/;
 const instant = (value: unknown) =>
   typeof value === 'string' && ISO_INSTANT.test(value) && !Number.isNaN(Date.parse(value)) ? value : undefined;
+const notFuture = (value: string | undefined) => (value && Date.parse(value) <= Date.now() ? value : undefined);
 const day = (value: unknown) => (typeof value === 'string' && DAY.test(value) ? value : undefined);
 const time = (value: unknown) => (typeof value === 'string' && TIME.test(value) ? value : undefined);
 const bool = (value: unknown) => (typeof value === 'boolean' ? value : undefined);
@@ -155,7 +156,9 @@ const task = (raw: Obj): Omit<TaskItem, 'userId'> | undefined => {
     goalId: id(raw.goalId),
     dependsOn: id(raw.dependsOn),
     projectId: id(raw.projectId),
-    alarmTime: time(raw.alarmTime)
+    alarmTime: time(raw.alarmTime),
+    // Cuándo se puso la alarma (si se puso después de su hora, no suena); una fecha futura no vale
+    alarmSetAt: notFuture(instant(raw.alarmSetAt))
   };
 };
 
