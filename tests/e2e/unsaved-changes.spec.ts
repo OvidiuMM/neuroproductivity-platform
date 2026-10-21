@@ -47,6 +47,8 @@ test('closing a task form with unsaved changes asks first; Escape keeps editing'
   await expect(form).toBeHidden();
   await expect(page.getByRole('heading', { name: `${title} en tren` })).toHaveCount(0);
   await expect(page.getByRole('heading', { name: title })).toBeVisible();
+  // Descartar los cambios de una tarea que ya existe no deja borrador
+  await expect(page.getByRole('button', { name: /^Borradores/ })).toHaveCount(0);
 });
 
 test('editing a task asks before discarding, and saving does not ask', async ({ page }) => {
