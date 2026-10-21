@@ -88,6 +88,15 @@ export const subscribeToCollection = <K extends UserCollection>(
 export const saveTask = (db: Firestore, uid: string, task: TaskItem) =>
   setDoc(doc(userCollection(db, uid, 'tasks'), task.id), { ...task, userId: uid });
 
+// Un borrador que se guarda como tarea: la tarea y el borrador borrado en un mismo lote, así nunca se pierde el
+// borrador sin que exista la tarea (también sin conexión)
+export const saveTaskFromDraft = (db: Firestore, uid: string, task: TaskItem, draftId: string) => {
+  const batch = writeBatch(db);
+  batch.set(doc(userCollection(db, uid, 'tasks'), task.id), { ...task, userId: uid });
+  batch.delete(doc(userCollection(db, uid, 'taskDrafts'), draftId));
+  return batch.commit();
+};
+
 // Tarea recurrente hecha: la tarea archivada (con el id de la siguiente) y la siguiente repetición se guardan
 // en un mismo lote, así nunca queda una sin la otra
 export const completeRecurringTask = (db: Firestore, uid: string, done: TaskItem, next: TaskItem) => {
