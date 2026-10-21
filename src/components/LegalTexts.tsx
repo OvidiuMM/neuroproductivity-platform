@@ -175,7 +175,10 @@ export const PrivacyPolicy: React.FC = () => (
           Otros servicios, solo cuando tú lo decides: al usar «Añadir al calendario» con Google Calendar u Outlook, el
           título, la descripción y las notas de la tarea van en el enlace; si conectas Google Calendar, los datos de tus
           tareas con fecha van al calendario «CLAR» de tu propia cuenta de Google, donde Google los trata según sus
-          condiciones y su política de privacidad; «Abrir en mi correo» pasa el correo a tu programa de correo.
+          condiciones y su política de privacidad; «Abrir en mi correo» pasa el correo a tu programa de correo; si
+          dictas una tarea o una nota con el micrófono, tu navegador pasa tu voz a texto (en Chrome, enviando el audio a
+          Google, que lo trata según sus condiciones). CLAR no recibe ni guarda el audio: solo el texto, como si lo
+          hubieras escrito.
         </li>
       </List>
       <p>CLAR no vende ni cede tus datos a nadie.</p>
