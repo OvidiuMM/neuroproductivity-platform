@@ -1,7 +1,7 @@
 # CLAR — Plataforma de Gestión del Tiempo y Neurociencia Aplicada
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
-[![Version](https://img.shields.io/badge/Version-0.9.6-indigo.svg)](#)
+[![Version](https://img.shields.io/badge/Version-0.9.7-indigo.svg)](#)
 [![React](https://img.shields.io/badge/React-19-61dafb.svg?logo=react&logoColor=black)](https://react.dev/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-7.x-3178c6.svg?logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
 [![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-4.x-38bdf8.svg?logo=tailwindcss&logoColor=white)](https://tailwindcss.com/)
@@ -182,6 +182,12 @@ La lista completa y numerada de lo que hace la app, con sus requisitos no funcio
 - **Sincronización con Google Calendar (función extra):** con la función en uso, «Conectar Google Calendar», en el menú de la cuenta, crea un calendario «CLAR» en la cuenta de Google de la persona y mantiene en él sus tareas con fecha (salvo «Algún día»), en un solo sentido, con los mismos eventos que «Añadir al calendario» (ver [Sincronización con Google Calendar](#sincronización-con-google-calendar)).
 - **Novedades de cada versión:** al entrar después de una actualización, una ventana cuenta una vez por cuenta las novedades de la versión (lo visto se guarda en el perfil, `releaseNotesSeen`, y en el dispositivo; las cuentas nuevas empiezan por la bienvenida, que las da por vistas). Están todas en la Ayuda y se abren también al pulsar la versión. El contenido está en `src/services/releaseNotes.ts`: al publicar una versión se añade su entrada al principio, y una prueba unitaria falla si la de `package.json` no tiene la suya.
 - **CI:** `actions/checkout` y `actions/setup-node` en v7 (Node 24).
+
+### Las tareas de hoy, alarmas a su hora y eventos con hora (0.9.7)
+
+- **Las tareas de hoy destacan:** una tarea abierta que vence hoy, mientras no haya vencido, lleva la etiqueta «Hoy» (`TodayTag`), el título en violeta oscuro y en negrita y, en Listas y Proyectos, un borde violeta a la izquierda (`getDeadlineState` devuelve `today`). En Metas, el título y la etiqueta; en la Agenda, el título, con «(vence hoy)» para los lectores de pantalla.
+- **Alarmas el día límite:** con solo fecha, la alarma suena ese día a su hora (antes, la víspera); con hora límite, tiene que ser antes y el formulario no deja guardar si no. Las tareas que se repiten ya no necesitan hora límite. Una alarma cuya hora había pasado al guardar la tarea no suena. La tarjeta dice cuándo sonará («hoy 17:00»). `sendDueAlarms` vuelve a calcular cada alarma de la cola con la tarea antes de enviarla, así las colas de antes se ponen en su nueva hora.
+- **Calendario:** una tarea con solo fecha es un evento de una hora a la hora de su alarma o, sin alarma, a las 09:00 (los intervalos de varios días sin horas siguen de día completo). En la sincronización con Google Calendar, las notas van en HTML, como lista con viñetas (`eventDescription` en `functions/src/calendarLogic.ts`); los eventos ya sincronizados cambian al cambiar su tarea o al volver a conectar.
 
 ---
 
