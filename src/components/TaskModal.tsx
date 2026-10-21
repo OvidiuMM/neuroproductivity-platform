@@ -203,6 +203,9 @@ export const TaskModal: React.FC<TaskModalProps> = ({
   onCreateGoal
 }) => {
   const [title, setTitle] = useState('');
+  // Cuántas veces se ha escrito a mano en el título y en la nota: el micrófono deja de dictar al escribir (DictateButton)
+  const [typedTitle, setTypedTitle] = useState(0);
+  const [typedNote, setTypedNote] = useState(0);
   // Áreas de la Rueda de la cuenta (con su nombre y las que se pueden elegir)
   const { areas: wheelAreas, label: areaName, selectable: selectableAreas } = useAreas();
   const [projectId, setProjectId] = useState('');
@@ -410,6 +413,8 @@ export const TaskModal: React.FC<TaskModalProps> = ({
 
   const handleAddObservation = () => {
     if (!newObsText.trim()) return;
+    // Si se estaba dictando la nota, se deja: lo que llegue después no vuelve a rellenar el campo
+    setTypedNote((count) => count + 1);
     const newObs: TaskObservation = {
       id: `obs-${Date.now()}`,
       type: 'note',
@@ -712,6 +717,7 @@ export const TaskModal: React.FC<TaskModalProps> = ({
                 onChange={(e) => {
                   setTitle(e.target.value);
                   setOverrideSyntaxWarning(false);
+                  setTypedTitle((n) => n + 1);
                 }}
                 onBlur={() => setTouched({ ...touched, title: true })}
                 placeholder="ej. Llamar al proveedor para acordar el plazo de entrega"
@@ -732,6 +738,7 @@ export const TaskModal: React.FC<TaskModalProps> = ({
                 }}
                 autoStart={autoDictate && !editingTask}
                 pause={guard.confirming}
+                typed={typedTitle}
               />
             </div>
             {/* Debajo del campo y no encima: con títulos largos o texto ampliado taparía lo escrito */}
@@ -1431,7 +1438,10 @@ export const TaskModal: React.FC<TaskModalProps> = ({
                     id="task-note"
                     type="text"
                     value={newObsText}
-                    onChange={(e) => setNewObsText(e.target.value)}
+                    onChange={(e) => {
+                      setNewObsText(e.target.value);
+                      setTypedNote((n) => n + 1);
+                    }}
                     placeholder="Añade una nota o un enlace…"
                     className="min-w-32 flex-1 rounded-xl border border-slate-300 px-3 py-1.5 text-xs focus:ring-2 focus:ring-indigo-400 focus:outline-none"
                     onKeyDown={(e) => {
@@ -1446,6 +1456,7 @@ export const TaskModal: React.FC<TaskModalProps> = ({
                     value={newObsText}
                     onChange={setNewObsText}
                     pause={guard.confirming}
+                    typed={typedNote}
                   />
                   <button
                     type="button"

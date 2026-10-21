@@ -231,13 +231,11 @@ test('a goal can be created from the task form, and the task is linked to it', a
   await goalArea.press('Enter');
   await expect(goalSelect.locator('option:checked')).toHaveText(secondGoal);
   await expect(form).toBeVisible();
-  // Descartar la tarea no deshace la meta
+  // Cerrar la tarea no deshace la meta. Una tarea nueva sin nada escrito (solo la meta) se cierra sin preguntar y
+  // sin dejar borrador
   await page.keyboard.press('Escape');
-  await page
-    .getByRole('alertdialog', { name: '¿Descartar los cambios?' })
-    .getByRole('button', { name: 'Descartar' })
-    .click();
   await expect(form).toBeHidden();
+  await expect(page.getByRole('button', { name: /^Borradores/ })).toHaveCount(0);
 
   await openSection(page, 'Metas');
   const health = page.getByRole('region', { name: 'Salud', exact: true });
