@@ -566,13 +566,15 @@ export const TaskModal: React.FC<TaskModalProps> = ({
   // «Cada N»: lo escrito se ve tal cual (se puede vaciar para escribir otro número) y, si es un número, cuenta ya,
   // ajustado de 1 a 99. Al salir del campo se ve el número que cuenta (si se dejó vacío, el de antes)
   const intervalInput = intervalText ?? String(repeatInterval);
+  const validInterval = (value: string) =>
+    /^\d+$/.test(value) && Number(value) >= 1 && Number(value) <= REPEAT_INTERVAL_MAX;
   const typeInterval = (value: string) => {
     setIntervalText(value);
-    if (/^\d+$/.test(value)) setRepeatInterval(Math.min(REPEAT_INTERVAL_MAX, Math.max(1, Number(value))));
+    if (validInterval(value)) setRepeatInterval(Number(value));
   };
+  // Vacío mientras se escribe otro número no es un error; «0» o letras, sí (y no deja guardar)
   const intervalError =
-    intervalText !== null &&
-    !(/^\d+$/.test(intervalText) && Number(intervalText) >= 1 && Number(intervalText) <= REPEAT_INTERVAL_MAX)
+    intervalText !== null && intervalText !== '' && !validInterval(intervalText)
       ? `Escribe un número del 1 al ${REPEAT_INTERVAL_MAX}.`
       : null;
   const recurrenceError = !isRepeating
@@ -608,6 +610,7 @@ export const TaskModal: React.FC<TaskModalProps> = ({
     !isSyntaxInvalid &&
     !datesError &&
     !recurrenceError &&
+    !(isRepeating && intervalError) &&
     !dependencyError &&
     !alarmProblem &&
     Boolean(listContext) &&

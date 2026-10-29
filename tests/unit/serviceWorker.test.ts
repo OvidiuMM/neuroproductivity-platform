@@ -82,6 +82,8 @@ const worker = ({
   const focused: string[] = [];
   const clientWindows = windows.map((url) => ({
     url: new URL(url, ORIGIN).href,
+    focused: false,
+    visibilityState: 'hidden',
     postMessage: (message: unknown) => void messages.push(message),
     focus: () => Promise.resolve(void focused.push(url))
   }));
@@ -312,4 +314,24 @@ test('tapping an alarm opens its task: in a new window, or in the open one with 
   const other = worker({ precache: [] });
   await other.click(undefined);
   assert.deepEqual(other.opened, ['/']);
+});
+
+test('an alarm that CLAR already showed on this device arrives by push without sounding again', async () => {
+  const key = 't1@2026-10-16T07:30:00.000Z';
+  const sw = worker({
+    precache: [],
+    stored: { 'clar-push-shown': { [`/__clar/push-shown/${encodeURIComponent(key)}`]: String(Date.now()) } }
+  });
+  await sw.push({ data: { title: 'Alarma', tag: key } });
+  assert.equal(sw.shown[0].options.silent, true);
+  const fresh = worker({ precache: [] });
+  await fresh.push({ data: { title: 'Alarma', tag: key } });
+  assert.equal(fresh.shown[0].options.silent, false);
+});
+
+test('tapping a notification prefers the window in use, then a visible one', async () => {
+  const sw = worker({ precache: [], windows: ['/a', '/b'] });
+  await sw.click({ key: 'k@1' });
+  // Sin ventana enfocada ni visible, la primera
+  assert.deepEqual(sw.focused, ['/a']);
 });

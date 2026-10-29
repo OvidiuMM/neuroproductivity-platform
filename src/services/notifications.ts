@@ -40,6 +40,7 @@ export const showSystemNotification = (title: string, body: string, tag: string)
           badge: '/badge-96.png',
           data: { key: tag }
         });
+        await rememberShownHere(tag).catch(() => undefined);
         return;
       }
       const notification = new Notification(title, { body, tag, icon: '/icon-192.png' });
@@ -53,16 +54,24 @@ export const showSystemNotification = (title: string, body: string, tag: string)
   })();
 };
 
-// Si la notificación push de una alarma ya se mostró en este dispositivo (el service worker lo apunta, public/sw.js):
-// entonces, al abrir CLAR, la app no la vuelve a avisar con otra notificación
+// Las alarmas ya notificadas en este dispositivo, durante dos días (public/sw.js): las que llegaron por push y las que
+// mostró la app. Al abrir CLAR, la app no vuelve a notificar una que llegó por push; y si la push llega después de la
+// de la app, sale sin sonar
+export const PUSH_SHOWN_CACHE = 'clar-push-shown';
+const shownUrl = (key: string) => `/__clar/push-shown/${encodeURIComponent(key)}`;
 export const wasShownByPush = async (key: string) => {
   try {
     if (typeof caches === 'undefined') return false;
-    const cache = await caches.open('clar-push-shown');
-    return Boolean(await cache.match(`/__clar/push-shown/${encodeURIComponent(key)}`));
+    const cache = await caches.open(PUSH_SHOWN_CACHE);
+    return Boolean(await cache.match(shownUrl(key)));
   } catch {
     return false;
   }
+};
+const rememberShownHere = async (key: string) => {
+  if (typeof caches === 'undefined') return;
+  const cache = await caches.open(PUSH_SHOWN_CACHE);
+  await cache.put(shownUrl(key), new Response(String(Date.now())));
 };
 
 // Al pulsar la notificación de una alarma con CLAR ya abierta, el service worker pide abrir su tarea
