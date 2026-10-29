@@ -24,8 +24,8 @@ export const registerServiceWorker = () => {
   navigator.serviceWorker.register('/sw.js').catch(() => undefined);
 };
 
-// Muestra la notificación si hay permiso; al pulsarla se vuelve a CLAR, donde está el aviso con «Ver tarea». Una
-// misma etiqueta sustituye a la anterior (no se acumulan duplicados).
+// Muestra la notificación si hay permiso; al pulsarla se abre la tarea (public/sw.js). La etiqueta es la clave de la
+// alarma: una misma etiqueta sustituye a la anterior (no se acumulan duplicados).
 export const showSystemNotification = (title: string, body: string, tag: string) => {
   if (notificationState() !== 'granted') return;
   void (async () => {
@@ -33,7 +33,13 @@ export const showSystemNotification = (title: string, body: string, tag: string)
       // Solo con el service worker ya activo (recién registrado puede estar aún instalándose)
       const registration = await navigator.serviceWorker?.getRegistration();
       if (registration?.active) {
-        await registration.showNotification(title, { body, tag, icon: '/icon-192.png', badge: '/icon-192.png' });
+        await registration.showNotification(title, {
+          body,
+          tag,
+          icon: '/icon-192.png',
+          badge: '/badge-96.png',
+          data: { key: tag }
+        });
         return;
       }
       const notification = new Notification(title, { body, tag, icon: '/icon-192.png' });
@@ -46,3 +52,18 @@ export const showSystemNotification = (title: string, body: string, tag: string)
     }
   })();
 };
+
+// Si la notificación push de una alarma ya se mostró en este dispositivo (el service worker lo apunta, public/sw.js):
+// entonces, al abrir CLAR, la app no la vuelve a avisar con otra notificación
+export const wasShownByPush = async (key: string) => {
+  try {
+    if (typeof caches === 'undefined') return false;
+    const cache = await caches.open('clar-push-shown');
+    return Boolean(await cache.match(`/__clar/push-shown/${encodeURIComponent(key)}`));
+  } catch {
+    return false;
+  }
+};
+
+// Al pulsar la notificación de una alarma con CLAR ya abierta, el service worker pide abrir su tarea
+export const OPEN_ALARM_MESSAGE = 'clar:open-alarm';

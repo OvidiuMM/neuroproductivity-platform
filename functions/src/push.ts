@@ -130,7 +130,7 @@ export const registerPushDevice = onCall({ region: REGION }, async (request) => 
     );
     if (recent.length >= MAX_REGISTRATIONS_PER_HOUR)
       throw new HttpsError('resource-exhausted', 'Demasiados intentos seguidos. Inténtalo de nuevo en un rato.');
-    tx.set(limitRef, { at: [...recent, new Date().toISOString()] });
+    tx.set(limitRef, { at: [...recent, new Date().toISOString()] }, { merge: true });
   });
 
   const id = tokenId(token);
@@ -170,6 +170,44 @@ export const unregisterPushDevice = onCall({ region: REGION }, async (request) =
   await dropToken(auth.uid, tokenId(token));
   logger.info('Push device unregistered');
   return { ok: true };
+});
+
+// «PROBAR NOTIFICACIÓN»: un aviso ahora mismo a un dispositivo registrado de la cuenta, por el mismo camino que las
+// alarmas. Como mucho 5 por hora. Si el token ya no vale, se borra y se dice
+const MAX_TESTS_PER_HOUR = 5;
+export const sendTestPush = onCall({ region: REGION }, async (request) => {
+  const auth = requireAuth(request);
+  const { token } = (request.data ?? {}) as { token?: unknown };
+  if (!isValidToken(token)) throw new HttpsError('invalid-argument', 'Solicitud no válida.');
+  const id = tokenId(token);
+  if (!(await tokensRef(auth.uid).doc(id).get()).exists)
+    throw new HttpsError('failed-precondition', 'Activa antes las alarmas con CLAR cerrada en este dispositivo.');
+  const limitRef = db().doc(`push_limits/${auth.uid}`);
+  await db().runTransaction(async (tx) => {
+    const hourAgo = Date.now() - 60 * 60 * 1000;
+    const recent = (((await tx.get(limitRef)).data()?.tests as string[] | undefined) ?? []).filter(
+      (at) => Date.parse(at) > hourAgo
+    );
+    if (recent.length >= MAX_TESTS_PER_HOUR)
+      throw new HttpsError('resource-exhausted', 'Ya has probado varias veces. Inténtalo de nuevo en un rato.');
+    tx.set(limitRef, { tests: [...recent, new Date().toISOString()] }, { merge: true });
+  });
+  const result = await sendWithFcm({
+    tokens: [token],
+    data: { title: 'CLAR', body: 'Así te avisará CLAR de tus alarmas, también con la app cerrada.', tag: 'clar-test' },
+    webpush: { headers: { Urgency: 'high', TTL: '120' } }
+  });
+  const response = result.responses[0];
+  if (response?.success) return { ok: true };
+  if (INVALID_TOKEN.has(response?.error?.code ?? '')) {
+    await dropToken(auth.uid, id);
+    throw new HttpsError(
+      'failed-precondition',
+      'Este dispositivo ya no recibe avisos: desactívalos y actívalos otra vez.'
+    );
+  }
+  logger.warn('Test push failed', { code: response?.error?.code ?? 'unknown' });
+  throw new HttpsError('unavailable', 'No se pudo enviar ahora. Inténtalo de nuevo en un rato.');
 });
 
 // Pone al día la alarma de una tarea en la cola. En una transacción, con la tarea tal como está ahora (los eventos del
@@ -273,7 +311,9 @@ export const sendQueued = async (ref: DocumentReference, now: number, send: Send
           title: notificationText(alarm, showTitle),
           body: String(claimed.body),
           tag: String(claimed.key),
-          url: '/'
+          // El momento de la alarma (la notificación lo muestra como su hora) y la dirección que abre su tarea
+          at: claimed.at.toDate().toISOString(),
+          url: `/?alarma=${encodeURIComponent(String(claimed.key))}`
         },
         webpush: { headers: { Urgency: 'high', TTL: String(ttl) } }
       })

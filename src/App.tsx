@@ -73,6 +73,7 @@ import { useTaskAlarms } from './hooks/useTaskAlarms';
 import { alarmLateNote, alarmSetAtFor, formatClock } from './services/alarms';
 import {
   NOTIFICATIONS_GRANTED_EVENT,
+  OPEN_ALARM_MESSAGE,
   notificationState,
   registerServiceWorker,
   requestNotifications,
@@ -84,7 +85,9 @@ import {
   isPushEnabled,
   isPushTitleShown,
   pushAvailable,
+  pushPermissionLost,
   registerPushDevice,
+  sendTestPush,
   setPushTitleShown
 } from './services/push';
 import { TOUR_STEPS } from './tourSteps';
@@ -995,6 +998,22 @@ export default function App({ user, services, isAdmin = false }: AppProps) {
     url.searchParams.delete('nueva');
     window.history.replaceState(window.history.state, '', url);
   }, []);
+  // ALARMA PULSADA: al tocar la notificación de una alarma se abre su tarea (public/sw.js). Con CLAR cerrada llega como
+  // /?alarma=<clave>, que se quita de la dirección al arrancar; con CLAR abierta, como mensaje del service worker. Se
+  // abre más abajo, como el acceso directo
+  const [launchAlarm, setLaunchAlarm] = useState(() => new URLSearchParams(window.location.search).get('alarma'));
+  useEffect(() => {
+    const url = new URL(window.location.href);
+    if (url.searchParams.has('alarma')) {
+      url.searchParams.delete('alarma');
+      window.history.replaceState(window.history.state, '', url);
+    }
+    const onMessage = (event: MessageEvent<{ type?: unknown; key?: unknown } | null>) => {
+      if (event.data?.type === OPEN_ALARM_MESSAGE && typeof event.data.key === 'string') setLaunchAlarm(event.data.key);
+    };
+    navigator.serviceWorker?.addEventListener('message', onMessage);
+    return () => navigator.serviceWorker?.removeEventListener('message', onMessage);
+  }, []);
   const startTour = (firstRun = false) => {
     navigate('tasks');
     setIsFirstRunTour(firstRun);
@@ -1079,6 +1098,7 @@ export default function App({ user, services, isAdmin = false }: AppProps) {
     !releaseNotesClosed &&
     !otherDialogOpen &&
     launchNewTask === null &&
+    launchAlarm === null &&
     profileOnboarding.fromServer &&
     shouldShowReleaseNotes({
       current: __APP_VERSION__,
@@ -1171,6 +1191,17 @@ export default function App({ user, services, isAdmin = false }: AppProps) {
     setEditingTask(task);
     setIsTaskModalOpen(true);
   };
+  // La alarma pulsada se abre cuando lo haría el acceso directo y su tarea ha llegado. Si mientras tanto se abre otro
+  // formulario, o la tarea ya no está (confirmado por el servidor), se descarta
+  if (launchAlarm !== null && isTaskModalOpen) setLaunchAlarm(null);
+  else if (launchAlarm !== null && launchReady) {
+    const taskId = launchAlarm.slice(0, launchAlarm.lastIndexOf('@'));
+    const task = tasks.find((t) => t.id === taskId && !isArchived(t));
+    if (task) {
+      setLaunchAlarm(null);
+      openAlarmTask(task);
+    } else if (syncByCollection.tasks.fromServer) setLaunchAlarm(null);
+  }
 
   // Conteo de tareas por contexto
   const archivedTasks = tasks.filter(isArchived);
@@ -1574,7 +1605,9 @@ export default function App({ user, services, isAdmin = false }: AppProps) {
                   enabled: pushEnabled,
                   onChange: handleTogglePush,
                   showTitle: pushShowsTitle,
-                  onShowTitleChange: handlePushTitle
+                  onShowTitleChange: handlePushTitle,
+                  permissionLost: pushPermissionLost(uid),
+                  onTest: () => sendTestPush(services, uid)
                 }
               : null
           }

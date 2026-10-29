@@ -167,5 +167,5 @@ test('cancelling detaches every handler, and Safari without dictation gets its o
     [recognition.onstart, recognition.onresult, recognition.onerror, recognition.onend],
     [null, null, null, null]
   );
-  assert.match(dictationErrorMessage('service-not-allowed')!, /dictado del dispositivo/);
+  assert.match(dictationErrorMessage('service-not-allowed')!, /micrófono del teclado/);
 });

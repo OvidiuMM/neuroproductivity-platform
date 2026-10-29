@@ -11,6 +11,7 @@ import {
 import { FirebaseError } from 'firebase/app';
 import { AccessGate } from './AccessGate';
 import { LoginScreen } from './components/LoginScreen';
+import { popupsUnreliable } from './services/platform';
 import { LoadingScreen } from './components/BrandMark';
 import { getFirebase, type FirebaseServices } from './services/firebase';
 import { sendPasswordReset, signInWithEmail, signUpWithEmail } from './services/auth';
@@ -63,6 +64,11 @@ export const AuthGate: React.FC = () => {
     setIsSigningIn(true);
     setSignInError(null);
     try {
+      // En la app de la pantalla de inicio del iPhone, la ventana de Google no vuelve: se entra por redirección
+      if (popupsUnreliable()) {
+        await signInWithRedirect(state.services.auth, provider);
+        return;
+      }
       await signInWithPopup(state.services.auth, provider);
     } catch (e) {
       const code = e instanceof FirebaseError ? e.code : '';

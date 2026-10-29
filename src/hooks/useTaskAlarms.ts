@@ -1,6 +1,7 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import type { TaskItem } from '../types';
 import { matchPendingAlerts, scheduledAlarms, type ScheduledAlarm } from '../services/alarms';
+import { wasShownByPush } from '../services/notifications';
 
 // Alarmas ya avisadas, por cuenta: no se repiten al recargar ni en otra pestaña. Se olvidan pasados dos días.
 const firedStorageKey = (uid: string) => `clar_alarms_fired:${uid}`;
@@ -45,7 +46,7 @@ const claim = (uid: string, key: string): Promise<boolean> =>
 interface AlarmHandlers {
   // Aviso dentro de la app: en todas las pestañas abiertas
   onAlert: (alarm: ScheduledAlarm) => void;
-  // Notificación del sistema: una sola vez, desde la pestaña que se quedó la alarma
+  // Notificación del sistema: una sola vez, desde la pestaña que se quedó la alarma, y no si ya llegó por push
   onNotify: (alarm: ScheduledAlarm) => void;
 }
 
@@ -89,9 +90,10 @@ export const useTaskAlarms = (uid: string, tasks: TaskItem[], handlers: AlarmHan
     pendingRef.current = rest;
     for (const alarm of matched) handlersRef.current.onAlert(alarm);
     for (const alarm of alarms.filter((a) => a.at <= now)) {
-      void claim(uid, alarm.key).then((mine) => {
+      void claim(uid, alarm.key).then(async (mine) => {
         if (!mine) return;
-        handlersRef.current.onNotify(alarm);
+        // Si ya llegó por push a este dispositivo, no se vuelve a notificar (sonaría otra vez); el aviso de la app, sí
+        if (!(await wasShownByPush(alarm.key))) handlersRef.current.onNotify(alarm);
         handlersRef.current.onAlert(alarm);
         channelRef.current?.postMessage({ key: alarm.key });
       });

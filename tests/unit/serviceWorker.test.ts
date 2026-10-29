@@ -22,13 +22,16 @@ interface WorkerOptions {
   // Lo guardado, por versión: { nombre de la caché: { dirección: contenido } }
   stored?: Record<string, Record<string, string>>;
   network?: (path: string) => Answer;
+  // Ventanas de CLAR abiertas (para las notificaciones)
+  windows?: string[];
 }
 
 const worker = ({
   precache = PRECACHE,
   version = 'v2',
   stored = { 'clar-app-v2': { '/': 'app guardada', '/assets/app.js': 'código guardado' } },
-  network = (path: string): Answer => ({ body: `de la red: ${path}` })
+  network = (path: string): Answer => ({ body: `de la red: ${path}` }),
+  windows = []
 }: WorkerOptions = {}) => {
   const listeners: Record<string, (event: unknown) => void> = {};
   const store = new Map(Object.entries(stored).map(([name, entries]) => [name, new Map(Object.entries(entries))]));
@@ -43,7 +46,13 @@ const worker = ({
       const entries = store.get(name)!;
       return Promise.resolve({
         put: async (request: string | { url: string }, response: Response) =>
-          void entries.set(keyOf(request), await response.text())
+          void entries.set(keyOf(request), await response.text()),
+        keys: () => Promise.resolve([...entries.keys()].map((key) => ({ url: new URL(key, ORIGIN).href }))),
+        match: (request: string | { url: string }) => {
+          const body = entries.get(keyOf(request));
+          return Promise.resolve(body === undefined ? undefined : new Response(body));
+        },
+        delete: (request: string | { url: string }) => Promise.resolve(entries.delete(keyOf(request)))
       });
     },
     match: (request: string | { url: string }, options: { cacheName?: string } = {}) => {
@@ -67,12 +76,28 @@ const worker = ({
       })
     );
   };
+  const shown: { title: string; options: NotificationOptions & { timestamp?: number } }[] = [];
+  const opened: string[] = [];
+  const messages: unknown[] = [];
+  const focused: string[] = [];
+  const clientWindows = windows.map((url) => ({
+    url: new URL(url, ORIGIN).href,
+    postMessage: (message: unknown) => void messages.push(message),
+    focus: () => Promise.resolve(void focused.push(url))
+  }));
   const self = {
     location: { origin: ORIGIN },
     addEventListener: (type: string, listener: (event: unknown) => void) => (listeners[type] = listener),
     skipWaiting: () => Promise.resolve(),
-    clients: { claim: () => Promise.resolve() },
-    registration: {}
+    clients: {
+      claim: () => Promise.resolve(),
+      matchAll: () => Promise.resolve(clientWindows),
+      openWindow: (url: string) => Promise.resolve(void opened.push(url))
+    },
+    registration: {
+      showNotification: (title: string, options: NotificationOptions) =>
+        Promise.resolve(void shown.push({ title, options }))
+    }
   };
   const code = precache.length ? injectPrecache(source, precache, version) : source;
   // En un service worker, una dirección relativa es de su sitio
@@ -82,7 +107,22 @@ const worker = ({
       this.url = new URL(url, ORIGIN).href;
     }
   }
-  runInNewContext(code, { self, caches, fetch, URL, Response, Request, Promise, setTimeout, clearTimeout, Error });
+  runInNewContext(code, {
+    self,
+    caches,
+    fetch,
+    URL,
+    Response,
+    Request,
+    Promise,
+    setTimeout,
+    clearTimeout,
+    Error,
+    Date,
+    Number,
+    String,
+    encodeURIComponent
+  });
 
   // Lo que responde a una petición, o null si la deja pasar a la red
   const respond = async (path: string, { mode = 'cors', method = 'GET' } = {}) => {
@@ -99,7 +139,37 @@ const worker = ({
     return done.promise!;
   };
   const cached = (name: string) => Object.fromEntries(store.get(name) ?? []);
-  return { listeners, respond, lifecycle, requested, cached, names: () => [...store.keys()] };
+  // Llega un mensaje push o se pulsa una notificación; termina cuando acaba lo que el worker espera (waitUntil)
+  const push = (message: unknown) => {
+    const done: { promise?: Promise<unknown> } = {};
+    listeners.push({
+      data: { json: () => message },
+      waitUntil: (promise: Promise<unknown>) => (done.promise = promise)
+    });
+    return done.promise!;
+  };
+  const click = (data: unknown) => {
+    const done: { promise?: Promise<unknown> } = {};
+    listeners.notificationclick({
+      notification: { data, close: () => undefined },
+      waitUntil: (promise: Promise<unknown>) => (done.promise = promise)
+    });
+    return done.promise!;
+  };
+  return {
+    listeners,
+    respond,
+    lifecycle,
+    requested,
+    cached,
+    names: () => [...store.keys()],
+    push,
+    click,
+    shown,
+    opened,
+    messages,
+    focused
+  };
 };
 
 test('offline, any page of the app opens the saved copy, and its files come from the copy', async () => {
@@ -190,4 +260,56 @@ test('in development (no list) the worker does not even listen to requests', () 
   assert.equal(worker({ precache: [] }).listeners.fetch, undefined);
   assert.ok(worker().listeners.fetch);
   assert.ok(worker({ precache: [] }).listeners.push);
+});
+
+test('an alarm push shows its notification at the alarm time and is remembered so the app does not repeat it', async () => {
+  const sw = worker({ precache: [] });
+  const key = 't1@2026-10-16T07:30:00.000Z';
+  await sw.push({
+    data: { title: 'Alarma de las 09:30', body: 'Vence hoy', tag: key, at: '2026-10-16T07:30:00.000Z' }
+  });
+  assert.equal(sw.shown.length, 1);
+  const { title, options } = sw.shown[0];
+  assert.equal(title, 'Alarma de las 09:30');
+  assert.equal(options.tag, key);
+  assert.equal(options.badge, '/badge-96.png');
+  assert.equal(options.timestamp, Date.parse('2026-10-16T07:30:00.000Z'));
+  // Objetos del entorno del worker: se comparan como JSON
+  assert.equal(JSON.stringify(options.data), JSON.stringify({ key }));
+  assert.ok(sw.cached('clar-push-shown')[`/__clar/push-shown/${encodeURIComponent(key)}`]);
+});
+
+test('a push without an alarm (the test one) is shown but not remembered', async () => {
+  const sw = worker({ precache: [] });
+  await sw.push({ data: { title: 'CLAR', body: 'Prueba', tag: 'clar-test' } });
+  assert.equal(sw.shown.length, 1);
+  assert.equal(JSON.stringify(sw.shown[0].options.data), JSON.stringify({ key: null }));
+  assert.deepEqual(sw.cached('clar-push-shown'), {});
+});
+
+test('alarms remembered more than two days ago are forgotten', async () => {
+  const old = String(Date.now() - 3 * 24 * 60 * 60 * 1000);
+  const sw = worker({ precache: [], stored: { 'clar-push-shown': { '/__clar/push-shown/viejo%40x': old } } });
+  await sw.push({ data: { title: 'A', tag: 't2@2026-10-16T08:00:00.000Z' } });
+  assert.deepEqual(Object.keys(sw.cached('clar-push-shown')), [
+    `/__clar/push-shown/${encodeURIComponent('t2@2026-10-16T08:00:00.000Z')}`
+  ]);
+});
+
+test('tapping an alarm opens its task: in a new window, or in the open one with a message', async () => {
+  const key = 't1@2026-10-16T07:30:00.000Z';
+  const closed = worker({ precache: [] });
+  await closed.click({ key });
+  assert.deepEqual(closed.opened, [`/?alarma=${encodeURIComponent(key)}`]);
+
+  const open = worker({ precache: [], windows: ['/'] });
+  await open.click({ key });
+  assert.deepEqual(open.opened, []);
+  assert.equal(JSON.stringify(open.messages), JSON.stringify([{ type: 'clar:open-alarm', key }]));
+  assert.deepEqual(open.focused, ['/']);
+
+  // Otra notificación (sin alarma) solo vuelve a CLAR
+  const other = worker({ precache: [] });
+  await other.click(undefined);
+  assert.deepEqual(other.opened, ['/']);
 });

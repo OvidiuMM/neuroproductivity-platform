@@ -10,6 +10,7 @@ import { forgetAccess } from './access';
 import { disconnectGoogleCalendar } from './googleCalendar';
 import { signOutAndClearCache, type FirebaseServices } from './firebase';
 import { deleteAllUserData, exportUserData, readWheelAreas } from './repository';
+import { popupsUnreliable } from './platform';
 import { downloadJson } from './download';
 
 // Descarga y borrado de la cuenta. Funcionan también sin acceso aprobado (las reglas dejan leer y borrar
@@ -30,11 +31,17 @@ export const downloadAccountData = async ({ db }: FirebaseServices, user: User) 
 };
 
 // Firebase exige un inicio de sesión reciente para eliminar la cuenta: con la contraseña si la cuenta la tiene
-// (y se ha escrito), si no con Google
-const reauthenticate = (user: User, password?: string) =>
-  password
-    ? reauthenticateWithCredential(user, EmailAuthProvider.credential(user.email ?? '', password))
-    : reauthenticateWithPopup(user, new GoogleAuthProvider());
+// (y se ha escrito), si no con Google. En la app de la pantalla de inicio del iPhone la ventana de Google no vuelve:
+// vale haber entrado hace menos de 4 minutos (el servidor pide menos de 5)
+const RECENT_SIGN_IN_MS = 4 * 60 * 1000;
+const reauthenticate = async (user: User, password?: string) => {
+  if (password) return reauthenticateWithCredential(user, EmailAuthProvider.credential(user.email ?? '', password));
+  if (!popupsUnreliable()) return reauthenticateWithPopup(user, new GoogleAuthProvider());
+  if (Date.now() - Date.parse(user.metadata.lastSignInTime ?? '') < RECENT_SIGN_IN_MS) return;
+  throw new Error(
+    'Para eliminar la cuenta desde la app del iPhone, cierra sesión, vuelve a entrar y elimínala en los 4 minutos siguientes.'
+  );
+};
 
 // `withCalendar`: la cuenta usa la sincronización con Google Calendar. Entonces se desconecta primero: así borrar las
 // tareas no borra sus eventos, que se quedan en Google. Si no se puede, la eliminación sigue (la función la desconecta
