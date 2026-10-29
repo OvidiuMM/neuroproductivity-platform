@@ -2,6 +2,7 @@ import React, { useRef, useState } from 'react';
 import { Accessibility, RotateCcw, X } from 'lucide-react';
 import { useModalFocus } from '../hooks/useModalFocus';
 import { DEFAULT_A11Y_PREFS, loadA11yPrefs, saveA11yPrefs, type A11yPrefs, type TextSize } from '../services/a11yPrefs';
+import { messages } from '../i18n/locale';
 
 interface AccessibilityPanelProps {
   isOpen: boolean;
@@ -10,34 +11,74 @@ interface AccessibilityPanelProps {
   returnFocusTo?: () => HTMLElement | null;
 }
 
+type SwitchKey = 'highContrast' | 'reduceMotion' | 'strongFocus' | 'celebrations';
+
+const m = messages<{
+  title: string;
+  close: string;
+  textSize: string;
+  sizes: Record<TextSize, string>;
+  switches: Record<SwitchKey, { label: string; hint: string }>;
+  savedHere: string;
+  reset: string;
+}>(
+  {
+    title: 'Accesibilidad',
+    close: 'Cerrar',
+    textSize: 'Tamaño del texto',
+    sizes: { normal: 'Normal', large: 'Grande', xlarge: 'Muy grande' },
+    switches: {
+      highContrast: { label: 'Alto contraste', hint: 'Textos y bordes más oscuros, y enlaces subrayados.' },
+      reduceMotion: {
+        label: 'Reducir animaciones',
+        hint: 'Quita transiciones y animaciones. Se aplica también si tu sistema lo pide.'
+      },
+      strongFocus: {
+        label: 'Foco muy visible',
+        hint: 'Contorno grueso alrededor del elemento activo al usar el teclado.'
+      },
+      celebrations: {
+        label: 'Celebraciones',
+        hint: 'Un mensaje y una breve animación al hacer una tarea antigua, lograr una meta o terminar un proyecto.'
+      }
+    },
+    savedHere: 'Se guarda en este dispositivo.',
+    reset: 'Restablecer'
+  },
+  {
+    title: 'Accessibility',
+    close: 'Close',
+    textSize: 'Text size',
+    sizes: { normal: 'Normal', large: 'Large', xlarge: 'Extra large' },
+    switches: {
+      highContrast: { label: 'High contrast', hint: 'Darker text and borders, and underlined links.' },
+      reduceMotion: {
+        label: 'Reduce animations',
+        hint: 'Removes transitions and animations. Also applies if your system asks for it.'
+      },
+      strongFocus: {
+        label: 'Highly visible focus',
+        hint: 'A thick outline around the active element when you use the keyboard.'
+      },
+      celebrations: {
+        label: 'Celebrations',
+        hint: 'A message and a short animation when you complete an old task, achieve a goal or finish a project.'
+      }
+    },
+    savedHere: 'Saved on this device.',
+    reset: 'Reset'
+  }
+);
+
 const TEXT_SIZES: { value: TextSize; label: string; sample: string }[] = [
-  { value: 'normal', label: 'Normal', sample: 'text-sm' },
-  { value: 'large', label: 'Grande', sample: 'text-base' },
-  { value: 'xlarge', label: 'Muy grande', sample: 'text-lg' }
+  { value: 'normal', label: m.sizes.normal, sample: 'text-sm' },
+  { value: 'large', label: m.sizes.large, sample: 'text-base' },
+  { value: 'xlarge', label: m.sizes.xlarge, sample: 'text-lg' }
 ];
 
-const SWITCHES: {
-  key: 'highContrast' | 'reduceMotion' | 'strongFocus' | 'celebrations';
-  label: string;
-  hint: string;
-}[] = [
-  { key: 'highContrast', label: 'Alto contraste', hint: 'Textos y bordes más oscuros, y enlaces subrayados.' },
-  {
-    key: 'reduceMotion',
-    label: 'Reducir animaciones',
-    hint: 'Quita transiciones y animaciones. Se aplica también si tu sistema lo pide.'
-  },
-  {
-    key: 'strongFocus',
-    label: 'Foco muy visible',
-    hint: 'Contorno grueso alrededor del elemento activo al usar el teclado.'
-  },
-  {
-    key: 'celebrations',
-    label: 'Celebraciones',
-    hint: 'Un mensaje y una breve animación al hacer una tarea antigua, lograr una meta o terminar un proyecto.'
-  }
-];
+const SWITCHES: { key: SwitchKey; label: string; hint: string }[] = (
+  ['highContrast', 'reduceMotion', 'strongFocus', 'celebrations'] as const
+).map((key) => ({ key, ...m.switches[key] }));
 
 // Panel de accesibilidad: los cambios se aplican al momento y se guardan en este dispositivo
 export const AccessibilityPanel: React.FC<AccessibilityPanelProps> = ({ isOpen, onClose, returnFocusTo }) => {
@@ -64,12 +105,12 @@ export const AccessibilityPanel: React.FC<AccessibilityPanelProps> = ({ isOpen, 
         <div className="flex items-center justify-between border-b border-slate-100 bg-slate-50/90 px-6 py-4">
           <h2 id="a11y-panel-title" className="flex items-center gap-2 text-sm font-bold text-slate-900">
             <Accessibility className="h-4 w-4 text-indigo-600" aria-hidden="true" />
-            Accesibilidad
+            {m.title}
           </h2>
           <button
             type="button"
             onClick={onClose}
-            aria-label="Cerrar"
+            aria-label={m.close}
             className="rounded-lg p-1.5 text-slate-500 hover:bg-slate-200/60 hover:text-slate-700"
           >
             <X className="h-5 w-5" aria-hidden="true" />
@@ -78,7 +119,7 @@ export const AccessibilityPanel: React.FC<AccessibilityPanelProps> = ({ isOpen, 
 
         <div className="space-y-5 p-6">
           <fieldset className="space-y-2">
-            <legend className="text-xs font-bold tracking-wider text-slate-700 uppercase">Tamaño del texto</legend>
+            <legend className="text-xs font-bold tracking-wider text-slate-700 uppercase">{m.textSize}</legend>
             <div className="grid grid-cols-3 gap-2">
               {TEXT_SIZES.map(({ value, label, sample }) => (
                 <label
@@ -140,14 +181,14 @@ export const AccessibilityPanel: React.FC<AccessibilityPanelProps> = ({ isOpen, 
           </ul>
 
           <div className="flex items-center justify-between border-t border-slate-100 pt-3">
-            <p className="text-[11px] text-slate-600">Se guarda en este dispositivo.</p>
+            <p className="text-[11px] text-slate-600">{m.savedHere}</p>
             <button
               type="button"
               onClick={() => update(DEFAULT_A11Y_PREFS)}
               className="flex items-center gap-1.5 rounded-lg border border-slate-300 px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-50"
             >
               <RotateCcw className="h-3.5 w-3.5" aria-hidden="true" />
-              Restablecer
+              {m.reset}
             </button>
           </div>
         </div>
@@ -177,6 +218,6 @@ export const AccessibilityTrigger: React.FC<{ onClick: () => void }> = ({ onClic
     className="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-600 underline-offset-2 hover:text-slate-900 hover:underline"
   >
     <Accessibility className="h-3.5 w-3.5" aria-hidden="true" />
-    Accesibilidad
+    {m.title}
   </button>
 );

@@ -11,6 +11,7 @@ import {
   type Auth,
   type User
 } from 'firebase/auth';
+import { messages } from '../i18n/locale';
 
 // Cuentas con email y contraseña (además de Google): alta con verificación del email, acceso y recuperación
 
@@ -70,24 +71,55 @@ export const changePassword = async (user: User, currentPassword: string, newPas
   await updatePassword(user, newPassword);
 };
 
+const m = messages(
+  {
+    wrongCredentials: 'Email o contraseña incorrectos.',
+    invalidEmail: 'Ese email no es válido.',
+    missingPassword: 'Escribe la contraseña.',
+    emailInUse: 'Ya hay una cuenta con ese email. Entra o recupera la contraseña.',
+    weakPassword: `La contraseña debe tener al menos ${MIN_PASSWORD_LENGTH} caracteres.`,
+    tooManyRequests: 'Demasiados intentos. Espera un momento o recupera la contraseña.',
+    offline: 'No hay conexión. Inténtalo de nuevo cuando vuelvas a tenerla.',
+    recentLogin: 'Por seguridad, vuelve a entrar y repite la acción.',
+    popupClosed: 'Se cerró la ventana de Google sin confirmar. Vuelve a intentarlo.',
+    popupBlocked:
+      'El navegador bloqueó la ventana de Google: permite las ventanas emergentes de CLAR y vuelve a intentarlo.',
+    userMismatch: 'Esa no es la cuenta de Google con la que has entrado: elige la misma para confirmar.',
+    notAllowed: 'El acceso con email y contraseña no está activado en este proyecto.'
+  },
+  {
+    wrongCredentials: 'Wrong email or password.',
+    invalidEmail: "That email isn't valid.",
+    missingPassword: 'Enter your password.',
+    emailInUse: 'There is already an account with that email. Sign in or reset your password.',
+    weakPassword: `Your password must be at least ${MIN_PASSWORD_LENGTH} characters long.`,
+    tooManyRequests: 'Too many attempts. Wait a moment or reset your password.',
+    offline: "You're offline. Try again when you're back online.",
+    recentLogin: 'For security, sign in again and repeat the action.',
+    popupClosed: 'The Google window was closed before you confirmed. Try again.',
+    popupBlocked: 'Your browser blocked the Google window: allow pop-ups for CLAR and try again.',
+    userMismatch: "That isn't the Google account you signed in with: choose the same one to confirm.",
+    notAllowed: "Email and password sign-in isn't enabled in this project."
+  }
+);
+
 const AUTH_ERRORS: Record<string, string> = {
-  'auth/invalid-credential': 'Email o contraseña incorrectos.',
-  'auth/wrong-password': 'Email o contraseña incorrectos.',
-  'auth/user-not-found': 'Email o contraseña incorrectos.',
-  'auth/invalid-email': 'Ese email no es válido.',
-  'auth/missing-password': 'Escribe la contraseña.',
-  'auth/email-already-in-use': 'Ya hay una cuenta con ese email. Entra o recupera la contraseña.',
-  'auth/weak-password': `La contraseña debe tener al menos ${MIN_PASSWORD_LENGTH} caracteres.`,
-  'auth/too-many-requests': 'Demasiados intentos. Espera un momento o recupera la contraseña.',
-  'auth/network-request-failed': 'No hay conexión. Inténtalo de nuevo cuando vuelvas a tenerla.',
-  'auth/requires-recent-login': 'Por seguridad, vuelve a entrar y repite la acción.',
+  'auth/invalid-credential': m.wrongCredentials,
+  'auth/wrong-password': m.wrongCredentials,
+  'auth/user-not-found': m.wrongCredentials,
+  'auth/invalid-email': m.invalidEmail,
+  'auth/missing-password': m.missingPassword,
+  'auth/email-already-in-use': m.emailInUse,
+  'auth/weak-password': m.weakPassword,
+  'auth/too-many-requests': m.tooManyRequests,
+  'auth/network-request-failed': m.offline,
+  'auth/requires-recent-login': m.recentLogin,
   // Confirmar con Google (p. ej. al eliminar la cuenta)
-  'auth/popup-closed-by-user': 'Se cerró la ventana de Google sin confirmar. Vuelve a intentarlo.',
-  'auth/cancelled-popup-request': 'Se cerró la ventana de Google sin confirmar. Vuelve a intentarlo.',
-  'auth/popup-blocked':
-    'El navegador bloqueó la ventana de Google: permite las ventanas emergentes de CLAR y vuelve a intentarlo.',
-  'auth/user-mismatch': 'Esa no es la cuenta de Google con la que has entrado: elige la misma para confirmar.',
-  'auth/operation-not-allowed': 'El acceso con email y contraseña no está activado en este proyecto.'
+  'auth/popup-closed-by-user': m.popupClosed,
+  'auth/cancelled-popup-request': m.popupClosed,
+  'auth/popup-blocked': m.popupBlocked,
+  'auth/user-mismatch': m.userMismatch,
+  'auth/operation-not-allowed': m.notAllowed
 };
 
 export const describeAuthError = (error: unknown, fallback: string) =>

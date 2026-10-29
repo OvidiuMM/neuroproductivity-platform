@@ -1,10 +1,10 @@
-import { HttpsError, onCall } from 'firebase-functions/https';
 import { onDocumentWritten } from 'firebase-functions/firestore';
 import * as logger from 'firebase-functions/logger';
 import { defineSecret, defineString } from 'firebase-functions/params';
 import { adminDb } from './adminApp';
-import { REGION, adminEmail, appUrl, isEmulator, requireAuth } from './access';
+import { REGION, adminEmail, appUrl, isEmulator } from './access';
 import { isCurrentAdminMarker } from './accessLogic';
+import { invalidRequest, onUserCall, requireAuth, userErrors } from './callable';
 import {
   buildTaskEvent,
   eventIdFor,
@@ -32,6 +32,7 @@ import {
   type GoogleCalendarApi,
   type OAuthClient
 } from './googleCalendar';
+import { languageOf, messages, type Language } from './i18n';
 
 // SINCRONIZACIÓN CON GOOGLE CALENDAR (función extra «Sincronizar con Google Calendar»), en un solo sentido: las tareas
 // con fecha de la cuenta van a un calendario propio, «CLAR», en su cuenta de Google. Lo que se cambie en Google no
@@ -43,6 +44,8 @@ import {
 // - Desconectar (disconnectGoogleCalendar, o al perder la función o el acceso): se retira el permiso en Google y se
 //   borra; el calendario se queda en Google. Ver calendarCleanup.ts.
 // Solo sincroniza una cuenta que puede usar la función ahora mismo (calendarEntitled): se comprueba en cada cambio.
+// Lo que escribe CLAR en los eventos (y la descripción del calendario) va en el idioma de la cuenta en ese momento: un
+// evento escrito antes de cambiarlo sigue en el anterior hasta que su tarea cambie o se vuelva a conectar.
 
 // Id del cliente OAuth (web) de Google: no es secreto. El secreto del cliente está en Secret Manager
 const clientIdParam = defineString('GOOGLE_OAUTH_CLIENT_ID', {
@@ -71,8 +74,9 @@ const calendarDeps = (): CalendarDeps => ({
 
 // Si la cuenta puede usar la sincronización ahora mismo: con el acceso aprobado y la función concedida por la
 // administración, o si es la administración (con su marca vigente) y la tiene encendida. `featurePrefs` lo puede
-// escribir cualquier cuenta en su perfil: solo cuenta para la administración.
-export const calendarEntitled = async (uid: string) => {
+// escribir cualquier cuenta en su perfil: solo cuenta para la administración. Con el idioma de la cuenta, que está en
+// el mismo perfil (así no cuesta otra lectura)
+export const calendarAccount = async (uid: string): Promise<{ entitled: boolean; language: Language }> => {
   const db = adminDb();
   const [access, features, admin, profile] = await Promise.all([
     db.doc(`access/${uid}`).get(),
@@ -80,12 +84,15 @@ export const calendarEntitled = async (uid: string) => {
     db.doc(`admins/${uid}`).get(),
     db.doc(`users/${uid}`).get()
   ]);
-  if (access.data()?.status !== 'approved') return false;
+  const prefs = profile.data() as { featurePrefs?: Record<string, unknown>; language?: unknown } | undefined;
+  const language = languageOf(prefs?.language);
+  if (access.data()?.status !== 'approved') return { entitled: false, language };
   if (isCurrentAdminMarker(admin.data(), adminEmail()))
-    return (profile.data() as { featurePrefs?: Record<string, unknown> } | undefined)?.featurePrefs?.[FEATURE] === true;
+    return { entitled: prefs?.featurePrefs?.[FEATURE] === true, language };
   const granted: unknown = features.data()?.granted;
-  return Array.isArray(granted) && granted.includes(FEATURE);
+  return { entitled: Array.isArray(granted) && granted.includes(FEATURE), language };
 };
+export const calendarEntitled = async (uid: string) => (await calendarAccount(uid)).entitled;
 
 // Permisos de acceso de cada conexión (uid y cuándo se conectó; duran una hora), en la memoria de la instancia: así
 // cada cambio no pide uno nuevo, y el de una conexión anterior nunca se usa con otra. Las llamadas a la vez comparten
@@ -173,7 +180,8 @@ export const syncTaskEvent = async (
 ) => {
   const link = knownLink ?? ((await calendarLinkDoc(uid).get()).data() as CalendarLink | undefined);
   if (!link) return 'not-connected' as const;
-  if (!(await calendarEntitled(uid))) {
+  const { entitled, language } = await calendarAccount(uid);
+  if (!entitled) {
     // Sin la función (p. ej. ya no es la cuenta de administración), la conexión no se queda
     await disconnectCalendar(uid, { onlyConnection: link.connectedAt, deps });
     return 'not-entitled' as const;
@@ -183,7 +191,7 @@ export const syncTaskEvent = async (
   const taskRef = adminDb().doc(`users/${uid}/tasks/${taskId}`);
   const desired = async () => {
     const task = await taskRef.get();
-    return task.exists ? buildTaskEvent(task.data() as SyncTask, link.timeZone, deps.appUrl()) : null;
+    return task.exists ? buildTaskEvent(task.data() as SyncTask, link.timeZone, deps.appUrl(), language) : null;
   };
   try {
     let event = await desired();
@@ -206,12 +214,18 @@ export const syncTaskEvent = async (
 
 // Sube todas las tareas que van al calendario (al conectar). Con `cleanUp` (al volver a usar un calendario), borra
 // también los eventos de CLAR de tareas que ya no van a él (borradas, sin fecha o en «Algún día» mientras estaba
-// desconectada). Un fallo suelto se cuenta y se sigue; si hay que volver a conectar, se para.
-export const syncAllTasks = async (uid: string, link: CalendarLink, deps: CalendarDeps, cleanUp: boolean) => {
+// desconectada). Un fallo suelto se cuenta y se sigue; si hay que volver a conectar, se para. `language`: el de la cuenta
+export const syncAllTasks = async (
+  uid: string,
+  link: CalendarLink,
+  deps: CalendarDeps,
+  cleanUp: boolean,
+  language: Language = 'es'
+) => {
   const tasks = await adminDb().collection(`users/${uid}/tasks`).get();
   const pending = tasks.docs.flatMap((d) => {
     const eventId = eventIdFor(d.id);
-    const event = eventId ? buildTaskEvent(d.data(), link.timeZone, deps.appUrl()) : null;
+    const event = eventId ? buildTaskEvent(d.data(), link.timeZone, deps.appUrl(), language) : null;
     return eventId && event ? [{ eventId, event }] : [];
   });
   let stale: string[] = [];
@@ -232,7 +246,7 @@ export const syncAllTasks = async (uid: string, link: CalendarLink, deps: Calend
     const taskId = taskIdForEvent(eventId);
     if (!taskId) return false;
     const task = await adminDb().doc(`users/${uid}/tasks/${taskId}`).get();
-    return !task.exists || !buildTaskEvent(task.data() as SyncTask, link.timeZone, deps.appUrl());
+    return !task.exists || !buildTaskEvent(task.data() as SyncTask, link.timeZone, deps.appUrl(), language);
   };
   const jobs: { eventId: string; event: CalendarEventBody | null }[] = [
     ...stale.map((eventId) => ({ eventId, event: null })),
@@ -289,37 +303,62 @@ const finishConnection = (uid: string, link: CalendarLink, result: { synced: num
     return true;
   });
 
-const CLOSED_MESSAGE = 'La conexión se cerró mientras se subían las tareas (se desconectó o se quitó la función).';
-
-const RECONNECT_MESSAGE: Record<ReconnectReason, string> = {
-  revoked: 'Google retiró el permiso mientras se subían las tareas. Vuelve a conectar.',
-  calendarMissing: 'El calendario «CLAR» desapareció de Google mientras se subían las tareas. Vuelve a conectar.'
-};
+const fail = userErrors(
+  messages(
+    {
+      notEnabled: 'Tu cuenta no tiene activada la sincronización con Google Calendar.',
+      notAccepted: 'Google no aceptó la autorización. Vuelve a intentarlo.',
+      keepPermission: 'Para sincronizar, deja marcado el permiso de Google Calendar.',
+      noOffline: 'Google no dio el permiso para sincronizar con CLAR cerrada. Vuelve a intentarlo.',
+      notPrepared: 'No se pudo preparar el calendario «CLAR» en Google. Inténtalo de nuevo en un momento.',
+      noAccess: 'Tu cuenta ya no tiene acceso a CLAR.',
+      noLongerEnabled: 'Tu cuenta ya no tiene activada la sincronización con Google Calendar.',
+      closed: 'La conexión se cerró mientras se subían las tareas (se desconectó o se quitó la función).',
+      reconnect: {
+        revoked: 'Google retiró el permiso mientras se subían las tareas. Vuelve a conectar.',
+        calendarMissing: 'El calendario «CLAR» desapareció de Google mientras se subían las tareas. Vuelve a conectar.'
+      },
+      notUploaded: 'Se conectó, pero no se pudieron subir las tareas. Desconecta y vuelve a conectar para subirlas.',
+      unavailable: 'La sincronización con Google Calendar no está disponible en esta instalación.'
+    },
+    {
+      notEnabled: "Your account doesn't have Google Calendar sync turned on.",
+      notAccepted: "Google didn't accept the authorization. Try again.",
+      keepPermission: 'To sync, leave the Google Calendar permission checked.',
+      noOffline: "Google didn't give permission to sync while CLAR is closed. Try again.",
+      notPrepared: "Couldn't prepare the “CLAR” calendar in Google. Try again in a moment.",
+      noAccess: 'Your account no longer has access to CLAR.',
+      noLongerEnabled: 'Your account no longer has Google Calendar sync turned on.',
+      closed:
+        'The connection was closed while your tasks were uploading (it was disconnected or the feature was removed).',
+      reconnect: {
+        revoked: 'Google withdrew the permission while your tasks were uploading. Connect again.',
+        calendarMissing: 'The “CLAR” calendar disappeared from Google while your tasks were uploading. Connect again.'
+      },
+      notUploaded: "Connected, but your tasks couldn't be uploaded. Disconnect and connect again to upload them.",
+      unavailable: "Google Calendar sync isn't available in this installation."
+    }
+  )
+);
 
 export const connectCalendar = async (uid: string, data: unknown, deps: CalendarDeps) => {
-  if (!(await calendarEntitled(uid))) {
-    throw new HttpsError('permission-denied', 'Tu cuenta no tiene activada la sincronización con Google Calendar.');
-  }
+  const { entitled, language } = await calendarAccount(uid);
+  if (!entitled) throw fail('permission-denied', (t) => t.notEnabled);
   const input = parseConnectRequest(data, allowedOrigins(deps.appUrl()));
-  if (!input) throw new HttpsError('invalid-argument', 'Solicitud no válida.');
+  if (!input) throw invalidRequest();
   let tokens: Awaited<ReturnType<GoogleCalendarApi['exchangeCode']>>;
   try {
     tokens = await deps.api.exchangeCode(deps.client(), input);
   } catch (error) {
     logger.warn('Calendar authorization not exchanged', { reason: (error as { reason?: string }).reason ?? 'unknown' });
-    throw new HttpsError('invalid-argument', 'Google no aceptó la autorización. Vuelve a intentarlo.');
+    throw fail('invalid-argument', (t) => t.notAccepted);
   }
   // Sin el permiso del calendario (Google deja desmarcarlo) o sin permiso sin conexión, no hay nada que guardar
   const refreshToken = tokens.refreshToken;
   const withdraw = () => deps.api.revoke(refreshToken ?? tokens.accessToken).catch(() => undefined);
   if (!tokens.scope.split(' ').includes(CALENDAR_SCOPE) || !refreshToken) {
     await withdraw();
-    throw new HttpsError(
-      'permission-denied',
-      refreshToken
-        ? 'Para sincronizar, deja marcado el permiso de Google Calendar.'
-        : 'Google no dio el permiso para sincronizar con CLAR cerrada. Vuelve a intentarlo.'
-    );
+    throw fail('permission-denied', (t) => (refreshToken ? t.keepPermission : t.noOffline));
   }
   // Volver a conectar: el permiso nuevo sustituye al anterior (retirar el anterior retiraría también el nuevo, que es
   // de la misma cuenta y la misma app)
@@ -327,15 +366,17 @@ export const connectCalendar = async (uid: string, data: unknown, deps: Calendar
   const connectedAt = new Date().toISOString();
   let link: CalendarLink;
   try {
-    const calendarId = await deps.api.ensureCalendar(tokens.accessToken, input.timeZone, previous?.calendarId);
+    const calendarId = await deps.api.ensureCalendar(
+      tokens.accessToken,
+      input.timeZone,
+      previous?.calendarId,
+      language
+    );
     link = { token: sealToken(refreshToken, deps.key(), uid), calendarId, timeZone: input.timeZone, connectedAt };
   } catch (error) {
     await withdraw();
     logger.warn('Calendar not prepared', { reason: error instanceof GoogleApiError ? error.reason : 'unknown' });
-    throw new HttpsError(
-      'unavailable',
-      'No se pudo preparar el calendario «CLAR» en Google. Inténtalo de nuevo en un momento.'
-    );
+    throw fail('unavailable', (t) => t.notPrepared);
   }
   // El permiso y el estado, en la misma transacción que comprueba que la cuenta sigue con acceso: si se eliminó o
   // perdió el acceso entretanto, no queda nada
@@ -353,49 +394,41 @@ export const connectCalendar = async (uid: string, data: unknown, deps: Calendar
   });
   if (!saved) {
     await withdraw();
-    throw new HttpsError('permission-denied', 'Tu cuenta ya no tiene acceso a CLAR.');
+    throw fail('permission-denied', (t) => t.noAccess);
   }
   rememberAccessToken(connectionKey(uid, link), tokens.accessToken, tokens.expiresIn);
   // Si entretanto le quitaron la función, no se queda conectada
   if (!(await calendarEntitled(uid))) {
     await disconnectCalendar(uid, { onlyConnection: connectedAt, deps });
-    throw new HttpsError('permission-denied', 'Tu cuenta ya no tiene activada la sincronización con Google Calendar.');
+    throw fail('permission-denied', (t) => t.noLongerEnabled);
   }
   let result: { synced: number; failed: number };
   try {
-    result = await syncAllTasks(uid, link, deps, link.calendarId === previous?.calendarId);
+    result = await syncAllTasks(uid, link, deps, link.calendarId === previous?.calendarId, language);
   } catch (error) {
-    if (!(await stillConnected(uid, link))) throw new HttpsError('failed-precondition', CLOSED_MESSAGE);
+    if (!(await stillConnected(uid, link))) throw fail('failed-precondition', (t) => t.closed);
     const reason = reconnectReason(error);
     await handleFailure(uid, error, deps, link);
-    if (reason) throw new HttpsError('failed-precondition', RECONNECT_MESSAGE[reason]);
+    if (reason) throw fail('failed-precondition', (t) => t.reconnect[reason]);
     // Conectada, pero sin subir las tareas (p. ej. un fallo de la base de datos)
     await finishConnection(uid, link, null);
-    throw new HttpsError(
-      'unavailable',
-      'Se conectó, pero no se pudieron subir las tareas. Desconecta y vuelve a conectar para subirlas.'
-    );
+    throw fail('unavailable', (t) => t.notUploaded);
   }
-  if (!(await finishConnection(uid, link, result))) throw new HttpsError('failed-precondition', CLOSED_MESSAGE);
+  if (!(await finishConnection(uid, link, result))) throw fail('failed-precondition', (t) => t.closed);
   logger.info('Calendar connected', result);
   return result;
 };
 
-export const connectGoogleCalendar = onCall(
+export const connectGoogleCalendar = onUserCall(
   { region: REGION, secrets: calendarSecrets, timeoutSeconds: 540 },
   async (request) => {
     const auth = requireAuth(request);
-    if (isEmulator || !clientIdParam.value().trim()) {
-      throw new HttpsError(
-        'failed-precondition',
-        'La sincronización con Google Calendar no está disponible en esta instalación.'
-      );
-    }
+    if (isEmulator || !clientIdParam.value().trim()) throw fail('failed-precondition', (t) => t.unavailable);
     return connectCalendar(auth.uid, request.data, calendarDeps());
   }
 );
 
-export const disconnectGoogleCalendar = onCall({ region: REGION, secrets: calendarKeySecrets }, async (request) => {
+export const disconnectGoogleCalendar = onUserCall({ region: REGION, secrets: calendarKeySecrets }, async (request) => {
   const auth = requireAuth(request);
   await disconnectCalendar(auth.uid);
   logger.info('Calendar disconnected', { reason: 'user' });
@@ -403,7 +436,8 @@ export const disconnectGoogleCalendar = onCall({ region: REGION, secrets: calend
 });
 
 // Cada cambio de una tarea, en su evento. Casi ninguna cuenta está conectada: lo primero es comprobarlo. Un cambio que
-// no afecta al evento (p. ej. la prioridad) no llama a Google
+// no afecta al evento (p. ej. la prioridad) no llama a Google. Basta compararlo en español: si el evento no cambia en un
+// idioma, tampoco en el otro (syncTaskEvent lo escribe en el de la cuenta)
 export const syncTaskCalendar = onDocumentWritten(
   { document: 'users/{uid}/tasks/{taskId}', region: REGION, secrets: calendarSecrets },
   async (event) => {

@@ -1,6 +1,12 @@
 import React from 'react';
 import { TaskStatus } from '../types';
 import { TASK_STATUSES } from '../services/tasks';
+import { messages } from '../i18n/locale';
+
+const m = messages(
+  { statusOf: (title: string) => `Estado de «${title}»`, blocked: ' (bloqueada)' },
+  { statusOf: (title) => `Status of “${title}”`, blocked: ' (blocked)' }
+);
 
 interface TaskStatusSelectProps {
   status: TaskStatus;
@@ -26,7 +32,7 @@ export const TaskStatusSelect: React.FC<TaskStatusSelectProps> = ({
     <select
       value={status}
       onChange={(e) => onChange(e.target.value as TaskStatus)}
-      aria-label={`Estado de «${taskTitle}»`}
+      aria-label={m.statusOf(taskTitle)}
       className={`cursor-pointer rounded-lg border font-semibold focus:ring-2 focus:ring-indigo-400 focus:outline-none ${current.className} ${
         size === 'xs' ? 'px-1.5 py-0.5 text-[10px]' : 'px-2 py-1 text-[11px]'
       }`}
@@ -34,7 +40,7 @@ export const TaskStatusSelect: React.FC<TaskStatusSelectProps> = ({
       {TASK_STATUSES.map((s) => (
         <option key={s.value} value={s.value} disabled={blocked && NEEDS_UNBLOCKED.includes(s.value)}>
           {s.label}
-          {blocked && NEEDS_UNBLOCKED.includes(s.value) ? ' (bloqueada)' : ''}
+          {blocked && NEEDS_UNBLOCKED.includes(s.value) ? m.blocked : ''}
         </option>
       ))}
     </select>

@@ -16,43 +16,315 @@ import {
 } from '../types';
 import { analyzeImmediateActionSyntax, SyntaxAnalysisResult } from '../services/syntaxAnalyzer';
 import { inferWheelCategory, NLPSuggestionResult } from '../services/nlpEngine';
-import { formatTaskDates, isCancelled, toLocalDate, validateTaskDates } from '../services/tasks';
+import { PRIORITY_LABEL, formatDay, isCancelled, toLocalDate, validateTaskDates } from '../services/tasks';
 import { createsCycle, dependencyCandidates, dependentsOf, tasksById } from '../services/dependencies';
 import { ESTIMATE_OPTIONS } from '../services/taskListing';
 import {
+  afterDoneText,
   buildRecurrence,
   canRepeatFromCompletion,
   describeRecurrence,
   everyPeriod,
   firstOccurrence,
   isLastWeekdayOfMonth,
+  monthlyDayText,
   nextOccurrence,
   nthOfMonth,
   repeatUnit,
   toDateString
 } from '../services/recurrence';
+import { messages } from '../i18n/locale';
 
 const REPEAT_FREQUENCIES: RecurrenceFrequency[] = ['DAILY', 'WEEKLY', 'MONTHLY', 'YEARLY'];
-// Nombre completo del campo «Cada N» (se lee con el lector de pantalla)
-const REPEAT_HOW_MANY: Record<RecurrenceFrequency, string> = {
-  DAILY: 'cuántos días',
-  WEEKLY: 'cuántas semanas',
-  MONTHLY: 'cuántos meses',
-  YEARLY: 'cuántos años'
-};
 const REPEAT_INTERVAL_MAX = 99;
-const WEEKDAY_NAMES = ['domingo', 'lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado'];
-const ORDINAL_LABELS = ['', '1.er', '2.º', '3.er', '4.º'];
-// Semana empezando en lunes; `day` es el número de JavaScript (0 = domingo)
-const WEEKDAY_TOGGLES = [
-  { day: 1, short: 'L', name: 'Lunes' },
-  { day: 2, short: 'M', name: 'Martes' },
-  { day: 3, short: 'X', name: 'Miércoles' },
-  { day: 4, short: 'J', name: 'Jueves' },
-  { day: 5, short: 'V', name: 'Viernes' },
-  { day: 6, short: 'S', name: 'Sábado' },
-  { day: 0, short: 'D', name: 'Domingo' }
-];
+
+const m = messages(
+  {
+    // Nombre completo del campo «Cada N» (se lee con el lector de pantalla)
+    repeatHowMany: {
+      DAILY: 'cuántos días',
+      WEEKLY: 'cuántas semanas',
+      MONTHLY: 'cuántos meses',
+      YEARLY: 'cuántos años'
+    } satisfies Record<RecurrenceFrequency, string>,
+    // Semana empezando en lunes; `day` es el número de JavaScript (0 = domingo)
+    weekdayToggles: [
+      { day: 1, short: 'L', name: 'Lunes' },
+      { day: 2, short: 'M', name: 'Martes' },
+      { day: 3, short: 'X', name: 'Miércoles' },
+      { day: 4, short: 'J', name: 'Jueves' },
+      { day: 5, short: 'V', name: 'Viernes' },
+      { day: 6, short: 'S', name: 'Sábado' },
+      { day: 0, short: 'D', name: 'Domingo' }
+    ],
+    nameRequired: 'El nombre es obligatorio.',
+    dependencyCycle: 'Esa tarea ya espera a esta (directa o indirectamente): elige otra o ninguna.',
+    intervalRange: (max: number) => `Escribe un número del 1 al ${max}.`,
+    endBeforeStart: 'La fecha límite (fin de la repetición) no puede ser anterior al inicio.',
+    noRepetition: 'No hay ninguna repetición entre el inicio y la fecha límite.',
+    startAfterDueTime: 'La hora de inicio no puede ser posterior a la hora límite.',
+    editTask: 'Editar la tarea',
+    newTask: 'Nueva tarea',
+    subtitle: 'Empieza por un verbo: así sabrás exactamente qué hacer.',
+    close: 'Cerrar',
+    list: 'Lista',
+    work: 'Profesional',
+    personal: 'Personal',
+    task: 'Tarea',
+    characters: (count: number) => `${count}/100 caracteres`,
+    actionVerb: 'Verbo físico:',
+    titleHint: 'empieza por una acción concreta que puedas hacer ya (Llamar, Enviar, Reservar…).',
+    titlePlaceholder: 'ej. Llamar al proveedor para acordar el plazo de entrega',
+    dictateTask: 'Dictar la tarea',
+    writeTask: 'Escribe la tarea.',
+    tooLong: 'Supera el límite de 100 caracteres recomendado para legibilidad.',
+    missingVerb: 'Falta un verbo transitivo de acción física motora.',
+    firstStep: '¿Cuál es el primer paso? Conviértelo en algo que puedas hacer ya.',
+    useSuggestion: (suggestion: string) => `Usar sugerencia: "${suggestion}"`,
+    keepWording: 'Mantener redacción',
+    project: 'Proyecto',
+    optional: '(opcional)',
+    noProject: '(Sin proyecto)',
+    projectUnavailable: '(Proyecto no disponible ahora)',
+    projectFinished: ' (terminado)',
+    projectArchived: ' (archivado)',
+    goal: 'Meta',
+    noGoal: '(Sin meta)',
+    goalUnavailable: '(Meta no disponible ahora)',
+    goalAchieved: ' (lograda)',
+    goalArchived: ' (archivada)',
+    projectGoal: (project: string) => `La del proyecto «${project}»: para cambiarla, cambia el proyecto o quítalo.`,
+    goalArea: (area: string) => `Área de la Rueda: ${area} (la de la meta).`,
+    linkTo: (goal: string) => `Vincular a «${goal}»`,
+    noGoalsYet: 'Aún no tienes metas. Vincula la tarea a una para ver cómo avanza.',
+    goalsLater: 'Puedes vincular la tarea a una meta cuando la crees en «Metas».',
+    newGoal: 'Nueva meta',
+    goalCreated: (goal: string) => `Meta «${goal}» creada y vinculada a esta tarea.`,
+    dueDate: 'Fecha límite',
+    repeatEnd: '· fin de la repetición (opcional)',
+    dueTime: 'Hora límite',
+    repeatDueHelp: 'Al repetir, cada repetición vence su propio día, con las horas indicadas. ',
+    deadlineHelp: (violet: React.ReactNode, red: React.ReactNode) => (
+      <>
+        Sin hora, el plazo termina al final del día. El título se pone {violet} cuando falta menos de una semana y {red}{' '}
+        cuando ha vencido. El día que vence lleva además la etiqueta «Hoy».
+      </>
+    ),
+    violet: 'violeta',
+    red: 'rojo',
+    alarm: 'Alarma',
+    removeAlarm: 'Quitar la alarma',
+    remove: 'Quitar',
+    alarmHelp: 'Suena el día límite a esa hora; con hora límite, tiene que ser antes de ella.',
+    alarmPush:
+      'Suena mientras CLAR esté abierta y, con «Avisarme también con CLAR cerrada» activado en el menú de tu cuenta, aunque esté cerrada. Si no, el aviso sale al abrirla.',
+    alarmNoPush:
+      'Suena mientras CLAR esté abierta: en el ordenador, también en segundo plano; en el móvil, mientras esté a la vista. Con CLAR cerrada o el móvil bloqueado, el aviso sale al abrirla: para no perderla, añade la tarea al calendario (.ics), que lleva la alarma.',
+    priority: 'Prioridad',
+    priorityHelp: 'Con la fecha límite a más de una semana, cuenta un nivel por debajo.',
+    moreOptions: 'Más opciones',
+    moreOptionsList: 'descripción, estimación, área, dependencia, inicio, repetición, «Algún día» y notas',
+    description: 'Descripción',
+    descriptionPlaceholder: 'Detalla el resultado esperado, personas involucradas o requerimientos físicos previos...',
+    findingArea: 'Buscando el área de tu Rueda…',
+    suggestion: 'Sugerencia:',
+    linkArea: (area: React.ReactNode) => <>¿Vincular a {area}?</>,
+    confidence: (percent: number) => `(${percent}% de confianza)`,
+    useArea: 'Usar esta área',
+    estimate: 'Estimación (duración)',
+    notEstimated: '(Sin estimar)',
+    wheelArea: 'Área de la Rueda',
+    noArea: '(Sin área)',
+    goalAreaFixed: (goal: string) => `La de su meta, «${goal}»: para cambiarla, cambia la meta o quítala.`,
+    area: 'Área:',
+    suggested: 'sugerida',
+    chosenByYou: 'elegida por ti',
+    startsAfter: 'Empieza después de',
+    noDependency: '(No espera a ninguna tarea)',
+    deletedTask: '(Tarea eliminada)',
+    waitsForThis: (title: string) => `${title} (espera a esta tarea)`,
+    closedTask: (title: string, cancelled: boolean) => `${title} (${cancelled ? 'cancelada' : 'hecha'})`,
+    dependencyHelp:
+      'Mientras esa tarea no esté hecha o cancelada, esta queda bloqueada: no entra en el Top 10 ni se puede marcar como hecha o en progreso. Varias tareas pueden esperar a la misma.',
+    waitingForThis: (titles: string[]) => `Esperan a esta tarea: ${titles.map((t) => `«${t}»`).join(', ')}.`,
+    startAndRepeat: 'Inicio y repetición (opcional)',
+    repeatStart: 'Inicio de la repetición',
+    todayIfEmpty: ' (hoy si lo dejas vacío)',
+    rangeStart: 'Inicio (para un intervalo)',
+    startDate: 'Fecha de inicio',
+    startTime: 'Hora de inicio',
+    repeat: 'Repetir',
+    every: 'Cada',
+    noRepeat: 'No se repite',
+    whenNextDue: 'Cuándo vence la siguiente',
+    fixedDates: 'En fechas fijas',
+    weekdays: 'Días de la semana',
+    monthDay: 'Qué día del mes',
+    first: (date: string) => ` · Primera: ${date}`,
+    ifDoneThatDay: ' · Si la haces ese día, ',
+    whenCompleted: ' · Al completarla, ',
+    nextDue: (date: string) => `la siguiente vencerá el ${date}`,
+    noMoreRepeats: 'no habrá más repeticiones',
+    inMoreOptions: (error: string) => `${error} (en «Más opciones»)`,
+    saveForSomeday: 'Guardar para algún día',
+    somedayHelp: 'No entrará en tu Top 10; la encontrarás en «Algún día».',
+    notes: 'Notas',
+    notePlaceholder: 'Añade una nota o un enlace…',
+    dictateNote: 'Dictar una nota',
+    add: 'Añadir',
+    beforeSaving: 'Antes de guardar:',
+    upTo100: 'Hasta 100 caracteres',
+    startsWithVerb: 'Empieza por un verbo de acción',
+    cancel: 'Cancelar',
+    saveChanges: 'Guardar los cambios',
+    saveTask: 'Guardar la tarea',
+    discardEdit: 'Has cambiado esta tarea y no has guardado los cambios.',
+    discardNew: 'Has empezado una tarea nueva y no la has guardado.'
+  },
+  {
+    repeatHowMany: {
+      DAILY: 'how many days',
+      WEEKLY: 'how many weeks',
+      MONTHLY: 'how many months',
+      YEARLY: 'how many years'
+    },
+    weekdayToggles: [
+      { day: 1, short: 'M', name: 'Monday' },
+      { day: 2, short: 'T', name: 'Tuesday' },
+      { day: 3, short: 'W', name: 'Wednesday' },
+      { day: 4, short: 'T', name: 'Thursday' },
+      { day: 5, short: 'F', name: 'Friday' },
+      { day: 6, short: 'S', name: 'Saturday' },
+      { day: 0, short: 'S', name: 'Sunday' }
+    ],
+    nameRequired: 'The name is required.',
+    dependencyCycle: 'That task is already waiting for this one (directly or indirectly): choose another one or none.',
+    intervalRange: (max) => `Write a number from 1 to ${max}.`,
+    endBeforeStart: "The due date (end of the repeat) can't be before the start.",
+    noRepetition: "There's no repeat between the start and the due date.",
+    startAfterDueTime: "The start time can't be after the due time.",
+    editTask: 'Edit task',
+    newTask: 'New task',
+    subtitle: "Start with a verb: that way you'll know exactly what to do.",
+    close: 'Close',
+    list: 'List',
+    work: 'Work',
+    personal: 'Personal',
+    task: 'Task',
+    characters: (count) => `${count}/100 characters`,
+    actionVerb: 'Action verb:',
+    titleHint: 'start with a concrete action you can do right away (Call, Send, Book…).',
+    titlePlaceholder: 'e.g. Call the supplier to agree on the delivery date',
+    dictateTask: 'Dictate the task',
+    writeTask: 'Write the task.',
+    tooLong: 'It goes over the 100-character limit recommended for readability.',
+    missingVerb: 'It needs an action verb.',
+    firstStep: "What's the first step? Turn it into something you can do right away.",
+    useSuggestion: (suggestion) => `Use suggestion: “${suggestion}”`,
+    keepWording: 'Keep my wording',
+    project: 'Project',
+    optional: '(optional)',
+    noProject: '(No project)',
+    projectUnavailable: '(Project not available right now)',
+    projectFinished: ' (finished)',
+    projectArchived: ' (archived)',
+    goal: 'Goal',
+    noGoal: '(No goal)',
+    goalUnavailable: '(Goal not available right now)',
+    goalAchieved: ' (achieved)',
+    goalArchived: ' (archived)',
+    projectGoal: (project) => `The goal of the project “${project}”: to change it, change or remove the project.`,
+    goalArea: (area) => `Wheel area: ${area} (the goal's).`,
+    linkTo: (goal) => `Link to “${goal}”`,
+    noGoalsYet: "You don't have any goals yet. Link the task to one to see how it's going.",
+    goalsLater: 'You can link the task to a goal once you create one in “Goals”.',
+    newGoal: 'New goal',
+    goalCreated: (goal) => `Goal “${goal}” created and linked to this task.`,
+    dueDate: 'Due date',
+    repeatEnd: '· end of the repeat (optional)',
+    dueTime: 'Due time',
+    repeatDueHelp: 'When it repeats, each repeat is due on its own day, at the times you set. ',
+    deadlineHelp: (violet, red) => (
+      <>
+        Without a time, the deadline ends at the end of the day. The title turns {violet} when it's less than a week
+        away and {red} when it's overdue. On the day it's due, it also gets the “Today” tag.
+      </>
+    ),
+    violet: 'purple',
+    red: 'red',
+    alarm: 'Alarm',
+    removeAlarm: 'Remove the alarm',
+    remove: 'Remove',
+    alarmHelp: 'It rings on the due date at that time; with a due time, it has to be before it.',
+    alarmPush:
+      "It rings while CLAR is open and, with “Also notify me when CLAR is closed” turned on in your account menu, even when it's closed. Otherwise, you'll see it when you open CLAR.",
+    alarmNoPush:
+      "It rings while CLAR is open: on a computer, also in the background; on a phone, while it's on screen. With CLAR closed or your phone locked, you'll see it when you open CLAR: so you don't miss it, add the task to your calendar (.ics), which includes the alarm.",
+    priority: 'Priority',
+    priorityHelp: 'With the due date more than a week away, it counts one level lower.',
+    moreOptions: 'More options',
+    moreOptionsList: 'description, estimate, area, dependency, start, repeat, “Someday” and notes',
+    description: 'Description',
+    descriptionPlaceholder: 'Describe the expected result, the people involved or anything you need beforehand...',
+    findingArea: 'Looking for the area of your Wheel…',
+    suggestion: 'Suggestion:',
+    linkArea: (area) => <>Link to {area}?</>,
+    confidence: (percent) => `(${percent}% confidence)`,
+    useArea: 'Use this area',
+    estimate: 'Estimate (duration)',
+    notEstimated: '(Not estimated)',
+    wheelArea: 'Wheel area',
+    noArea: '(No area)',
+    goalAreaFixed: (goal) => `The area of its goal, “${goal}”: to change it, change or remove the goal.`,
+    area: 'Area:',
+    suggested: 'suggested',
+    chosenByYou: 'chosen by you',
+    startsAfter: 'Starts after',
+    noDependency: "(Doesn't wait for any task)",
+    deletedTask: '(Deleted task)',
+    waitsForThis: (title) => `${title} (waits for this task)`,
+    closedTask: (title, cancelled) => `${title} (${cancelled ? 'canceled' : 'done'})`,
+    dependencyHelp:
+      "Until that task is done or canceled, this one stays blocked: it doesn't go into the Top 10 and can't be marked as done or in progress. Several tasks can wait for the same one.",
+    waitingForThis: (titles) => `Waiting for this task: ${titles.map((t) => `“${t}”`).join(', ')}.`,
+    startAndRepeat: 'Start and repeat (optional)',
+    repeatStart: 'Repeat start',
+    todayIfEmpty: ' (today if you leave it empty)',
+    rangeStart: 'Start (for a date range)',
+    startDate: 'Start date',
+    startTime: 'Start time',
+    repeat: 'Repeat',
+    every: 'Every',
+    noRepeat: "Doesn't repeat",
+    whenNextDue: 'When the next one is due',
+    fixedDates: 'On fixed dates',
+    weekdays: 'Days of the week',
+    monthDay: 'Which day of the month',
+    first: (date) => ` · First: ${date}`,
+    ifDoneThatDay: ' · If you do it that day, ',
+    whenCompleted: ' · When you complete it, ',
+    nextDue: (date) => `the next one will be due on ${date}`,
+    noMoreRepeats: 'there will be no more repeats',
+    inMoreOptions: (error) => `${error} (in “More options”)`,
+    saveForSomeday: 'Save for someday',
+    somedayHelp: "It won't go into your Top 10; you'll find it in “Someday”.",
+    notes: 'Notes',
+    notePlaceholder: 'Add a note or a link…',
+    dictateNote: 'Dictate a note',
+    add: 'Add',
+    beforeSaving: 'Before saving:',
+    upTo100: 'Up to 100 characters',
+    startsWithVerb: 'Starts with an action verb',
+    cancel: 'Cancel',
+    saveChanges: 'Save changes',
+    saveTask: 'Save task',
+    discardEdit: "You've changed this task and haven't saved the changes.",
+    discardNew: "You've started a new task and haven't saved it."
+  }
+);
+
+// «el día 15» → «El día 15» (las opciones del mes empiezan la frase)
+const capitalize = (text: string) => text.charAt(0).toUpperCase() + text.slice(1);
 import {
   X,
   AlertTriangle,
@@ -259,7 +531,7 @@ export const TaskModal: React.FC<TaskModalProps> = ({
     () =>
       title.trim()
         ? analyzeImmediateActionSyntax(title)
-        : { isValid: false, detectedVerb: null, warning: 'El nombre es obligatorio.' },
+        : { isValid: false, detectedVerb: null, warning: m.nameRequired },
     [title]
   );
   const [nlpResult, setNlpResult] = useState<NLPSuggestionResult | null>(null);
@@ -456,9 +728,7 @@ export const TaskModal: React.FC<TaskModalProps> = ({
   // Se revisa con las tareas de ahora: si entretanto la elegida pasó a esperar a esta (en otra pestaña o dispositivo),
   // guardarla dejaría las dos bloqueadas para siempre
   const dependencyError =
-    dependsOn && createsCycle(editingTask?.id, dependsOn, tasksById(tasks))
-      ? 'Esa tarea ya espera a esta (directa o indirectamente): elige otra o ninguna.'
-      : null;
+    dependsOn && createsCycle(editingTask?.id, dependsOn, tasksById(tasks)) ? m.dependencyCycle : null;
   const waitingForThis = editingTask ? dependentsOf(editingTask, tasks) : [];
   const goalOptions = knownGoals.filter((g) => g.status === 'ACTIVE' || g.id === goalId);
   const suggestedGoal = useMemo(() => (goalId ? null : suggestGoal(title, knownGoals)), [goalId, title, knownGoals]);
@@ -527,19 +797,12 @@ export const TaskModal: React.FC<TaskModalProps> = ({
     repeatFrequency === storedRecurrence.frequency
   );
   const anchorDay = keepsStoredDay ? storedRecurrence!.monthDay! : anchor.getDate();
+  const monthlyLabel = (mode: MonthlyMode) =>
+    capitalize(monthlyDayText(mode, anchorDay, anchor.getDay(), nthOfMonth(anchor)));
   const monthlyOptions: { mode: MonthlyMode; label: string }[] = [
-    { mode: 'DAY_OF_MONTH', label: `El día ${anchorDay}` },
-    ...(nthOfMonth(anchor) <= 4
-      ? [
-          {
-            mode: 'NTH_WEEKDAY' as const,
-            label: `El ${ORDINAL_LABELS[nthOfMonth(anchor)]} ${WEEKDAY_NAMES[anchor.getDay()]}`
-          }
-        ]
-      : []),
-    ...(isLastWeekdayOfMonth(anchor)
-      ? [{ mode: 'LAST_WEEKDAY' as const, label: `El último ${WEEKDAY_NAMES[anchor.getDay()]}` }]
-      : [])
+    { mode: 'DAY_OF_MONTH', label: monthlyLabel('DAY_OF_MONTH') },
+    ...(nthOfMonth(anchor) <= 4 ? [{ mode: 'NTH_WEEKDAY' as const, label: monthlyLabel('NTH_WEEKDAY') }] : []),
+    ...(isLastWeekdayOfMonth(anchor) ? [{ mode: 'LAST_WEEKDAY' as const, label: monthlyLabel('LAST_WEEKDAY') }] : [])
   ];
   // Si al cambiar la fecha el modo elegido deja de existir (p. ej. ya no es el último lunes), se usa el día del mes
   const effectiveMonthlyMode = monthlyOptions.some((o) => o.mode === repeatMonthlyMode)
@@ -575,16 +838,16 @@ export const TaskModal: React.FC<TaskModalProps> = ({
   // Vacío mientras se escribe otro número no es un error; «0» o letras, sí (y no deja guardar)
   const intervalError =
     intervalText !== null && intervalText !== '' && !validInterval(intervalText)
-      ? `Escribe un número del 1 al ${REPEAT_INTERVAL_MAX}.`
+      ? m.intervalRange(REPEAT_INTERVAL_MAX)
       : null;
   const recurrenceError = !isRepeating
     ? null
     : dueDate && dueDate < seriesStart
-      ? 'La fecha límite (fin de la repetición) no puede ser anterior al inicio.'
+      ? m.endBeforeStart
       : !firstRepetition
-        ? 'No hay ninguna repetición entre el inicio y la fecha límite.'
+        ? m.noRepetition
         : startTime && dueTime && startTime > dueTime
-          ? 'La hora de inicio no puede ser posterior a la hora límite.'
+          ? m.startAfterDueTime
           : null;
 
   // Fechas que se guardan. Una hora sin fecha no tiene sentido y se descarta; en una tarea repetida, la fecha
@@ -672,13 +935,13 @@ export const TaskModal: React.FC<TaskModalProps> = ({
           <div>
             <h2 id="task-modal-title" className="flex items-center gap-2 text-base font-bold text-slate-900">
               <ListPlus className="h-5 w-5 text-indigo-600" />
-              {editingTask ? 'Editar la tarea' : 'Nueva tarea'}
+              {editingTask ? m.editTask : m.newTask}
             </h2>
-            <p className="mt-0.5 text-xs text-slate-500">Empieza por un verbo: así sabrás exactamente qué hacer.</p>
+            <p className="mt-0.5 text-xs text-slate-500">{m.subtitle}</p>
           </div>
           <button
             onClick={requestClose}
-            aria-label="Cerrar"
+            aria-label={m.close}
             className="rounded-lg p-1.5 text-slate-500 transition-colors hover:bg-slate-200/60 hover:text-slate-600"
           >
             <X className="h-5 w-5" />
@@ -692,7 +955,7 @@ export const TaskModal: React.FC<TaskModalProps> = ({
               id="task-context-label"
               className="mb-1.5 block text-xs font-bold tracking-wider text-slate-600 uppercase"
             >
-              Lista <span className="text-red-500">*</span>
+              {m.list} <span className="text-red-500">*</span>
             </p>
             <div role="group" aria-labelledby="task-context-label" className="grid grid-cols-2 gap-3">
               <button
@@ -705,7 +968,7 @@ export const TaskModal: React.FC<TaskModalProps> = ({
                 }`}
               >
                 <span className="h-2 w-2 rounded-full bg-indigo-600" />
-                Profesional
+                {m.work}
               </button>
               <button
                 type="button"
@@ -717,7 +980,7 @@ export const TaskModal: React.FC<TaskModalProps> = ({
                 }`}
               >
                 <span className="h-2 w-2 rounded-full bg-emerald-600" />
-                Personal
+                {m.personal}
               </button>
             </div>
           </div>
@@ -726,19 +989,18 @@ export const TaskModal: React.FC<TaskModalProps> = ({
           <div>
             <div className="mb-1.5 flex items-center justify-between">
               <label htmlFor="task-title" className="text-xs font-bold tracking-wider text-slate-600 uppercase">
-                Tarea <span className="text-red-500">*</span>
+                {m.task} <span className="text-red-500">*</span>
               </label>
               <span
                 className={`font-mono text-[11px] ${title.length > 100 ? 'font-bold text-red-600' : 'text-slate-500'}`}
               >
-                {title.length}/100 caracteres
+                {m.characters(title.length)}
               </span>
             </div>
 
             {/* Texto indicativo encima del campo: la acción empieza por un verbo físico */}
             <p id="task-title-hint" className="mb-1.5 text-[11px] text-slate-500">
-              <strong className="text-slate-700">Verbo físico:</strong> empieza por una acción concreta que puedas hacer
-              ya (Llamar, Enviar, Reservar…).
+              <strong className="text-slate-700">{m.actionVerb}</strong> {m.titleHint}
             </p>
 
             <div className="relative flex flex-wrap items-center gap-1">
@@ -754,7 +1016,7 @@ export const TaskModal: React.FC<TaskModalProps> = ({
                   setTypedTitle((n) => n + 1);
                 }}
                 onBlur={() => setTouched({ ...touched, title: true })}
-                placeholder="ej. Llamar al proveedor para acordar el plazo de entrega"
+                placeholder={m.titlePlaceholder}
                 className={`min-w-0 flex-1 rounded-xl border px-3.5 py-2.5 text-sm transition-all focus:ring-2 focus:outline-none ${
                   touched.title && (isTitleEmpty || isTitleTooLong || isSyntaxInvalid)
                     ? 'border-red-400 bg-red-50/20 focus:ring-red-400'
@@ -764,7 +1026,7 @@ export const TaskModal: React.FC<TaskModalProps> = ({
                 }`}
               />
               <DictateButton
-                label="Dictar la tarea"
+                label={m.dictateTask}
                 value={title}
                 onChange={(value) => {
                   setTitle(value);
@@ -779,20 +1041,19 @@ export const TaskModal: React.FC<TaskModalProps> = ({
             {syntaxResult.isValid && syntaxResult.detectedVerb && (
               <p className="mt-1 flex items-center gap-1 text-[11px] font-semibold text-emerald-700">
                 <Check className="h-3.5 w-3.5" aria-hidden="true" />
-                Verbo físico: {syntaxResult.detectedVerb}
+                {m.actionVerb} {syntaxResult.detectedVerb}
               </p>
             )}
 
             {/* Error por longitud o vacío */}
             {touched.title && isTitleEmpty && (
               <p className="mt-1 flex items-center gap-1 text-xs text-red-600">
-                <AlertTriangle className="h-3.5 w-3.5" /> Escribe la tarea.
+                <AlertTriangle className="h-3.5 w-3.5" /> {m.writeTask}
               </p>
             )}
             {isTitleTooLong && (
               <p className="mt-1 flex items-center gap-1 text-xs text-red-600">
-                <AlertTriangle className="h-3.5 w-3.5" /> Supera el límite de 100 caracteres recomendado para
-                legibilidad.
+                <AlertTriangle className="h-3.5 w-3.5" /> {m.tooLong}
               </p>
             )}
 
@@ -802,13 +1063,8 @@ export const TaskModal: React.FC<TaskModalProps> = ({
                 <div className="flex items-start gap-2">
                   <ShieldAlert className="mt-0.5 h-4 w-4 shrink-0 text-amber-600" />
                   <div className="flex-1 space-y-1.5">
-                    <p className="font-bold">
-                      {syntaxResult.warning || 'Falta un verbo transitivo de acción física motora.'}
-                    </p>
-                    <p className="text-amber-800">
-                      {syntaxResult.assistantQuestion ||
-                        '¿Cuál es el primer paso? Conviértelo en algo que puedas hacer ya.'}
-                    </p>
+                    <p className="font-bold">{syntaxResult.warning || m.missingVerb}</p>
+                    <p className="text-amber-800">{syntaxResult.assistantQuestion || m.firstStep}</p>
                     {syntaxResult.suggestion && (
                       <div className="flex items-center gap-2 pt-1">
                         <button
@@ -816,7 +1072,7 @@ export const TaskModal: React.FC<TaskModalProps> = ({
                           onClick={() => applySyntaxSuggestion(syntaxResult.suggestion!)}
                           className="flex items-center gap-1 rounded-lg bg-amber-700 px-2.5 py-1 text-[11px] font-semibold text-white transition-colors hover:bg-amber-800"
                         >
-                          <span>Usar sugerencia: "{syntaxResult.suggestion}"</span>
+                          <span>{m.useSuggestion(syntaxResult.suggestion)}</span>
                           <ArrowRight className="h-3 w-3" />
                         </button>
                         <button
@@ -824,7 +1080,7 @@ export const TaskModal: React.FC<TaskModalProps> = ({
                           onClick={() => setOverrideSyntaxWarning(true)}
                           className="text-[11px] text-amber-700 hover:underline"
                         >
-                          Mantener redacción
+                          {m.keepWording}
                         </button>
                       </div>
                     )}
@@ -841,7 +1097,7 @@ export const TaskModal: React.FC<TaskModalProps> = ({
                 htmlFor="task-project"
                 className="mb-1.5 block text-xs font-bold tracking-wider text-slate-600 uppercase"
               >
-                Proyecto <span className="font-normal tracking-normal text-slate-500 normal-case">(opcional)</span>
+                {m.project} <span className="font-normal tracking-normal text-slate-500 normal-case">{m.optional}</span>
               </label>
               <select
                 id="task-project"
@@ -849,12 +1105,12 @@ export const TaskModal: React.FC<TaskModalProps> = ({
                 onChange={(e) => chooseProject(e.target.value)}
                 className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-400 focus:outline-none"
               >
-                <option value="">(Sin proyecto)</option>
-                {projectId && !project && <option value={projectId}>(Proyecto no disponible ahora)</option>}
+                <option value="">{m.noProject}</option>
+                {projectId && !project && <option value={projectId}>{m.projectUnavailable}</option>}
                 {projectOptions.map((p) => (
                   <option key={p.id} value={p.id}>
                     {p.title}
-                    {p.status === 'FINISHED' ? ' (terminado)' : p.status === 'ARCHIVED' ? ' (archivado)' : ''}
+                    {p.status === 'FINISHED' ? m.projectFinished : p.status === 'ARCHIVED' ? m.projectArchived : ''}
                   </option>
                 ))}
               </select>
@@ -869,7 +1125,7 @@ export const TaskModal: React.FC<TaskModalProps> = ({
                   htmlFor="task-goal"
                   className="mb-1.5 block text-xs font-bold tracking-wider text-slate-600 uppercase"
                 >
-                  Meta <span className="font-normal tracking-normal text-slate-500 normal-case">(opcional)</span>
+                  {m.goal} <span className="font-normal tracking-normal text-slate-500 normal-case">{m.optional}</span>
                 </label>
                 <select
                   ref={goalSelectRef}
@@ -879,8 +1135,8 @@ export const TaskModal: React.FC<TaskModalProps> = ({
                   onChange={(e) => chooseGoal(e.target.value)}
                   className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-400 focus:outline-none"
                 >
-                  <option value="">(Sin meta)</option>
-                  {goalId && !goal && <option value={goalId}>(Meta no disponible ahora)</option>}
+                  <option value="">{m.noGoal}</option>
+                  {goalId && !goal && <option value={goalId}>{m.goalUnavailable}</option>}
                   {areasInUse(
                     wheelAreas,
                     goalOptions.map((g) => g.area)
@@ -891,22 +1147,16 @@ export const TaskModal: React.FC<TaskModalProps> = ({
                         .map((g) => (
                           <option key={g.id} value={g.id}>
                             {g.title}
-                            {g.status === 'ACHIEVED' ? ' (lograda)' : g.status === 'ARCHIVED' ? ' (archivada)' : ''}
+                            {g.status === 'ACHIEVED' ? m.goalAchieved : g.status === 'ARCHIVED' ? m.goalArchived : ''}
                           </option>
                         ))}
                     </optgroup>
                   ))}
                 </select>
                 {project ? (
-                  <p className="mt-1 text-[11px] text-slate-500">
-                    La del proyecto «{project.title}»: para cambiarla, cambia el proyecto o quítalo.
-                  </p>
+                  <p className="mt-1 text-[11px] text-slate-500">{m.projectGoal(project.title)}</p>
                 ) : (
-                  goal && (
-                    <p className="mt-1 text-[11px] text-slate-500">
-                      Área de la Rueda: {areaName(goal.area)} (la de la meta).
-                    </p>
-                  )
+                  goal && <p className="mt-1 text-[11px] text-slate-500">{m.goalArea(areaName(goal.area))}</p>
                 )}
                 {suggestedGoal && !project && (
                   <button
@@ -915,16 +1165,14 @@ export const TaskModal: React.FC<TaskModalProps> = ({
                     className="mt-1.5 inline-flex min-h-9 items-center gap-1.5 rounded-lg border border-indigo-200 bg-indigo-50 px-2.5 text-left text-xs font-semibold text-indigo-800 hover:bg-indigo-100"
                   >
                     <Target className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
-                    Vincular a «{suggestedGoal.title}»
+                    {m.linkTo(suggestedGoal.title)}
                   </button>
                 )}
               </>
             ) : (
               <p className="text-[11px] text-slate-500">
                 <Target className="mr-1 inline h-3.5 w-3.5 align-[-2px] text-indigo-500" aria-hidden="true" />
-                {onCreateGoal
-                  ? 'Aún no tienes metas. Vincula la tarea a una para ver cómo avanza.'
-                  : 'Puedes vincular la tarea a una meta cuando la crees en «Metas».'}
+                {onCreateGoal ? m.noGoalsYet : m.goalsLater}
               </p>
             )}
             {onCreateGoal &&
@@ -946,31 +1194,26 @@ export const TaskModal: React.FC<TaskModalProps> = ({
                   className="mt-1.5 inline-flex min-h-9 items-center gap-1.5 rounded-lg px-2 text-xs font-semibold text-indigo-700 hover:bg-indigo-50 hover:text-indigo-900"
                 >
                   <Plus className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
-                  Nueva meta
+                  {m.newGoal}
                 </button>
               ))}
             {/* Siempre presente, para que el lector de pantalla anuncie la confirmación */}
             <p role="status" className="text-[11px] font-medium text-emerald-700">
-              {createdGoalId && goal?.id === createdGoalId
-                ? `Meta «${goal.title}» creada y vinculada a esta tarea.`
-                : ''}
+              {createdGoalId && goal?.id === createdGoalId ? m.goalCreated(goal.title) : ''}
             </p>
           </div>
 
           {/* FECHA LÍMITE: a la vista; el inicio y la repetición están en «Más opciones» */}
           <div className="space-y-1.5">
             <span className="mb-1.5 block text-xs font-bold tracking-wider text-slate-600 uppercase">
-              Fecha límite
+              {m.dueDate}
               {isRepeating && (
-                <span className="font-normal tracking-normal text-slate-600 normal-case">
-                  {' '}
-                  · fin de la repetición (opcional)
-                </span>
+                <span className="font-normal tracking-normal text-slate-600 normal-case"> {m.repeatEnd}</span>
               )}
             </span>
             <div className="flex gap-2">
               <DateField
-                label="Fecha límite"
+                label={m.dueDate}
                 value={dueDate}
                 onChange={setDueDate}
                 onDraftChange={draftOf('dueDate')}
@@ -978,7 +1221,7 @@ export const TaskModal: React.FC<TaskModalProps> = ({
                 inputClassName="px-2.5 py-1.5 rounded-lg border border-slate-300 text-xs focus:outline-none focus:ring-2 focus:ring-indigo-400"
               />
               <TimeField
-                label="Hora límite"
+                label={m.dueTime}
                 value={dueTime}
                 onChange={setDueTime}
                 onDraftChange={draftOf('dueTime')}
@@ -987,11 +1230,11 @@ export const TaskModal: React.FC<TaskModalProps> = ({
               />
             </div>
             <p className="text-[11px] leading-relaxed text-slate-500">
-              {isRepeating && 'Al repetir, cada repetición vence su propio día, con las horas indicadas. '}
-              Sin hora, el plazo termina al final del día. El título se pone{' '}
-              <span className="font-semibold text-violet-600">violeta</span> cuando falta menos de una semana y{' '}
-              <span className="font-semibold text-red-600">rojo</span> cuando ha vencido. El día que vence lleva además
-              la etiqueta «Hoy».
+              {isRepeating && m.repeatDueHelp}
+              {m.deadlineHelp(
+                <span className="font-semibold text-violet-600">{m.violet}</span>,
+                <span className="font-semibold text-red-600">{m.red}</span>
+              )}
             </p>
           </div>
 
@@ -1001,12 +1244,12 @@ export const TaskModal: React.FC<TaskModalProps> = ({
               htmlFor="task-alarm"
               className="mb-1.5 block text-xs font-bold tracking-wider text-slate-600 uppercase"
             >
-              Alarma <span className="font-normal tracking-normal text-slate-500 normal-case">(opcional)</span>
+              {m.alarm} <span className="font-normal tracking-normal text-slate-500 normal-case">{m.optional}</span>
             </label>
             <div className="flex items-center gap-2">
               <TimeField
                 id="task-alarm"
-                label="Alarma"
+                label={m.alarm}
                 hasVisibleLabel
                 value={alarmBlocked ? '' : alarmTime}
                 onChange={setAlarmTime}
@@ -1019,10 +1262,10 @@ export const TaskModal: React.FC<TaskModalProps> = ({
                 <button
                   type="button"
                   onClick={() => setAlarmTime('')}
-                  aria-label="Quitar la alarma"
+                  aria-label={m.removeAlarm}
                   className="min-h-9 rounded-lg px-2 text-xs font-semibold text-slate-600 hover:bg-slate-100 hover:text-slate-900"
                 >
-                  Quitar
+                  {m.remove}
                 </button>
               )}
             </div>
@@ -1037,12 +1280,7 @@ export const TaskModal: React.FC<TaskModalProps> = ({
               </p>
             )}
             <p id="task-alarm-help" className="mt-1 text-[11px] leading-relaxed text-slate-500">
-              {alarmBlocked ??
-                alarmDescription ??
-                'Suena el día límite a esa hora; con hora límite, tiene que ser antes de ella.'}{' '}
-              {pushAvailable()
-                ? 'Suena mientras CLAR esté abierta y, con «Avisarme también con CLAR cerrada» activado en el menú de tu cuenta, aunque esté cerrada. Si no, el aviso sale al abrirla.'
-                : 'Suena mientras CLAR esté abierta: en el ordenador, también en segundo plano; en el móvil, mientras esté a la vista. Con CLAR cerrada o el móvil bloqueado, el aviso sale al abrirla: para no perderla, añade la tarea al calendario (.ics), que lleva la alarma.'}
+              {alarmBlocked ?? alarmDescription ?? m.alarmHelp} {pushAvailable() ? m.alarmPush : m.alarmNoPush}
             </p>
             {alarmDescription && <NotificationPermission />}
           </div>
@@ -1053,7 +1291,7 @@ export const TaskModal: React.FC<TaskModalProps> = ({
               htmlFor="task-priority"
               className="mb-1.5 block text-xs font-bold tracking-wider text-slate-600 uppercase"
             >
-              Prioridad <span className="text-red-500">*</span>
+              {m.priority} <span className="text-red-500">*</span>
             </label>
             <select
               id="task-priority"
@@ -1061,14 +1299,12 @@ export const TaskModal: React.FC<TaskModalProps> = ({
               onChange={(e) => setPriority(e.target.value as TaskPriority)}
               className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm font-semibold focus:ring-2 focus:ring-indigo-400 focus:outline-none"
             >
-              <option value="CRITICAL">🔥 Crítica</option>
-              <option value="HIGH">⚡ Alta</option>
-              <option value="MEDIUM">⚖️ Media</option>
-              <option value="LOW">🌱 Baja</option>
+              <option value="CRITICAL">🔥 {PRIORITY_LABEL.CRITICAL}</option>
+              <option value="HIGH">⚡ {PRIORITY_LABEL.HIGH}</option>
+              <option value="MEDIUM">⚖️ {PRIORITY_LABEL.MEDIUM}</option>
+              <option value="LOW">🌱 {PRIORITY_LABEL.LOW}</option>
             </select>
-            <p className="mt-1 text-[11px] text-slate-500">
-              Con la fecha límite a más de una semana, cuenta un nivel por debajo.
-            </p>
+            <p className="mt-1 text-[11px] text-slate-500">{m.priorityHelp}</p>
           </div>
 
           {/* MÁS OPCIONES: lo que no hace falta para capturar la acción */}
@@ -1081,10 +1317,9 @@ export const TaskModal: React.FC<TaskModalProps> = ({
               className="flex min-h-11 w-full items-center justify-between gap-2 px-3.5 text-left text-xs font-bold tracking-wider text-slate-700 uppercase"
             >
               <span>
-                Más opciones
-                <span className="ml-2 font-normal tracking-normal text-slate-500 normal-case">
-                  descripción, estimación, área, dependencia, inicio, repetición, «Algún día» y notas
-                </span>
+                {m.moreOptions}
+                <span className="sr-only">: </span>
+                <span className="ml-2 font-normal tracking-normal text-slate-500 normal-case">{m.moreOptionsList}</span>
               </span>
               <ChevronDown
                 className={`h-4 w-4 shrink-0 text-slate-500 transition-transform ${showMore ? 'rotate-180' : ''}`}
@@ -1099,8 +1334,8 @@ export const TaskModal: React.FC<TaskModalProps> = ({
                     htmlFor="task-description"
                     className="text-xs font-bold tracking-wider text-slate-600 uppercase"
                   >
-                    Descripción{' '}
-                    <span className="font-normal tracking-normal text-slate-500 normal-case">(opcional)</span>
+                    {m.description}{' '}
+                    <span className="font-normal tracking-normal text-slate-500 normal-case">{m.optional}</span>
                   </label>
                 </div>
                 <textarea
@@ -1116,14 +1351,14 @@ export const TaskModal: React.FC<TaskModalProps> = ({
                     if ((e.relatedTarget as HTMLElement | null)?.tagName === 'BUTTON') return;
                     triggerNLPInference();
                   }}
-                  placeholder="Detalla el resultado esperado, personas involucradas o requerimientos físicos previos..."
+                  placeholder={m.descriptionPlaceholder}
                   className="w-full rounded-xl border border-slate-300 px-3.5 py-2.5 text-sm transition-all focus:ring-2 focus:ring-indigo-400 focus:outline-none"
                 />
 
                 {/* SUGERENCIA DE ÁREA */}
                 {nlpLoading && (
                   <p className="mt-1 flex animate-pulse items-center gap-1 text-[11px] text-indigo-600">
-                    <Sparkles className="h-3.5 w-3.5" /> Buscando el área de tu Rueda…
+                    <Sparkles className="h-3.5 w-3.5" /> {m.findingArea}
                   </p>
                 )}
 
@@ -1132,12 +1367,10 @@ export const TaskModal: React.FC<TaskModalProps> = ({
                     <div className="flex items-center gap-2 text-indigo-950">
                       <Sparkles className="h-4 w-4 text-indigo-600" />
                       <div>
-                        <span className="font-semibold">Sugerencia:</span>{' '}
-                        <span>
-                          ¿Vincular a <strong>{areaName(nlpResult.category)}</strong>?
-                        </span>
+                        <span className="font-semibold">{m.suggestion}</span>{' '}
+                        <span>{m.linkArea(<strong>{areaName(nlpResult.category)}</strong>)}</span>
                         <span className="ml-1.5 font-mono text-[11px] text-indigo-600">
-                          ({Math.round(nlpResult.confidenceScore * 100)}% de confianza)
+                          {m.confidence(Math.round(nlpResult.confidenceScore * 100))}
                         </span>
                       </div>
                     </div>
@@ -1147,7 +1380,7 @@ export const TaskModal: React.FC<TaskModalProps> = ({
                       className="flex items-center gap-1 rounded-lg bg-indigo-600 px-2.5 py-1 text-xs font-bold text-white transition-colors hover:bg-indigo-700"
                     >
                       <Check className="h-3 w-3" />
-                      <span>Usar esta área</span>
+                      <span>{m.useArea}</span>
                     </button>
                   </div>
                 )}
@@ -1161,7 +1394,7 @@ export const TaskModal: React.FC<TaskModalProps> = ({
                     htmlFor="task-estimate"
                     className="mb-1.5 block text-xs font-bold tracking-wider text-slate-600 uppercase"
                   >
-                    Estimación (duración)
+                    {m.estimate}
                   </label>
                   <select
                     id="task-estimate"
@@ -1169,7 +1402,7 @@ export const TaskModal: React.FC<TaskModalProps> = ({
                     onChange={(e) => setEstimateMinutes(e.target.value ? Number(e.target.value) : undefined)}
                     className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-400 focus:outline-none"
                   >
-                    <option value="">(Sin estimar)</option>
+                    <option value="">{m.notEstimated}</option>
                     {ESTIMATE_OPTIONS.map((o) => (
                       <option key={o.value} value={o.value}>
                         {o.label}
@@ -1184,7 +1417,7 @@ export const TaskModal: React.FC<TaskModalProps> = ({
                     htmlFor="task-category"
                     className="mb-1.5 block text-xs font-bold tracking-wider text-slate-600 uppercase"
                   >
-                    Área de la Rueda
+                    {m.wheelArea}
                   </label>
                   <select
                     id="task-category"
@@ -1196,7 +1429,7 @@ export const TaskModal: React.FC<TaskModalProps> = ({
                     }}
                     className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-400 focus:outline-none"
                   >
-                    <option value="">(Sin área)</option>
+                    <option value="">{m.noArea}</option>
                     {selectableAreas(goal ? goal.area : wheelCategory).map(({ id, label: name }) => (
                       <option key={id} value={id}>
                         {name}
@@ -1204,14 +1437,12 @@ export const TaskModal: React.FC<TaskModalProps> = ({
                     ))}
                   </select>
                   {goal ? (
-                    <p className="mt-1 text-[11px] text-slate-500">
-                      La de su meta, «{goal.title}»: para cambiarla, cambia la meta o quítala.
-                    </p>
+                    <p className="mt-1 text-[11px] text-slate-500">{m.goalAreaFixed(goal.title)}</p>
                   ) : (
                     wheelCategory && (
                       <p className="mt-1 text-[11px] text-slate-500">
-                        Área: <strong>{areaName(wheelCategory)}</strong> (
-                        {linkedBy === 'AUTO_TFIDF' ? 'sugerida' : 'elegida por ti'})
+                        {m.area} <strong>{areaName(wheelCategory)}</strong> (
+                        {linkedBy === 'AUTO_TFIDF' ? m.suggested : m.chosenByYou})
                       </p>
                     )
                   )}
@@ -1224,8 +1455,8 @@ export const TaskModal: React.FC<TaskModalProps> = ({
                   htmlFor="task-depends-on"
                   className="mb-1.5 block text-xs font-bold tracking-wider text-slate-600 uppercase"
                 >
-                  Empieza después de{' '}
-                  <span className="font-normal tracking-normal text-slate-500 normal-case">(opcional)</span>
+                  {m.startsAfter}{' '}
+                  <span className="font-normal tracking-normal text-slate-500 normal-case">{m.optional}</span>
                 </label>
                 <select
                   id="task-depends-on"
@@ -1234,20 +1465,20 @@ export const TaskModal: React.FC<TaskModalProps> = ({
                   aria-describedby="task-depends-on-help"
                   className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-400 focus:outline-none"
                 >
-                  <option value="">(No espera a ninguna tarea)</option>
+                  <option value="">{m.noDependency}</option>
                   {dependsOn && !dependencyOptions.some((t) => t.id === dependsOn) && (
                     <option value={dependsOn}>
                       {!waitingFor
-                        ? '(Tarea eliminada)'
+                        ? m.deletedTask
                         : dependencyError
-                          ? `${waitingFor.title} (espera a esta tarea)`
-                          : `${waitingFor.title} (${isCancelled(waitingFor) ? 'cancelada' : 'hecha'})`}
+                          ? m.waitsForThis(waitingFor.title)
+                          : m.closedTask(waitingFor.title, isCancelled(waitingFor))}
                     </option>
                   )}
                   {(['WORK', 'PERSONAL'] as const)
                     .filter((list) => dependencyOptions.some((t) => t.listContext === list))
                     .map((list) => (
-                      <optgroup key={list} label={list === 'WORK' ? 'Profesional' : 'Personal'}>
+                      <optgroup key={list} label={list === 'WORK' ? m.work : m.personal}>
                         {dependencyOptions
                           .filter((t) => t.listContext === list)
                           .map((t) => (
@@ -1259,8 +1490,7 @@ export const TaskModal: React.FC<TaskModalProps> = ({
                     ))}
                 </select>
                 <p id="task-depends-on-help" className="mt-1 text-[11px] leading-relaxed text-slate-500">
-                  Mientras esa tarea no esté hecha o cancelada, esta queda bloqueada: no entra en el Top 10 ni se puede
-                  marcar como hecha o en progreso. Varias tareas pueden esperar a la misma.
+                  {m.dependencyHelp}
                 </p>
                 {dependencyError && (
                   <p role="alert" className="mt-1 flex items-center gap-1 text-xs font-medium text-red-600">
@@ -1270,7 +1500,7 @@ export const TaskModal: React.FC<TaskModalProps> = ({
                 )}
                 {waitingForThis.length > 0 && (
                   <p className="mt-1 text-[11px] text-slate-600">
-                    Esperan a esta tarea: {waitingForThis.map((t) => `«${t.title}»`).join(', ')}.
+                    {m.waitingForThis(waitingForThis.map((t) => t.title))}
                   </p>
                 )}
               </div>
@@ -1279,23 +1509,23 @@ export const TaskModal: React.FC<TaskModalProps> = ({
               <fieldset className="min-w-0 space-y-3 rounded-xl border border-slate-200 p-3.5">
                 <legend className="flex items-center gap-1.5 px-1 text-xs font-bold tracking-wider text-slate-600 uppercase">
                   <CalendarClock className="h-3.5 w-3.5 text-indigo-600" />
-                  Inicio y repetición (opcional)
+                  {m.startAndRepeat}
                 </legend>
                 <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                   <div className="space-y-1">
                     <span className="block text-[11px] font-semibold text-slate-700">
                       {isRepeating ? (
                         <>
-                          Inicio de la repetición
-                          <span className="font-normal text-slate-600"> (hoy si lo dejas vacío)</span>
+                          {m.repeatStart}
+                          <span className="font-normal text-slate-600">{m.todayIfEmpty}</span>
                         </>
                       ) : (
-                        'Inicio (para un intervalo)'
+                        m.rangeStart
                       )}
                     </span>
                     <div className="flex gap-2">
                       <DateField
-                        label="Fecha de inicio"
+                        label={m.startDate}
                         value={startDate}
                         onChange={setStartDate}
                         onDraftChange={draftOf('startDate')}
@@ -1303,7 +1533,7 @@ export const TaskModal: React.FC<TaskModalProps> = ({
                         inputClassName="px-2.5 py-1.5 rounded-lg border border-slate-300 text-xs focus:outline-none focus:ring-2 focus:ring-indigo-400"
                       />
                       <TimeField
-                        label="Hora de inicio"
+                        label={m.startTime}
                         value={startTime}
                         onChange={setStartTime}
                         onDraftChange={draftOf('startTime')}
@@ -1330,7 +1560,7 @@ export const TaskModal: React.FC<TaskModalProps> = ({
                         className="flex items-center gap-1 text-[11px] font-semibold text-slate-700"
                       >
                         <Repeat className="h-3.5 w-3.5 text-indigo-600" aria-hidden="true" />
-                        Repetir
+                        {m.repeat}
                       </label>
                       {/* «Cada [N] [unidad]» va junto: si no cabe en la línea, pasa entero a la siguiente (y, con el
                           texto muy grande, la unidad baja también) */}
@@ -1338,7 +1568,8 @@ export const TaskModal: React.FC<TaskModalProps> = ({
                         {repeatFrequency && (
                           <>
                             <label htmlFor="task-repeat-interval" className="text-xs text-slate-700">
-                              Cada<span className="sr-only"> {REPEAT_HOW_MANY[repeatFrequency]}</span>
+                              {m.every}
+                              <span className="sr-only"> {m.repeatHowMany[repeatFrequency]}</span>
                             </label>
                             <input
                               id="task-repeat-interval"
@@ -1371,7 +1602,7 @@ export const TaskModal: React.FC<TaskModalProps> = ({
                           }}
                           className="max-w-full min-w-0 rounded-lg border border-slate-300 bg-white px-2.5 py-1.5 text-xs focus:ring-2 focus:ring-indigo-400 focus:outline-none"
                         >
-                          <option value="">No se repite</option>
+                          <option value="">{m.noRepeat}</option>
                           {/* Al repetir, tras «Cada N» solo va la unidad, en singular o plural según N. Sin repetir, la
                               regla entera, con el N que se usará (si se cambió antes) */}
                           {REPEAT_FREQUENCIES.map((frequency) => (
@@ -1399,7 +1630,7 @@ export const TaskModal: React.FC<TaskModalProps> = ({
                   {/* Días y semanas: en fechas fijas o contando desde el día en que se hace */}
                   {canRepeatFromCompletion(repeatFrequency) && (
                     <fieldset className="space-y-1">
-                      <legend className="text-[11px] font-semibold text-slate-700">Cuándo vence la siguiente</legend>
+                      <legend className="text-[11px] font-semibold text-slate-700">{m.whenNextDue}</legend>
                       <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-slate-700">
                         <label className="flex cursor-pointer items-center gap-1.5">
                           <input
@@ -1408,7 +1639,7 @@ export const TaskModal: React.FC<TaskModalProps> = ({
                             checked={!fromCompletion}
                             onChange={() => setRepeatFromCompletion(false)}
                           />
-                          En fechas fijas
+                          {m.fixedDates}
                         </label>
                         <label className="flex cursor-pointer items-center gap-1.5">
                           <input
@@ -1417,7 +1648,7 @@ export const TaskModal: React.FC<TaskModalProps> = ({
                             checked={fromCompletion}
                             onChange={() => setRepeatFromCompletion(true)}
                           />
-                          {repeatInterval} {repeatUnit(repeatFrequency, repeatInterval)} después de hacerla
+                          {afterDoneText(repeatInterval, repeatFrequency)}
                         </label>
                       </div>
                     </fieldset>
@@ -1425,9 +1656,9 @@ export const TaskModal: React.FC<TaskModalProps> = ({
 
                   {repeatFrequency === 'WEEKLY' && !fromCompletion && (
                     <fieldset className="space-y-1">
-                      <legend className="text-[11px] font-semibold text-slate-700">Días de la semana</legend>
+                      <legend className="text-[11px] font-semibold text-slate-700">{m.weekdays}</legend>
                       <div className="flex flex-wrap gap-1.5">
-                        {WEEKDAY_TOGGLES.map(({ day, short, name }) => (
+                        {m.weekdayToggles.map(({ day, short, name }) => (
                           <label
                             key={day}
                             className={`cursor-pointer rounded-lg border px-2.5 py-1 text-xs font-semibold has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-indigo-400 ${
@@ -1456,7 +1687,7 @@ export const TaskModal: React.FC<TaskModalProps> = ({
 
                   {repeatFrequency === 'MONTHLY' && (
                     <fieldset className="space-y-1">
-                      <legend className="text-[11px] font-semibold text-slate-700">Qué día del mes</legend>
+                      <legend className="text-[11px] font-semibold text-slate-700">{m.monthDay}</legend>
                       <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-slate-700">
                         {monthlyOptions.map((option) => (
                           <label key={option.mode} className="flex cursor-pointer items-center gap-1.5">
@@ -1476,11 +1707,9 @@ export const TaskModal: React.FC<TaskModalProps> = ({
                   {recurrence && firstRepetition && (
                     <p className="text-[11px] font-medium text-indigo-700" role="status">
                       {describeRecurrence(recurrence, firstRepetition)}
-                      {` · Primera: ${formatTaskDates({ dueDate: firstRepetition })?.replace('Vence: ', '')}`}
-                      {fromCompletion ? ' · Si la haces ese día, ' : ' · Al completarla, '}
-                      {nextRepetition
-                        ? `la siguiente vencerá el ${formatTaskDates({ dueDate: nextRepetition })?.replace('Vence: ', '')}`
-                        : 'no habrá más repeticiones'}
+                      {m.first(formatDay(firstRepetition))}
+                      {fromCompletion ? m.ifDoneThatDay : m.whenCompleted}
+                      {nextRepetition ? m.nextDue(formatDay(nextRepetition)) : m.noMoreRepeats}
                     </p>
                   )}
                   {recurrenceError && (
@@ -1502,10 +1731,8 @@ export const TaskModal: React.FC<TaskModalProps> = ({
                     className="mt-0.5 h-4 w-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
                   />
                   <div>
-                    <span className="block text-xs font-bold text-slate-800">Guardar para algún día</span>
-                    <span className="mt-0.5 block text-[11px] leading-relaxed text-slate-500">
-                      No entrará en tu Top 10; la encontrarás en «Algún día».
-                    </span>
+                    <span className="block text-xs font-bold text-slate-800">{m.saveForSomeday}</span>
+                    <span className="mt-0.5 block text-[11px] leading-relaxed text-slate-500">{m.somedayHelp}</span>
                   </div>
                 </label>
               </div>
@@ -1516,7 +1743,7 @@ export const TaskModal: React.FC<TaskModalProps> = ({
                   htmlFor="task-note"
                   className="mb-1.5 block text-xs font-bold tracking-wider text-slate-600 uppercase"
                 >
-                  Notas
+                  {m.notes}
                 </label>
                 <div className="mb-2 flex flex-wrap items-center gap-2">
                   <input
@@ -1527,7 +1754,7 @@ export const TaskModal: React.FC<TaskModalProps> = ({
                       setNewObsText(e.target.value);
                       setTypedNote((n) => n + 1);
                     }}
-                    placeholder="Añade una nota o un enlace…"
+                    placeholder={m.notePlaceholder}
                     className="min-w-32 flex-1 rounded-xl border border-slate-300 px-3 py-1.5 text-xs focus:ring-2 focus:ring-indigo-400 focus:outline-none"
                     onKeyDown={(e) => {
                       if (e.key === 'Enter') {
@@ -1537,7 +1764,7 @@ export const TaskModal: React.FC<TaskModalProps> = ({
                     }}
                   />
                   <DictateButton
-                    label="Dictar una nota"
+                    label={m.dictateNote}
                     value={newObsText}
                     onChange={setNewObsText}
                     pause={guard.confirming}
@@ -1548,7 +1775,7 @@ export const TaskModal: React.FC<TaskModalProps> = ({
                     onClick={handleAddObservation}
                     className="rounded-xl bg-slate-100 px-3 py-1.5 text-xs font-semibold text-slate-700 transition-colors hover:bg-slate-200"
                   >
-                    Añadir
+                    {m.add}
                   </button>
                 </div>
 
@@ -1579,13 +1806,13 @@ export const TaskModal: React.FC<TaskModalProps> = ({
           {!showMore && (datesError || recurrenceError || dependencyError) && (
             <p role="alert" className="flex items-center gap-1 text-xs font-medium text-red-600">
               <AlertTriangle className="h-3.5 w-3.5" />
-              {datesError ?? recurrenceError ?? dependencyError} (en «Más opciones»)
+              {m.inMoreOptions((datesError ?? recurrenceError ?? dependencyError)!)}
             </p>
           )}
 
           {/* CHECKLIST DE VALIDACIÓN EN TIEMPO REAL ANTES DE ENVIAR */}
           <div className="space-y-1 rounded-xl border border-slate-200 bg-slate-50 p-3 text-xs">
-            <span className="mb-1 block font-bold text-slate-700">Antes de guardar:</span>
+            <span className="mb-1 block font-bold text-slate-700">{m.beforeSaving}</span>
             <div className="grid grid-cols-2 gap-2 text-[11px]">
               <div className="flex items-center gap-1.5">
                 {!isTitleEmpty && !isTitleTooLong ? (
@@ -1593,7 +1820,7 @@ export const TaskModal: React.FC<TaskModalProps> = ({
                 ) : (
                   <span className="inline-block h-3.5 w-3.5 rounded-full border border-slate-300" />
                 )}
-                <span className={!isTitleEmpty ? 'text-slate-700' : 'text-slate-500'}>Hasta 100 caracteres</span>
+                <span className={!isTitleEmpty ? 'text-slate-700' : 'text-slate-500'}>{m.upTo100}</span>
               </div>
 
               <div className="flex items-center gap-1.5">
@@ -1602,9 +1829,7 @@ export const TaskModal: React.FC<TaskModalProps> = ({
                 ) : (
                   <span className="inline-block h-3.5 w-3.5 rounded-full border border-slate-300" />
                 )}
-                <span className={syntaxResult.isValid ? 'text-slate-700' : 'text-slate-500'}>
-                  Empieza por un verbo de acción
-                </span>
+                <span className={syntaxResult.isValid ? 'text-slate-700' : 'text-slate-500'}>{m.startsWithVerb}</span>
               </div>
             </div>
           </div>
@@ -1616,7 +1841,7 @@ export const TaskModal: React.FC<TaskModalProps> = ({
               onClick={requestClose}
               className="rounded-xl px-4 py-2 text-xs font-semibold text-slate-600 transition-colors hover:bg-slate-100 hover:text-slate-900"
             >
-              Cancelar
+              {m.cancel}
             </button>
             <button
               type="submit"
@@ -1628,18 +1853,14 @@ export const TaskModal: React.FC<TaskModalProps> = ({
               }`}
             >
               <Check className="h-4 w-4" />
-              <span>{editingTask ? 'Guardar los cambios' : 'Guardar la tarea'}</span>
+              <span>{editingTask ? m.saveChanges : m.saveTask}</span>
             </button>
           </div>
         </form>
 
         {guard.confirming && (
           <DiscardChangesPrompt
-            text={
-              editingTask
-                ? 'Has cambiado esta tarea y no has guardado los cambios.'
-                : 'Has empezado una tarea nueva y no la has guardado.'
-            }
+            text={editingTask ? m.discardEdit : m.discardNew}
             onKeepEditing={guard.keepEditing}
             onDiscard={guard.discard}
           />

@@ -1,5 +1,23 @@
 import React, { Component, Suspense, useRef, useState, type ReactNode } from 'react';
 import { ModalOpenerContext, useModalFocus } from '../hooks/useModalFocus';
+import { messages } from '../i18n/locale';
+
+const m = messages(
+  {
+    sectionFailed: 'No se pudo cargar esta sección. Comprueba la conexión.',
+    openFailed: 'No se pudo abrir. Comprueba la conexión.',
+    loading: 'Cargando…',
+    retry: 'Reintentar',
+    cancel: 'Cancelar'
+  },
+  {
+    sectionFailed: "Couldn't load this section. Check your connection.",
+    openFailed: "Couldn't open it. Check your connection.",
+    loading: 'Loading…',
+    retry: 'Retry',
+    cancel: 'Cancel'
+  }
+);
 
 // Si la descarga de una parte de la app falla, se avisa con «Reintentar» en lugar de dejar la app en blanco: el
 // fallo no sale de aquí (el resto de la app, la navegación incluida, sigue funcionando)
@@ -35,9 +53,9 @@ export const DeferredSection: React.FC<{ retry: () => void; children: ReactNode 
     onRetry={retry}
     fallback={(again) => (
       <div role="alert" className="space-y-3 rounded-2xl border border-amber-200 bg-amber-50 p-6 text-center">
-        <p className="text-sm text-amber-900">No se pudo cargar esta sección. Comprueba la conexión.</p>
+        <p className="text-sm text-amber-900">{m.sectionFailed}</p>
         <button type="button" onClick={again} className={`${buttonClass} bg-slate-900 font-bold text-white`}>
-          Reintentar
+          {m.retry}
         </button>
       </div>
     )}
@@ -45,7 +63,7 @@ export const DeferredSection: React.FC<{ retry: () => void; children: ReactNode 
     <Suspense
       fallback={
         <div role="status" className="py-16 text-center text-sm text-slate-500">
-          Cargando…
+          {m.loading}
         </div>
       }
     >
@@ -76,12 +94,12 @@ const PendingDialog: React.FC<{ failed: boolean; onRetry?: () => void; onCancel:
           role={failed ? 'alert' : 'status'}
           className={`text-sm ${failed ? 'text-amber-900' : 'text-slate-600'}`}
         >
-          {failed ? 'No se pudo abrir. Comprueba la conexión.' : 'Cargando…'}
+          {failed ? m.openFailed : m.loading}
         </p>
         <div className="flex justify-center gap-2">
           {failed && onRetry && (
             <button type="button" onClick={onRetry} className={`${buttonClass} bg-slate-900 font-bold text-white`}>
-              Reintentar
+              {m.retry}
             </button>
           )}
           <button
@@ -90,7 +108,7 @@ const PendingDialog: React.FC<{ failed: boolean; onRetry?: () => void; onCancel:
             className={`${buttonClass} text-slate-700 hover:bg-slate-100`}
             data-autofocus
           >
-            Cancelar
+            {m.cancel}
           </button>
         </div>
       </div>

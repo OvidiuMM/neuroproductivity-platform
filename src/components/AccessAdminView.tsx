@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { Ban, Check, Sparkles, UserX, X } from 'lucide-react';
 import type { AccessRequest, DecisionStatus } from '../services/access';
 import { EXTRA_FEATURES, type FeatureId } from '../services/features';
+import { LOCALE_TAG, messages } from '../i18n/locale';
 
 interface AccessAdminViewProps {
   requests: AccessRequest[];
@@ -19,7 +20,7 @@ interface AccessAdminViewProps {
   onSetFeatures: (uid: string, features: FeatureId[]) => Promise<boolean>;
 }
 
-const dateFormat = new Intl.DateTimeFormat('es-ES', {
+const dateFormat = new Intl.DateTimeFormat(LOCALE_TAG, {
   day: 'numeric',
   month: 'short',
   year: 'numeric',
@@ -27,42 +28,145 @@ const dateFormat = new Intl.DateTimeFormat('es-ES', {
   minute: '2-digit'
 });
 
-const GROUPS: { id: string; title: string; matches: (r: AccessRequest) => boolean; empty: string }[] = [
+type GroupId = 'access-pending' | 'access-approved' | 'access-closed' | 'access-blocked';
+
+const m = messages<{
+  groups: Record<GroupId, { title: string; empty: string }>;
+  actions: { block: string; approve: string; reject: string; revoke: string; unblock: string };
+  status: Record<AccessRequest['status'], string>;
+  intro: string;
+  approvalRequired: string;
+  approvalOff: string;
+  approvalOn: string;
+  confirmOff: string;
+  alsoApprove: (pending: number) => string;
+  turnOff: string;
+  cancel: string;
+  isNew: string;
+  asksAgain: string;
+  requestedOn: string;
+  decidedOn: string;
+  extraFeatures: string;
+  you: string;
+  featuresOf: (who: string) => string;
+  featuresHelp: string;
+  saving: string;
+  save: string;
+}>(
   {
-    id: 'access-pending',
-    title: 'Pendientes',
-    matches: (r) => r.status === 'pending',
-    empty: 'No hay solicitudes pendientes.'
+    groups: {
+      'access-pending': { title: 'Pendientes', empty: 'No hay solicitudes pendientes.' },
+      'access-approved': { title: 'Con acceso', empty: 'Nadie tiene acceso todavía.' },
+      'access-closed': { title: 'Rechazadas o retiradas', empty: 'Ninguna.' },
+      'access-blocked': {
+        title: 'Bloqueadas',
+        empty: 'Ninguna. Una cuenta bloqueada no puede entrar ni volver con otra cuenta del mismo email.'
+      }
+    },
+    actions: {
+      block: 'Bloquear',
+      approve: 'Aprobar',
+      reject: 'Rechazar',
+      revoke: 'Retirar acceso',
+      unblock: 'Desbloquear'
+    },
+    status: {
+      pending: 'Pendiente',
+      approved: 'Con acceso',
+      rejected: 'Rechazada',
+      revoked: 'Retirada',
+      blocked: 'Bloqueada'
+    },
+    intro:
+      'Aprueba quién puede usar la app. Cada solicitud nueva te llega también por email, y la persona recibe otro cuando la apruebas. Con la aprobación desactivada, las cuentas nuevas entran solas y salen aquí como «Nueva»; solo te llega un email si una cuenta rechazada o retirada vuelve a pedir acceso. Una cuenta retirada puede eliminarse y volver con el mismo email; para impedirlo, bloquéala.',
+    approvalRequired: 'Aprobación obligatoria',
+    approvalOff: 'Desactivada: las cuentas nuevas entran solas, salvo las bloqueadas.',
+    approvalOn: 'Activada: cada cuenta nueva espera a que la apruebes.',
+    confirmOff:
+      'Sin aprobación obligatoria, las cuentas nuevas o pendientes con el email confirmado entran solas; las rechazadas, retiradas y bloqueadas, no (si vuelven a pedir acceso, esperan a que lo decidas).',
+    alsoApprove: (pending) =>
+      ` También se aprobarán ${pending === 1 ? 'la solicitud pendiente' : `las ${pending} solicitudes pendientes`}.`,
+    turnOff: 'Desactivar la aprobación',
+    cancel: 'Cancelar',
+    isNew: 'Nueva',
+    asksAgain: ' · vuelve a pedirlo',
+    requestedOn: ' · solicitado el ',
+    decidedOn: ' · decidido el ',
+    extraFeatures: 'Funciones extra',
+    you: 'Tú (administración)',
+    featuresOf: (who) => `Funciones extra de ${who}`,
+    featuresHelp: 'Se activan para esta cuenta en cuanto las guardas; para quitarlas, desmárcalas y guarda.',
+    saving: 'Guardando…',
+    save: 'Guardar'
   },
   {
-    id: 'access-approved',
-    title: 'Con acceso',
-    matches: (r) => r.status === 'approved',
-    empty: 'Nadie tiene acceso todavía.'
-  },
+    groups: {
+      'access-pending': { title: 'Pending', empty: 'No pending requests.' },
+      'access-approved': { title: 'With access', empty: 'Nobody has access yet.' },
+      'access-closed': { title: 'Rejected or removed', empty: 'None.' },
+      'access-blocked': {
+        title: 'Blocked',
+        empty: "None. A blocked account can't sign in or come back with another account with the same email."
+      }
+    },
+    actions: {
+      block: 'Block',
+      approve: 'Approve',
+      reject: 'Reject',
+      revoke: 'Remove access',
+      unblock: 'Unblock'
+    },
+    status: {
+      pending: 'Pending',
+      approved: 'With access',
+      rejected: 'Rejected',
+      revoked: 'Removed',
+      blocked: 'Blocked'
+    },
+    intro:
+      'Approve who can use the app. You also get an email for each new request, and the person gets one when you approve it. With approval turned off, new accounts get in by themselves and show up here as “New”; you only get an email if a rejected or removed account asks for access again. A removed account can be deleted and come back with the same email; to prevent that, block it.',
+    approvalRequired: 'Approval required',
+    approvalOff: 'Off: new accounts get in by themselves, except blocked ones.',
+    approvalOn: 'On: each new account waits for your approval.',
+    confirmOff:
+      "Without required approval, new or pending accounts with a confirmed email get in by themselves; rejected, removed and blocked ones don't (if they ask for access again, they wait for your decision).",
+    alsoApprove: (pending) =>
+      ` ${pending === 1 ? 'The pending request' : `The ${pending} pending requests`} will also be approved.`,
+    turnOff: 'Turn off approval',
+    cancel: 'Cancel',
+    isNew: 'New',
+    asksAgain: ' · asking again',
+    requestedOn: ' · requested on ',
+    decidedOn: ' · decided on ',
+    extraFeatures: 'Extra features',
+    you: 'You (admin)',
+    featuresOf: (who) => `Extra features for ${who}`,
+    featuresHelp: 'They turn on for this account as soon as you save them; to remove them, uncheck them and save.',
+    saving: 'Saving…',
+    save: 'Save'
+  }
+);
+
+const GROUPS: { id: GroupId; title: string; matches: (r: AccessRequest) => boolean; empty: string }[] = [
+  { id: 'access-pending', ...m.groups['access-pending'], matches: (r) => r.status === 'pending' },
+  { id: 'access-approved', ...m.groups['access-approved'], matches: (r) => r.status === 'approved' },
   {
     id: 'access-closed',
-    title: 'Rechazadas o retiradas',
-    matches: (r) => r.status === 'rejected' || r.status === 'revoked',
-    empty: 'Ninguna.'
+    ...m.groups['access-closed'],
+    matches: (r) => r.status === 'rejected' || r.status === 'revoked'
   },
-  {
-    id: 'access-blocked',
-    title: 'Bloqueadas',
-    matches: (r) => r.status === 'blocked',
-    empty: 'Ninguna. Una cuenta bloqueada no puede entrar ni volver con otra cuenta del mismo email.'
-  }
+  { id: 'access-blocked', ...m.groups['access-blocked'], matches: (r) => r.status === 'blocked' }
 ];
 
 const BLOCK = {
   status: 'blocked' as const,
-  label: 'Bloquear',
+  label: m.actions.block,
   icon: Ban,
   style: 'border border-slate-300 text-slate-700 hover:bg-slate-50'
 };
 const APPROVE = {
   status: 'approved' as const,
-  label: 'Aprobar',
+  label: m.actions.approve,
   icon: Check,
   style: 'bg-emerald-700 hover:bg-emerald-800 text-white'
 };
@@ -75,7 +179,7 @@ const ACTIONS: Record<
     APPROVE,
     {
       status: 'rejected',
-      label: 'Rechazar',
+      label: m.actions.reject,
       icon: X,
       style: 'border border-slate-300 text-slate-700 hover:bg-slate-50'
     },
@@ -84,7 +188,7 @@ const ACTIONS: Record<
   approved: [
     {
       status: 'revoked',
-      label: 'Retirar acceso',
+      label: m.actions.revoke,
       icon: UserX,
       style: 'border border-red-300 text-red-700 hover:bg-red-50'
     },
@@ -95,20 +199,14 @@ const ACTIONS: Record<
   blocked: [
     {
       status: 'revoked',
-      label: 'Desbloquear',
+      label: m.actions.unblock,
       icon: UserX,
       style: 'border border-slate-300 text-slate-700 hover:bg-slate-50'
     }
   ]
 };
 
-const STATUS_LABEL: Record<AccessRequest['status'], string> = {
-  pending: 'Pendiente',
-  approved: 'Con acceso',
-  rejected: 'Rechazada',
-  revoked: 'Retirada',
-  blocked: 'Bloqueada'
-};
+const STATUS_LABEL: Record<AccessRequest['status'], string> = m.status;
 
 // Solo para la administración: decide quién puede usar la app
 export const AccessAdminView: React.FC<AccessAdminViewProps> = ({
@@ -191,12 +289,7 @@ export const AccessAdminView: React.FC<AccessAdminViewProps> = ({
 
   return (
     <div className="space-y-5">
-      <p className="text-xs text-slate-600">
-        Aprueba quién puede usar la app. Cada solicitud nueva te llega también por email, y la persona recibe otro
-        cuando la apruebas. Con la aprobación desactivada, las cuentas nuevas entran solas y salen aquí como «Nueva»;
-        solo te llega un email si una cuenta rechazada o retirada vuelve a pedir acceso. Una cuenta retirada puede
-        eliminarse y volver con el mismo email; para impedirlo, bloquéala.
-      </p>
+      <p className="text-xs text-slate-600">{m.intro}</p>
 
       <section
         aria-labelledby="access-mode-title"
@@ -205,12 +298,10 @@ export const AccessAdminView: React.FC<AccessAdminViewProps> = ({
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="min-w-0 space-y-0.5">
             <h3 id="access-mode-title" className="text-sm font-bold text-slate-900">
-              Aprobación obligatoria
+              {m.approvalRequired}
             </h3>
             <p id="access-mode-description" className="text-xs text-slate-600">
-              {approvalRequired === false
-                ? 'Desactivada: las cuentas nuevas entran solas, salvo las bloqueadas.'
-                : 'Activada: cada cuenta nueva espera a que la apruebes.'}
+              {approvalRequired === false ? m.approvalOff : m.approvalOn}
             </p>
           </div>
           <button
@@ -239,10 +330,8 @@ export const AccessAdminView: React.FC<AccessAdminViewProps> = ({
             className="space-y-2 rounded-xl border border-amber-200 bg-amber-50 p-3 text-xs text-amber-900"
           >
             <p>
-              Sin aprobación obligatoria, las cuentas nuevas o pendientes con el email confirmado entran solas; las
-              rechazadas, retiradas y bloqueadas, no (si vuelven a pedir acceso, esperan a que lo decidas).
-              {pendingCount > 0 &&
-                ` También se aprobarán ${pendingCount === 1 ? 'la solicitud pendiente' : `las ${pendingCount} solicitudes pendientes`}.`}
+              {m.confirmOff}
+              {pendingCount > 0 && m.alsoApprove(pendingCount)}
             </p>
             <div className="flex flex-wrap gap-2">
               <button
@@ -251,14 +340,14 @@ export const AccessAdminView: React.FC<AccessAdminViewProps> = ({
                 onClick={() => setMode(false)}
                 className="min-h-11 rounded-xl bg-slate-900 px-4 font-bold text-white hover:bg-slate-800 disabled:opacity-60"
               >
-                Desactivar la aprobación
+                {m.turnOff}
               </button>
               <button
                 type="button"
                 onClick={() => setConfirmOpen(false)}
                 className="min-h-11 rounded-xl px-3 font-semibold text-amber-900 hover:bg-amber-100"
               >
-                Cancelar
+                {m.cancel}
               </button>
             </div>
           </div>
@@ -316,19 +405,23 @@ export const AccessAdminView: React.FC<AccessAdminViewProps> = ({
                             <p className="text-sm font-semibold break-words text-slate-900">
                               {request.name || request.email}
                               {newSince && request.status === 'approved' && request.requestedAt > newSince && (
+                                <span className="sr-only">, </span>
+                              )}
+                              {newSince && request.status === 'approved' && request.requestedAt > newSince && (
                                 <span className="ml-2 rounded-full bg-red-600 px-1.5 py-0.5 align-middle text-[10px] font-bold text-white">
-                                  Nueva
+                                  {m.isNew}
                                 </span>
                               )}
                             </p>
                             <p className="text-xs break-all text-slate-600">{request.email}</p>
                             <p className="text-[11px] text-slate-500">
                               {STATUS_LABEL[request.status]}
-                              {request.status === 'pending' && request.review && ' · vuelve a pedirlo'} · solicitado el{' '}
+                              {request.status === 'pending' && request.review && m.asksAgain}
+                              {m.requestedOn}
                               {dateFormat.format(new Date(request.requestedAt))}
-                              {request.decidedAt && request.status !== 'pending' && (
-                                <> · decidido el {dateFormat.format(new Date(request.decidedAt))}</>
-                              )}
+                              {request.decidedAt &&
+                                request.status !== 'pending' &&
+                                `${m.decidedOn}${dateFormat.format(new Date(request.decidedAt))}`}
                             </p>
                             {request.message && (
                               <blockquote className="mt-1 rounded-r-lg border-l-4 border-slate-300 bg-slate-50 px-3 py-2 text-xs break-words whitespace-pre-wrap text-slate-700">
@@ -338,7 +431,7 @@ export const AccessAdminView: React.FC<AccessAdminViewProps> = ({
                             {granted.length > 0 && (
                               <p className="flex items-center gap-1 text-[11px] font-semibold text-indigo-700">
                                 <Sparkles className="h-3 w-3 shrink-0" aria-hidden="true" />
-                                Funciones extra:{' '}
+                                {m.extraFeatures}:{' '}
                                 {EXTRA_FEATURES.filter((f) => granted.includes(f.id))
                                   .map((f) => f.label)
                                   .join(', ')}
@@ -348,7 +441,7 @@ export const AccessAdminView: React.FC<AccessAdminViewProps> = ({
                         </div>
                         <div className="flex shrink-0 flex-wrap items-center gap-2">
                           {isSelf ? (
-                            <span className="text-[11px] font-semibold text-slate-500">Tú (administración)</span>
+                            <span className="text-[11px] font-semibold text-slate-500">{m.you}</span>
                           ) : (
                             <>
                               {canHaveFeatures && (
@@ -359,11 +452,11 @@ export const AccessAdminView: React.FC<AccessAdminViewProps> = ({
                                   onClick={() => toggleEditing(request.uid)}
                                   aria-expanded={isEditing}
                                   aria-controls={isEditing ? panelId : undefined}
-                                  aria-label={`Funciones extra: ${who}`}
+                                  aria-label={`${m.extraFeatures}: ${who}`}
                                   className="flex items-center gap-1.5 rounded-lg border border-indigo-200 px-3 py-1.5 text-xs font-bold text-indigo-700 hover:bg-indigo-50 disabled:opacity-60"
                                 >
                                   <Sparkles className="h-3.5 w-3.5" aria-hidden="true" />
-                                  Funciones extra
+                                  {m.extraFeatures}
                                 </button>
                               )}
                               {ACTIONS[request.status].map(({ status, label, icon: Icon, style }) => (
@@ -389,10 +482,8 @@ export const AccessAdminView: React.FC<AccessAdminViewProps> = ({
                           id={panelId}
                           className="space-y-2 rounded-xl border border-indigo-100 bg-indigo-50/60 p-3"
                         >
-                          <legend className="sr-only">Funciones extra de {who}</legend>
-                          <p className="text-[11px] text-slate-600">
-                            Se activan para esta cuenta en cuanto las guardas; para quitarlas, desmárcalas y guarda.
-                          </p>
+                          <legend className="sr-only">{m.featuresOf(who)}</legend>
+                          <p className="text-[11px] text-slate-600">{m.featuresHelp}</p>
                           {EXTRA_FEATURES.map((feature) => {
                             const inputId = `features-${request.uid}-${feature.id}`;
                             return (
@@ -432,7 +523,7 @@ export const AccessAdminView: React.FC<AccessAdminViewProps> = ({
                               onClick={saveFeatures}
                               className="min-h-11 rounded-xl bg-slate-900 px-4 text-xs font-bold text-white hover:bg-slate-800 disabled:opacity-60"
                             >
-                              {busyUid === request.uid ? 'Guardando…' : 'Guardar'}
+                              {busyUid === request.uid ? m.saving : m.save}
                             </button>
                             <button
                               type="button"
@@ -440,7 +531,7 @@ export const AccessAdminView: React.FC<AccessAdminViewProps> = ({
                               onClick={() => closeEditing(request.uid)}
                               className="min-h-11 rounded-xl px-3 text-xs font-semibold text-slate-700 hover:bg-white"
                             >
-                              Cancelar
+                              {m.cancel}
                             </button>
                           </div>
                         </fieldset>

@@ -25,6 +25,116 @@ import { isAndroid } from '../services/platform';
 import type { ExtraFeature, FeatureId } from '../services/features';
 import { CalendarConnection, type CalendarConnectionProps } from './CalendarConnection';
 import { ShareAppButton } from './ShareApp';
+import { LanguageSelector } from './LanguageSelector';
+import { messages } from '../i18n/locale';
+
+const m = messages(
+  {
+    language: 'Idioma',
+    failed: 'No se pudo completar la acción.',
+    shortPassword: `La contraseña nueva debe tener al menos ${MIN_PASSWORD_LENGTH} caracteres.`,
+    passwordChanged: 'Contraseña cambiada.',
+    title: 'Tu cuenta',
+    close: 'Cerrar',
+    withPassword: 'Entras con email y contraseña',
+    withGoogle: 'Entras con Google',
+    // Alrededor del enlace a la política de privacidad
+    dataBefore:
+      'Tus datos se guardan en tu cuenta (Google Cloud, UE) y solo tú puedes acceder a ellos. Se sincronizan entre tus dispositivos y, sin conexión, los cambios se envían al recuperarla. Más detalles en la ',
+    privacy: 'política de privacidad',
+    accessibility: 'Accesibilidad: tamaño del texto, contraste y animaciones',
+    preparingDownload: 'Preparando descarga…',
+    download: 'Descargar mis datos (JSON)',
+    readingFile: 'Leyendo el archivo…',
+    import: 'Importar datos (JSON)',
+    importHelp: 'El archivo de «Descargar mis datos». Se añade lo que falta; lo que ya tienes no se toca.',
+    alarmNotifications: 'Notificaciones de las alarmas',
+    enableAlarmNotifications: 'Activar las notificaciones de las alarmas',
+    pushOn: 'Listo: en este dispositivo, las alarmas te llegarán aunque CLAR esté cerrada.',
+    pushOff: 'En este dispositivo, las alarmas solo avisarán con CLAR abierta.',
+    saving: 'Guardando…',
+    pushLabel: 'Avisarme también con CLAR cerrada (en este dispositivo)',
+    pushHelp:
+      'La hora de la alarma (y el nombre de la tarea, si lo muestras) pasa por Firebase Cloud Messaging (Google) hasta este dispositivo.',
+    permissionLost:
+      'Las notificaciones de CLAR están bloqueadas en los ajustes de este dispositivo: así no te llega ninguna alarma. Vuelve a permitirlas o desactiva esta opción.',
+    testSent: 'Enviada: te llegará en unos segundos, también si cierras CLAR ahora.',
+    sending: 'Enviando…',
+    test: 'Probar notificación',
+    androidHelp:
+      'En Android, para que aparezca en lo alto de la pantalla: Ajustes › Notificaciones › CLAR (o Chrome) › «Mostrar en pantalla emergente». Si llegan tarde, quita las restricciones de batería de Chrome.',
+    showTitle: 'Mostrar el nombre de la tarea (también con el móvil bloqueado)',
+    extraFeatures: 'Funciones extra',
+    adminFeatures: 'Como administración, las tienes todas: enciende las que quieras usar.',
+    grantedFeatures: 'Activadas para tu cuenta por la administración.',
+    contact: 'Escríbenos: ideas, fallos o dudas',
+    security: 'Seguridad',
+    changePassword: 'Cambiar la contraseña',
+    currentPassword: 'Contraseña actual',
+    newPassword: 'Contraseña nueva',
+    passwordHint: `Al menos ${MIN_PASSWORD_LENGTH} caracteres.`,
+    saveNewPassword: 'Guardar la contraseña nueva',
+    everywhere: 'Cerrar sesión en todos los dispositivos',
+    everywhereHelp:
+      'Se cerrará la sesión en todos tus dispositivos, también en este. Los demás dejarán de tener acceso en menos de una hora. Úsalo si has perdido un dispositivo o has entrado en uno que no es tuyo.',
+    closingSessions: 'Cerrando sesiones…',
+    closeAllSessions: 'Cerrar todas las sesiones',
+    signOut: 'Cerrar sesión',
+    deleteAccount: 'Eliminar mi cuenta y todos mis datos'
+  },
+  {
+    language: 'Language',
+    failed: "Couldn't complete the action.",
+    shortPassword: `Your new password must be at least ${MIN_PASSWORD_LENGTH} characters long.`,
+    passwordChanged: 'Password changed.',
+    title: 'Your account',
+    close: 'Close',
+    withPassword: 'You sign in with email and password',
+    withGoogle: 'You sign in with Google',
+    dataBefore:
+      "Your data is saved in your account (Google Cloud, EU) and only you can access it. It syncs across your devices and, when you're offline, your changes are sent once you're back online. More details in the ",
+    privacy: 'privacy policy',
+    accessibility: 'Accessibility: text size, contrast and animations',
+    preparingDownload: 'Preparing download…',
+    download: 'Download my data (JSON)',
+    readingFile: 'Reading the file…',
+    import: 'Import data (JSON)',
+    importHelp: "The file from “Download my data”. What's missing is added; what you already have isn't touched.",
+    alarmNotifications: 'Alarm notifications',
+    enableAlarmNotifications: 'Turn on alarm notifications',
+    pushOn: 'Done: on this device, your alarms will reach you even when CLAR is closed.',
+    pushOff: 'On this device, alarms will only notify you while CLAR is open.',
+    saving: 'Saving…',
+    pushLabel: 'Also notify me when CLAR is closed (on this device)',
+    pushHelp:
+      'The alarm time (and the task name, if you show it) goes through Firebase Cloud Messaging (Google) to this device.',
+    permissionLost:
+      "CLAR's notifications are blocked in this device's settings, so no alarm reaches you. Allow them again or turn this option off.",
+    testSent: 'Sent: it will arrive in a few seconds, even if you close CLAR now.',
+    sending: 'Sending…',
+    test: 'Test notification',
+    androidHelp:
+      "On Android, to make it appear at the top of the screen: Settings › Notifications › CLAR (or Chrome) › “Pop on screen”. If they arrive late, remove Chrome's battery restrictions.",
+    showTitle: 'Show the task name (also when the phone is locked)',
+    extraFeatures: 'Extra features',
+    adminFeatures: 'As the admin, you have them all: turn on the ones you want to use.',
+    grantedFeatures: 'Turned on for your account by the admin.',
+    contact: 'Contact us: ideas, bugs or questions',
+    security: 'Security',
+    changePassword: 'Change password',
+    currentPassword: 'Current password',
+    newPassword: 'New password',
+    passwordHint: `At least ${MIN_PASSWORD_LENGTH} characters.`,
+    saveNewPassword: 'Save the new password',
+    everywhere: 'Sign out on all devices',
+    everywhereHelp:
+      "You'll be signed out on all your devices, including this one. The others will lose access in less than an hour. Use it if you've lost a device or signed in on one that isn't yours.",
+    closingSessions: 'Signing out…',
+    closeAllSessions: 'Sign out everywhere',
+    signOut: 'Sign out',
+    deleteAccount: 'Delete my account and all my data'
+  }
+);
 
 interface AccountMenuProps {
   isOpen: boolean;
@@ -135,7 +245,7 @@ export const AccountMenu: React.FC<AccountMenuProps> = ({
       await action();
       if (done) setNotice(done);
     } catch (e) {
-      setError(describeAuthError(e, e instanceof Error && e.message ? e.message : 'No se pudo completar la acción.'));
+      setError(describeAuthError(e, e instanceof Error && e.message ? e.message : m.failed));
     } finally {
       setBusy(null);
     }
@@ -151,7 +261,7 @@ export const AccountMenu: React.FC<AccountMenuProps> = ({
   const submitPassword = (e: React.FormEvent) => {
     e.preventDefault();
     if (newPassword.length < MIN_PASSWORD_LENGTH) {
-      setError(`La contraseña nueva debe tener al menos ${MIN_PASSWORD_LENGTH} caracteres.`);
+      setError(m.shortPassword);
       return;
     }
     void run(
@@ -161,7 +271,7 @@ export const AccountMenu: React.FC<AccountMenuProps> = ({
         clearPasswords();
         setPanel(null);
       },
-      'Contraseña cambiada.'
+      m.passwordChanged
     );
   };
 
@@ -171,14 +281,14 @@ export const AccountMenu: React.FC<AccountMenuProps> = ({
         ref={dialogRef}
         role="dialog"
         aria-modal="true"
-        aria-label="Tu cuenta"
+        aria-label={m.title}
         className="animate-in fade-in zoom-in-95 my-auto w-full max-w-md overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-2xl duration-200"
       >
         <div className="flex items-center justify-between border-b border-slate-100 bg-slate-50/90 px-6 py-4">
-          <h2 className="text-sm font-bold text-slate-900">Tu cuenta</h2>
+          <h2 className="text-sm font-bold text-slate-900">{m.title}</h2>
           <button
             onClick={onClose}
-            aria-label="Cerrar"
+            aria-label={m.close}
             className="rounded-lg p-1.5 text-slate-500 transition-colors hover:bg-slate-200/60 hover:text-slate-600"
           >
             <X className="h-5 w-5" />
@@ -203,7 +313,7 @@ export const AccountMenu: React.FC<AccountMenuProps> = ({
               <h3 className="truncate text-sm font-bold text-slate-900">{user.name}</h3>
               {user.email && <p className="truncate text-xs text-slate-500">{user.email}</p>}
               <p className="text-[11px] text-slate-600">
-                {reauthMethods[0] === 'password' ? 'Entras con email y contraseña' : 'Entras con Google'}
+                {reauthMethods[0] === 'password' ? m.withPassword : m.withGoogle}
               </p>
             </div>
           </div>
@@ -211,10 +321,9 @@ export const AccountMenu: React.FC<AccountMenuProps> = ({
           <div className="flex items-start gap-2.5 rounded-2xl border border-slate-200 bg-slate-50 p-3.5 text-[11px] leading-relaxed text-slate-600">
             <Cloud className="mt-0.5 h-4 w-4 shrink-0 text-slate-500" aria-hidden="true" />
             <p>
-              Tus datos se guardan en tu cuenta (Google Cloud, UE) y solo tú puedes acceder a ellos. Se sincronizan
-              entre tus dispositivos y, sin conexión, los cambios se envían al recuperarla. Más detalles en la{' '}
+              {m.dataBefore}
               <LegalLink to="privacy" newTab>
-                política de privacidad
+                {m.privacy}
               </LegalLink>
               .
             </p>
@@ -234,9 +343,14 @@ export const AccountMenu: React.FC<AccountMenuProps> = ({
           </div>
 
           <div className="space-y-2">
+            {/* El idioma de la app, en este dispositivo y en la cuenta (al cambiarlo, la app se vuelve a cargar) */}
+            <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-slate-200 px-4 py-2">
+              <span className="text-xs font-bold text-slate-700">{m.language}</span>
+              <LanguageSelector />
+            </div>
             <button type="button" onClick={onOpenAccessibility} disabled={busy !== null} className={actionClass}>
               <Accessibility className="h-4 w-4 text-indigo-600" aria-hidden="true" />
-              Accesibilidad: tamaño del texto, contraste y animaciones
+              {m.accessibility}
             </button>
             <button
               type="button"
@@ -245,7 +359,7 @@ export const AccountMenu: React.FC<AccountMenuProps> = ({
               className={actionClass}
             >
               <Download className="h-4 w-4 text-indigo-600" aria-hidden="true" />
-              {busy === 'export' ? 'Preparando descarga…' : 'Descargar mis datos (JSON)'}
+              {busy === 'export' ? m.preparingDownload : m.download}
             </button>
             <button
               type="button"
@@ -255,10 +369,10 @@ export const AccountMenu: React.FC<AccountMenuProps> = ({
               className={actionClass}
             >
               <Upload className="h-4 w-4 text-indigo-600" aria-hidden="true" />
-              {busy === 'import' ? 'Leyendo el archivo…' : 'Importar datos (JSON)'}
+              {busy === 'import' ? m.readingFile : m.import}
             </button>
             <p id="account-import-help" className="px-1 text-[11px] text-slate-600">
-              El archivo de «Descargar mis datos». Se añade lo que falta; lo que ya tienes no se toca.
+              {m.importHelp}
             </p>
             <input
               ref={importInput}
@@ -275,12 +389,12 @@ export const AccountMenu: React.FC<AccountMenuProps> = ({
               }}
             />
             <div className="rounded-xl border border-slate-200 px-4 py-2.5">
-              <p className="text-xs font-bold text-slate-700">Notificaciones de las alarmas</p>
+              <p className="text-xs font-bold text-slate-700">{m.alarmNotifications}</p>
               {/* Con push, la casilla de abajo pide también el permiso: el botón solo haría falta sin ella */}
               {push ? (
                 notificationState() === 'denied' && !push.enabled && <NotificationPermission />
               ) : (
-                <NotificationPermission buttonLabel="Activar las notificaciones de las alarmas" />
+                <NotificationPermission buttonLabel={m.enableAlarmNotifications} />
               )}
               {push && (
                 <div className="mt-2 space-y-1">
@@ -291,28 +405,20 @@ export const AccountMenu: React.FC<AccountMenuProps> = ({
                       disabled={busy !== null}
                       onChange={(e) => {
                         const on = e.target.checked;
-                        void run(
-                          'push',
-                          () => push.onChange(on),
-                          on
-                            ? 'Listo: en este dispositivo, las alarmas te llegarán aunque CLAR esté cerrada.'
-                            : 'En este dispositivo, las alarmas solo avisarán con CLAR abierta.'
-                        );
+                        void run('push', () => push.onChange(on), on ? m.pushOn : m.pushOff);
                       }}
                       aria-describedby="account-push-help"
                       className="h-4 w-4 rounded border-slate-300 text-indigo-600"
                     />
-                    {busy === 'push' ? 'Guardando…' : 'Avisarme también con CLAR cerrada (en este dispositivo)'}
+                    {busy === 'push' ? m.saving : m.pushLabel}
                   </label>
                   <p id="account-push-help" className="text-[11px] text-slate-600">
-                    La hora de la alarma (y el nombre de la tarea, si lo muestras) pasa por Firebase Cloud Messaging
-                    (Google) hasta este dispositivo.
+                    {m.pushHelp}
                   </p>
                   {push.permissionLost && (
                     <p className="flex items-start gap-1.5 rounded-lg bg-amber-50 p-2 text-[11px] text-amber-900">
                       <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0" aria-hidden="true" />
-                      Las notificaciones de CLAR están bloqueadas en los ajustes de este dispositivo: así no te llega
-                      ninguna alarma. Vuelve a permitirlas o desactiva esta opción.
+                      {m.permissionLost}
                     </p>
                   )}
                   {push.enabled && !push.permissionLost && (
@@ -320,25 +426,13 @@ export const AccountMenu: React.FC<AccountMenuProps> = ({
                       <button
                         type="button"
                         disabled={busy !== null}
-                        onClick={() =>
-                          void run(
-                            'push-test',
-                            push.onTest,
-                            'Enviada: te llegará en unos segundos, también si cierras CLAR ahora.'
-                          )
-                        }
+                        onClick={() => void run('push-test', push.onTest, m.testSent)}
                         className="inline-flex min-h-9 items-center gap-1.5 rounded-lg border border-indigo-200 bg-indigo-50 px-2.5 text-xs font-semibold text-indigo-800 hover:bg-indigo-100 disabled:opacity-60"
                       >
                         <Bell className="h-3.5 w-3.5" aria-hidden="true" />
-                        {busy === 'push-test' ? 'Enviando…' : 'Probar notificación'}
+                        {busy === 'push-test' ? m.sending : m.test}
                       </button>
-                      {isAndroid() && (
-                        <p className="text-[11px] text-slate-600">
-                          En Android, para que aparezca en lo alto de la pantalla: Ajustes › Notificaciones › CLAR (o
-                          Chrome) › «Mostrar en pantalla emergente». Si llegan tarde, quita las restricciones de batería
-                          de Chrome.
-                        </p>
-                      )}
+                      {isAndroid() && <p className="text-[11px] text-slate-600">{m.androidHelp}</p>}
                     </div>
                   )}
                   {push.enabled && (
@@ -353,7 +447,7 @@ export const AccountMenu: React.FC<AccountMenuProps> = ({
                         }}
                         className="h-4 w-4 rounded border-slate-300 text-indigo-600"
                       />
-                      Mostrar el nombre de la tarea (también con el móvil bloqueado)
+                      {m.showTitle}
                     </label>
                   )}
                 </div>
@@ -363,12 +457,10 @@ export const AccountMenu: React.FC<AccountMenuProps> = ({
               <section aria-labelledby="account-features" className="rounded-xl border border-slate-200 px-4 py-2.5">
                 <h3 id="account-features" className="flex items-center gap-1.5 text-xs font-bold text-slate-700">
                   <Sparkles className="h-3.5 w-3.5 text-indigo-600" aria-hidden="true" />
-                  Funciones extra
+                  {m.extraFeatures}
                 </h3>
                 <p className="text-[11px] text-slate-600">
-                  {extraFeatures.onToggle
-                    ? 'Como administración, las tienes todas: enciende las que quieras usar.'
-                    : 'Activadas para tu cuenta por la administración.'}
+                  {extraFeatures.onToggle ? m.adminFeatures : m.grantedFeatures}
                 </p>
                 <ul className="mt-2 space-y-2">
                   {extraFeatures.features.map((feature) => {
@@ -417,7 +509,7 @@ export const AccountMenu: React.FC<AccountMenuProps> = ({
             )}
             <button type="button" onClick={onContact} disabled={busy !== null} className={actionClass}>
               <MessageSquare className="h-4 w-4 text-indigo-600" aria-hidden="true" />
-              Escríbenos: ideas, fallos o dudas
+              {m.contact}
             </button>
             <ShareAppButton className={actionClass} />
           </div>
@@ -425,7 +517,7 @@ export const AccountMenu: React.FC<AccountMenuProps> = ({
           {/* SEGURIDAD */}
           <section aria-labelledby="account-security" className="space-y-2">
             <h3 id="account-security" className="text-xs font-bold tracking-wider text-slate-700 uppercase">
-              Seguridad
+              {m.security}
             </h3>
             {hasPassword && (
               <button
@@ -436,14 +528,14 @@ export const AccountMenu: React.FC<AccountMenuProps> = ({
                 className={actionClass}
               >
                 <KeyRound className="h-4 w-4 text-indigo-600" aria-hidden="true" />
-                Cambiar la contraseña
+                {m.changePassword}
               </button>
             )}
             {panel === 'password' && (
               <form onSubmit={submitPassword} className="space-y-3 rounded-2xl border border-slate-200 p-4">
                 <div className="space-y-1">
                   <label htmlFor="current-password" className="block text-xs font-semibold text-slate-700">
-                    Contraseña actual
+                    {m.currentPassword}
                   </label>
                   <input
                     id="current-password"
@@ -457,7 +549,7 @@ export const AccountMenu: React.FC<AccountMenuProps> = ({
                 </div>
                 <div className="space-y-1">
                   <label htmlFor="new-password" className="block text-xs font-semibold text-slate-700">
-                    Contraseña nueva
+                    {m.newPassword}
                   </label>
                   <input
                     id="new-password"
@@ -471,7 +563,7 @@ export const AccountMenu: React.FC<AccountMenuProps> = ({
                     className={inputClass}
                   />
                   <p id="new-password-hint" className="text-[11px] text-slate-600">
-                    Al menos {MIN_PASSWORD_LENGTH} caracteres.
+                    {m.passwordHint}
                   </p>
                 </div>
                 <button
@@ -479,7 +571,7 @@ export const AccountMenu: React.FC<AccountMenuProps> = ({
                   disabled={busy !== null}
                   className="rounded-xl bg-slate-900 px-3 py-2 text-xs font-bold text-white hover:bg-slate-800 disabled:opacity-60"
                 >
-                  {busy === 'password' ? 'Guardando…' : 'Guardar la contraseña nueva'}
+                  {busy === 'password' ? m.saving : m.saveNewPassword}
                 </button>
               </form>
             )}
@@ -492,28 +584,25 @@ export const AccountMenu: React.FC<AccountMenuProps> = ({
               className={actionClass}
             >
               <MonitorSmartphone className="h-4 w-4 text-indigo-600" aria-hidden="true" />
-              Cerrar sesión en todos los dispositivos
+              {m.everywhere}
             </button>
             {panel === 'everywhere' && (
               <div className="space-y-3 rounded-2xl border border-slate-200 p-4">
-                <p className="text-xs leading-relaxed text-slate-700">
-                  Se cerrará la sesión en todos tus dispositivos, también en este. Los demás dejarán de tener acceso en
-                  menos de una hora. Úsalo si has perdido un dispositivo o has entrado en uno que no es tuyo.
-                </p>
+                <p className="text-xs leading-relaxed text-slate-700">{m.everywhereHelp}</p>
                 <button
                   type="button"
                   disabled={busy !== null}
                   onClick={() => run('everywhere', onSignOutEverywhere)}
                   className="rounded-xl bg-slate-900 px-3 py-2 text-xs font-bold text-white hover:bg-slate-800 disabled:opacity-60"
                 >
-                  {busy === 'everywhere' ? 'Cerrando sesiones…' : 'Cerrar todas las sesiones'}
+                  {busy === 'everywhere' ? m.closingSessions : m.closeAllSessions}
                 </button>
               </div>
             )}
 
             <button type="button" onClick={onSignOut} disabled={busy !== null} className={actionClass}>
               <LogOut className="h-4 w-4 text-slate-500" aria-hidden="true" />
-              Cerrar sesión
+              {m.signOut}
             </button>
           </section>
 
@@ -537,7 +626,7 @@ export const AccountMenu: React.FC<AccountMenuProps> = ({
               className="flex w-full items-center gap-2 rounded-xl border border-red-200 bg-white px-4 py-2.5 text-xs font-bold text-red-700 hover:bg-red-50 disabled:opacity-60"
             >
               <Trash2 className="h-4 w-4" aria-hidden="true" />
-              Eliminar mi cuenta y todos mis datos
+              {m.deleteAccount}
             </button>
           )}
         </div>

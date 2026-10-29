@@ -1,5 +1,6 @@
 import React, { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { TIME_INPUT_PLACEHOLDER, parseTimeInput } from '../services/timeInput';
+import { messages } from '../i18n/locale';
 
 interface TimeFieldProps {
   // Nombre accesible del campo (salvo que haya un <label htmlFor={id}> visible)
@@ -15,7 +16,10 @@ interface TimeFieldProps {
   onDraftChange?: (pending: boolean) => void;
 }
 
-const INVALID_MESSAGE = `Escribe la hora en 24 h, como ${TIME_INPUT_PLACEHOLDER} (de 00:00 a 23:59)`;
+const INVALID_MESSAGE = messages<string>(
+  `Escribe la hora en 24 h, como ${TIME_INPUT_PLACEHOLDER} (de 00:00 a 23:59)`,
+  `Write the time in 24-hour format, like ${TIME_INPUT_PLACEHOLDER} (00:00 to 23:59)`
+);
 
 // Hora en 24 h escrita a mano (9:30, 0930, 21:45…), en lugar del selector del navegador, que en sistemas en 12 h
 // muestra a. m./p. m. Lo que no es aún una hora no se guarda y bloquea el envío del formulario con un mensaje.

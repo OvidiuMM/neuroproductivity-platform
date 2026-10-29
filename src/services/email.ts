@@ -1,4 +1,5 @@
 import type { EmailDraft } from '../types';
+import { LOCALE_TAG } from '../i18n/locale';
 
 // CORREO («Tiempo protegido»): CLAR no lo envía; lo redacta en orden (adjuntos, texto, asunto y, al final,
 // destinatarios), lo guarda y lo pasa al programa de correo para enviarlo.
@@ -26,7 +27,7 @@ export const formatFileSize = (bytes: number) => {
     value /= 1024;
     unit++;
   }
-  const number = new Intl.NumberFormat('es-ES', { maximumFractionDigits: value < 10 ? 1 : 0 }).format(value);
+  const number = new Intl.NumberFormat(LOCALE_TAG, { maximumFractionDigits: value < 10 ? 1 : 0 }).format(value);
   return `${number} ${units[unit]}`;
 };
 

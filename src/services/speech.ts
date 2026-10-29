@@ -1,4 +1,28 @@
 import { isIOS } from './platform';
+import { LOCALE_TAG, messages } from '../i18n/locale';
+
+const m = messages(
+  {
+    notAllowed: 'Para dictar, da permiso al micrófono en tu navegador.',
+    useKeyboardMic: 'Aquí no se puede dictar: usa el micrófono del teclado.',
+    turnOnDictation: 'Aquí no se puede dictar. Activa el dictado del dispositivo o prueba en el navegador.',
+    noMicrophone: 'No se encuentra el micrófono.',
+    needsConnection: 'Para dictar hace falta conexión.',
+    noSpeech: 'No se ha oído nada. Pulsa el micrófono y habla.',
+    failed: 'No se pudo dictar. Inténtalo de nuevo.',
+    unsupported: 'Este navegador no permite dictar.'
+  },
+  {
+    notAllowed: 'To dictate, allow microphone access in your browser.',
+    useKeyboardMic: "You can't dictate here: use the keyboard's microphone.",
+    turnOnDictation: "You can't dictate here. Turn on dictation on your device or try in the browser.",
+    noMicrophone: "Can't find the microphone.",
+    needsConnection: 'You need a connection to dictate.',
+    noSpeech: "Didn't hear anything. Tap the microphone and speak.",
+    failed: "Couldn't dictate. Try again.",
+    unsupported: "This browser doesn't support dictation."
+  }
+);
 // DICTAR UNA TAREA: el reconocimiento de voz del navegador (Web Speech API). CLAR no recibe el audio, solo el texto
 // que devuelve el navegador, que para pasarlo a texto lo envía a su proveedor (Google en Chrome, Apple en Safari,
 // Microsoft en Edge; lo dice la política de privacidad). Firefox no lo tiene, y entonces no se ofrece.
@@ -53,22 +77,20 @@ export const transcriptOf = (results: SpeechResults) => {
 export const dictationErrorMessage = (code: string) => {
   switch (code) {
     case 'not-allowed':
-      return 'Para dictar, da permiso al micrófono en tu navegador.';
+      return m.notAllowed;
     // Safari, con el dictado del dispositivo desactivado (o donde no lo deja usar)
     case 'service-not-allowed':
-      return isIOS()
-        ? 'Aquí no se puede dictar: usa el micrófono del teclado.'
-        : 'Aquí no se puede dictar. Activa el dictado del dispositivo o prueba en el navegador.';
+      return isIOS() ? m.useKeyboardMic : m.turnOnDictation;
     case 'audio-capture':
-      return 'No se encuentra el micrófono.';
+      return m.noMicrophone;
     case 'network':
-      return 'Para dictar hace falta conexión.';
+      return m.needsConnection;
     case 'no-speech':
-      return 'No se ha oído nada. Pulsa el micrófono y habla.';
+      return m.noSpeech;
     case 'aborted':
       return null;
     default:
-      return 'No se pudo dictar. Inténtalo de nuevo.';
+      return m.failed;
   }
 };
 
@@ -88,7 +110,7 @@ export interface Dictation {
 // Un solo dictado a la vez en toda la app: empezar otro cancela el anterior
 let active: Dictation | null = null;
 
-// Empieza a dictar en español: `onStart` llega cuando el navegador ya escucha, `onText` recibe el texto según se
+// Empieza a dictar en el idioma de la app: `onStart` llega cuando el navegador ya escucha, `onText` recibe el texto según se
 // reconoce y `onEnd`, al terminar (con el mensaje si falló), siempre después de volver de aquí. Una frase cada vez:
 // al callar termina solo y, si no, a los 30 segundos. Si la página se oculta (otra app), se para sin dar error
 export const startDictation = ({
@@ -103,11 +125,12 @@ export const startDictation = ({
   active?.discard();
   const Constructor = recognitionConstructor();
   if (!Constructor) {
-    queueMicrotask(() => onEnd('Este navegador no permite dictar.'));
+    queueMicrotask(() => onEnd(m.unsupported));
     return { stop: () => undefined, discard: () => undefined, cancel: () => undefined };
   }
   const recognition = new Constructor();
-  recognition.lang = 'es-ES';
+  // Se dicta en el idioma de la app
+  recognition.lang = LOCALE_TAG;
   recognition.interimResults = true;
   recognition.continuous = false;
   recognition.maxAlternatives = 1;
@@ -160,7 +183,7 @@ export const startDictation = ({
     recognition.start();
   } catch {
     detach();
-    queueMicrotask(() => onEnd('No se pudo dictar. Inténtalo de nuevo.'));
+    queueMicrotask(() => onEnd(m.failed));
   }
   return dictation;
 };

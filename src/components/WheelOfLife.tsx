@@ -4,6 +4,68 @@ import { activeGoalsByArea } from '../services/goals';
 import { logAverage } from '../services/wheel';
 import { useAreas } from '../hooks/useAreas';
 import { Compass, History, Save, Check, TrendingUp, Flag, BookOpen, Target, ArrowRight, Pencil } from 'lucide-react';
+import { LOCALE_TAG, messages } from '../i18n/locale';
+
+const m = messages(
+  {
+    firstStepTitle: 'Primer paso: evalúa tu Rueda de la Vida',
+    firstStepBefore: 'Puntúa de 0 a 10 tu satisfacción actual en cada área y pulsa ',
+    firstStepAfter:
+      '. Será tu punto de partida: en «Metas» verás primero las áreas más bajas para ponerles metas, y podrás comparar tu progreso en cada nueva evaluación.',
+    viewHelp: 'Ver la ayuda',
+    wheel: 'Rueda de la Vida',
+    intro:
+      'Puntúa del 0 al 10 cuánto te satisface cada área de tu vida. Las más bajas son el punto de partida de tus metas, y cada evaluación queda guardada para que veas cómo cambias.',
+    editAreas: 'Editar áreas',
+    compare: 'Comparar con una evaluación anterior',
+    chart: 'Gráfico de la Rueda de la Vida',
+    now: 'Ahora',
+    before: 'Antes',
+    scoreByArea: 'Puntuación por área',
+    range: 'Del 0 al 10',
+    activeGoals: (n: number) => `· ${n} ${n === 1 ? 'meta activa' : 'metas activas'}`,
+    scoreOf: (area: string) => `Puntuación de ${area}`,
+    saveThis: 'Guardar esta evaluación',
+    notePlaceholder: 'Nombre opcional (p. ej. «Fin de trimestre»)',
+    save: 'Guardar la evaluación',
+    saved: 'Evaluación guardada.',
+    yourEvaluations: (n: number) => `Tus evaluaciones (${n})`,
+    evaluation: (n: number) => `Evaluación ${n}`,
+    average: (value: string) => `Promedio: ${value}/10`,
+    goals: 'Metas',
+    nextStep: 'El siguiente paso: ponles metas a las áreas que más quieres mejorar y añádeles tareas.',
+    goToGoals: 'Ir a Metas'
+  },
+  {
+    firstStepTitle: 'First step: assess your Wheel of Life',
+    firstStepBefore: 'Rate from 0 to 10 how satisfied you are now with each area and press ',
+    firstStepAfter:
+      '. It will be your starting point: “Goals” shows the lowest areas first so you can set goals for them, and you can compare your progress with each new assessment.',
+    viewHelp: 'View help',
+    wheel: 'Wheel of Life',
+    intro:
+      'Rate from 0 to 10 how satisfied you are with each area of your life. The lowest ones are the starting point for your goals, and each assessment is saved so you can see how you change.',
+    editAreas: 'Edit areas',
+    compare: 'Compare with an earlier assessment',
+    chart: 'Wheel of Life chart',
+    now: 'Now',
+    before: 'Before',
+    scoreByArea: 'Score by area',
+    range: 'From 0 to 10',
+    activeGoals: (n) => `· ${n} ${n === 1 ? 'active goal' : 'active goals'}`,
+    scoreOf: (area) => `Score for ${area}`,
+    saveThis: 'Save this assessment',
+    notePlaceholder: 'Optional name (e.g. “End of quarter”)',
+    save: 'Save assessment',
+    saved: 'Assessment saved.',
+    yourEvaluations: (n) => `Your assessments (${n})`,
+    evaluation: (n) => `Assessment ${n}`,
+    average: (value) => `Average: ${value}/10`,
+    goals: 'Goals',
+    nextStep: 'Next step: set goals for the areas you most want to improve and add tasks to them.',
+    goToGoals: 'Go to Goals'
+  }
+);
 
 interface WheelOfLifeProps {
   logs: WheelOfLifeLog[];
@@ -107,11 +169,11 @@ export const WheelOfLife: React.FC<WheelOfLifeProps> = ({
             <Flag className="h-5 w-5" />
           </div>
           <div className="flex-1 space-y-1">
-            <h3 className="text-sm font-bold text-indigo-950">Primer paso: evalúa tu Rueda de la Vida</h3>
+            <h3 className="text-sm font-bold text-indigo-950">{m.firstStepTitle}</h3>
             <p className="text-xs leading-relaxed text-indigo-900">
-              Puntúa de 0 a 10 tu satisfacción actual en cada área y pulsa <strong>Guardar la evaluación</strong>. Será
-              tu punto de partida: en «Metas» verás primero las áreas más bajas para ponerles metas, y podrás comparar
-              tu progreso en cada nueva evaluación.
+              {m.firstStepBefore}
+              <strong>{m.save}</strong>
+              {m.firstStepAfter}
             </p>
           </div>
           <button
@@ -120,7 +182,7 @@ export const WheelOfLife: React.FC<WheelOfLifeProps> = ({
             className="flex items-center gap-1.5 rounded-xl border border-indigo-200 bg-white px-3.5 py-2 text-xs font-bold whitespace-nowrap text-indigo-700 transition-colors hover:bg-indigo-100"
           >
             <BookOpen className="h-3.5 w-3.5" />
-            <span>Ver la ayuda</span>
+            <span>{m.viewHelp}</span>
           </button>
         </div>
       )}
@@ -130,12 +192,9 @@ export const WheelOfLife: React.FC<WheelOfLifeProps> = ({
         <div>
           <h2 className="flex items-center gap-2 text-xl font-bold text-slate-900">
             <Compass className="h-6 w-6 text-indigo-600" />
-            Rueda de la Vida
+            {m.wheel}
           </h2>
-          <p className="mt-1 max-w-2xl text-xs leading-relaxed text-slate-500">
-            Puntúa del 0 al 10 cuánto te satisface cada área de tu vida. Las más bajas son el punto de partida de tus
-            metas, y cada evaluación queda guardada para que veas cómo cambias.
-          </p>
+          <p className="mt-1 max-w-2xl text-xs leading-relaxed text-slate-500">{m.intro}</p>
         </div>
 
         {/* Comparar con una evaluación anterior y editar las áreas */}
@@ -146,7 +205,7 @@ export const WheelOfLife: React.FC<WheelOfLifeProps> = ({
             className="flex min-h-11 items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 text-xs font-semibold text-slate-700 hover:bg-slate-50"
           >
             <Pencil className="h-4 w-4 text-indigo-600" aria-hidden="true" />
-            Editar áreas
+            {m.editAreas}
           </button>
           <label className="flex cursor-pointer items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-semibold text-slate-700">
             <input
@@ -156,7 +215,7 @@ export const WheelOfLife: React.FC<WheelOfLifeProps> = ({
               className="h-4 w-4 rounded border-slate-300 text-indigo-600"
             />
             <History className="h-4 w-4 text-indigo-600" />
-            <span>Comparar con una evaluación anterior</span>
+            <span>{m.compare}</span>
           </label>
         </div>
       </div>
@@ -170,7 +229,7 @@ export const WheelOfLife: React.FC<WheelOfLifeProps> = ({
               viewBox={`${-LABEL_MARGIN_X} ${-LABEL_MARGIN_Y} ${size + 2 * LABEL_MARGIN_X} ${size + 2 * LABEL_MARGIN_Y}`}
               className="h-auto w-full"
               role="img"
-              aria-label="Gráfico de la Rueda de la Vida"
+              aria-label={m.chart}
             >
               {/* Círculos concéntricos de referencia (Niveles del 0 al 10) */}
               {[2, 4, 6, 8, 10].map((level) => (
@@ -259,12 +318,12 @@ export const WheelOfLife: React.FC<WheelOfLifeProps> = ({
           <div className="mt-4 flex items-center gap-6 border-t border-slate-100 pt-4 text-xs">
             <div className="flex items-center gap-2">
               <span className="inline-block h-3 w-3 rounded-full bg-indigo-600" />
-              <span className="font-semibold text-slate-800">Ahora</span>
+              <span className="font-semibold text-slate-800">{m.now}</span>
             </div>
             {showHistoryOverlay && historicalLog && (
               <div className="flex items-center gap-2">
                 <span className="inline-block h-3 w-3 rounded-full border border-dashed border-amber-700 bg-amber-500" />
-                <span className="text-slate-600">{historicalLog.label || 'Antes'}</span>
+                <span className="text-slate-600">{historicalLog.label || m.before}</span>
               </div>
             )}
           </div>
@@ -275,8 +334,8 @@ export const WheelOfLife: React.FC<WheelOfLifeProps> = ({
           {/* Panel de Sliders / Manipulación Directa (0 al 10) */}
           <div className="space-y-3.5 rounded-2xl border border-slate-200 bg-white p-5 shadow-xs">
             <div className="flex items-center justify-between border-b border-slate-100 pb-2">
-              <h3 className="text-xs font-bold tracking-wider text-slate-700 uppercase">Puntuación por área</h3>
-              <span className="text-[11px] text-slate-500">Del 0 al 10</span>
+              <h3 className="text-xs font-bold tracking-wider text-slate-700 uppercase">{m.scoreByArea}</h3>
+              <span className="text-[11px] text-slate-500">{m.range}</span>
             </div>
 
             <div className="max-h-[300px] space-y-3 overflow-y-auto pr-2">
@@ -292,9 +351,7 @@ export const WheelOfLife: React.FC<WheelOfLifeProps> = ({
                       <span className="font-semibold text-slate-800">
                         {label(cat)}
                         {goalsByArea[cat] ? (
-                          <span className="ml-1.5 font-normal text-indigo-700">
-                            · {goalsByArea[cat]} {goalsByArea[cat] === 1 ? 'meta activa' : 'metas activas'}
-                          </span>
+                          <span className="ml-1.5 font-normal text-indigo-700">{m.activeGoals(goalsByArea[cat])}</span>
                         ) : null}
                       </span>
                       <div className="flex items-center gap-2 font-mono">
@@ -312,7 +369,7 @@ export const WheelOfLife: React.FC<WheelOfLifeProps> = ({
                       max="10"
                       step="1"
                       value={currentVal}
-                      aria-label={`Puntuación de ${label(cat)}`}
+                      aria-label={m.scoreOf(label(cat))}
                       onChange={(e) => handleScoreChange(cat, parseInt(e.target.value, 10))}
                       className="h-1.5 w-full cursor-pointer appearance-none rounded-lg bg-slate-200 accent-indigo-600"
                     />
@@ -327,7 +384,7 @@ export const WheelOfLife: React.FC<WheelOfLifeProps> = ({
                 htmlFor="wheel-snapshot-note"
                 className="block text-xs font-bold tracking-wider text-slate-600 uppercase"
               >
-                Guardar esta evaluación
+                {m.saveThis}
               </label>
               <div className="flex gap-2">
                 <input
@@ -335,7 +392,7 @@ export const WheelOfLife: React.FC<WheelOfLifeProps> = ({
                   type="text"
                   value={snapshotLabel}
                   onChange={(e) => setSnapshotLabel(e.target.value)}
-                  placeholder="Nombre opcional (p. ej. «Fin de trimestre»)"
+                  placeholder={m.notePlaceholder}
                   className="min-w-0 flex-1 rounded-xl border border-slate-300 px-3 py-1.5 text-xs focus:ring-2 focus:ring-indigo-400 focus:outline-none"
                 />
                 <button
@@ -344,14 +401,14 @@ export const WheelOfLife: React.FC<WheelOfLifeProps> = ({
                   className="flex items-center gap-1.5 rounded-xl bg-slate-900 px-4 py-2 text-xs font-bold whitespace-nowrap text-white shadow-xs transition-colors hover:bg-slate-800"
                 >
                   <Save className="h-3.5 w-3.5" />
-                  <span>Guardar la evaluación</span>
+                  <span>{m.save}</span>
                 </button>
               </div>
 
               {savedSuccess && (
                 <div className="animate-in fade-in flex items-center gap-1.5 rounded-xl border border-emerald-200 bg-emerald-50 p-2 text-xs text-emerald-800">
                   <Check className="h-4 w-4 text-emerald-600" />
-                  <span>Evaluación guardada.</span>
+                  <span>{m.saved}</span>
                 </div>
               )}
             </div>
@@ -361,7 +418,7 @@ export const WheelOfLife: React.FC<WheelOfLifeProps> = ({
           <div className="space-y-3 rounded-2xl border border-slate-200 bg-white p-5 shadow-xs">
             <h3 className="flex items-center gap-1.5 text-xs font-bold tracking-wider text-slate-700 uppercase">
               <TrendingUp className="h-4 w-4 text-indigo-600" />
-              <span>Tus evaluaciones ({logs.length})</span>
+              <span>{m.yourEvaluations(logs.length)}</span>
             </h3>
 
             <div className="max-h-48 space-y-2 overflow-y-auto pr-1">
@@ -376,9 +433,9 @@ export const WheelOfLife: React.FC<WheelOfLifeProps> = ({
                   }`}
                 >
                   <div>
-                    <span className="block truncate">{log.label || `Evaluación ${idx + 1}`}</span>
+                    <span className="block truncate">{log.label || m.evaluation(idx + 1)}</span>
                     <span className="font-mono text-[10px] text-slate-500">
-                      {new Date(log.timestamp).toLocaleDateString('es-ES', {
+                      {new Date(log.timestamp).toLocaleDateString(LOCALE_TAG, {
                         year: 'numeric',
                         month: 'short',
                         day: 'numeric',
@@ -388,7 +445,7 @@ export const WheelOfLife: React.FC<WheelOfLifeProps> = ({
                     </span>
                   </div>
                   <div className="rounded-md border border-slate-200 bg-white px-2 py-0.5 font-mono text-[11px] text-slate-600">
-                    Promedio: {logAverage(log.scores).toFixed(1)}/10
+                    {m.average(logAverage(log.scores).toFixed(1))}
                   </div>
                 </button>
               ))}
@@ -408,18 +465,16 @@ export const WheelOfLife: React.FC<WheelOfLifeProps> = ({
             className="flex items-center gap-2 text-xs font-bold tracking-wider text-slate-700 uppercase"
           >
             <Target className="h-4 w-4 text-indigo-600" aria-hidden="true" />
-            Metas
+            {m.goals}
           </h3>
-          <p className="mt-1 text-xs text-slate-600">
-            El siguiente paso: ponles metas a las áreas que más quieres mejorar y añádeles tareas.
-          </p>
+          <p className="mt-1 text-xs text-slate-600">{m.nextStep}</p>
         </div>
         <button
           type="button"
           onClick={onOpenGoals}
           className="inline-flex min-h-11 items-center gap-2 rounded-xl bg-slate-900 px-4 text-sm font-bold text-white hover:bg-slate-800"
         >
-          Ir a Metas
+          {m.goToGoals}
           <ArrowRight className="h-4 w-4" aria-hidden="true" />
         </button>
       </section>
