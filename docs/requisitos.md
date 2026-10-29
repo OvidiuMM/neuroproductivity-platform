@@ -1,9 +1,9 @@
 # Requisitos del sistema — CLAR
 
-- **Versión:** 1.0.0
-- **Última revisión:** 2026-10-21
+- **Versión:** 1.1.0
+- **Última revisión:** 2026-10-29
 
-Este documento describe qué hace CLAR en la versión 1.0.0: sus requisitos funcionales y no funcionales tal como están implementados en el código de esta versión (la SPA de `src/`, las Cloud Functions de `functions/src/`, las reglas de Firestore, la configuración de Firebase Hosting y las pruebas). No recoge planes ni funciones futuras. Donde el README y el código no coinciden, manda el código.
+Este documento describe qué hace CLAR en la versión 1.1.0: sus requisitos funcionales y no funcionales tal como están implementados en el código de esta versión (la SPA de `src/`, las Cloud Functions de `functions/src/`, las reglas de Firestore, la configuración de Firebase Hosting y las pruebas). No recoge planes ni funciones futuras. Donde el README y el código no coinciden, manda el código.
 
 **Convenciones.** RF: requisito funcional. RNF: requisito no funcional. Los identificadores son estables: un requisito nuevo toma el siguiente número libre de su sección y uno retirado no se reutiliza. Los textos entre «» son etiquetas de la interfaz. «Origen» señala los archivos principales de cada sección.
 
