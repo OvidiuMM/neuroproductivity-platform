@@ -5,6 +5,8 @@ import {
   describeRecurrence,
   nextOccurrence,
   nextRecurringTask,
+  occurrencesBetween,
+  repeatUnit,
   toRRule,
   upcomingOccurrences,
   firstOccurrence
@@ -273,5 +275,135 @@ describe('describeRecurrence and toRRule', () => {
       'RRULE:FREQ=YEARLY;INTERVAL=1;BYMONTH=2;BYMONTHDAY=28,29;BYSETPOS=-1'
     );
     assert.equal(toRRule(buildRecurrence('YEARLY', '2026-10-29'), true, '2026-10-29'), 'RRULE:FREQ=YEARLY;INTERVAL=1');
+  });
+});
+
+describe('repeating from completion (N days or weeks after doing it)', () => {
+  const daily3 = buildRecurrence('DAILY', '2026-10-15', { interval: 3, from: 'COMPLETION' });
+  const weekly2 = buildRecurrence('WEEKLY', '2026-10-15', { interval: 2, weekdays: [1, 3], from: 'COMPLETION' });
+
+  it('is only for days and weeks, and has no weekdays', () => {
+    assert.deepEqual(daily3, { frequency: 'DAILY', interval: 3, from: 'COMPLETION' });
+    assert.deepEqual(weekly2, { frequency: 'WEEKLY', interval: 2, from: 'COMPLETION' });
+    // En meses y años no existe: fechas fijas
+    assert.equal(buildRecurrence('MONTHLY', '2026-10-15', { from: 'COMPLETION' }).from, undefined);
+    assert.equal(buildRecurrence('YEARLY', '2026-10-15', { from: 'COMPLETION' }).from, undefined);
+    // Sin él, como siempre (las tareas de antes de 1.1.0)
+    assert.equal('from' in buildRecurrence('DAILY', '2026-10-15', { interval: 3 }), false);
+  });
+
+  it('counts from the local day it is done, late or early, whatever the due date', () => {
+    // Vencía el 15; hecha el 20 (tarde) → el 23; hecha el 10 (antes) → el 13
+    assert.equal(nextOccurrence('2026-10-15', daily3, new Date(2026, 9, 20, 18, 0)), '2026-10-23');
+    assert.equal(nextOccurrence('2026-10-15', daily3, new Date(2026, 9, 10, 9, 0)), '2026-10-13');
+    // A última hora del día cuenta ese día
+    assert.equal(nextOccurrence('2026-10-15', daily3, new Date(2026, 9, 15, 23, 59)), '2026-10-18');
+    // Semanas: 2 semanas = 14 días, sin días de la semana
+    assert.equal(nextOccurrence('2026-10-15', weekly2, new Date(2026, 9, 21, 12, 0)), '2026-11-04');
+  });
+
+  it('crosses month and year ends, and 29 February', () => {
+    const daily1 = buildRecurrence('DAILY', '2027-01-31', { from: 'COMPLETION' });
+    assert.equal(nextOccurrence('2027-01-31', daily1, new Date(2027, 0, 31, 10, 0)), '2027-02-01');
+    assert.equal(nextOccurrence('2026-01-30', daily3, new Date(2026, 0, 30, 10, 0)), '2026-02-02');
+    assert.equal(nextOccurrence('2028-02-27', daily3, new Date(2028, 1, 27, 10, 0)), '2028-03-01');
+    assert.equal(
+      nextOccurrence(
+        '2028-02-27',
+        buildRecurrence('DAILY', '2028-02-27', { interval: 2, from: 'COMPLETION' }),
+        new Date(2028, 1, 27)
+      ),
+      '2028-02-29'
+    );
+    const weekly1 = buildRecurrence('WEEKLY', '2026-12-30', { from: 'COMPLETION' });
+    assert.equal(nextOccurrence('2026-12-30', weekly1, new Date(2026, 11, 30, 10, 0)), '2027-01-06');
+  });
+
+  it('stops after the until date', () => {
+    const rec = { ...daily3, until: '2026-10-31' };
+    assert.equal(nextOccurrence('2026-10-25', rec, new Date(2026, 9, 28)), '2026-10-31');
+    assert.equal(nextOccurrence('2026-10-25', rec, new Date(2026, 9, 29)), null);
+  });
+
+  it('creates the next task N days after it is done, keeping its times and alarm, on its own day', () => {
+    const task: TaskItem = {
+      id: 'task-1',
+      userId: 'uid',
+      listContext: 'PERSONAL',
+      title: 'Regar las plantas',
+      description: '',
+      priority: 'MEDIUM',
+      createdAt: '2026-10-01T09:00:00.000Z',
+      updatedAt: '2026-10-01T09:00:00.000Z',
+      observations: [],
+      isSomeday: false,
+      status: 'PENDING',
+      startDate: '2026-10-14',
+      startTime: '08:00',
+      dueDate: '2026-10-15',
+      dueTime: '09:00',
+      alarmTime: '08:30',
+      recurrence: daily3
+    };
+    // Hecha el 20 por la tarde, pasada la hora límite: la siguiente, el 23 a las mismas horas
+    const next = nextRecurringTask(task, new Date(2026, 9, 20, 18, 0))!;
+    assert.equal(next.dueDate, '2026-10-23');
+    assert.deepEqual([next.startTime, next.dueTime, next.alarmTime], ['08:00', '09:00', '08:30']);
+    assert.equal(next.startDate, undefined);
+    assert.deepEqual(next.recurrence, daily3);
+    // El mismo id que en fechas fijas: dos pestañas no crean dos
+    assert.equal(next.id, nextRecurringTask({ ...task, recurrence: buildRecurrence('DAILY', '2026-10-15') })!.id);
+  });
+
+  it('has no predicted series: the agenda shows only the current one', () => {
+    assert.deepEqual(occurrencesBetween('2026-10-15', daily3, '2026-10-01', '2026-12-31'), []);
+    assert.deepEqual(upcomingOccurrences('2026-10-15', weekly2, 5), ['2026-10-15']);
+    // Semanas desde que se hace: la primera es el propio inicio, sea el día que sea
+    assert.equal(firstOccurrence('2026-10-15', weekly2), '2026-10-15');
+  });
+
+  it('describes it in plain Spanish and has no RRULE', () => {
+    assert.equal(describeRecurrence(daily3), '3 días después de hacerla');
+    assert.equal(describeRecurrence(weekly2, '2026-10-15'), '2 semanas después de hacerla');
+    assert.equal(
+      describeRecurrence(buildRecurrence('DAILY', '2026-10-15', { from: 'COMPLETION' })),
+      '1 día después de hacerla'
+    );
+    assert.equal(
+      describeRecurrence(buildRecurrence('WEEKLY', '2026-10-15', { from: 'COMPLETION' })),
+      '1 semana después de hacerla'
+    );
+    assert.match(
+      describeRecurrence({ ...daily3, until: '2026-12-31' }),
+      /^3 días después de hacerla \(hasta el 31 dic 2026\)$/
+    );
+    assert.equal(toRRule(daily3, false, '2026-10-15'), null);
+    assert.equal(toRRule(weekly2, true, '2026-10-15'), null);
+  });
+
+  it('ignores a completion mode on months and years written by hand', () => {
+    const monthly = { ...buildRecurrence('MONTHLY', '2026-10-15'), from: 'COMPLETION' as const };
+    assert.equal(nextOccurrence('2026-10-15', monthly, past), '2026-11-15');
+    assert.equal(describeRecurrence(monthly), 'Cada mes, el día 15');
+    assert.equal(toRRule(monthly, true), 'RRULE:FREQ=MONTHLY;INTERVAL=1;BYMONTHDAY=15');
+  });
+});
+
+describe('every N periods', () => {
+  it('names the unit by N, and never says «Cada día» for every 3 days', () => {
+    assert.deepEqual(
+      [repeatUnit('DAILY', 1), repeatUnit('DAILY', 3), repeatUnit('WEEKLY', 2), repeatUnit('MONTHLY', 1)],
+      ['día', 'días', 'semanas', 'mes']
+    );
+    assert.equal(describeRecurrence(buildRecurrence('DAILY', '2026-10-12', { interval: 3 })), 'Cada 3 días');
+    assert.equal(describeRecurrence(buildRecurrence('YEARLY', '2026-10-12', { interval: 2 })), 'Cada 2 años');
+    assert.equal(toRRule(buildRecurrence('DAILY', '2026-10-12', { interval: 3 }), true), 'RRULE:FREQ=DAILY;INTERVAL=3');
+  });
+
+  it('repeats every 3 days on fixed dates, skipping those missed when done late', () => {
+    const daily3 = buildRecurrence('DAILY', '2026-10-12', { interval: 3 });
+    assert.deepEqual(upcomingOccurrences('2026-10-12', daily3, 3), ['2026-10-12', '2026-10-15', '2026-10-18']);
+    // Hecha el 16: la del 15 ya pasó → la del 18 (fechas fijas, no 3 días después de hacerla)
+    assert.equal(nextOccurrence('2026-10-12', daily3, new Date(2026, 9, 16, 10, 0)), '2026-10-18');
   });
 });

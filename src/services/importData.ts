@@ -13,6 +13,7 @@ import type { UserCollection, UserData } from './repository';
 import { GOAL_TITLE_MAX, GOAL_WHY_MAX } from './goals';
 import { PROJECT_DESCRIPTION_MAX, PROJECT_TITLE_MAX } from './projects';
 import { AREA_LABEL_MAX, DEFAULT_AREAS, MAX_VISIBLE_AREAS, isAreaId, validateAreas, visibleAreas } from './wheel';
+import { canRepeatFromCompletion } from './recurrence';
 
 // IMPORTAR LA DESCARGA DE LA CUENTA («Descargar mis datos (JSON)»). El archivo viene de fuera: cada registro se
 // comprueba campo a campo y solo se guardan los campos conocidos, con su tipo y su formato. Lo que ya está en la cuenta
@@ -107,10 +108,15 @@ const recurrence = (raw: unknown): Recurrence | undefined => {
   if (!isObj(raw)) return undefined;
   const frequency = oneOf(raw.frequency, ['DAILY', 'WEEKLY', 'MONTHLY', 'YEARLY'] as const);
   if (!frequency) return undefined;
-  const weekdays = [...new Set(list(raw.weekdays, (v) => int(v, 0, 6), 7))];
+  // Contando desde que se hace: solo días y semanas, sin días de la semana. Otro valor, o en meses y años, se omite
+  // (fechas fijas)
+  const from = raw.from === 'COMPLETION' && canRepeatFromCompletion(frequency) ? 'COMPLETION' : undefined;
+  const weekdays = from ? [] : [...new Set(list(raw.weekdays, (v) => int(v, 0, 6), 7))];
   return {
     frequency,
+    // El formulario deja de 1 a 99; aquí se sigue admitiendo hasta 999, así ningún archivo que antes valía deja de valer
     interval: int(raw.interval, 1, 999) ?? 1,
+    from,
     weekdays: weekdays.length ? weekdays : undefined,
     monthlyMode: oneOf(raw.monthlyMode, ['DAY_OF_MONTH', 'NTH_WEEKDAY', 'LAST_WEEKDAY'] as const),
     monthDay: int(raw.monthDay, 1, 31),

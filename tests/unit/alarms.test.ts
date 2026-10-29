@@ -163,6 +163,17 @@ test('the alarm is marked as set when it, the day or the repetition changes, not
   assert.equal(alarmSetAtFor(before, { ...before, dueTime: '13:00' }, now), now);
   assert.equal(alarmSetAtFor(before, { ...before, recurrence: { frequency: 'DAILY', interval: 1 } }, now), now);
   assert.equal(alarmSetAtFor(before, { ...before, alarmTime: undefined }, now), undefined);
+  // Pasar a contar desde que se hace (o dejar de hacerlo) también es un cambio de la repetición
+  const daily = { ...before, recurrence: { frequency: 'DAILY' as const, interval: 3 } };
+  const fromCompletion = { ...before, recurrence: { ...daily.recurrence, from: 'COMPLETION' as const } };
+  assert.equal(alarmSetAtFor(daily, fromCompletion, now), now);
+  assert.equal(alarmSetAtFor(fromCompletion, daily, now), now);
+  assert.equal(alarmSetAtFor(fromCompletion, { ...fromCompletion }, now), before.alarmSetAt);
+  // Sin `from` y con `from` vacío (p. ej. tras una importación) es la misma repetición
+  assert.equal(
+    alarmSetAtFor(daily, { ...before, recurrence: { ...daily.recurrence, from: undefined } }, now),
+    before.alarmSetAt
+  );
   // La misma repetición con sus campos en otro orden no es un cambio
   const monthly = {
     ...before,

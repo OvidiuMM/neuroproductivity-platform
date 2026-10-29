@@ -234,6 +234,33 @@ describe('recurring tasks in calendars', () => {
     assert.equal(buildCalendarEvent(task({ dueDate: '2026-10-19', dueTime: '10:00' }), APP)!.timeZone, undefined);
   });
 
+  it('exports a task repeated from completion as a single event, the current repetition, with its alarm', () => {
+    const event = buildCalendarEvent(
+      task({
+        dueDate: '2026-10-19',
+        dueTime: '10:00',
+        alarmTime: '09:30',
+        recurrence: { frequency: 'DAILY', interval: 3, from: 'COMPLETION' }
+      }),
+      APP,
+      'Europe/Madrid'
+    )!;
+    assert.equal(event.rrule, undefined);
+    // Sin serie no hace falta la zona: como cualquier tarea que no se repite
+    assert.equal(event.timeZone, undefined);
+    assert.deepEqual(event.start, new Date(2026, 9, 19, 10, 0));
+    assert.equal(new URL(googleCalendarUrl(event)).searchParams.get('recur'), null);
+    const file = buildIcs(event);
+    assert.doesNotMatch(file, /RRULE/);
+    assert.match(file, /TRIGGER:-PT30M/);
+    // Cada 3 días en fechas fijas sí es una serie
+    const fixed = buildCalendarEvent(
+      task({ dueDate: '2026-10-19', recurrence: { frequency: 'DAILY', interval: 3 } }),
+      APP
+    )!;
+    assert.equal(fixed.rrule, 'RRULE:FREQ=DAILY;INTERVAL=3');
+  });
+
   it('has no series for one-off tasks', () => {
     const event = buildCalendarEvent(task({ dueDate: '2026-10-12' }), APP)!;
     assert.equal(event.rrule, undefined);
