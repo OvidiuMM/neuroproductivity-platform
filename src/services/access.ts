@@ -55,7 +55,14 @@ export const subscribeToAccessRequests = (
   );
 
 export const syncAccess = async (functions: Functions) =>
-  (await httpsCallable<void, { status: OwnAccessStatus; isAdmin: boolean }>(functions, 'syncAccess')()).data;
+  (
+    await httpsCallable<{ language: Locale }, { status: OwnAccessStatus; isAdmin: boolean }>(
+      functions,
+      'syncAccess'
+    )({
+      language: LOCALE
+    })
+  ).data;
 
 // Con el idioma de la app: el servidor lo guarda en la solicitud (el email de la aprobación va en ese idioma) y lo usa
 // en sus mensajes de error
@@ -69,14 +76,14 @@ export const requestAccess = async (functions: Functions, message: string) =>
 
 export const setAccess = async (functions: Functions, uid: string, status: DecisionStatus) =>
   (
-    await httpsCallable<{ uid: string; status: DecisionStatus }, { status: DecisionStatus }>(
+    await httpsCallable<{ uid: string; status: DecisionStatus; language: Locale }, { status: DecisionStatus }>(
       functions,
       'setAccess'
-    )({ uid, status })
+    )({ uid, status, language: LOCALE })
   ).data;
 
 export const forgetAccess = async (functions: Functions) => {
-  await httpsCallable(functions, 'forgetAccess')();
+  await httpsCallable<{ language: Locale }>(functions, 'forgetAccess')({ language: LOCALE });
 };
 
 // Aprobación de cuentas (solo administración): obligatoria o libre. Sin configuración guardada, es obligatoria.
@@ -93,8 +100,11 @@ export const subscribeToApprovalRequired = (
 
 export const setAccessMode = async (functions: Functions, approvalRequired: boolean) =>
   (
-    await httpsCallable<{ approvalRequired: boolean }, { approvalRequired: boolean; approved: number }>(
+    await httpsCallable<
+      { approvalRequired: boolean; language: Locale },
+      { approvalRequired: boolean; approved: number }
+    >(
       functions,
       'setAccessMode'
-    )({ approvalRequired })
+    )({ approvalRequired, language: LOCALE })
   ).data;

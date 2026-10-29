@@ -77,7 +77,8 @@ const m = messages(
     tasksPerWeek: 'Tareas por semana',
     hoursPerWeek: 'Horas estimadas por semana',
     velocityRange: 'Media de las últimas cuatro semanas.',
-    cycle: (days: string) => `De media tardas ${days} días desde que creas una tarea hasta que la terminas.`,
+    cycle: (days: string, one: boolean) =>
+      `De media tardas ${days} ${one ? 'día' : 'días'} desde que creas una tarea hasta que la terminas.`,
     streakAndOpen: 'Constancia y pendientes',
     streak: 'Racha',
     daysInARow: (n: number): string => (n === 1 ? 'día seguido' : 'días seguidos'),
@@ -144,7 +145,7 @@ const m = messages(
     tasksPerWeek: 'Tasks per week',
     hoursPerWeek: 'Estimated hours per week',
     velocityRange: 'Average over the last four weeks.',
-    cycle: (days) => `On average, you take ${days} days from creating a task to finishing it.`,
+    cycle: (days, one) => `On average, you take ${days} ${one ? 'day' : 'days'} from creating a task to finishing it.`,
     streakAndOpen: 'Streak and pending',
     streak: 'Streak',
     daysInARow: (n) => (n === 1 ? 'day in a row' : 'days in a row'),
@@ -373,7 +374,9 @@ export const HomeView: React.FC<HomeViewProps> = ({
             <Metric label={m.hoursPerWeek} value={decimal.format(stats.weeklyEstimatedHours)} />
           </div>
           <p className="text-xs text-slate-600">
-            {stats.avgCycleDays === null ? m.velocityRange : m.cycle(decimal.format(stats.avgCycleDays))}
+            {stats.avgCycleDays === null
+              ? m.velocityRange
+              : m.cycle(decimal.format(stats.avgCycleDays), decimal.format(stats.avgCycleDays) === '1')}
           </p>
         </Card>
 

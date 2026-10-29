@@ -78,7 +78,41 @@ export const activeGoalsByArea = (goals: Goal[]) =>
     .reduce<Partial<Record<WheelCategory, number>>>((acc, g) => ({ ...acc, [g.area]: (acc[g.area] ?? 0) + 1 }), {});
 
 // Palabras con significado: sin tildes, en minúscula y de cuatro letras o más (fuera artículos y nexos)
-const STOPWORDS = new Set(['para', 'como', 'desde', 'hasta', 'sobre', 'entre', 'este', 'esta', 'estos', 'estas']);
+// Palabras comunes que no cuentan para sugerir una meta, en el idioma de la app
+const STOPWORDS = new Set(
+  messages(
+    ['para', 'como', 'desde', 'hasta', 'sobre', 'entre', 'este', 'esta', 'estos', 'estas'],
+    [
+      'about',
+      'with',
+      'from',
+      'that',
+      'this',
+      'these',
+      'those',
+      'your',
+      'have',
+      'will',
+      'into',
+      'over',
+      'what',
+      'when',
+      'than',
+      'then',
+      'them',
+      'they',
+      'there',
+      'their',
+      'some',
+      'more',
+      'also',
+      'just',
+      'make',
+      'want',
+      'need'
+    ]
+  )
+);
 const significantWords = (text: string) =>
   new Set(
     text

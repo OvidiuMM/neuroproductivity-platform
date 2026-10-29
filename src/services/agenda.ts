@@ -1,6 +1,7 @@
 import { ListContext, MeetingGuard, TaskItem } from '../types';
 import { DeadlineState, getDeadlineState, isArchived, toLocalDate } from './tasks';
 import { occurrencesBetween, toDateString } from './recurrence';
+import { LOCALE_TAG } from '../i18n/locale';
 
 // Elemento de la agenda en un día concreto
 export interface AgendaItem {
@@ -102,7 +103,7 @@ export const buildAgenda = (
 
   // Dentro de cada día: primero lo que no tiene hora, después por hora
   for (const items of agenda.values()) {
-    items.sort((a, b) => (a.time ?? '').localeCompare(b.time ?? '') || a.title.localeCompare(b.title));
+    items.sort((a, b) => (a.time ?? '').localeCompare(b.time ?? '') || a.title.localeCompare(b.title, LOCALE_TAG));
   }
   return agenda;
 };

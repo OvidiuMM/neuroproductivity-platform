@@ -283,7 +283,31 @@ const ENGLISH_ACTION_VERBS = new Set([
   'interview',
   'hire',
   'invoice',
-  'reconcile'
+  'reconcile',
+  'add',
+  'sell',
+  'fill',
+  'see',
+  'tell',
+  'open',
+  'close',
+  'help',
+  'decide',
+  'choose',
+  'remove',
+  'delete',
+  'mark',
+  'vacuum',
+  'hoover',
+  'mow',
+  'iron',
+  'shop',
+  'summarise',
+  'memorise',
+  'prioritise',
+  'prioritize',
+  'finalise',
+  'finalize'
 ]);
 
 const ENGLISH_AMORPHOUS_PATTERNS = [

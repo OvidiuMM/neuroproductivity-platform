@@ -146,9 +146,10 @@ export const unregisterPushDevice = async (services: FirebaseServices, uid: stri
     token = await withTimeout(currentToken(services), UNREGISTER_TIMEOUT_MS).catch(() => null);
   await unsubscribeHere().catch(() => undefined);
   if (!token) return;
-  await withTimeout(httpsCallable(services.functions, 'unregisterPushDevice')({ token }), UNREGISTER_TIMEOUT_MS).catch(
-    () => undefined
-  );
+  await withTimeout(
+    httpsCallable(services.functions, 'unregisterPushDevice')({ token, language: LOCALE }),
+    UNREGISTER_TIMEOUT_MS
+  ).catch(() => undefined);
 };
 
 export const enablePush = async (services: FirebaseServices, uid: string) => {
@@ -181,7 +182,7 @@ export const sendTestPush = async (services: FirebaseServices, uid: string) => {
   const token = await currentToken(services);
   if (!token) throw new Error(m.notSupported);
   try {
-    await httpsCallable(services.functions, 'sendTestPush')({ token });
+    await httpsCallable(services.functions, 'sendTestPush')({ token, language: LOCALE });
   } catch (e) {
     const code = (e as { code?: unknown } | null)?.code;
     if (typeof code === 'string' && TEST_ERRORS.has(code)) throw new Error(m.testFailed, { cause: e });

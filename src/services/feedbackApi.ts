@@ -67,10 +67,10 @@ export const submitFeedback = async (functions: Functions, input: FeedbackInput)
 // Solo la administración: envía la respuesta por email y, si sale, la guarda en el mensaje
 export const replyToFeedback = async (functions: Functions, ticketId: string, replyId: string, message: string) =>
   (
-    await httpsCallable<{ ticketId: string; replyId: string; message: string }, FeedbackReply>(
+    await httpsCallable<{ ticketId: string; replyId: string; message: string; language: Locale }, FeedbackReply>(
       functions,
       'replyToFeedback'
-    )({ ticketId, replyId, message })
+    )({ ticketId, replyId, message, language: LOCALE })
   ).data;
 
 const toTicket = (d: QueryDocumentSnapshot) => ({ ...(d.data() as Omit<FeedbackTicket, 'id'>), id: d.id });

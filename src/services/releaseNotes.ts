@@ -25,7 +25,7 @@ const released = (year: number, month: number) => monthFormat.format(Date.UTC(ye
 export const RELEASE_NOTES: readonly ReleaseNote[] = [
   {
     version: '1.2.0',
-    month: released(2026, 11),
+    month: released(2026, 10),
     changes: [
       messages(
         {
@@ -106,7 +106,7 @@ export const RELEASE_NOTES: readonly ReleaseNote[] = [
         },
         {
           title: 'Dictate your tasks',
-          text: 'In browsers that support it, the microphone in the form types the task or a note as you speak, up to 30 seconds at a time. On Android, when you long-press the app icon, “Nueva tarea por voz” (new task by voice) opens a new task with the microphone listening.'
+          text: 'In browsers that support it, the microphone in the form types the task or a note as you speak, up to 30 seconds at a time. On Android, when you long-press the app icon, “Nueva tarea por voz · New task by voice” opens a new task with the microphone listening.'
         }
       ),
       messages(

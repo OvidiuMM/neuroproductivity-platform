@@ -45,6 +45,11 @@ export const LOCALE_TAG = LOCALE === 'en' ? 'en-GB' : 'es-ES';
 export const messages = <T>(es: T, en: NoInfer<T>): T => (LOCALE === 'en' ? en : es);
 
 export const hasPendingLocale = () => read(PENDING_KEY) === '1';
+// El guardado en este dispositivo ahora (otra pestaña puede haberlo cambiado después de cargar esta)
+export const storedLocale = (): Locale | null => {
+  const saved = read(STORAGE_KEY);
+  return isLocale(saved) ? saved : null;
+};
 export const clearPendingLocale = () => {
   try {
     localStorage.removeItem(PENDING_KEY);
@@ -54,8 +59,15 @@ export const clearPendingLocale = () => {
 };
 
 // Cambia el idioma y vuelve a cargar la app. `pending`: lo eligió la persona en este dispositivo (se guardará en su
-// cuenta al entrar); sin él, viene de la cuenta. Si el dispositivo no deja guardarlo, no se recarga (se quedaría igual)
-export const setLocale = (next: Locale, { pending = true }: { pending?: boolean } = {}) => {
+// cuenta al entrar); sin él, viene de la cuenta. `reload: false`: se aplica la próxima vez que se abra. Si el
+// dispositivo no deja guardarlo, no se recarga (se quedaría igual) y devuelve false. Elegir el que ya está no cambia
+// nada (tampoco pasa a la cuenta). Contra bucles: si una recarga por el mismo idioma ya no sirvió, no se repite.
+const RELOADED_KEY = 'clar_locale_reloaded';
+export const setLocale = (
+  next: Locale,
+  { pending = true, reload = true }: { pending?: boolean; reload?: boolean } = {}
+) => {
+  if (next === LOCALE && next === storedLocale()) return true;
   try {
     localStorage.setItem(STORAGE_KEY, next);
     if (pending) localStorage.setItem(PENDING_KEY, '1');
@@ -64,8 +76,41 @@ export const setLocale = (next: Locale, { pending = true }: { pending?: boolean 
     return false;
   }
   if (read(STORAGE_KEY) !== next) return false;
-  if (next !== LOCALE) window.location.reload();
+  if (next === LOCALE || !reload) return true;
+  try {
+    if (sessionStorage.getItem(RELOADED_KEY) === next) return true;
+    sessionStorage.setItem(RELOADED_KEY, next);
+  } catch {
+    // Sin sessionStorage no hay forma de saberlo: se recarga
+  }
+  window.location.reload();
   return true;
+};
+
+// Qué hacer con el idioma de la cuenta al abrir la app (useAccountLanguage), una vez, con el perfil del servidor:
+// - elegido en este dispositivo y sin guardar en la cuenta (o la cuenta sin idioma): se guarda el del dispositivo,
+//   el de ahora (otra pestaña pudo cambiarlo después de cargar esta);
+// - si no, manda el de la cuenta. Si es otro, se recarga solo si el perfil llegó al poco de abrir (después, la
+//   persona ya está usando la app: se aplica la próxima vez)
+export const ADOPT_WINDOW_MS = 5_000;
+export type LanguageSync =
+  { action: 'save'; language: Locale } | { action: 'adopt'; language: Locale; reload: boolean } | { action: 'none' };
+export const accountLanguageSync = ({
+  pending,
+  stored,
+  account,
+  page,
+  sinceOpenMs
+}: {
+  pending: boolean;
+  stored: Locale | null;
+  account: unknown;
+  page: Locale;
+  sinceOpenMs: number;
+}): LanguageSync => {
+  if (pending || !isLocale(account)) return { action: 'save', language: stored ?? page };
+  if (account === page) return { action: 'none' };
+  return { action: 'adopt', language: account, reload: sinceOpenMs <= ADOPT_WINDOW_MS };
 };
 
 // <html lang> según el idioma (lectores de pantalla, traductores, corrección ortográfica)
