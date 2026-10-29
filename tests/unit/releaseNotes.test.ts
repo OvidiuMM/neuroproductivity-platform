@@ -21,11 +21,12 @@ test('the version of package.json has its release notes, first, and each change 
   }
 });
 
+// En inglés, ver releaseNotes.en.test.ts
 test('the release notes never announce the extra features', () => {
   for (const release of RELEASE_NOTES) {
     for (const { title, text } of release.changes) {
       const said = `${title} ${text}`;
-      assert.doesNotMatch(said, /funci[oó]n(es)? extra|calendario «CLAR»/i, release.version);
+      assert.doesNotMatch(said, /funci[oó]n(es)? extra|calendario «CLAR»|Google Calendar/i, release.version);
       for (const { label, description } of EXTRA_FEATURES)
         assert.ok(!said.includes(label) && !said.includes(description), release.version);
     }
