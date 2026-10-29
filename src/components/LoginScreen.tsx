@@ -5,6 +5,7 @@ import { AccessibilityTrigger, AccessibleScreen } from './AccessibilityPanel';
 import { EmailAuthForm, type EmailAuthMode } from './EmailAuthForm';
 import { LegalLink, LegalLinks } from './LegalLinks';
 import { MIN_AGE } from '../services/legal';
+import { LanguageSelector } from './LanguageSelector';
 
 interface LoginScreenProps {
   onSignIn: () => void;
@@ -107,6 +108,10 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
     <AccessibleScreen>
       {(openAccessibility) => (
         <div className="min-h-screen bg-slate-50 antialiased">
+          {/* El idioma, a la vista antes de nada */}
+          <div className="mx-auto flex max-w-6xl justify-end px-4 pt-4">
+            <LanguageSelector />
+          </div>
           <main className="mx-auto grid max-w-6xl gap-8 px-4 py-8 lg:grid-cols-[1fr_28rem] lg:items-start lg:gap-12 lg:py-14">
             {/* Qué es CLAR */}
             <section aria-labelledby="landing-title" className="space-y-8">

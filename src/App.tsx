@@ -70,6 +70,7 @@ import { MoreSheet } from './components/MoreSheet';
 import { FeedbackDialog } from './components/FeedbackDialog';
 import { AlarmAlerts, type AlarmAlert } from './components/AlarmAlerts';
 import { useTaskAlarms } from './hooks/useTaskAlarms';
+import { useAccountLanguage } from './hooks/useAccountLanguage';
 import { alarmLateNote, alarmSetAtFor, formatClock } from './services/alarms';
 import {
   NOTIFICATIONS_GRANTED_EVENT,
@@ -927,6 +928,8 @@ export default function App({ user, services, isAdmin = false }: AppProps) {
   // Las funciones extra que la administración tiene encendidas (en el perfil)
   const [featurePrefs, setFeaturePrefs] = useState<FeaturePrefs>({});
   const [welcomeClosed, setWelcomeClosed] = useState(false);
+  // IDIOMA: el de la cuenta y el de este dispositivo, al abrir (src/i18n/locale.ts)
+  useAccountLanguage(db, uid, profileOnboarding.record?.language, profileOnboarding.fromServer);
   useEffect(
     () =>
       subscribeToProfile(

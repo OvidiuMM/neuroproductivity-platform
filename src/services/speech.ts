@@ -1,4 +1,5 @@
 import { isIOS } from './platform';
+import { LOCALE_TAG } from '../i18n/locale';
 // DICTAR UNA TAREA: el reconocimiento de voz del navegador (Web Speech API). CLAR no recibe el audio, solo el texto
 // que devuelve el navegador, que para pasarlo a texto lo envía a su proveedor (Google en Chrome, Apple en Safari,
 // Microsoft en Edge; lo dice la política de privacidad). Firefox no lo tiene, y entonces no se ofrece.
@@ -107,7 +108,8 @@ export const startDictation = ({
     return { stop: () => undefined, discard: () => undefined, cancel: () => undefined };
   }
   const recognition = new Constructor();
-  recognition.lang = 'es-ES';
+  // Se dicta en el idioma de la app
+  recognition.lang = LOCALE_TAG;
   recognition.interimResults = true;
   recognition.continuous = false;
   recognition.maxAlternatives = 1;

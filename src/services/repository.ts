@@ -19,6 +19,7 @@ import type { User } from 'firebase/auth';
 import { EmailDraft, Goal, MeetingGuard, Project, TaskDraft, TaskItem, WheelArea, WheelOfLifeLog } from '../types';
 import { isUnchanged, normalizeTask } from './tasks';
 import { onboardingRecord, type OnboardingOutcome, type OnboardingRecord } from './onboarding';
+import type { Locale } from '../i18n/locale';
 
 // Datos de cada persona en users/{uid}/<colección>/<id>. Las reglas (firestore.rules) solo dejan acceder al propio uid.
 export type UserCollection = 'tasks' | 'wheelLogs' | 'meetings' | 'emails' | 'goals' | 'projects' | 'taskDrafts';
@@ -259,6 +260,7 @@ export const recordTermsAcceptance = async (db: Firestore, uid: string, version:
 // funciones extra tiene encendidas la administración (sin validar: ver featurePrefsOf) y la última versión cuyas
 // novedades vio (sin validar: ver shouldShowReleaseNotes)
 export type ProfileRecord = OnboardingRecord & {
+  language?: unknown;
   wheelAreas?: unknown;
   featurePrefs?: unknown;
   releaseNotesSeen?: unknown;
@@ -283,6 +285,10 @@ export const saveWheelAreas = (db: Firestore, uid: string, areas: WheelArea[]) =
 
 export const readWheelAreas = async (db: Firestore, uid: string) =>
   ((await getDoc(doc(db, 'users', uid))).data() as ProfileRecord | undefined)?.wheelAreas;
+
+// El idioma de la app de la cuenta (src/i18n/locale.ts): el servidor lo usa para los emails
+export const saveLanguage = (db: Firestore, uid: string, language: Locale) =>
+  setDoc(doc(db, 'users', uid), { language }, { merge: true });
 
 // Con `releaseNotesSeen`, también las novedades de esa versión, en la misma escritura
 export const markOnboardingSeen = (db: Firestore, uid: string, outcome: OnboardingOutcome, releaseNotesSeen?: string) =>
