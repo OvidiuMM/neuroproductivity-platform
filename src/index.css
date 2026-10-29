@@ -29,6 +29,52 @@ html.a11y-contrast a {
   text-decoration: underline;
 }
 
+/* ENTRADAS de ventanas y avisos, con las clases de tw-animate-css pero sin la dependencia: `animate-in` anima desde lo
+   que fijan `fade-in`, `zoom-in-95` y `slide-in-from-*` hasta el estado normal, con la duración de `duration-*` (150 ms
+   si no lleva). Solo las que se usan; con menos movimiento, las reglas de abajo las dejan en nada. Las variables no se
+   heredan: lo que entra dentro de una ventana que entra no hereda su punto de partida */
+@property --tw-enter-opacity {
+  syntax: '<number>';
+  inherits: false;
+  initial-value: 1;
+}
+@property --tw-enter-scale {
+  syntax: '<number>';
+  inherits: false;
+  initial-value: 1;
+}
+@property --tw-enter-translate-y {
+  syntax: '<length-percentage>';
+  inherits: false;
+  initial-value: 0px;
+}
+@keyframes clar-enter {
+  from {
+    opacity: var(--tw-enter-opacity, 1);
+    transform: translateY(var(--tw-enter-translate-y, 0)) scale(var(--tw-enter-scale, 1));
+  }
+}
+@layer utilities {
+  .animate-in {
+    animation: clar-enter var(--tw-duration, 150ms) var(--tw-ease, ease);
+  }
+  .fade-in {
+    --tw-enter-opacity: 0;
+  }
+  .zoom-in-95 {
+    --tw-enter-scale: 0.95;
+  }
+  .slide-in-from-bottom {
+    --tw-enter-translate-y: 100%;
+  }
+  .slide-in-from-bottom-3 {
+    --tw-enter-translate-y: calc(var(--spacing) * 3);
+  }
+  .slide-in-from-top-3 {
+    --tw-enter-translate-y: calc(var(--spacing) * -3);
+  }
+}
+
 /* Menos movimiento: por la preferencia del sistema o por el panel */
 @media (prefers-reduced-motion: reduce) {
   *,
