@@ -122,6 +122,31 @@ describe('push alarms', () => {
     assert.equal(fcm.sent[0].data?.url, `/?alarma=${encodeURIComponent('t1@2026-10-16T07:30:00.000Z')}`);
   });
 
+  it('sends an alarm queued by 1.1.0 (with its text and without time zone) like a new one', async () => {
+    await device('d1');
+    await task('t1', { dueDate: '2026-10-16', dueTime: '12:00', alarmTime: '09:30' });
+    await syncTaskAlarm(uid, 't1', now - 60 * MINUTE);
+    const fresh = fakeFcm();
+    assert.equal(await sendQueued(db.doc(`alarm_queue/${uid}__t1`), now, fresh.send), 'sent');
+    // La misma alarma, como la dejaba 1.1.0 en la cola: con `body` y sin `timeZone` ni `hasDueTime`
+    await db.doc(`alarm_sent/${uid}__t1`).delete();
+    const at = Date.parse('2026-10-16T07:30:00.000Z');
+    await db.doc(`alarm_queue/${uid}__t1`).set({
+      uid,
+      taskId: 't1',
+      at: Timestamp.fromMillis(at),
+      due: Timestamp.fromMillis(Date.parse('2026-10-16T10:00:00.000Z')),
+      key: 't1@2026-10-16T07:30:00.000Z',
+      clock: '09:30',
+      taskTitle: 'Pagar el alquiler',
+      body: 'Vence hoy a las 12:00',
+      attempts: 0
+    });
+    const old = fakeFcm();
+    assert.equal(await sendQueued(db.doc(`alarm_queue/${uid}__t1`), now, old.send), 'sent');
+    assert.deepEqual(old.sent[0].data, fresh.sent[0].data);
+  });
+
   it('writes each notification in the language of its device; one registered before 1.2.0, in Spanish', async () => {
     await device('d1');
     await device('d2', { showTitle: true, language: 'en' });
