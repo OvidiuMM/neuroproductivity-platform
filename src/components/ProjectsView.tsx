@@ -20,6 +20,7 @@ import { blockerOf, tasksById } from '../services/dependencies';
 import { useNow } from '../hooks/useNow';
 import { ProjectProgress } from './ProjectProgress';
 import { TaskCard } from './TaskCard';
+import { messages } from '../i18n/locale';
 
 interface ProjectsViewProps {
   projects: Project[];
@@ -40,39 +41,114 @@ interface ProjectsViewProps {
   onOpenGoals: () => void;
 }
 
+const m = messages(
+  {
+    tasks: (n: number) => `${n} ${n === 1 ? 'tarea' : 'tareas'}`,
+    overdue: (day: string, remaining: string) => `Fuera de plazo: terminaba el ${day} y quedan ${remaining}.`,
+    soon: (day: string, remaining: string) => `Termina pronto, el ${day}, y quedan ${remaining}.`,
+    ready: 'Todas sus tareas están hechas: márcalo como terminado.',
+    lateOne: (title: string) => `«${title}» vence después del fin del proyecto.`,
+    lateMany: (n: number) => `${n} tareas vencen después del fin del proyecto.`,
+    openProject: (title: string) => `Abrir el proyecto «${title}»`,
+    noGoal: '(Meta no disponible)',
+    endsOn: (day: string) => `Termina el ${day}`,
+    allProjects: 'Todos los proyectos',
+    goal: (title: string | undefined) => `Meta: ${title ?? '(no disponible)'}`,
+    end: (day: string) => `Fin: ${day}`,
+    edit: 'Editar',
+    markFinished: 'Marcar como terminado',
+    archive: 'Archivar',
+    reactivate: 'Reactivar',
+    downloadOf: (title: string) => `Descargar «${title}» (JSON)`,
+    download: 'Descargar (JSON)',
+    todo: (n: number) => `Tareas por hacer (${n})`,
+    addTask: 'Añadir tarea',
+    noTasks: 'Aún no tiene tareas. Añade la primera.',
+    noneLeft: 'No quedan tareas por hacer.',
+    tasksOf: (title: string) => `Tareas de «${title}»`,
+    closedTasks: (n: number) => `Hechas y canceladas (${n})`,
+    projects: 'Proyectos',
+    intro:
+      'Opcional: agrupa tareas relacionadas, con fecha de fin, para cumplir una meta o una parte de ella. Una meta puede tener uno o varios proyectos. La batería muestra cuánto llevas hecho.',
+    newProject: 'Nuevo proyecto',
+    noGoals:
+      'Los proyectos son opcionales y cada uno pertenece a una meta: agrupan sus tareas relacionadas. Crea tu primera meta en «Metas».',
+    goToGoals: 'Ir a Metas',
+    noActive: 'No tienes proyectos activos.',
+    activeList: 'Proyectos activos',
+    closedProjects: (n: number) => `Terminados y archivados (${n})`,
+    closedList: 'Proyectos terminados y archivados'
+  },
+  {
+    tasks: (n) => `${n} ${n === 1 ? 'task' : 'tasks'}`,
+    overdue: (day, remaining) => `Overdue: it was due to end on ${day} and ${remaining} left.`,
+    soon: (day, remaining) => `Ends soon, on ${day}, and ${remaining} left.`,
+    ready: 'All its tasks are done: mark it as finished.',
+    lateOne: (title) => `“${title}” is due after the project ends.`,
+    lateMany: (n) => `${n} tasks are due after the project ends.`,
+    openProject: (title) => `Open the project “${title}”`,
+    noGoal: '(Goal not available)',
+    endsOn: (day) => `Ends on ${day}`,
+    allProjects: 'All projects',
+    goal: (title) => `Goal: ${title ?? '(not available)'}`,
+    end: (day) => `End: ${day}`,
+    edit: 'Edit',
+    markFinished: 'Mark as finished',
+    archive: 'Archive',
+    reactivate: 'Reactivate',
+    downloadOf: (title) => `Download “${title}” (JSON)`,
+    download: 'Download (JSON)',
+    todo: (n) => `Tasks to do (${n})`,
+    addTask: 'Add task',
+    noTasks: 'No tasks yet. Add the first one.',
+    noneLeft: 'No tasks left to do.',
+    tasksOf: (title) => `Tasks of “${title}”`,
+    closedTasks: (n) => `Done and canceled (${n})`,
+    projects: 'Projects',
+    intro:
+      'Optional: group related tasks, with an end date, to reach a goal or part of one. A goal can have one or more projects. The battery shows how much you’ve done.',
+    newProject: 'New project',
+    noGoals:
+      'Projects are optional and each one belongs to a goal: they group its related tasks. Create your first goal in “Goals”.',
+    goToGoals: 'Go to Goals',
+    noActive: 'You have no active projects.',
+    activeList: 'Active projects',
+    closedProjects: (n) => `Finished and archived (${n})`,
+    closedList: 'Finished and archived projects'
+  }
+);
+
 const actionButton =
   'inline-flex min-h-11 items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3 text-xs font-semibold text-slate-700 hover:bg-slate-50';
 
 // Avisos del plazo: fuera de plazo, termina pronto, todo hecho y tareas que vencen después del fin
 const DeadlineNotice: React.FC<{ project: Project; tasks: TaskItem[]; now: Date }> = ({ project, tasks, now }) => {
   const { state, open, lateTasks } = projectDeadline(project, tasks, now);
-  const remaining = `${open} ${open === 1 ? 'tarea' : 'tareas'}`;
+  const remaining = m.tasks(open);
   return (
     <>
       {state === 'overdue' && (
         <p className="flex items-start gap-1.5 text-xs font-semibold text-red-700">
           <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0" aria-hidden="true" />
-          Fuera de plazo: terminaba el {formatDay(project.endDate)} y quedan {remaining}.
+          {m.overdue(formatDay(project.endDate), remaining)}
         </p>
       )}
       {state === 'soon' && (
         <p className="flex items-start gap-1.5 text-xs font-semibold text-violet-700">
           <CalendarClock className="mt-0.5 h-3.5 w-3.5 shrink-0" aria-hidden="true" />
-          Termina pronto, el {formatDay(project.endDate)}, y quedan {remaining}.
+          {m.soon(formatDay(project.endDate), remaining)}
         </p>
       )}
       {state === 'ready' && (
         <p className="flex items-start gap-1.5 text-xs font-semibold text-emerald-700">
           <CheckCircle2 className="mt-0.5 h-3.5 w-3.5 shrink-0" aria-hidden="true" />
-          Todas sus tareas están hechas: márcalo como terminado.
+          {m.ready}
         </p>
       )}
       {lateTasks.length > 0 && (
         <p className="flex items-start gap-1.5 text-xs font-semibold text-amber-800">
           <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0" aria-hidden="true" />
-          {lateTasks.length === 1
-            ? `«${lateTasks[0].title}» vence después del fin del proyecto.`
-            : `${lateTasks.length} tareas vencen después del fin del proyecto.`}
+          {lateTasks.length === 1 ? m.lateOne(lateTasks[0].title) : m.lateMany(lateTasks.length)}
         </p>
       )}
     </>
@@ -91,7 +167,7 @@ const ProjectCard: React.FC<{
     <button
       type="button"
       onClick={onOpen}
-      aria-label={`Abrir el proyecto «${project.title}»`}
+      aria-label={m.openProject(project.title)}
       className="block min-h-11 w-full text-left"
     >
       <span className="block text-sm font-bold wrap-anywhere text-slate-900 hover:text-indigo-700">
@@ -100,13 +176,11 @@ const ProjectCard: React.FC<{
       <span className="mt-0.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] text-slate-600">
         <span className="inline-flex items-center gap-1 font-semibold text-indigo-700">
           <Target className="h-3 w-3" aria-hidden="true" />
-          {goal?.title ?? '(Meta no disponible)'}
+          {goal?.title ?? m.noGoal}
         </span>
         <span className="inline-flex items-center gap-1">
           <CalendarClock className="h-3 w-3" aria-hidden="true" />
-          {project.status === 'ACTIVE'
-            ? `Termina el ${formatDay(project.endDate)}`
-            : PROJECT_STATUS_LABEL[project.status]}
+          {project.status === 'ACTIVE' ? m.endsOn(formatDay(project.endDate)) : PROJECT_STATUS_LABEL[project.status]}
         </span>
       </span>
     </button>
@@ -167,7 +241,7 @@ export const ProjectsView: React.FC<ProjectsViewProps> = ({
           className="inline-flex min-h-11 items-center gap-1.5 rounded-lg px-2 text-xs font-semibold text-indigo-700 hover:bg-indigo-50"
         >
           <ArrowLeft className="h-4 w-4" aria-hidden="true" />
-          Todos los proyectos
+          {m.allProjects}
         </button>
 
         <section aria-labelledby="project-title" className="space-y-3 rounded-2xl border border-slate-200 bg-white p-5">
@@ -183,11 +257,11 @@ export const ProjectsView: React.FC<ProjectsViewProps> = ({
             <p className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-slate-600">
               <span className="inline-flex items-center gap-1 font-semibold text-indigo-700">
                 <Target className="h-3.5 w-3.5" aria-hidden="true" />
-                Meta: {goal?.title ?? '(no disponible)'}
+                {m.goal(goal?.title)}
               </span>
               <span className="inline-flex items-center gap-1">
                 <CalendarClock className="h-3.5 w-3.5" aria-hidden="true" />
-                Fin: {formatDay(selected.endDate)}
+                {m.end(formatDay(selected.endDate))}
               </span>
               <span>{PROJECT_STATUS_LABEL[selected.status]}</span>
             </p>
@@ -198,32 +272,32 @@ export const ProjectsView: React.FC<ProjectsViewProps> = ({
           <div className="flex flex-wrap gap-2">
             <button type="button" onClick={() => onEditProject(selected)} className={actionButton}>
               <Pencil className="h-4 w-4" aria-hidden="true" />
-              Editar
+              {m.edit}
             </button>
             {active ? (
               <>
                 <button type="button" onClick={() => onSetProjectStatus(selected, 'FINISHED')} className={actionButton}>
                   <CheckCircle2 className="h-4 w-4 text-emerald-600" aria-hidden="true" />
-                  Marcar como terminado
+                  {m.markFinished}
                 </button>
                 <button type="button" onClick={() => onSetProjectStatus(selected, 'ARCHIVED')} className={actionButton}>
-                  Archivar
+                  {m.archive}
                 </button>
               </>
             ) : (
               <button type="button" onClick={() => onSetProjectStatus(selected, 'ACTIVE')} className={actionButton}>
                 <Undo2 className="h-4 w-4" aria-hidden="true" />
-                Reactivar
+                {m.reactivate}
               </button>
             )}
             <button
               type="button"
               onClick={() => onDownloadProject(selected)}
-              aria-label={`Descargar «${selected.title}» (JSON)`}
+              aria-label={m.downloadOf(selected.title)}
               className={actionButton}
             >
               <FileDown className="h-4 w-4 text-indigo-600" aria-hidden="true" />
-              Descargar (JSON)
+              {m.download}
             </button>
           </div>
         </section>
@@ -231,7 +305,7 @@ export const ProjectsView: React.FC<ProjectsViewProps> = ({
         <section aria-labelledby="project-tasks-title" className="space-y-3">
           <div className="flex flex-wrap items-center justify-between gap-2 px-1">
             <h3 id="project-tasks-title" className="text-xs font-bold tracking-wider text-slate-900 uppercase">
-              Tareas por hacer ({open.length})
+              {m.todo(open.length)}
             </h3>
             <button
               type="button"
@@ -239,15 +313,15 @@ export const ProjectsView: React.FC<ProjectsViewProps> = ({
               className="inline-flex min-h-11 items-center gap-1.5 rounded-xl bg-slate-900 px-3 text-xs font-bold text-white hover:bg-slate-800"
             >
               <Plus className="h-4 w-4" aria-hidden="true" />
-              Añadir tarea
+              {m.addTask}
             </button>
           </div>
           {open.length === 0 ? (
             <p className="rounded-2xl border border-slate-200 bg-white p-6 text-center text-sm text-slate-600">
-              {all.length === 0 ? 'Aún no tiene tareas. Añade la primera.' : 'No quedan tareas por hacer.'}
+              {all.length === 0 ? m.noTasks : m.noneLeft}
             </p>
           ) : (
-            <ol aria-label={`Tareas de «${selected.title}»`} className="space-y-2.5">
+            <ol aria-label={m.tasksOf(selected.title)} className="space-y-2.5">
               {open.map((task) => (
                 <TaskCard
                   key={task.id}
@@ -266,7 +340,7 @@ export const ProjectsView: React.FC<ProjectsViewProps> = ({
           {closed.length > 0 && (
             <details className="group rounded-xl border border-slate-200 bg-white">
               <summary className="flex min-h-11 cursor-pointer list-none items-center justify-between px-4 text-xs font-bold text-slate-700">
-                Hechas y canceladas ({closed.length})
+                {m.closedTasks(closed.length)}
                 <ChevronDown className="h-4 w-4 transition-transform group-open:rotate-180" aria-hidden="true" />
               </summary>
               <ul className="space-y-1 border-t border-slate-100 p-3">
@@ -298,12 +372,9 @@ export const ProjectsView: React.FC<ProjectsViewProps> = ({
             className="flex items-center gap-2 text-lg font-bold text-slate-900 focus:outline-none"
           >
             <FolderKanban className="h-5 w-5 text-indigo-600" aria-hidden="true" />
-            Proyectos
+            {m.projects}
           </h2>
-          <p className="text-xs text-slate-600">
-            Opcional: agrupa tareas relacionadas, con fecha de fin, para cumplir una meta o una parte de ella. Una meta
-            puede tener uno o varios proyectos. La batería muestra cuánto llevas hecho.
-          </p>
+          <p className="text-xs text-slate-600">{m.intro}</p>
         </div>
         {hasGoals && (
           <button
@@ -312,31 +383,28 @@ export const ProjectsView: React.FC<ProjectsViewProps> = ({
             className="inline-flex min-h-11 items-center gap-1.5 rounded-xl bg-slate-900 px-4 text-xs font-bold text-white hover:bg-slate-800"
           >
             <Plus className="h-4 w-4" aria-hidden="true" />
-            Nuevo proyecto
+            {m.newProject}
           </button>
         )}
       </div>
 
       {!hasGoals ? (
         <div className="space-y-3 rounded-2xl border border-slate-200 bg-white p-6 text-center text-sm text-slate-600">
-          <p>
-            Los proyectos son opcionales y cada uno pertenece a una meta: agrupan sus tareas relacionadas. Crea tu
-            primera meta en «Metas».
-          </p>
+          <p>{m.noGoals}</p>
           <button
             type="button"
             onClick={onOpenGoals}
             className="inline-flex min-h-11 items-center gap-1.5 rounded-xl bg-slate-900 px-4 text-xs font-bold text-white"
           >
-            Ir a Metas
+            {m.goToGoals}
           </button>
         </div>
       ) : active.length === 0 ? (
         <p className="rounded-2xl border border-slate-200 bg-white p-6 text-center text-sm text-slate-600">
-          No tienes proyectos activos.
+          {m.noActive}
         </p>
       ) : (
-        <ul aria-label="Proyectos activos" className="grid gap-3 md:grid-cols-2">
+        <ul aria-label={m.activeList} className="grid gap-3 md:grid-cols-2">
           {active.map((project) => (
             <ProjectCard
               key={project.id}
@@ -353,13 +421,10 @@ export const ProjectsView: React.FC<ProjectsViewProps> = ({
       {others.length > 0 && (
         <details className="group rounded-xl border border-slate-200 bg-white">
           <summary className="flex min-h-11 cursor-pointer list-none items-center justify-between px-4 text-xs font-bold text-slate-700">
-            Terminados y archivados ({others.length})
+            {m.closedProjects(others.length)}
             <ChevronDown className="h-4 w-4 transition-transform group-open:rotate-180" aria-hidden="true" />
           </summary>
-          <ul
-            aria-label="Proyectos terminados y archivados"
-            className="grid gap-3 border-t border-slate-100 p-3 md:grid-cols-2"
-          >
+          <ul aria-label={m.closedList} className="grid gap-3 border-t border-slate-100 p-3 md:grid-cols-2">
             {others.map((project) => (
               <ProjectCard
                 key={project.id}

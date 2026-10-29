@@ -25,6 +25,7 @@ import {
   parseRecipients,
   sameAttachment
 } from '../services/email';
+import { messages } from '../i18n/locale';
 
 // draft: «Guardar borrador» · auto: al cerrar con cambios sin guardar · saved: correo terminado
 export type EmailSaveKind = 'draft' | 'auto' | 'saved';
@@ -35,6 +36,89 @@ interface EmailModalProps {
   onClose: () => void;
   onSave: (email: EmailDraft, kind: EmailSaveKind) => void;
 }
+
+const m = messages(
+  {
+    newEmail: 'Nuevo correo',
+    continueDraft: 'Continuar el borrador',
+    editEmail: 'Editar el correo',
+    order: 'Primero el contenido; los destinatarios, al final',
+    close: 'Cerrar',
+    step1: 'Paso 1: Archivos Adjuntos',
+    noAttachments: 'Sin archivos adjuntos',
+    attachments: 'Archivos adjuntos',
+    chooseFiles: 'Elegir archivos',
+    filesHelp:
+      'CLAR apunta solo el nombre y el tamaño, como lista de lo que adjuntarás al enviarlo desde tu correo: los archivos no salen de tu equipo.',
+    filesToAttach: 'Archivos que adjuntar',
+    removeAttachment: (name: string) => `Quitar el adjunto ${name}`,
+    step1Error: 'Elige al menos un archivo o marca «Sin archivos adjuntos».',
+    step2: 'Paso 2: Cuerpo del Correo',
+    words: (n: number) => `${n} palabras`,
+    characters: (n: number) => `${n} caracteres`,
+    bodyPlaceholder: 'Escribe el mensaje claro y conciso aquí...',
+    tooLong: 'Es largo:',
+    tooLongText: ' si cabe en una pantalla, se lee mejor y genera menos idas y vueltas.',
+    bodyError: (min: number) => `El cuerpo del correo debe tener al menos ${min} caracteres.`,
+    step3: 'Paso 3: Asunto',
+    subjectPlaceholder: 'Asunto claro y descriptivo...',
+    step4: 'Paso 4: Destinatarios',
+    locked: 'Bloqueado hasta completar contenido',
+    unlocked: 'Desbloqueado',
+    recipientsPlaceholder: 'correo1@ejemplo.com, correo2@ejemplo.com',
+    lockedPlaceholder: '🔒 Completa adjuntos y cuerpo para desbloquear este campo',
+    recipientsError: 'Ingresa al menos una dirección de correo electrónico válida (formato: usuario@dominio.com).',
+    beforeSaving: 'Antes de guardar:',
+    check1: 'Paso 1: Adjuntos verificados',
+    check2: 'Paso 2: Cuerpo redactado',
+    check3: 'Paso 3: Asunto definido',
+    check4: 'Paso 4: Destinatarios válidos',
+    saveDraft: 'Guardar borrador',
+    openInMail: 'Abrir en mi correo',
+    save: 'Guardar el correo',
+    closeNote: 'Al cerrar, lo que hayas escrito se guarda como borrador.'
+  },
+  {
+    newEmail: 'New email',
+    continueDraft: 'Continue the draft',
+    editEmail: 'Edit email',
+    order: 'Content first; recipients last',
+    close: 'Close',
+    step1: 'Step 1: Attachments',
+    noAttachments: 'No attachments',
+    attachments: 'Attachments',
+    chooseFiles: 'Choose files',
+    filesHelp:
+      'CLAR only notes the name and size, as a list of what you’ll attach when you send it from your email: the files never leave your device.',
+    filesToAttach: 'Files to attach',
+    removeAttachment: (name) => `Remove the attachment ${name}`,
+    step1Error: 'Choose at least one file or check “No attachments”.',
+    step2: 'Step 2: Email body',
+    words: (n) => `${n} ${n === 1 ? 'word' : 'words'}`,
+    characters: (n) => `${n} ${n === 1 ? 'character' : 'characters'}`,
+    bodyPlaceholder: 'Write a clear, concise message here...',
+    tooLong: 'It’s long:',
+    tooLongText: ' if it fits on one screen, it’s easier to read and leads to less back-and-forth.',
+    bodyError: (min) => `The email body must have at least ${min} characters.`,
+    step3: 'Step 3: Subject',
+    subjectPlaceholder: 'Clear, descriptive subject...',
+    step4: 'Step 4: Recipients',
+    locked: 'Locked until the content is complete',
+    unlocked: 'Unlocked',
+    recipientsPlaceholder: 'email1@example.com, email2@example.com',
+    lockedPlaceholder: '🔒 Complete the attachments and body to unlock this field',
+    recipientsError: 'Enter at least one valid email address (format: user@domain.com).',
+    beforeSaving: 'Before saving:',
+    check1: 'Step 1: Attachments checked',
+    check2: 'Step 2: Body written',
+    check3: 'Step 3: Subject set',
+    check4: 'Step 4: Valid recipients',
+    saveDraft: 'Save draft',
+    openInMail: 'Open in my email',
+    save: 'Save email',
+    closeNote: 'When you close, whatever you’ve written is saved as a draft.'
+  }
+);
 
 const stepCheck = (done: boolean, text: string) => (
   <div className="flex items-center gap-1.5">
@@ -138,7 +222,7 @@ export const EmailModal: React.FC<EmailModalProps> = ({ email, onClose, onSave }
   const dialogRef = useRef<HTMLDivElement>(null);
   useModalFocus(true, dialogRef, close);
 
-  const title = !email ? 'Nuevo correo' : isDraft(email) ? 'Continuar el borrador' : 'Editar el correo';
+  const title = !email ? m.newEmail : isDraft(email) ? m.continueDraft : m.editEmail;
 
   return (
     <div className="fixed inset-0 z-50 flex justify-center overflow-y-auto bg-slate-900/60 p-4 backdrop-blur-xs sm:p-8">
@@ -156,12 +240,12 @@ export const EmailModal: React.FC<EmailModalProps> = ({ email, onClose, onSave }
               <Mail className="h-5 w-5 text-indigo-600" aria-hidden="true" />
               {title}
             </h2>
-            <p className="mt-0.5 text-xs text-slate-500">Primero el contenido; los destinatarios, al final</p>
+            <p className="mt-0.5 text-xs text-slate-500">{m.order}</p>
           </div>
           <button
             type="button"
             onClick={close}
-            aria-label="Cerrar"
+            aria-label={m.close}
             className="rounded-lg p-1.5 text-slate-500 transition-colors hover:bg-slate-200/60 hover:text-slate-600"
           >
             <X className="h-5 w-5" aria-hidden="true" />
@@ -174,7 +258,7 @@ export const EmailModal: React.FC<EmailModalProps> = ({ email, onClose, onSave }
             <div className="flex flex-wrap items-center justify-between gap-2">
               <span className="flex items-center gap-1.5 text-xs font-bold tracking-wider text-slate-700 uppercase">
                 <Paperclip className="h-4 w-4 text-slate-500" aria-hidden="true" />
-                Paso 1: Archivos Adjuntos <span className="text-red-500">*</span>
+                {m.step1} <span className="text-red-500">*</span>
               </span>
               <label className="flex cursor-pointer items-center gap-1.5 text-xs text-slate-600">
                 <input
@@ -186,20 +270,13 @@ export const EmailModal: React.FC<EmailModalProps> = ({ email, onClose, onSave }
                   }}
                   className="h-3.5 w-3.5 rounded border-slate-300 text-indigo-600"
                 />
-                <span>Sin archivos adjuntos</span>
+                <span>{m.noAttachments}</span>
               </label>
             </div>
 
             {!noAttachmentsDeclared && (
               <div className="space-y-1.5">
-                <input
-                  ref={fileInput}
-                  type="file"
-                  multiple
-                  hidden
-                  onChange={handleFiles}
-                  aria-label="Archivos adjuntos"
-                />
+                <input ref={fileInput} type="file" multiple hidden onChange={handleFiles} aria-label={m.attachments} />
                 <button
                   type="button"
                   onClick={() => fileInput.current?.click()}
@@ -207,17 +284,16 @@ export const EmailModal: React.FC<EmailModalProps> = ({ email, onClose, onSave }
                   className="inline-flex min-h-10 items-center gap-1.5 rounded-xl bg-slate-900 px-3.5 text-xs font-bold text-white transition-colors hover:bg-slate-800"
                 >
                   <Paperclip className="h-3.5 w-3.5" aria-hidden="true" />
-                  Elegir archivos
+                  {m.chooseFiles}
                 </button>
                 <p id="email-files-help" className="text-[11px] leading-relaxed text-slate-500">
-                  CLAR apunta solo el nombre y el tamaño, como lista de lo que adjuntarás al enviarlo desde tu correo:
-                  los archivos no salen de tu equipo.
+                  {m.filesHelp}
                 </p>
               </div>
             )}
 
             {attachments.length > 0 && (
-              <ul aria-label="Archivos que adjuntar" className="space-y-1">
+              <ul aria-label={m.filesToAttach} className="space-y-1">
                 {attachments.map((att, i) => (
                   <li
                     key={`${att.name}-${i}`}
@@ -229,7 +305,7 @@ export const EmailModal: React.FC<EmailModalProps> = ({ email, onClose, onSave }
                     <button
                       type="button"
                       onClick={() => setAttachments(attachments.filter((_, j) => j !== i))}
-                      aria-label={`Quitar el adjunto ${att.name}`}
+                      aria-label={m.removeAttachment(att.name)}
                       className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-slate-500 hover:bg-red-50 hover:text-red-600"
                     >
                       <Trash2 className="h-3.5 w-3.5" aria-hidden="true" />
@@ -239,21 +315,19 @@ export const EmailModal: React.FC<EmailModalProps> = ({ email, onClose, onSave }
               </ul>
             )}
 
-            {!isStep1AttachmentsValid && (
-              <p className="text-[11px] text-red-600">Elige al menos un archivo o marca «Sin archivos adjuntos».</p>
-            )}
+            {!isStep1AttachmentsValid && <p className="text-[11px] text-red-600">{m.step1Error}</p>}
           </div>
 
           {/* PASO 2 (INVERSO): CUERPO DEL CORREO CON ALERTA NO-SCROLL */}
           <div>
             <div className="mb-1 flex items-center justify-between">
               <label htmlFor="email-body" className="text-xs font-bold tracking-wider text-slate-700 uppercase">
-                Paso 2: Cuerpo del Correo <span className="text-red-500">*</span>
+                {m.step2} <span className="text-red-500">*</span>
               </label>
               <div className="flex items-center gap-2 font-mono text-[11px] text-slate-500">
-                <span>{wordCount} palabras</span>
+                <span>{m.words(wordCount)}</span>
                 <span aria-hidden="true">·</span>
-                <span className={body.length > 550 ? 'font-bold text-amber-700' : ''}>{body.length} caracteres</span>
+                <span className={body.length > 550 ? 'font-bold text-amber-700' : ''}>{m.characters(body.length)}</span>
               </div>
             </div>
 
@@ -264,7 +338,7 @@ export const EmailModal: React.FC<EmailModalProps> = ({ email, onClose, onSave }
               value={body}
               onChange={(e) => setBody(e.target.value)}
               onBlur={() => setTouched({ ...touched, body: true })}
-              placeholder="Escribe el mensaje claro y conciso aquí..."
+              placeholder={m.bodyPlaceholder}
               className={`w-full rounded-xl border px-3.5 py-2.5 text-xs focus:ring-2 focus:outline-none ${
                 touched.body && !isStep2BodyValid
                   ? 'border-red-400 bg-red-50/20 focus:ring-red-400'
@@ -277,15 +351,14 @@ export const EmailModal: React.FC<EmailModalProps> = ({ email, onClose, onSave }
               <div className="mt-1.5 flex items-start gap-2 rounded-xl border border-amber-200 bg-amber-50 p-2.5 text-xs text-amber-900">
                 <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-amber-600" aria-hidden="true" />
                 <p className="text-[11px] leading-relaxed">
-                  <strong>Es largo:</strong> si cabe en una pantalla, se lee mejor y genera menos idas y vueltas.
+                  <strong>{m.tooLong}</strong>
+                  {m.tooLongText}
                 </p>
               </div>
             )}
 
             {touched.body && !isStep2BodyValid && (
-              <p className="mt-1 text-xs text-red-600">
-                El cuerpo del correo debe tener al menos {EMAIL_BODY_MIN} caracteres.
-              </p>
+              <p className="mt-1 text-xs text-red-600">{m.bodyError(EMAIL_BODY_MIN)}</p>
             )}
           </div>
 
@@ -295,7 +368,7 @@ export const EmailModal: React.FC<EmailModalProps> = ({ email, onClose, onSave }
               htmlFor="email-subject"
               className="mb-1 block text-xs font-bold tracking-wider text-slate-700 uppercase"
             >
-              Paso 3: Asunto <span className="text-red-500">*</span>
+              {m.step3} <span className="text-red-500">*</span>
             </label>
             <input
               id="email-subject"
@@ -303,7 +376,7 @@ export const EmailModal: React.FC<EmailModalProps> = ({ email, onClose, onSave }
               type="text"
               value={subject}
               onChange={(e) => setSubject(e.target.value)}
-              placeholder="Asunto claro y descriptivo..."
+              placeholder={m.subjectPlaceholder}
               className="w-full rounded-xl border border-slate-300 px-3.5 py-2 text-xs focus:ring-2 focus:ring-indigo-400 focus:outline-none"
             />
           </div>
@@ -320,17 +393,17 @@ export const EmailModal: React.FC<EmailModalProps> = ({ email, onClose, onSave }
                 ) : (
                   <Lock className="h-4 w-4 text-slate-500" aria-hidden="true" />
                 )}
-                <span>Paso 4: Destinatarios</span>
+                <span>{m.step4}</span>
                 <span className="text-red-500">*</span>
               </label>
 
               {!isRecipientsUnlocked ? (
                 <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-bold text-slate-600 uppercase">
-                  Bloqueado hasta completar contenido
+                  {m.locked}
                 </span>
               ) : (
                 <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-bold text-emerald-700 uppercase">
-                  Desbloqueado
+                  {m.unlocked}
                 </span>
               )}
             </div>
@@ -342,11 +415,7 @@ export const EmailModal: React.FC<EmailModalProps> = ({ email, onClose, onSave }
               value={recipientsInput}
               onChange={(e) => setRecipientsInput(e.target.value)}
               onBlur={() => setTouched({ ...touched, recipients: true })}
-              placeholder={
-                isRecipientsUnlocked
-                  ? 'correo1@ejemplo.com, correo2@ejemplo.com'
-                  : '🔒 Completa adjuntos y cuerpo para desbloquear este campo'
-              }
+              placeholder={isRecipientsUnlocked ? m.recipientsPlaceholder : m.lockedPlaceholder}
               className={`w-full rounded-xl border px-3.5 py-2 text-xs focus:ring-2 focus:outline-none ${
                 !isRecipientsUnlocked
                   ? 'cursor-not-allowed border-slate-200 bg-slate-100 text-slate-500'
@@ -357,20 +426,18 @@ export const EmailModal: React.FC<EmailModalProps> = ({ email, onClose, onSave }
             />
 
             {isRecipientsUnlocked && touched.recipients && !isRecipientsValid && (
-              <p className="mt-1 text-[11px] text-red-600">
-                Ingresa al menos una dirección de correo electrónico válida (formato: usuario@dominio.com).
-              </p>
+              <p className="mt-1 text-[11px] text-red-600">{m.recipientsError}</p>
             )}
           </div>
 
           {/* CHECKLIST DE REDACCIÓN INVERSA */}
           <div className="space-y-1 rounded-xl border border-slate-200 bg-slate-50 p-3 text-xs">
-            <span className="mb-1 block font-bold text-slate-700">Antes de guardar:</span>
+            <span className="mb-1 block font-bold text-slate-700">{m.beforeSaving}</span>
             <div className="grid grid-cols-2 gap-2 text-[11px]">
-              {stepCheck(isStep1AttachmentsValid, 'Paso 1: Adjuntos verificados')}
-              {stepCheck(isStep2BodyValid, 'Paso 2: Cuerpo redactado')}
-              {stepCheck(isStep3SubjectValid, 'Paso 3: Asunto definido')}
-              {stepCheck(isRecipientsValid, 'Paso 4: Destinatarios válidos')}
+              {stepCheck(isStep1AttachmentsValid, m.check1)}
+              {stepCheck(isStep2BodyValid, m.check2)}
+              {stepCheck(isStep3SubjectValid, m.check3)}
+              {stepCheck(isRecipientsValid, m.check4)}
             </div>
           </div>
 
@@ -382,7 +449,7 @@ export const EmailModal: React.FC<EmailModalProps> = ({ email, onClose, onSave }
                 onClick={close}
                 className="min-h-10 w-full rounded-xl px-3.5 text-xs font-semibold text-slate-600 transition-colors hover:text-slate-900 sm:w-auto"
               >
-                Cerrar
+                {m.close}
               </button>
               <button
                 type="button"
@@ -391,17 +458,17 @@ export const EmailModal: React.FC<EmailModalProps> = ({ email, onClose, onSave }
                 className={`${secondaryButton} disabled:cursor-not-allowed disabled:opacity-50`}
               >
                 <FileText className="h-4 w-4" aria-hidden="true" />
-                Guardar borrador
+                {m.saveDraft}
               </button>
               {hasContent ? (
                 <a href={buildMailto({ recipients: parsedRecipients, subject, body })} className={secondaryButton}>
                   <ExternalLink className="h-4 w-4" aria-hidden="true" />
-                  Abrir en mi correo
+                  {m.openInMail}
                 </a>
               ) : (
                 <button type="button" disabled className={`${secondaryButton} cursor-not-allowed opacity-50`}>
                   <ExternalLink className="h-4 w-4" aria-hidden="true" />
-                  Abrir en mi correo
+                  {m.openInMail}
                 </button>
               )}
               <button
@@ -414,12 +481,10 @@ export const EmailModal: React.FC<EmailModalProps> = ({ email, onClose, onSave }
                 }`}
               >
                 <Send className="h-4 w-4" aria-hidden="true" />
-                Guardar el correo
+                {m.save}
               </button>
             </div>
-            <p className="text-center text-[11px] text-slate-500 sm:text-right">
-              Al cerrar, lo que hayas escrito se guarda como borrador.
-            </p>
+            <p className="text-center text-[11px] text-slate-500 sm:text-right">{m.closeNote}</p>
           </div>
         </form>
       </div>

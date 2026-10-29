@@ -1,4 +1,5 @@
 import type { DefaultWheelCategory, WheelArea, WheelCategory } from '../types';
+import { LOCALE_TAG, messages, type Locale } from '../i18n/locale';
 
 // Áreas de partida de la Rueda de la Vida, en el orden en que se muestran (son también sus identificadores)
 export const WHEEL_CATEGORIES: DefaultWheelCategory[] = [
@@ -11,9 +12,44 @@ export const WHEEL_CATEGORIES: DefaultWheelCategory[] = [
   'Espiritualidad'
 ];
 
+// Nombre de las áreas de partida en cada idioma (en español, su identificador). Se guardan con su identificador como
+// nombre; al leerlas, un área de partida sin renombrar (con el nombre de partida de cualquier idioma) se muestra con
+// el del idioma de la app. Las renombradas conservan su nombre.
+const DEFAULT_AREA_NAMES: Record<Locale, Record<DefaultWheelCategory, string>> = {
+  es: {
+    Salud: 'Salud',
+    'Carrera Profesional': 'Carrera Profesional',
+    Finanzas: 'Finanzas',
+    Familia: 'Familia',
+    Ocio: 'Ocio',
+    Relaciones: 'Relaciones',
+    Espiritualidad: 'Espiritualidad'
+  },
+  en: {
+    Salud: 'Health',
+    'Carrera Profesional': 'Career',
+    Finanzas: 'Finances',
+    Familia: 'Family',
+    Ocio: 'Leisure',
+    Relaciones: 'Relationships',
+    Espiritualidad: 'Spirituality'
+  }
+};
+const areaNames = messages(DEFAULT_AREA_NAMES.es, DEFAULT_AREA_NAMES.en);
+
+const isDefaultCategory = (id: string): id is DefaultWheelCategory =>
+  (WHEEL_CATEGORIES as readonly string[]).includes(id);
+
+// El nombre de partida de un área en el idioma de la app; el de un área añadida es su identificador
+export const defaultAreaLabel = (id: WheelCategory) => (isDefaultCategory(id) ? areaNames[id] : id);
+
+// Un área de partida que conserva su nombre de partida (en cualquiera de los idiomas)
+const hasDefaultName = (id: string, label: string) =>
+  isDefaultCategory(id) && Object.values(DEFAULT_AREA_NAMES).some((names) => names[id] === label);
+
 // ÁREAS DE CADA CUENTA: renombrar, ocultar y añadir. Se guardan en el perfil (wheelAreas); sin nada guardado, las 7
 // de partida
-export const DEFAULT_AREAS: WheelArea[] = WHEEL_CATEGORIES.map((id) => ({ id, label: id }));
+export const DEFAULT_AREAS: WheelArea[] = WHEEL_CATEGORIES.map((id) => ({ id, label: defaultAreaLabel(id) }));
 export const AREA_LABEL_MAX = 30;
 export const MIN_VISIBLE_AREAS = 3; // con menos, el gráfico de la Rueda no se puede dibujar
 export const MAX_VISIBLE_AREAS = 12;
@@ -28,21 +64,30 @@ export const resolveAreas = (stored: unknown): WheelArea[] => {
     const { id, label, hidden } = entry as Record<string, unknown>;
     if (typeof id !== 'string' || !id || seen.has(id) || typeof label !== 'string' || !label.trim()) continue;
     seen.add(id);
-    areas.push(hidden === true ? { id, label: label.trim(), hidden: true } : { id, label: label.trim() });
+    const name = hasDefaultName(id, label.trim()) ? defaultAreaLabel(id) : label.trim();
+    areas.push(hidden === true ? { id, label: name, hidden: true } : { id, label: name });
   }
   return areas.some((a) => !a.hidden) ? areas : DEFAULT_AREAS;
 };
 
+// Lo que se guarda: un área de partida con su nombre de partida, con su identificador como nombre (así se ve en el
+// idioma que se use después)
+export const storableAreas = (areas: WheelArea[]): WheelArea[] =>
+  areas.map((a) => (hasDefaultName(a.id, a.label) && a.label !== a.id ? { ...a, label: a.id } : a));
+
 export const visibleAreas = (areas: WheelArea[]) => areas.filter((a) => !a.hidden);
 
-// El nombre que se muestra; un área que ya no está en la lista conserva su identificador como nombre
+// El nombre que se muestra; un área que ya no está en la lista conserva su identificador como nombre (el de partida,
+// en el idioma de la app)
 export const areaLabel = (areas: WheelArea[], id: WheelCategory | undefined) =>
-  id ? (areas.find((a) => a.id === id)?.label ?? id) : '';
+  id ? (areas.find((a) => a.id === id)?.label ?? defaultAreaLabel(id)) : '';
 
 // Áreas para elegir: las visibles y, aunque esté oculta (o ya no exista), la elegida
 export const selectableAreas = (areas: WheelArea[], current?: WheelCategory): WheelArea[] => {
   const list = areas.filter((a) => !a.hidden || a.id === current);
-  return current && !areas.some((a) => a.id === current) ? [...list, { id: current, label: current }] : list;
+  return current && !areas.some((a) => a.id === current)
+    ? [...list, { id: current, label: defaultAreaLabel(current) }]
+    : list;
 };
 
 export const newAreaId = () => `area-${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`;
@@ -60,16 +105,32 @@ export const isAreaId = (value: unknown): value is WheelCategory =>
   typeof value === 'string' &&
   ((WHEEL_CATEGORIES as readonly string[]).includes(value) || /^area-[a-z0-9]+$/.test(value));
 
+const m = messages(
+  {
+    noName: 'Cada área necesita un nombre.',
+    tooLong: `Los nombres no pueden pasar de ${AREA_LABEL_MAX} caracteres.`,
+    duplicate: 'Dos áreas no pueden llamarse igual.',
+    tooFew: `Deja al menos ${MIN_VISIBLE_AREAS} áreas a la vista.`,
+    tooMany: `Puedes tener hasta ${MAX_VISIBLE_AREAS} áreas a la vista.`
+  },
+  {
+    noName: 'Each area needs a name.',
+    tooLong: `Names can’t be longer than ${AREA_LABEL_MAX} characters.`,
+    duplicate: 'Two areas can’t have the same name.',
+    tooFew: `Keep at least ${MIN_VISIBLE_AREAS} areas in view.`,
+    tooMany: `You can have up to ${MAX_VISIBLE_AREAS} areas in view.`
+  }
+);
+
 // Nombres no vacíos, cortos y distintos, y entre 3 y 12 áreas visibles
 export const validateAreas = (areas: WheelArea[]): string | null => {
-  if (areas.some((a) => !a.label.trim())) return 'Cada área necesita un nombre.';
-  if (areas.some((a) => a.label.trim().length > AREA_LABEL_MAX))
-    return `Los nombres no pueden pasar de ${AREA_LABEL_MAX} caracteres.`;
-  const names = areas.map((a) => a.label.trim().toLocaleLowerCase('es'));
-  if (new Set(names).size !== names.length) return 'Dos áreas no pueden llamarse igual.';
+  if (areas.some((a) => !a.label.trim())) return m.noName;
+  if (areas.some((a) => a.label.trim().length > AREA_LABEL_MAX)) return m.tooLong;
+  const names = areas.map((a) => a.label.trim().toLocaleLowerCase(LOCALE_TAG));
+  if (new Set(names).size !== names.length) return m.duplicate;
   const visible = visibleAreas(areas).length;
-  if (visible < MIN_VISIBLE_AREAS) return `Deja al menos ${MIN_VISIBLE_AREAS} áreas a la vista.`;
-  if (visible > MAX_VISIBLE_AREAS) return `Puedes tener hasta ${MAX_VISIBLE_AREAS} áreas a la vista.`;
+  if (visible < MIN_VISIBLE_AREAS) return m.tooFew;
+  if (visible > MAX_VISIBLE_AREAS) return m.tooMany;
   return null;
 };
 

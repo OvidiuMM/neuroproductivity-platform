@@ -3,8 +3,53 @@ import { Compass, Plus, X } from 'lucide-react';
 import { useModalFocus } from '../hooks/useModalFocus';
 import { useDiscardGuard } from '../hooks/useDiscardGuard';
 import type { WheelArea } from '../types';
-import { AREA_LABEL_MAX, MAX_VISIBLE_AREAS, newAreaId, validateAreas, visibleAreas } from '../services/wheel';
+import {
+  AREA_LABEL_MAX,
+  MAX_VISIBLE_AREAS,
+  newAreaId,
+  storableAreas,
+  validateAreas,
+  visibleAreas
+} from '../services/wheel';
 import { DiscardChangesPrompt } from './DiscardChangesPrompt';
+import { messages } from '../i18n/locale';
+
+const m = messages(
+  {
+    title: 'Áreas de tu Rueda',
+    close: 'Cerrar',
+    intro: (max: number) =>
+      `Cambia el nombre de cualquier área o añade las tuyas. Un área oculta sale de la Rueda y de las listas para elegir, pero conserva sus evaluaciones, sus metas y sus tareas. Entre 3 y ${max} a la vista.`,
+    areas: 'Áreas',
+    nameOf: (n: number) => `Nombre del área ${n}`,
+    namePlaceholder: 'Nombre del área',
+    inView: 'A la vista',
+    areaN: (n: number) => `área ${n}`,
+    removeArea: (n: number) => `Quitar el área ${n}`,
+    remove: 'Quitar',
+    addArea: 'Añadir un área',
+    cancel: 'Cancelar',
+    save: 'Guardar las áreas',
+    discard: 'Has cambiado las áreas y no has guardado los cambios.'
+  },
+  {
+    title: 'Your Wheel areas',
+    close: 'Close',
+    intro: (max) =>
+      `Rename any area or add your own. A hidden area leaves the Wheel and the lists to choose from, but keeps its assessments, goals and tasks. Between 3 and ${max} in view.`,
+    areas: 'Areas',
+    nameOf: (n) => `Name of area ${n}`,
+    namePlaceholder: 'Area name',
+    inView: 'In view',
+    areaN: (n) => `area ${n}`,
+    removeArea: (n) => `Remove area ${n}`,
+    remove: 'Remove',
+    addArea: 'Add an area',
+    cancel: 'Cancel',
+    save: 'Save areas',
+    discard: 'You’ve changed the areas and haven’t saved the changes.'
+  }
+);
 
 interface AreasModalProps {
   areas: WheelArea[];
@@ -49,7 +94,7 @@ export const AreasModal: React.FC<AreasModalProps> = ({ areas, onSave, onClose }
     e.preventDefault();
     setSubmitted(true);
     if (error) return;
-    onSave(clean(draft));
+    onSave(storableAreas(clean(draft)));
     onClose();
   };
 
@@ -68,12 +113,12 @@ export const AreasModal: React.FC<AreasModalProps> = ({ areas, onSave, onClose }
         >
           <h2 id="areas-modal-title" className="flex items-center gap-2 text-base font-bold text-slate-900">
             <Compass className="h-5 w-5 text-indigo-600" aria-hidden="true" />
-            Áreas de tu Rueda
+            {m.title}
           </h2>
           <button
             type="button"
             onClick={guard.requestClose}
-            aria-label="Cerrar"
+            aria-label={m.close}
             className="rounded-lg p-1.5 text-slate-500 transition-colors hover:bg-slate-200/60 hover:text-slate-600"
           >
             <X className="h-5 w-5" aria-hidden="true" />
@@ -81,12 +126,9 @@ export const AreasModal: React.FC<AreasModalProps> = ({ areas, onSave, onClose }
         </div>
 
         <form onSubmit={handleSubmit} inert={guard.confirming} className="space-y-4 p-6">
-          <p className="text-xs leading-relaxed text-slate-600">
-            Cambia el nombre de cualquier área o añade las tuyas. Un área oculta sale de la Rueda y de las listas para
-            elegir, pero conserva sus evaluaciones, sus metas y sus tareas. Entre 3 y {MAX_VISIBLE_AREAS} a la vista.
-          </p>
+          <p className="text-xs leading-relaxed text-slate-600">{m.intro(MAX_VISIBLE_AREAS)}</p>
 
-          <ol ref={listRef} aria-label="Áreas" className="space-y-2">
+          <ol ref={listRef} aria-label={m.areas} className="space-y-2">
             {draft.map((area, index) => (
               <li key={area.id} className="flex flex-wrap items-center gap-2">
                 <input
@@ -94,8 +136,8 @@ export const AreasModal: React.FC<AreasModalProps> = ({ areas, onSave, onClose }
                   value={area.label}
                   onChange={(e) => update(area.id, { label: e.target.value })}
                   maxLength={AREA_LABEL_MAX}
-                  aria-label={`Nombre del área ${index + 1}`}
-                  placeholder="Nombre del área"
+                  aria-label={m.nameOf(index + 1)}
+                  placeholder={m.namePlaceholder}
                   className={`min-w-0 flex-1 rounded-xl border border-slate-300 px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-400 focus:outline-none ${
                     area.hidden ? 'bg-slate-50 text-slate-500' : ''
                   }`}
@@ -107,17 +149,17 @@ export const AreasModal: React.FC<AreasModalProps> = ({ areas, onSave, onClose }
                     onChange={(e) => update(area.id, { hidden: !e.target.checked })}
                     className="h-4 w-4 rounded border-slate-300 text-indigo-600"
                   />
-                  A la vista
-                  <span className="sr-only">: {area.label || `área ${index + 1}`}</span>
+                  {m.inView}
+                  <span className="sr-only">: {area.label || m.areaN(index + 1)}</span>
                 </label>
                 {area.isNew && (
                   <button
                     type="button"
                     onClick={() => setDraft((list) => list.filter((a) => a.id !== area.id))}
-                    aria-label={`Quitar el área ${index + 1}`}
+                    aria-label={m.removeArea(index + 1)}
                     className="min-h-11 rounded-xl px-2 text-xs font-semibold text-red-700 hover:bg-red-50"
                   >
-                    Quitar
+                    {m.remove}
                   </button>
                 )}
               </li>
@@ -131,7 +173,7 @@ export const AreasModal: React.FC<AreasModalProps> = ({ areas, onSave, onClose }
             className="inline-flex min-h-11 items-center gap-1.5 rounded-xl border border-slate-200 px-3 text-xs font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-60"
           >
             <Plus className="h-4 w-4" aria-hidden="true" />
-            Añadir un área
+            {m.addArea}
           </button>
 
           {submitted && error && (
@@ -146,23 +188,19 @@ export const AreasModal: React.FC<AreasModalProps> = ({ areas, onSave, onClose }
               onClick={guard.requestClose}
               className="rounded-xl px-4 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-100 hover:text-slate-900"
             >
-              Cancelar
+              {m.cancel}
             </button>
             <button
               type="submit"
               className="rounded-xl bg-slate-900 px-5 py-2.5 text-xs font-bold text-white shadow-sm hover:bg-slate-800"
             >
-              Guardar las áreas
+              {m.save}
             </button>
           </div>
         </form>
 
         {guard.confirming && (
-          <DiscardChangesPrompt
-            text="Has cambiado las áreas y no has guardado los cambios."
-            onKeepEditing={guard.keepEditing}
-            onDiscard={guard.discard}
-          />
+          <DiscardChangesPrompt text={m.discard} onKeepEditing={guard.keepEditing} onDiscard={guard.discard} />
         )}
       </div>
     </div>

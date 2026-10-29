@@ -8,6 +8,7 @@ import { areasInUse } from '../services/wheel';
 import { useAreas } from '../hooks/useAreas';
 import { DateField } from './DateField';
 import { DiscardChangesPrompt } from './DiscardChangesPrompt';
+import { messages } from '../i18n/locale';
 
 interface ProjectModalProps {
   // Proyecto que se edita, o ninguno para crear uno
@@ -19,6 +20,63 @@ interface ProjectModalProps {
   onDelete: (project: Project) => void;
   onClose: () => void;
 }
+
+const m = messages(
+  {
+    editProject: 'Editar el proyecto',
+    newProject: 'Nuevo proyecto',
+    close: 'Cerrar',
+    intro: 'Un conjunto de tareas con fecha de fin para avanzar en una meta. Su avance se ve como una batería.',
+    project: 'Proyecto',
+    titlePlaceholder: 'ej. Reformar la cocina',
+    goal: 'Meta',
+    chooseGoal: 'Elige una meta…',
+    noGoal: '(Meta no disponible)',
+    achieved: ' (lograda)',
+    archived: ' (archivada)',
+    goalNote: 'Sus tareas contarán en el avance de esa meta.',
+    endDate: 'Fecha de fin',
+    description: 'Descripción',
+    optional: '(opcional)',
+    descriptionPlaceholder: 'Qué tiene que quedar hecho al terminar',
+    deleteNote: 'Sus tareas se quedan en la meta, sin proyecto.',
+    deleteForGood: 'Eliminar definitivamente',
+    keep: 'No eliminar',
+    deleteProject: 'Eliminar el proyecto',
+    cancel: 'Cancelar',
+    saveChanges: 'Guardar los cambios',
+    createProject: 'Crear el proyecto',
+    discardEdit: 'Has cambiado este proyecto y no has guardado los cambios.',
+    discardNew: 'Has empezado un proyecto nuevo y no lo has guardado.'
+  },
+  {
+    editProject: 'Edit project',
+    newProject: 'New project',
+    close: 'Close',
+    intro: 'A set of tasks with an end date to move a goal forward. Its progress shows as a battery.',
+    project: 'Project',
+    titlePlaceholder: 'e.g. Redo the kitchen',
+    goal: 'Goal',
+    chooseGoal: 'Choose a goal…',
+    noGoal: '(Goal not available)',
+    achieved: ' (achieved)',
+    archived: ' (archived)',
+    goalNote: 'Its tasks will count toward that goal’s progress.',
+    endDate: 'End date',
+    description: 'Description',
+    optional: '(optional)',
+    descriptionPlaceholder: 'What has to be done when it ends',
+    deleteNote: 'Its tasks stay in the goal, without a project.',
+    deleteForGood: 'Delete permanently',
+    keep: 'Don’t delete',
+    deleteProject: 'Delete project',
+    cancel: 'Cancel',
+    saveChanges: 'Save changes',
+    createProject: 'Create project',
+    discardEdit: 'You’ve changed this project and haven’t saved the changes.',
+    discardNew: 'You’ve started a new project and haven’t saved it.'
+  }
+);
 
 const inputClass =
   'w-full rounded-xl border border-slate-300 px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-400 focus:outline-none';
@@ -93,12 +151,12 @@ export const ProjectModal: React.FC<ProjectModalProps> = ({
         >
           <h2 id="project-modal-title" className="flex items-center gap-2 text-base font-bold text-slate-900">
             <FolderKanban className="h-5 w-5 text-indigo-600" aria-hidden="true" />
-            {project ? 'Editar el proyecto' : 'Nuevo proyecto'}
+            {project ? m.editProject : m.newProject}
           </h2>
           <button
             type="button"
             onClick={guard.requestClose}
-            aria-label="Cerrar"
+            aria-label={m.close}
             className="rounded-lg p-1.5 text-slate-500 transition-colors hover:bg-slate-200/60 hover:text-slate-600"
           >
             <X className="h-5 w-5" aria-hidden="true" />
@@ -107,13 +165,11 @@ export const ProjectModal: React.FC<ProjectModalProps> = ({
 
         {/* Con la validación del navegador: una fecha imposible (p. ej. 31/02) bloquea el envío con su mensaje */}
         <form onSubmit={handleSubmit} inert={guard.confirming} className="space-y-4 p-6">
-          <p className="text-xs leading-relaxed text-slate-600">
-            Un conjunto de tareas con fecha de fin para avanzar en una meta. Su avance se ve como una batería.
-          </p>
+          <p className="text-xs leading-relaxed text-slate-600">{m.intro}</p>
 
           <div>
             <label htmlFor="project-title" className={labelClass}>
-              Proyecto <span className="text-red-600">*</span>
+              {m.project} <span className="text-red-600">*</span>
             </label>
             <input
               id="project-title"
@@ -121,7 +177,7 @@ export const ProjectModal: React.FC<ProjectModalProps> = ({
               value={title}
               onChange={(e) => setTitle(e.target.value)}
               maxLength={PROJECT_TITLE_MAX}
-              placeholder="ej. Reformar la cocina"
+              placeholder={m.titlePlaceholder}
               className={inputClass}
               data-autofocus
             />
@@ -129,7 +185,7 @@ export const ProjectModal: React.FC<ProjectModalProps> = ({
 
           <div>
             <label htmlFor="project-goal" className={labelClass}>
-              Meta <span className="text-red-600">*</span>
+              {m.goal} <span className="text-red-600">*</span>
             </label>
             <select
               id="project-goal"
@@ -137,8 +193,8 @@ export const ProjectModal: React.FC<ProjectModalProps> = ({
               onChange={(e) => setGoalId(e.target.value)}
               className={`${inputClass} bg-white`}
             >
-              <option value="">Elige una meta…</option>
-              {goalId && !goals.some((g) => g.id === goalId) && <option value={goalId}>(Meta no disponible)</option>}
+              <option value="">{m.chooseGoal}</option>
+              {goalId && !goals.some((g) => g.id === goalId) && <option value={goalId}>{m.noGoal}</option>}
               {areasInUse(
                 areas,
                 goalOptions.map((g) => g.area)
@@ -149,21 +205,21 @@ export const ProjectModal: React.FC<ProjectModalProps> = ({
                     .map((g) => (
                       <option key={g.id} value={g.id}>
                         {g.title}
-                        {g.status === 'ACHIEVED' ? ' (lograda)' : g.status === 'ARCHIVED' ? ' (archivada)' : ''}
+                        {g.status === 'ACHIEVED' ? m.achieved : g.status === 'ARCHIVED' ? m.archived : ''}
                       </option>
                     ))}
                 </optgroup>
               ))}
             </select>
-            <p className="mt-1 text-[11px] text-slate-500">Sus tareas contarán en el avance de esa meta.</p>
+            <p className="mt-1 text-[11px] text-slate-500">{m.goalNote}</p>
           </div>
 
           <div>
             <span className={labelClass}>
-              Fecha de fin <span className="text-red-600">*</span>
+              {m.endDate} <span className="text-red-600">*</span>
             </span>
             <DateField
-              label="Fecha de fin"
+              label={m.endDate}
               value={endDate}
               onChange={setEndDate}
               onDraftChange={setDateDraft}
@@ -173,7 +229,8 @@ export const ProjectModal: React.FC<ProjectModalProps> = ({
 
           <div>
             <label htmlFor="project-description" className={labelClass}>
-              Descripción <span className="font-normal tracking-normal text-slate-500 normal-case">(opcional)</span>
+              {m.description}{' '}
+              <span className="font-normal tracking-normal text-slate-500 normal-case">{m.optional}</span>
             </label>
             <textarea
               id="project-description"
@@ -181,7 +238,7 @@ export const ProjectModal: React.FC<ProjectModalProps> = ({
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               maxLength={PROJECT_DESCRIPTION_MAX}
-              placeholder="Qué tiene que quedar hecho al terminar"
+              placeholder={m.descriptionPlaceholder}
               className={inputClass}
             />
           </div>
@@ -196,7 +253,7 @@ export const ProjectModal: React.FC<ProjectModalProps> = ({
             {project ? (
               confirmDelete ? (
                 <div className="flex flex-wrap items-center gap-2 text-xs text-slate-700">
-                  <span id="project-delete-note">Sus tareas se quedan en la meta, sin proyecto.</span>
+                  <span id="project-delete-note">{m.deleteNote}</span>
                   <button
                     ref={confirmRef}
                     aria-describedby="project-delete-note"
@@ -207,14 +264,14 @@ export const ProjectModal: React.FC<ProjectModalProps> = ({
                     }}
                     className="rounded-lg bg-red-700 px-3 py-2 font-bold text-white hover:bg-red-800"
                   >
-                    Eliminar definitivamente
+                    {m.deleteForGood}
                   </button>
                   <button
                     type="button"
                     onClick={() => setConfirmDelete(false)}
                     className="rounded-lg px-2 py-2 font-semibold text-slate-600 hover:bg-slate-100"
                   >
-                    No eliminar
+                    {m.keep}
                   </button>
                 </div>
               ) : (
@@ -224,7 +281,7 @@ export const ProjectModal: React.FC<ProjectModalProps> = ({
                   className="flex items-center gap-1.5 rounded-lg px-2 py-2 text-xs font-semibold text-red-700 hover:bg-red-50"
                 >
                   <Trash2 className="h-4 w-4" aria-hidden="true" />
-                  Eliminar el proyecto
+                  {m.deleteProject}
                 </button>
               )
             ) : (
@@ -236,13 +293,13 @@ export const ProjectModal: React.FC<ProjectModalProps> = ({
                 onClick={guard.requestClose}
                 className="rounded-xl px-4 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-100 hover:text-slate-900"
               >
-                Cancelar
+                {m.cancel}
               </button>
               <button
                 type="submit"
                 className="rounded-xl bg-slate-900 px-5 py-2.5 text-xs font-bold text-white shadow-sm hover:bg-slate-800"
               >
-                {project ? 'Guardar los cambios' : 'Crear el proyecto'}
+                {project ? m.saveChanges : m.createProject}
               </button>
             </div>
           </div>
@@ -250,11 +307,7 @@ export const ProjectModal: React.FC<ProjectModalProps> = ({
 
         {guard.confirming && (
           <DiscardChangesPrompt
-            text={
-              project
-                ? 'Has cambiado este proyecto y no has guardado los cambios.'
-                : 'Has empezado un proyecto nuevo y no lo has guardado.'
-            }
+            text={project ? m.discardEdit : m.discardNew}
             onKeepEditing={guard.keepEditing}
             onDiscard={guard.discard}
           />

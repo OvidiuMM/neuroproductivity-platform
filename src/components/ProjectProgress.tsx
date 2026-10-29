@@ -1,6 +1,24 @@
 import React from 'react';
 import { Project, TaskItem } from '../types';
 import { projectProgress } from '../services/projects';
+import { messages } from '../i18n/locale';
+
+const m = messages(
+  {
+    noTasks: 'Aún no tiene tareas.',
+    progressOf: (title: string) => `Avance de «${title}»`,
+    percent: (n: number) => `${n} %`,
+    valueText: (percent: number, done: number, total: number) => `${percent} %: ${done} de ${total} tareas hechas`,
+    summary: (done: number, total: number) => `${done} de ${total} ${total === 1 ? 'tarea hecha' : 'tareas hechas'}`
+  },
+  {
+    noTasks: 'No tasks yet.',
+    progressOf: (title) => `Progress of “${title}”`,
+    percent: (n) => `${n}%`,
+    valueText: (percent, done, total) => `${percent}%: ${done} of ${total} tasks done`,
+    summary: (done, total) => `${done} of ${total} ${total === 1 ? 'task done' : 'tasks done'}`
+  }
+);
 
 // Color de la carga: poca (rojo), a medias (ámbar) o casi llena (verde)
 const levelClass = (percent: number) =>
@@ -13,16 +31,16 @@ export const ProjectProgress: React.FC<{ project: Project; tasks: TaskItem[]; co
   compact = false
 }) => {
   const { done, total, percent } = projectProgress(project, tasks);
-  if (total === 0) return <p className="text-[11px] text-slate-500">Aún no tiene tareas.</p>;
+  if (total === 0) return <p className="text-[11px] text-slate-500">{m.noTasks}</p>;
   return (
     <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
       <div
         role="progressbar"
-        aria-label={`Avance de «${project.title}»`}
+        aria-label={m.progressOf(project.title)}
         aria-valuemin={0}
         aria-valuemax={100}
         aria-valuenow={percent}
-        aria-valuetext={`${percent} %: ${done} de ${total} tareas hechas`}
+        aria-valuetext={m.valueText(percent, done, total)}
         className="flex items-center"
       >
         <div className={`rounded-md border-2 border-slate-400 p-0.5 ${compact ? 'h-4 w-9' : 'h-6 w-14'}`}>
@@ -30,10 +48,10 @@ export const ProjectProgress: React.FC<{ project: Project; tasks: TaskItem[]; co
         </div>
         <div className={`w-1 rounded-r-sm bg-slate-400 ${compact ? 'h-1.5' : 'h-2.5'}`} />
       </div>
-      <span className={`font-mono font-bold text-slate-900 ${compact ? 'text-xs' : 'text-sm'}`}>{percent} %</span>
-      <span className="text-[11px] text-slate-600">
-        {done} de {total} {total === 1 ? 'tarea hecha' : 'tareas hechas'}
+      <span className={`font-mono font-bold text-slate-900 ${compact ? 'text-xs' : 'text-sm'}`}>
+        {m.percent(percent)}
       </span>
+      <span className="text-[11px] text-slate-600">{m.summary(done, total)}</span>
     </div>
   );
 };
