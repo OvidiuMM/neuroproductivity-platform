@@ -1,6 +1,9 @@
 import React, { useEffect, useId, useRef } from 'react';
 import { X } from 'lucide-react';
 import { useModalFocus } from '../hooks/useModalFocus';
+import { messages } from '../i18n/locale';
+
+const m = messages({ close: 'Cerrar' }, { close: 'Close' });
 
 interface BottomSheetProps {
   isOpen: boolean;
@@ -46,7 +49,7 @@ export const BottomSheet: React.FC<BottomSheetProps> = ({ isOpen, onClose, title
           <button
             type="button"
             onClick={onClose}
-            aria-label="Cerrar"
+            aria-label={m.close}
             className="flex h-11 w-11 items-center justify-center rounded-xl text-slate-500 hover:bg-slate-100 hover:text-slate-700"
           >
             <X className="h-5 w-5" aria-hidden="true" />

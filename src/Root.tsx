@@ -1,6 +1,9 @@
 import { lazy, Suspense } from 'react';
 import { legalPageFor } from './services/legal';
 import { LoadingScreen } from './components/BrandMark';
+import { messages } from './i18n/locale';
+
+const loading = messages<string>('Cargando…', 'Loading…');
 
 const AuthGate = lazy(() => import('./AuthGate.tsx').then(({ AuthGate }) => ({ default: AuthGate })));
 const LegalPage = lazy(() => import('./components/LegalPage'));
@@ -16,7 +19,7 @@ export const Root = () => {
   const legal = legalPageFor(path);
   // Mientras se descarga la pantalla de entrada o el texto legal, el logo girando
   return (
-    <Suspense fallback={<LoadingScreen text="Cargando…" />}>
+    <Suspense fallback={<LoadingScreen text={loading} />}>
       {legal ? <LegalPage page={legal.id} /> : isAppPath(path) ? <AuthGate /> : <NotFoundPage />}
     </Suspense>
   );

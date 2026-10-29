@@ -5,6 +5,30 @@ import { SyncIndicator, type SyncStatus } from './SyncIndicator';
 import { BRAND_NAME, BrandMark } from './BrandMark';
 import { Avatar, PendingBadge } from './NavParts';
 import { sectionLabel, sectionsFor } from '../navigation';
+import { messages } from '../i18n/locale';
+
+const m = messages(
+  {
+    work: 'Profesional',
+    personal: 'Personal',
+    releaseNotes: (version: string) => `v${version}: novedades de esta versión`,
+    sections: 'Secciones',
+    activeList: 'Lista activa',
+    listCount: (label: string, count: number) => `${label}, ${count} ${count === 1 ? 'tarea' : 'tareas'}`,
+    accountOf: (name: string) => `Tu cuenta: ${name}`,
+    account: 'Tu cuenta'
+  },
+  {
+    work: 'Work',
+    personal: 'Personal',
+    releaseNotes: (version) => `v${version}: what’s new in this version`,
+    sections: 'Sections',
+    activeList: 'Active list',
+    listCount: (label, count) => `${label}, ${count} ${count === 1 ? 'task' : 'tasks'}`,
+    accountOf: (name) => `Your account: ${name}`,
+    account: 'Your account'
+  }
+);
 
 interface NavbarProps {
   activeTab: AppTab;
@@ -43,14 +67,14 @@ export const Navbar: React.FC<NavbarProps> = ({
   const contexts = [
     {
       value: 'WORK' as const,
-      label: 'Profesional',
+      label: m.work,
       count: taskCounts.work,
       Icon: Briefcase,
       iconClass: 'text-indigo-600'
     },
     {
       value: 'PERSONAL' as const,
-      label: 'Personal',
+      label: m.personal,
       count: taskCounts.personal,
       Icon: User,
       iconClass: 'text-emerald-600'
@@ -73,7 +97,7 @@ export const Navbar: React.FC<NavbarProps> = ({
             <button
               type="button"
               onClick={onShowReleaseNotes}
-              aria-label={`v${__APP_VERSION__}: novedades de esta versión`}
+              aria-label={m.releaseNotes(__APP_VERSION__)}
               className="hidden rounded border border-indigo-200 bg-indigo-50 px-1.5 py-0.5 font-mono text-[10px] font-bold whitespace-nowrap text-indigo-700 hover:bg-indigo-100 sm:inline"
             >
               v{__APP_VERSION__}
@@ -81,7 +105,7 @@ export const Navbar: React.FC<NavbarProps> = ({
           </div>
 
           {/* Secciones (escritorio y tableta): solo icono hasta 1280 px; «Ayuda» y «Administración», siempre */}
-          <nav aria-label="Secciones" className="hidden min-w-0 items-center gap-0.5 md:flex">
+          <nav aria-label={m.sections} className="hidden min-w-0 items-center gap-0.5 md:flex">
             {sections.map((section) => {
               const { tab, label, icon: Icon, iconOnly } = section;
               return (
@@ -110,7 +134,7 @@ export const Navbar: React.FC<NavbarProps> = ({
             {/* Las dos listas, siempre a la vista */}
             <div
               role="group"
-              aria-label="Lista activa"
+              aria-label={m.activeList}
               data-tour="lists"
               className="flex items-center rounded-lg border border-slate-200 bg-slate-100 p-0.5"
             >
@@ -120,7 +144,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                   type="button"
                   onClick={() => setActiveContext(value)}
                   aria-pressed={activeContext === value}
-                  aria-label={`${label}, ${count} tareas`}
+                  aria-label={m.listCount(label, count)}
                   title={label}
                   className={`flex h-8 items-center gap-1.5 rounded-md px-2 text-xs font-semibold transition-all ${
                     activeContext === value
@@ -142,8 +166,8 @@ export const Navbar: React.FC<NavbarProps> = ({
                 id="account-button"
                 onClick={onOpenAccount}
                 className="flex items-center gap-1.5 rounded-xl border border-slate-200 p-1 pr-2 pl-1.5 text-xs transition-all hover:border-slate-300 hover:bg-slate-50"
-                title={`Tu cuenta: ${activeUser.name}`}
-                aria-label="Tu cuenta"
+                title={m.accountOf(activeUser.name)}
+                aria-label={m.account}
               >
                 <Avatar user={activeUser} />
                 <ChevronDown className="h-3 w-3 text-slate-500" aria-hidden="true" />

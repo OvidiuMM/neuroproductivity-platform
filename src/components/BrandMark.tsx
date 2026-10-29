@@ -1,4 +1,5 @@
 import React from 'react';
+import { messages } from '../i18n/locale';
 
 // Símbolo de CLAR: una lente enfocada (ver con claridad qué hacer ahora). Colores de marca: fondo pizarra
 // #0f172a (slate-900), anillo índigo #818cf8 (indigo-400) y brillo blanco. Mismo dibujo que public/icon.svg.
@@ -43,4 +44,9 @@ export const LoadingScreen: React.FC<{ text: string }> = ({ text }) => (
 );
 
 export const BRAND_NAME = 'CLAR';
-export const BRAND_TAGLINE = 'Decide qué hacer ahora, con claridad';
+// El idioma es fijo mientras la página está abierta (cambiarlo la vuelve a cargar)
+// eslint-disable-next-line react-refresh/only-export-components -- una constante, aunque dependa del idioma
+export const BRAND_TAGLINE = messages<string>(
+  'Decide qué hacer ahora, con claridad',
+  'Decide what to do now, with clarity'
+);

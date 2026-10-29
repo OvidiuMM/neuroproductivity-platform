@@ -14,6 +14,7 @@ import {
   type QueryDocumentSnapshot
 } from 'firebase/firestore';
 import type { FeedbackContext, FeedbackType } from './feedback';
+import { LOCALE, type Locale } from '../i18n/locale';
 
 export type FeedbackStatus = 'new' | 'read' | 'closed';
 
@@ -54,16 +55,22 @@ export interface FeedbackInput {
   context?: FeedbackContext;
 }
 
+// Con el idioma de la app, para los mensajes y los emails del servidor
 export const submitFeedback = async (functions: Functions, input: FeedbackInput) =>
-  (await httpsCallable<FeedbackInput, { id: string }>(functions, 'submitFeedback')(input)).data;
+  (
+    await httpsCallable<FeedbackInput & { language: Locale }, { id: string }>(
+      functions,
+      'submitFeedback'
+    )({ ...input, language: LOCALE })
+  ).data;
 
 // Solo la administración: envía la respuesta por email y, si sale, la guarda en el mensaje
 export const replyToFeedback = async (functions: Functions, ticketId: string, replyId: string, message: string) =>
   (
-    await httpsCallable<{ ticketId: string; replyId: string; message: string }, FeedbackReply>(
+    await httpsCallable<{ ticketId: string; replyId: string; message: string; language: Locale }, FeedbackReply>(
       functions,
       'replyToFeedback'
-    )({ ticketId, replyId, message })
+    )({ ticketId, replyId, message, language: LOCALE })
   ).data;
 
 const toTicket = (d: QueryDocumentSnapshot) => ({ ...(d.data() as Omit<FeedbackTicket, 'id'>), id: d.id });

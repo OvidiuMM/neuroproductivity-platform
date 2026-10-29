@@ -1,34 +1,39 @@
 import React from 'react';
 import { CloudCheck, CloudOff, RefreshCw } from 'lucide-react';
+import { messages } from '../i18n/locale';
 
 // synced: todo confirmado por el servidor · pending: hay cambios sin confirmar · offline: sin conexión · syncing: forzando
 export type SyncStatus = 'synced' | 'pending' | 'offline' | 'syncing';
 
-const STATES: Record<SyncStatus, { label: string; short: string; className: string; Icon: typeof RefreshCw }> = {
-  synced: {
-    label: 'Sincronizado con el servidor. Pulsa para comprobarlo de nuevo.',
-    short: 'Sincronizado',
-    className: 'text-emerald-700 bg-emerald-50 border-emerald-300',
-    Icon: CloudCheck
+const m = messages<Record<SyncStatus, { label: string; short: string }>>(
+  {
+    synced: { label: 'Sincronizado con el servidor. Pulsa para comprobarlo de nuevo.', short: 'Sincronizado' },
+    pending: {
+      label: 'Hay cambios pendientes de sincronizar. Pulsa para sincronizar ahora.',
+      short: 'Cambios pendientes'
+    },
+    offline: {
+      label: 'Sin conexión: los cambios se guardan en este dispositivo y se enviarán al volver. Pulsa para reintentar.',
+      short: 'Sin conexión'
+    },
+    syncing: { label: 'Sincronizando…', short: 'Sincronizando…' }
   },
-  pending: {
-    label: 'Hay cambios pendientes de sincronizar. Pulsa para sincronizar ahora.',
-    short: 'Cambios pendientes',
-    className: 'text-orange-700 bg-orange-50 border-orange-300',
-    Icon: RefreshCw
-  },
-  offline: {
-    label: 'Sin conexión: los cambios se guardan en este dispositivo y se enviarán al volver. Pulsa para reintentar.',
-    short: 'Sin conexión',
-    className: 'text-orange-700 bg-orange-50 border-orange-300',
-    Icon: CloudOff
-  },
-  syncing: {
-    label: 'Sincronizando…',
-    short: 'Sincronizando…',
-    className: 'text-orange-700 bg-orange-50 border-orange-300',
-    Icon: RefreshCw
+  {
+    synced: { label: 'Synced with the server. Tap to check again.', short: 'Synced' },
+    pending: { label: 'There are changes waiting to sync. Tap to sync now.', short: 'Pending changes' },
+    offline: {
+      label: "Offline: your changes are saved on this device and will be sent when you're back online. Tap to retry.",
+      short: 'Offline'
+    },
+    syncing: { label: 'Syncing…', short: 'Syncing…' }
   }
+);
+
+const STATES: Record<SyncStatus, { label: string; short: string; className: string; Icon: typeof RefreshCw }> = {
+  synced: { ...m.synced, className: 'text-emerald-700 bg-emerald-50 border-emerald-300', Icon: CloudCheck },
+  pending: { ...m.pending, className: 'text-orange-700 bg-orange-50 border-orange-300', Icon: RefreshCw },
+  offline: { ...m.offline, className: 'text-orange-700 bg-orange-50 border-orange-300', Icon: CloudOff },
+  syncing: { ...m.syncing, className: 'text-orange-700 bg-orange-50 border-orange-300', Icon: RefreshCw }
 };
 
 // Verde si el contenido coincide con el servidor, naranja si no; cada estado tiene además su propio icono.

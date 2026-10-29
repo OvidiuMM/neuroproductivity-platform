@@ -1,6 +1,7 @@
 import { ListContext, MeetingGuard, TaskItem } from '../types';
 import { DeadlineState, getDeadlineState, isArchived, toLocalDate } from './tasks';
 import { occurrencesBetween, toDateString } from './recurrence';
+import { LOCALE_TAG } from '../i18n/locale';
 
 // Elemento de la agenda en un día concreto
 export interface AgendaItem {
@@ -10,7 +11,8 @@ export interface AgendaItem {
   date: string; // YYYY-MM-DD
   time?: string; // HH:mm (sin hora: todo el día)
   endTime?: string;
-  // task: vence / empieza / en curso (intervalo) · occurrence: repetición prevista de una tarea recurrente
+  // task: vence / empieza / en curso (intervalo) · occurrence: repetición prevista de una tarea recurrente. Es un
+  // identificador: el texto que se ve, en el idioma de la app, lo pone AgendaView
   label: 'Vence' | 'Empieza' | 'En curso' | 'Repetición prevista' | 'Reunión';
   context?: ListContext;
   deadline: DeadlineState;
@@ -101,7 +103,7 @@ export const buildAgenda = (
 
   // Dentro de cada día: primero lo que no tiene hora, después por hora
   for (const items of agenda.values()) {
-    items.sort((a, b) => (a.time ?? '').localeCompare(b.time ?? '') || a.title.localeCompare(b.title));
+    items.sort((a, b) => (a.time ?? '').localeCompare(b.time ?? '') || a.title.localeCompare(b.title, LOCALE_TAG));
   }
   return agenda;
 };

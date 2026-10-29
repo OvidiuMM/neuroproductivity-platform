@@ -3,7 +3,6 @@ import { featuresDoc, forgetFeatures } from './featuresCleanup';
 import { forgetFeedback } from './feedbackCleanup';
 import { forgetPushData, forgetPushDevices } from './pushCleanup';
 import { adminAuth, adminDb } from './adminApp';
-import { HttpsError, onCall, type CallableRequest } from 'firebase-functions/https';
 import * as logger from 'firebase-functions/logger';
 import { defineSecret, defineString } from 'firebase-functions/params';
 import { FieldValue, type DocumentReference, type Transaction } from 'firebase-admin/firestore';
@@ -27,6 +26,8 @@ import {
   type AccessRecord,
   type DecisionStatus
 } from './accessLogic';
+import { callerLanguage, invalidRequest, onUserCall, requireAuth, userErrors } from './callable';
+import { isLanguage, languageOf, messages, type Language } from './i18n';
 
 export const REGION = 'europe-west1';
 
@@ -93,8 +94,32 @@ export const sendEmail = async (
   }
 };
 
-const sendAccessEmail = (kind: AccessEmail, record: AccessRecord, transport?: ReturnType<typeof createTransport>) =>
-  sendEmail(kind, kind === 'new-request' ? adminEmail() : record.email, buildEmail(kind, record, appUrl()), transport);
+// El idioma de los emails a una persona: el de su cuenta o, si aún no lo tiene (no ha entrado nunca con acceso, así que
+// no tiene perfil), el de la app cuando pidió acceso. Si no se puede leer, el de la solicitud: el aviso sale igual
+const recipientLanguage = async (uid: string, record: AccessRecord): Promise<Language> => {
+  const profile: unknown = await db()
+    .doc(`users/${uid}`)
+    .get()
+    .then((d): unknown => d.data()?.language)
+    .catch(() => undefined);
+  return isLanguage(profile) ? profile : languageOf(record.language);
+};
+
+// A la administración, en español; a la persona (`uid`), en su idioma
+const sendAccessEmail = async (
+  kind: AccessEmail,
+  record: AccessRecord,
+  uid?: string,
+  transport?: ReturnType<typeof createTransport>
+) => {
+  const language = kind === 'approved' && uid ? await recipientLanguage(uid, record) : 'es';
+  return sendEmail(
+    kind,
+    kind === 'new-request' ? adminEmail() : record.email,
+    buildEmail(kind, record, appUrl(), language),
+    transport
+  );
+};
 
 // Borra las marcas de administración que no son de la cuenta configurada. Se hace en cada llamada, así una
 // cuenta que deja de ser administración pierde la lectura de las solicitudes aunque no vuelva a entrar.
@@ -134,13 +159,35 @@ const forgetBlockedDevices = async (uid: string) => {
   }
 };
 
-export const requireAuth = (request: CallableRequest) => {
-  if (!request.auth) throw new HttpsError('unauthenticated', 'Inicia sesión para continuar.');
-  return request.auth;
-};
+const fail = userErrors(
+  messages(
+    {
+      noEmail: 'Tu cuenta no tiene email.',
+      verifyEmail: 'Verifica tu email antes de solicitar acceso.',
+      retryLater: 'Podrás volver a pedir acceso más adelante.',
+      adminOnlyDecide: 'Solo la administración puede decidir los accesos.',
+      ownAccess: 'No puedes cambiar tu propio acceso.',
+      requestGone: 'La solicitud ya no existe.',
+      notPossible: 'Ese cambio no es posible desde el estado actual.',
+      adminOnlyMode: 'Solo la administración puede cambiar la aprobación de cuentas.',
+      signInAgain: 'Vuelve a iniciar sesión para eliminar la cuenta.'
+    },
+    {
+      noEmail: "Your account doesn't have an email.",
+      verifyEmail: 'Verify your email before requesting access.',
+      retryLater: 'You can request access again later.',
+      adminOnlyDecide: 'Only the admin can decide on access.',
+      ownAccess: "You can't change your own access.",
+      requestGone: 'The request no longer exists.',
+      notPossible: "That change isn't possible from the current status.",
+      adminOnlyMode: 'Only the admin can change account approval.',
+      signInAgain: 'Sign in again to delete the account.'
+    }
+  )
+);
 
 // Al iniciar sesión: la cuenta de administración se aprueba y se marca como tal; el resto solo consulta su estado
-export const syncAccess = onCall({ region: REGION }, async (request) => {
+export const syncAccess = onUserCall({ region: REGION }, async (request) => {
   const auth = requireAuth(request);
   const accessRef = db().doc(`access/${auth.uid}`);
   const adminRef = db().doc(`admins/${auth.uid}`);
@@ -198,14 +245,15 @@ export const syncAccess = onCall({ region: REGION }, async (request) => {
   return { status, isAdmin: false };
 });
 
-export const requestAccess = onCall({ region: REGION, secrets: emailSecrets }, async (request) => {
+export const requestAccess = onUserCall({ region: REGION, secrets: emailSecrets }, async (request) => {
   const auth = requireAuth(request);
-  if (!auth.token.email) throw new HttpsError('failed-precondition', 'Tu cuenta no tiene email.');
+  if (!auth.token.email) throw fail('failed-precondition', (t) => t.noEmail);
   // Las cuentas con contraseña confirman antes su email (las de Google ya vienen verificadas)
-  if (auth.token.email_verified !== true)
-    throw new HttpsError('permission-denied', 'Verifica tu email antes de solicitar acceso.');
+  if (auth.token.email_verified !== true) throw fail('permission-denied', (t) => t.verifyEmail);
   const message = normalizeMessage((request.data as { message?: unknown } | null)?.message);
   const ref = db().doc(`access/${auth.uid}`);
+  // El idioma de la app al pedirlo: el del aviso cuando se apruebe, si para entonces la cuenta aún no tiene el suyo
+  const language = await callerLanguage(request);
 
   const created = await db().runTransaction(async (tx) => {
     const [current, { approvalRequired, emailBlocked }] = await Promise.all([
@@ -228,9 +276,7 @@ export const requestAccess = onCall({ region: REGION, secrets: emailSecrets }, a
       return { status: 'approved' as const };
     }
     if (decision.action === 'wait') {
-      throw new HttpsError('resource-exhausted', 'Podrás volver a pedir acceso más adelante.', {
-        retryAt: decision.retryAt
-      });
+      throw fail('resource-exhausted', (t) => t.retryLater, { retryAt: decision.retryAt });
     }
     // Con la aprobación libre, una cuenta nueva se aprueba al momento; una rechazada o retirada, no (ver newRequestStatus)
     const now = new Date().toISOString();
@@ -239,11 +285,12 @@ export const requestAccess = onCall({ region: REGION, secrets: emailSecrets }, a
         ? {
             ...profileOf(auth.token),
             message,
+            language,
             status: 'pending',
             requestedAt: now,
             ...(current.exists && { review: true })
           }
-        : { ...profileOf(auth.token), message, status: 'approved', requestedAt: now, decidedAt: now };
+        : { ...profileOf(auth.token), message, language, status: 'approved', requestedAt: now, decidedAt: now };
     tx.set(ref, record);
     return { status: record.status, record };
   });
@@ -256,25 +303,25 @@ export const requestAccess = onCall({ region: REGION, secrets: emailSecrets }, a
   return { status: created.status };
 });
 
-export const setAccess = onCall({ region: REGION, secrets: emailSecrets }, async (request) => {
+export const setAccess = onUserCall({ region: REGION, secrets: emailSecrets }, async (request) => {
   const auth = requireAuth(request);
   await removeStaleAdminMarkers();
   if (!isAdminToken(auth.token, adminEmail())) {
-    throw new HttpsError('permission-denied', 'Solo la administración puede decidir los accesos.');
+    throw fail('permission-denied', (t) => t.adminOnlyDecide);
   }
   const { uid, status } = (request.data ?? {}) as { uid?: unknown; status?: unknown };
   if (typeof uid !== 'string' || !uid || !DECISIONS.includes(status as DecisionStatus)) {
-    throw new HttpsError('invalid-argument', 'Solicitud no válida.');
+    throw invalidRequest();
   }
-  if (uid === auth.uid) throw new HttpsError('failed-precondition', 'No puedes cambiar tu propio acceso.');
+  if (uid === auth.uid) throw fail('failed-precondition', (t) => t.ownAccess);
 
   const ref = db().doc(`access/${uid}`);
   const record = await db().runTransaction(async (tx) => {
     const current = await tx.get(ref);
-    if (!current.exists) throw new HttpsError('not-found', 'La solicitud ya no existe.');
+    if (!current.exists) throw fail('not-found', (t) => t.requestGone);
     const data = current.data() as AccessRecord;
     if (!canDecide(data.status, status as DecisionStatus)) {
-      throw new HttpsError('failed-precondition', 'Ese cambio no es posible desde el estado actual.');
+      throw fail('failed-precondition', (t) => t.notPossible);
     }
     const decidedAt = new Date().toISOString();
     // Ya decidida: deja de ser una solicitud a revisar
@@ -295,7 +342,7 @@ export const setAccess = onCall({ region: REGION, secrets: emailSecrets }, async
   if (status !== 'approved') await forgetPushDevices(uid);
   // La persona recibe un aviso cuando se aprueba su acceso (rechazos y retiradas se ven al entrar)
   if (record.status === 'approved' && normalizeEmail(record.email) !== normalizeEmail(adminEmail())) {
-    await sendAccessEmail('approved', record);
+    await sendAccessEmail('approved', record, uid);
   }
   return { status };
 });
@@ -319,41 +366,46 @@ const approveIfStillPending = (ref: DocumentReference, decidedAt: string) =>
     const { approvalRequired, emailBlocked } = await readPolicy(tx, normalizeEmail(current.email));
     if (approvalRequired || emailBlocked) return null;
     tx.update(ref, { status: 'approved', decidedAt });
-    return { ...current, status: 'approved' as const, decidedAt };
+    return { uid: ref.id, record: { ...current, status: 'approved' as const, decidedAt } };
   });
 
-export const setAccessMode = onCall({ region: REGION, secrets: emailSecrets, timeoutSeconds: 300 }, async (request) => {
-  const auth = requireAuth(request);
-  await removeStaleAdminMarkers();
-  if (!isAdminToken(auth.token, adminEmail())) {
-    throw new HttpsError('permission-denied', 'Solo la administración puede cambiar la aprobación de cuentas.');
+export const setAccessMode = onUserCall(
+  { region: REGION, secrets: emailSecrets, timeoutSeconds: 300 },
+  async (request) => {
+    const auth = requireAuth(request);
+    await removeStaleAdminMarkers();
+    if (!isAdminToken(auth.token, adminEmail())) {
+      throw fail('permission-denied', (t) => t.adminOnlyMode);
+    }
+    const { approvalRequired } = (request.data ?? {}) as { approvalRequired?: unknown };
+    if (typeof approvalRequired !== 'boolean') throw invalidRequest();
+
+    const now = new Date().toISOString();
+    await settingsRef().set({ approvalRequired, updatedAt: now });
+    logger.info('Access mode changed', { approvalRequired });
+    if (approvalRequired) return { approvalRequired, approved: 0 };
+
+    const pending = await db().collection('access').where('status', '==', 'pending').get();
+    const approved: { uid: string; record: AccessRecord }[] = [];
+    await inChunks(pending.docs, APPROVE_CONCURRENCY, async (d) => {
+      const result = await approveIfStillPending(d.ref, now);
+      if (result) approved.push(result);
+    });
+    logger.info('Pending requests approved', { approved: approved.length, skipped: pending.size - approved.length });
+
+    // Avisos con unas pocas conexiones compartidas; un fallo queda en los logs y no afecta a los demás
+    const toNotify = approved.filter(({ record }) => normalizeEmail(record.email) !== normalizeEmail(adminEmail()));
+    const transport = isEmulator || !smtpUser.value() || toNotify.length === 0 ? undefined : createTransport(true);
+    try {
+      await inChunks(toNotify, EMAIL_CONCURRENCY, ({ uid, record }) =>
+        sendAccessEmail('approved', record, uid, transport)
+      );
+    } finally {
+      transport?.close();
+    }
+    return { approvalRequired, approved: approved.length };
   }
-  const { approvalRequired } = (request.data ?? {}) as { approvalRequired?: unknown };
-  if (typeof approvalRequired !== 'boolean') throw new HttpsError('invalid-argument', 'Solicitud no válida.');
-
-  const now = new Date().toISOString();
-  await settingsRef().set({ approvalRequired, updatedAt: now });
-  logger.info('Access mode changed', { approvalRequired });
-  if (approvalRequired) return { approvalRequired, approved: 0 };
-
-  const pending = await db().collection('access').where('status', '==', 'pending').get();
-  const approved: AccessRecord[] = [];
-  await inChunks(pending.docs, APPROVE_CONCURRENCY, async (d) => {
-    const record = await approveIfStillPending(d.ref, now);
-    if (record) approved.push(record);
-  });
-  logger.info('Pending requests approved', { approved: approved.length, skipped: pending.size - approved.length });
-
-  // Avisos con unas pocas conexiones compartidas; un fallo queda en los logs y no afecta a los demás
-  const toNotify = approved.filter((record) => normalizeEmail(record.email) !== normalizeEmail(adminEmail()));
-  const transport = isEmulator || !smtpUser.value() || toNotify.length === 0 ? undefined : createTransport(true);
-  try {
-    await inChunks(toNotify, EMAIL_CONCURRENCY, (record) => sendAccessEmail('approved', record, transport));
-  } finally {
-    transport?.close();
-  }
-  return { approvalRequired, approved: approved.length };
-});
+);
 
 // Último paso para eliminar la cuenta: la borra de Auth y después sus datos, su solicitud de acceso, su marca de
 // administración, sus mensajes, sus dispositivos y alarmas de las notificaciones push, sus funciones extra y su conexión
@@ -361,12 +413,12 @@ export const setAccessMode = onCall({ region: REGION, secrets: emailSecrets, tim
 // dejaría a una cuenta rechazada o retirada volver a entrar o a pedir acceso al momento, sin decisión de nadie: por
 // eso la cuenta va primero y si falla no se borra nada. Pide un inicio de sesión reciente, como Firebase para borrar
 // la cuenta desde el navegador.
-export const forgetAccess = onCall(
+export const forgetAccess = onUserCall(
   { region: REGION, timeoutSeconds: 300, secrets: calendarKeySecrets },
   async (request) => {
     const auth = requireAuth(request);
     if (!isRecentSignIn(auth.token.auth_time, new Date())) {
-      throw new HttpsError('failed-precondition', 'Vuelve a iniciar sesión para eliminar la cuenta.');
+      throw fail('failed-precondition', (t) => t.signInAgain);
     }
     await adminAuth().deleteUser(auth.uid);
     await Promise.all([
@@ -386,7 +438,7 @@ export const forgetAccess = onCall(
 );
 
 // Cierra la sesión en todos los dispositivos: invalida los tokens de renovación de la cuenta
-export const revokeSessions = onCall({ region: REGION }, async (request) => {
+export const revokeSessions = onUserCall({ region: REGION }, async (request) => {
   const auth = requireAuth(request);
   await adminAuth().revokeRefreshTokens(auth.uid);
   // Los dispositivos tampoco reciben ya sus alarmas (p. ej. un móvil perdido); cada uno vuelve a registrarse al entrar

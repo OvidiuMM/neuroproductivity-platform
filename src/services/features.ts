@@ -1,5 +1,6 @@
 import { collection, doc, onSnapshot, setDoc, type Firestore } from 'firebase/firestore';
 import { httpsCallable, type Functions } from 'firebase/functions';
+import { LOCALE, messages, type Locale } from '../i18n/locale';
 
 // FUNCIONES EXTRA: lo que la administración activa a cada cuenta desde Administración → Solicitudes. Se guardan en
 // features/{uid}, que solo escribe el servidor (functions/src/features.ts) y leen la propia cuenta y la
@@ -14,14 +15,24 @@ export interface ExtraFeature {
   description: string;
 }
 
-export const EXTRA_FEATURES: readonly ExtraFeature[] = [
+const m = messages(
   {
-    id: 'googleCalendar',
-    label: 'Sincronizar con Google Calendar',
-    description:
-      'Las tareas con fecha aparecen en un calendario «CLAR» de tu cuenta de Google y se actualizan al cambiarlas.'
+    googleCalendar: {
+      label: 'Sincronizar con Google Calendar',
+      description:
+        'Las tareas con fecha aparecen en un calendario «CLAR» de tu cuenta de Google y se actualizan al cambiarlas.'
+    }
+  },
+  {
+    googleCalendar: {
+      label: 'Sync with Google Calendar',
+      description:
+        'Tasks with a date appear in a “CLAR” calendar in your Google account and update when you change them.'
+    }
   }
-];
+);
+
+export const EXTRA_FEATURES: readonly ExtraFeature[] = [{ id: 'googleCalendar', ...m.googleCalendar }];
 
 const FEATURE_IDS = EXTRA_FEATURES.map((f) => f.id);
 
@@ -79,10 +90,10 @@ export const subscribeToAllFeatures = (
 
 export const setFeatures = async (functions: Functions, uid: string, features: FeatureId[]) =>
   (
-    await httpsCallable<{ uid: string; features: FeatureId[] }, { features: FeatureId[] }>(
+    await httpsCallable<{ uid: string; features: FeatureId[]; language: Locale }, { features: FeatureId[] }>(
       functions,
       'setFeatures'
-    )({ uid, features })
+    )({ uid, features, language: LOCALE })
   ).data;
 
 // La administración enciende o apaga una función en su cuenta

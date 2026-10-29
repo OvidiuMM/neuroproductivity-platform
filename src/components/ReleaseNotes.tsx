@@ -2,6 +2,22 @@ import React, { useRef } from 'react';
 import { Sparkles, X } from 'lucide-react';
 import { useModalFocus } from '../hooks/useModalFocus';
 import type { ReleaseNote } from '../services/releaseNotes';
+import { messages } from '../i18n/locale';
+
+const m = messages(
+  {
+    title: (version: string) => `Novedades de la versión ${version}`,
+    close: 'Cerrar',
+    released: (month: string) => `Publicada en ${month}.`,
+    gotIt: 'Entendido'
+  },
+  {
+    title: (version) => `What's new in version ${version}`,
+    close: 'Close',
+    released: (month) => `Released in ${month}.`,
+    gotIt: 'Got it'
+  }
+);
 
 // Los cambios de una versión, en la ventana de novedades y en la Ayuda
 export const ReleaseChanges: React.FC<{ release: ReleaseNote }> = ({ release }) => (
@@ -38,25 +54,25 @@ export const ReleaseNotesDialog: React.FC<ReleaseNotesDialogProps> = ({ release,
         <div className="flex items-center justify-between gap-3 border-b border-slate-100 bg-slate-50/90 px-6 py-4">
           <h2 id="release-notes-title" className="flex items-center gap-2 text-sm font-bold text-slate-900">
             <Sparkles className="h-4 w-4 text-indigo-600" aria-hidden="true" />
-            Novedades de la versión {release.version}
+            {m.title(release.version)}
           </h2>
           <button
             onClick={onClose}
-            aria-label="Cerrar"
+            aria-label={m.close}
             className="rounded-lg p-1.5 text-slate-500 transition-colors hover:bg-slate-200/60 hover:text-slate-600"
           >
             <X className="h-5 w-5" />
           </button>
         </div>
         <div className="space-y-4 p-6">
-          <p className="text-xs text-slate-500">Publicada en {release.month}.</p>
+          <p className="text-xs text-slate-500">{m.released(release.month)}</p>
           <ReleaseChanges release={release} />
           <button
             type="button"
             onClick={onClose}
             className="min-h-11 w-full rounded-xl bg-slate-900 px-4 text-sm font-bold text-white hover:bg-slate-800"
           >
-            Entendido
+            {m.gotIt}
           </button>
         </div>
       </div>

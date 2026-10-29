@@ -7,6 +7,7 @@ import { GOAL_TITLE_MAX, GOAL_WHY_MAX, validateGoal } from '../services/goals';
 import { useAreas } from '../hooks/useAreas';
 import { DateField } from './DateField';
 import { DiscardChangesPrompt } from './DiscardChangesPrompt';
+import { messages } from '../i18n/locale';
 
 interface GoalModalProps {
   // Meta que se edita, o ninguna para crear una
@@ -19,6 +20,61 @@ interface GoalModalProps {
   projectCount?: number;
   onClose: () => void;
 }
+
+const m = messages(
+  {
+    editGoal: 'Editar la meta',
+    newGoal: 'Nueva meta',
+    close: 'Cerrar',
+    intro: 'Una meta concreta dentro de un área de tu Rueda. Vincúlale tareas para ver cómo avanza.',
+    goal: 'Meta',
+    titlePlaceholder: 'ej. Correr una media maratón',
+    area: 'Área de la Rueda',
+    chooseArea: 'Elige un área…',
+    why: '¿Para qué?',
+    optional: '(opcional)',
+    whyPlaceholder: 'Lo que te importa de conseguirla',
+    targetDate: 'Fecha objetivo',
+    hasProjects: (n: number) =>
+      `Tiene ${n === 1 ? 'un proyecto' : `${n} proyectos`}: para eliminarla, elimínalos o pásalos a otra meta antes.`,
+    deleteNote: 'Sus tareas se quedan, sin meta.',
+    deleteForGood: 'Eliminar definitivamente',
+    keep: 'No eliminar',
+    deleteGoal: 'Eliminar la meta',
+    cancel: 'Cancelar',
+    saveChanges: 'Guardar los cambios',
+    createGoal: 'Crear la meta',
+    discardEdit: 'Has cambiado esta meta y no has guardado los cambios.',
+    discardNew: 'Has empezado una meta nueva y no la has guardado.'
+  },
+  {
+    editGoal: 'Edit goal',
+    newGoal: 'New goal',
+    close: 'Close',
+    intro: 'A concrete goal within an area of your Wheel. Link tasks to it to see how it’s going.',
+    goal: 'Goal',
+    titlePlaceholder: 'e.g. Run a half marathon',
+    area: 'Wheel area',
+    chooseArea: 'Choose an area…',
+    why: 'Why?',
+    optional: '(optional)',
+    whyPlaceholder: 'What matters to you about achieving it',
+    targetDate: 'Target date',
+    hasProjects: (n) =>
+      n === 1
+        ? 'It has a project: to delete the goal, delete the project or move it to another goal first.'
+        : `It has ${n} projects: to delete the goal, delete them or move them to another goal first.`,
+    deleteNote: 'Its tasks stay, without a goal.',
+    deleteForGood: 'Delete permanently',
+    keep: 'Don’t delete',
+    deleteGoal: 'Delete goal',
+    cancel: 'Cancel',
+    saveChanges: 'Save changes',
+    createGoal: 'Create goal',
+    discardEdit: 'You’ve changed this goal and haven’t saved the changes.',
+    discardNew: 'You’ve started a new goal and haven’t saved it.'
+  }
+);
 
 const inputClass =
   'w-full rounded-xl border border-slate-300 px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-400 focus:outline-none';
@@ -92,12 +148,12 @@ export const GoalModal: React.FC<GoalModalProps> = ({
         >
           <h2 id="goal-modal-title" className="flex items-center gap-2 text-base font-bold text-slate-900">
             <Target className="h-5 w-5 text-indigo-600" aria-hidden="true" />
-            {goal ? 'Editar la meta' : 'Nueva meta'}
+            {goal ? m.editGoal : m.newGoal}
           </h2>
           <button
             type="button"
             onClick={guard.requestClose}
-            aria-label="Cerrar"
+            aria-label={m.close}
             className="rounded-lg p-1.5 text-slate-500 transition-colors hover:bg-slate-200/60 hover:text-slate-600"
           >
             <X className="h-5 w-5" aria-hidden="true" />
@@ -106,13 +162,11 @@ export const GoalModal: React.FC<GoalModalProps> = ({
 
         {/* Con la validación del navegador: una fecha imposible (p. ej. 31/02) bloquea el envío con su mensaje */}
         <form onSubmit={handleSubmit} inert={guard.confirming} className="space-y-4 p-6">
-          <p className="text-xs leading-relaxed text-slate-600">
-            Una meta concreta dentro de un área de tu Rueda. Vincúlale tareas para ver cómo avanza.
-          </p>
+          <p className="text-xs leading-relaxed text-slate-600">{m.intro}</p>
 
           <div>
             <label htmlFor="goal-title" className={labelClass}>
-              Meta <span className="text-red-600">*</span>
+              {m.goal} <span className="text-red-600">*</span>
             </label>
             <input
               id="goal-title"
@@ -120,7 +174,7 @@ export const GoalModal: React.FC<GoalModalProps> = ({
               value={title}
               onChange={(e) => setTitle(e.target.value)}
               maxLength={GOAL_TITLE_MAX}
-              placeholder="ej. Correr una media maratón"
+              placeholder={m.titlePlaceholder}
               className={inputClass}
               data-autofocus
             />
@@ -128,7 +182,7 @@ export const GoalModal: React.FC<GoalModalProps> = ({
 
           <div>
             <label htmlFor="goal-area" className={labelClass}>
-              Área de la Rueda <span className="text-red-600">*</span>
+              {m.area} <span className="text-red-600">*</span>
             </label>
             <select
               id="goal-area"
@@ -136,7 +190,7 @@ export const GoalModal: React.FC<GoalModalProps> = ({
               onChange={(e) => setArea(e.target.value)}
               className={`${inputClass} bg-white`}
             >
-              <option value="">Elige un área…</option>
+              <option value="">{m.chooseArea}</option>
               {selectable(area || undefined).map(({ id, label: name }) => (
                 <option key={id} value={id}>
                   {name}
@@ -147,7 +201,7 @@ export const GoalModal: React.FC<GoalModalProps> = ({
 
           <div>
             <label htmlFor="goal-why" className={labelClass}>
-              ¿Para qué? <span className="font-normal tracking-normal text-slate-500 normal-case">(opcional)</span>
+              {m.why} <span className="font-normal tracking-normal text-slate-500 normal-case">{m.optional}</span>
             </label>
             <textarea
               id="goal-why"
@@ -155,17 +209,18 @@ export const GoalModal: React.FC<GoalModalProps> = ({
               value={why}
               onChange={(e) => setWhy(e.target.value)}
               maxLength={GOAL_WHY_MAX}
-              placeholder="Lo que te importa de conseguirla"
+              placeholder={m.whyPlaceholder}
               className={inputClass}
             />
           </div>
 
           <div>
             <span className={labelClass}>
-              Fecha objetivo <span className="font-normal tracking-normal text-slate-500 normal-case">(opcional)</span>
+              {m.targetDate}{' '}
+              <span className="font-normal tracking-normal text-slate-500 normal-case">{m.optional}</span>
             </span>
             <DateField
-              label="Fecha objetivo"
+              label={m.targetDate}
               value={targetDate}
               onChange={setTargetDate}
               onDraftChange={setDateDraft}
@@ -181,14 +236,11 @@ export const GoalModal: React.FC<GoalModalProps> = ({
 
           <div className="flex flex-wrap items-center justify-between gap-3 border-t border-slate-100 pt-4">
             {goal && projectCount > 0 ? (
-              <p className="max-w-xs text-[11px] text-slate-600">
-                Tiene {projectCount === 1 ? 'un proyecto' : `${projectCount} proyectos`}: para eliminarla, elimínalos o
-                pásalos a otra meta antes.
-              </p>
+              <p className="max-w-xs text-[11px] text-slate-600">{m.hasProjects(projectCount)}</p>
             ) : goal ? (
               confirmDelete ? (
                 <div className="flex flex-wrap items-center gap-2 text-xs text-slate-700">
-                  <span id="goal-delete-note">Sus tareas se quedan, sin meta.</span>
+                  <span id="goal-delete-note">{m.deleteNote}</span>
                   <button
                     ref={confirmRef}
                     aria-describedby="goal-delete-note"
@@ -199,14 +251,14 @@ export const GoalModal: React.FC<GoalModalProps> = ({
                     }}
                     className="rounded-lg bg-red-700 px-3 py-2 font-bold text-white hover:bg-red-800"
                   >
-                    Eliminar definitivamente
+                    {m.deleteForGood}
                   </button>
                   <button
                     type="button"
                     onClick={() => setConfirmDelete(false)}
                     className="rounded-lg px-2 py-2 font-semibold text-slate-600 hover:bg-slate-100"
                   >
-                    No eliminar
+                    {m.keep}
                   </button>
                 </div>
               ) : (
@@ -216,7 +268,7 @@ export const GoalModal: React.FC<GoalModalProps> = ({
                   className="flex items-center gap-1.5 rounded-lg px-2 py-2 text-xs font-semibold text-red-700 hover:bg-red-50"
                 >
                   <Trash2 className="h-4 w-4" aria-hidden="true" />
-                  Eliminar la meta
+                  {m.deleteGoal}
                 </button>
               )
             ) : (
@@ -228,13 +280,13 @@ export const GoalModal: React.FC<GoalModalProps> = ({
                 onClick={guard.requestClose}
                 className="rounded-xl px-4 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-100 hover:text-slate-900"
               >
-                Cancelar
+                {m.cancel}
               </button>
               <button
                 type="submit"
                 className="rounded-xl bg-slate-900 px-5 py-2.5 text-xs font-bold text-white shadow-sm hover:bg-slate-800"
               >
-                {goal ? 'Guardar los cambios' : 'Crear la meta'}
+                {goal ? m.saveChanges : m.createGoal}
               </button>
             </div>
           </div>
@@ -242,11 +294,7 @@ export const GoalModal: React.FC<GoalModalProps> = ({
 
         {guard.confirming && (
           <DiscardChangesPrompt
-            text={
-              goal
-                ? 'Has cambiado esta meta y no has guardado los cambios.'
-                : 'Has empezado una meta nueva y no la has guardado.'
-            }
+            text={goal ? m.discardEdit : m.discardNew}
             onKeepEditing={guard.keepEditing}
             onDiscard={guard.discard}
           />

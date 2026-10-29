@@ -5,6 +5,8 @@ import { AccessibilityTrigger, AccessibleScreen } from './AccessibilityPanel';
 import { EmailAuthForm, type EmailAuthMode } from './EmailAuthForm';
 import { LegalLink, LegalLinks } from './LegalLinks';
 import { MIN_AGE } from '../services/legal';
+import { LanguageSelector } from './LanguageSelector';
+import { messages } from '../i18n/locale';
 
 interface LoginScreenProps {
   onSignIn: () => void;
@@ -38,44 +40,149 @@ const GoogleIcon = () => (
   </svg>
 );
 
+type FeatureKey = 'wheel' | 'goals' | 'top10' | 'agenda' | 'protected' | 'dictate' | 'offline';
+
+const m = messages<{
+  features: Record<FeatureKey, { title: string; text: string }>;
+  intro: string;
+  signUp: string;
+  haveAccount: string;
+  featuresLabel: string;
+  yourData: string;
+  dataStored: string;
+  install: string;
+  openSource: string;
+  code: string;
+  newTab: string;
+  signInTitle: string;
+  openingGoogle: string;
+  continueGoogle: string;
+  orEmail: string;
+  // Alrededor de los enlaces a las condiciones de uso y a la política de privacidad
+  consentBefore: string;
+  terms: string;
+  consentMiddle: string;
+  privacy: string;
+  storage: string;
+}>(
+  {
+    features: {
+      wheel: {
+        title: 'Rueda de la Vida',
+        text: 'Valora de 0 a 10 cada área de tu vida y mira cómo cambia con el tiempo.'
+      },
+      goals: {
+        title: 'Metas y proyectos',
+        text: 'Convierte cada meta en tareas concretas y, si te ayuda, agrúpalas en proyectos.'
+      },
+      top10: {
+        title: 'Tu Top 10',
+        text: 'Dos listas, profesional y personal. Las 10 primeras son tu foco; lo demás espera.'
+      },
+      agenda: {
+        title: 'Agenda y alarmas',
+        text: 'Fechas, repeticiones y alarmas que te avisan aunque CLAR esté cerrada. Lo de hoy, a la vista.'
+      },
+      protected: {
+        title: 'Tiempo protegido',
+        text: 'Reuniones con orden del día y correos pensados antes de escribirlos.'
+      },
+      dictate: {
+        title: 'Dicta tus tareas',
+        text: 'Pulsa el micrófono y dilo, o mantén pulsado el icono de la app: «Nueva tarea por voz».'
+      },
+      offline: {
+        title: 'También sin conexión',
+        text: 'Funciona sin conexión y se sincroniza entre tus dispositivos al volver.'
+      }
+    },
+    intro: 'Una app gratuita para pasar de tus metas a la siguiente acción concreta, sin perderte en listas infinitas.',
+    signUp: 'Crear cuenta gratis',
+    haveAccount: 'Ya tengo cuenta',
+    featuresLabel: 'Qué hace CLAR',
+    yourData: 'Tus datos',
+    dataStored:
+      'Se guardan en la Unión Europea y solo tú los ves. Puedes descargarlos o borrarlos cuando quieras. Sin anuncios ni analítica.',
+    install: 'Instálala en el móvil desde el navegador: «Añadir a la pantalla de inicio».',
+    openSource: 'Código abierto (licencia MIT):',
+    code: 'el código en GitHub',
+    newTab: '(se abre en otra pestaña)',
+    signInTitle: 'Entra en CLAR',
+    openingGoogle: 'Abriendo Google…',
+    continueGoogle: 'Continuar con Google',
+    orEmail: 'o con tu email',
+    consentBefore: `Al continuar, con Google o con tu email, confirmas que tienes al menos ${MIN_AGE} años (o la edad mínima legal para dar tu consentimiento en tu país de residencia, si es mayor) y aceptas las `,
+    terms: 'condiciones de uso',
+    consentMiddle: '. Cómo tratamos tus datos: ',
+    privacy: 'política de privacidad',
+    storage:
+      'Si entras con email y contraseña, primero confirmarás tu email. Tus tareas, metas, proyectos, evaluaciones, agenda y correos se guardan en tu cuenta, en servidores de Google Cloud en la Unión Europea (Bélgica).'
+  },
+  {
+    features: {
+      wheel: {
+        title: 'Wheel of Life',
+        text: 'Rate each area of your life from 0 to 10 and see how it changes over time.'
+      },
+      goals: {
+        title: 'Goals and projects',
+        text: 'Turn each goal into concrete tasks and, if it helps, group them into projects.'
+      },
+      top10: {
+        title: 'Your Top 10',
+        text: 'Two lists, work and personal. The first 10 are your focus; the rest can wait.'
+      },
+      agenda: {
+        title: 'Agenda and alarms',
+        text: "Dates, repeats and alarms that notify you even when CLAR is closed. Today's tasks, in plain sight."
+      },
+      protected: {
+        title: 'Protected time',
+        text: 'Meetings with an agenda and emails thought through before you write them.'
+      },
+      dictate: {
+        title: 'Dictate your tasks',
+        text: 'Tap the microphone and say it, or press and hold the app icon: “Nueva tarea por voz · New task by voice”.'
+      },
+      offline: {
+        title: 'Offline too',
+        text: "Works offline and syncs across your devices when you're back online."
+      }
+    },
+    intro: 'A free app to go from your goals to the next concrete action, without getting lost in endless lists.',
+    signUp: 'Create a free account',
+    haveAccount: 'I already have an account',
+    featuresLabel: 'What CLAR does',
+    yourData: 'Your data',
+    dataStored:
+      "It's stored in the European Union and only you can see it. You can download or delete it whenever you want. No ads, no analytics.",
+    install: 'Install it on your phone from the browser: “Add to Home Screen”.',
+    openSource: 'Open source (MIT license):',
+    code: 'the code on GitHub',
+    newTab: '(opens in a new tab)',
+    signInTitle: 'Sign in to CLAR',
+    openingGoogle: 'Opening Google…',
+    continueGoogle: 'Continue with Google',
+    orEmail: 'or with your email',
+    consentBefore: `By continuing, with Google or with your email, you confirm that you are at least ${MIN_AGE} years old (or the minimum legal age to give consent in your country of residence, if higher) and you accept the `,
+    terms: 'terms of use',
+    consentMiddle: '. How we handle your data: ',
+    privacy: 'privacy policy',
+    storage:
+      'If you sign in with email and password, you will confirm your email first. Your tasks, goals, projects, assessments, agenda and emails are saved in your account, on Google Cloud servers in the European Union (Belgium).'
+  }
+);
+
 // Lo que hace CLAR, en la página de presentación (los textos los aprobó la persona responsable; las funciones extra
 // no se anuncian)
 const FEATURES: { icon: React.ReactNode; title: string; text: string }[] = [
-  {
-    icon: <Compass className="h-5 w-5 text-indigo-600" aria-hidden="true" />,
-    title: 'Rueda de la Vida',
-    text: 'Valora de 1 a 10 cada área de tu vida y mira cómo cambia con el tiempo.'
-  },
-  {
-    icon: <Target className="h-5 w-5 text-indigo-600" aria-hidden="true" />,
-    title: 'Metas y proyectos',
-    text: 'Convierte cada meta en tareas concretas y, si te ayuda, agrúpalas en proyectos.'
-  },
-  {
-    icon: <Briefcase className="h-5 w-5 text-indigo-600" aria-hidden="true" />,
-    title: 'Tu Top 10',
-    text: 'Dos listas, profesional y personal. Las 10 primeras son tu foco; lo demás espera.'
-  },
-  {
-    icon: <CalendarDays className="h-5 w-5 text-indigo-600" aria-hidden="true" />,
-    title: 'Agenda y alarmas',
-    text: 'Fechas, repeticiones y alarmas que te avisan aunque CLAR esté cerrada. Lo de hoy, a la vista.'
-  },
-  {
-    icon: <ShieldCheck className="h-5 w-5 text-indigo-600" aria-hidden="true" />,
-    title: 'Tiempo protegido',
-    text: 'Reuniones con orden del día y correos pensados antes de escribirlos.'
-  },
-  {
-    icon: <Mic className="h-5 w-5 text-indigo-600" aria-hidden="true" />,
-    title: 'Dicta tus tareas',
-    text: 'Pulsa el micrófono y dilo, o mantén pulsado el icono de la app: «Nueva tarea por voz».'
-  },
-  {
-    icon: <WifiOff className="h-5 w-5 text-indigo-600" aria-hidden="true" />,
-    title: 'También sin conexión',
-    text: 'Funciona sin conexión y se sincroniza entre tus dispositivos al volver.'
-  }
+  { icon: <Compass className="h-5 w-5 text-indigo-600" aria-hidden="true" />, ...m.features.wheel },
+  { icon: <Target className="h-5 w-5 text-indigo-600" aria-hidden="true" />, ...m.features.goals },
+  { icon: <Briefcase className="h-5 w-5 text-indigo-600" aria-hidden="true" />, ...m.features.top10 },
+  { icon: <CalendarDays className="h-5 w-5 text-indigo-600" aria-hidden="true" />, ...m.features.agenda },
+  { icon: <ShieldCheck className="h-5 w-5 text-indigo-600" aria-hidden="true" />, ...m.features.protected },
+  { icon: <Mic className="h-5 w-5 text-indigo-600" aria-hidden="true" />, ...m.features.dictate },
+  { icon: <WifiOff className="h-5 w-5 text-indigo-600" aria-hidden="true" />, ...m.features.offline }
 ];
 
 export const REPOSITORY_URL = 'https://github.com/OvidiuMM/neuroproductivity-platform';
@@ -107,6 +214,10 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
     <AccessibleScreen>
       {(openAccessibility) => (
         <div className="min-h-screen bg-slate-50 antialiased">
+          {/* El idioma, a la vista antes de nada */}
+          <div className="mx-auto flex max-w-6xl justify-end px-4 pt-4">
+            <LanguageSelector />
+          </div>
           <main className="mx-auto grid max-w-6xl gap-8 px-4 py-8 lg:grid-cols-[1fr_28rem] lg:items-start lg:gap-12 lg:py-14">
             {/* Qué es CLAR */}
             <section aria-labelledby="landing-title" className="space-y-8">
@@ -121,29 +232,26 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
                   </h1>
                 </div>
                 <p className="text-xl font-semibold text-slate-800 sm:text-2xl">{BRAND_TAGLINE}</p>
-                <p className="max-w-2xl text-sm leading-relaxed text-slate-600 sm:text-base">
-                  Una app gratuita para pasar de tus metas a la siguiente acción concreta, sin perderte en listas
-                  infinitas.
-                </p>
+                <p className="max-w-2xl text-sm leading-relaxed text-slate-600 sm:text-base">{m.intro}</p>
                 <div className="flex flex-wrap gap-3">
                   <button
                     type="button"
                     onClick={() => goToForm('signup')}
                     className="min-h-11 rounded-2xl bg-slate-900 px-5 text-sm font-bold text-white shadow-sm hover:bg-slate-800"
                   >
-                    Crear cuenta gratis
+                    {m.signUp}
                   </button>
                   <button
                     type="button"
                     onClick={() => goToForm('signin')}
                     className="min-h-11 rounded-2xl border-2 border-slate-200 bg-white px-5 text-sm font-bold text-slate-800 hover:bg-slate-50"
                   >
-                    Ya tengo cuenta
+                    {m.haveAccount}
                   </button>
                 </div>
               </div>
 
-              <ul aria-label="Qué hace CLAR" className="grid gap-3 sm:grid-cols-2">
+              <ul aria-label={m.featuresLabel} className="grid gap-3 sm:grid-cols-2">
                 {FEATURES.map((feature) => (
                   <li
                     key={feature.title}
@@ -161,23 +269,20 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
               <div className="space-y-2 rounded-2xl border border-slate-200 bg-white p-4 text-xs leading-relaxed text-slate-600">
                 <h2 className="flex items-center gap-2 text-sm font-bold text-slate-900">
                   <Cloud className="h-4 w-4 text-slate-500" aria-hidden="true" />
-                  Tus datos
+                  {m.yourData}
                 </h2>
+                <p>{m.dataStored}</p>
+                <p>{m.install}</p>
                 <p>
-                  Se guardan en la Unión Europea y solo tú los ves. Puedes descargarlos o borrarlos cuando quieras. Sin
-                  anuncios ni analítica.
-                </p>
-                <p>Instálala en el móvil desde el navegador: «Añadir a la pantalla de inicio».</p>
-                <p>
-                  Código abierto (licencia MIT):{' '}
+                  {m.openSource}{' '}
                   <a
                     href={REPOSITORY_URL}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="font-semibold text-indigo-700 underline underline-offset-2 hover:text-indigo-900"
                   >
-                    el código en GitHub
-                    <span className="sr-only"> (se abre en otra pestaña)</span>
+                    {m.code}
+                    <span className="sr-only"> {m.newTab}</span>
                   </a>
                   .
                 </p>
@@ -189,7 +294,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
               id="entrar"
               className="w-full space-y-6 rounded-3xl border border-slate-200 bg-white p-8 shadow-xl lg:sticky lg:top-8"
             >
-              <h2 className="text-lg font-bold text-slate-900">Entra en CLAR</h2>
+              <h2 className="text-lg font-bold text-slate-900">{m.signInTitle}</h2>
               <button
                 type="button"
                 onClick={onSignIn}
@@ -197,7 +302,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
                 className="flex w-full items-center justify-center gap-2.5 rounded-2xl border-2 border-slate-200 bg-white px-4 py-3 text-sm font-bold text-slate-800 shadow-2xs transition-all hover:bg-slate-50 disabled:opacity-60"
               >
                 <GoogleIcon />
-                <span>{isSigningIn ? 'Abriendo Google…' : 'Continuar con Google'}</span>
+                <span>{isSigningIn ? m.openingGoogle : m.continueGoogle}</span>
               </button>
               {error && (
                 <p role="alert" className="rounded-xl border border-red-200 bg-red-50 p-3 text-xs text-red-700">
@@ -205,7 +310,8 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
                 </p>
               )}
               <div className="flex items-center gap-3 text-xs text-slate-600" aria-hidden="true">
-                <span className="h-px flex-1 bg-slate-200" />o con tu email
+                <span className="h-px flex-1 bg-slate-200" />
+                {m.orEmail}
                 <span className="h-px flex-1 bg-slate-200" />
               </div>
               <div id="email-auth">
@@ -218,16 +324,12 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
                 />
               </div>
               <p className="text-[11px] leading-relaxed text-slate-600">
-                Al continuar, con Google o con tu email, confirmas que tienes al menos {MIN_AGE} años (o la edad mínima
-                legal para dar tu consentimiento en tu país de residencia, si es mayor) y aceptas las{' '}
-                <LegalLink to="terms">condiciones de uso</LegalLink>. Cómo tratamos tus datos:{' '}
-                <LegalLink to="privacy">política de privacidad</LegalLink>.
+                {m.consentBefore}
+                <LegalLink to="terms">{m.terms}</LegalLink>
+                {m.consentMiddle}
+                <LegalLink to="privacy">{m.privacy}</LegalLink>.
               </p>
-              <p className="text-[11px] leading-relaxed text-slate-600">
-                Si entras con email y contraseña, primero confirmarás tu email. Tus tareas, metas, proyectos,
-                evaluaciones, agenda y correos se guardan en tu cuenta, en servidores de Google Cloud en la Unión
-                Europea (Bélgica).
-              </p>
+              <p className="text-[11px] leading-relaxed text-slate-600">{m.storage}</p>
             </div>
           </main>
 

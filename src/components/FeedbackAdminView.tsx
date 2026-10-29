@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Mail, Reply } from 'lucide-react';
-import { FEEDBACK_TYPES, REPLY_MAX_LENGTH, cleanReply } from '../services/feedback';
+import { FEEDBACK_TYPES, REPLY_MAX_LENGTH, cleanReply, deviceLabel } from '../services/feedback';
 import {
   newReplyId,
   type ClosedFeedbackPage,
@@ -9,6 +9,7 @@ import {
   type FeedbackTicket,
   type ReplyResult
 } from '../services/feedbackApi';
+import { LOCALE_TAG, messages } from '../i18n/locale';
 
 interface FeedbackAdminViewProps {
   // Abiertos (nuevos y leídos), en vivo
@@ -22,9 +23,102 @@ interface FeedbackAdminViewProps {
   loadClosed: (cursor: ClosedFeedbackPage['cursor']) => Promise<ClosedFeedbackPage>;
 }
 
-const dateTime = new Intl.DateTimeFormat('es-ES', { dateStyle: 'medium', timeStyle: 'short' });
+const m = messages<{
+  status: Record<FeedbackStatus, string>;
+  alreadySent: string;
+  replyFor: (who: string) => string;
+  replyHelp: (email: string, length: number) => string;
+  sending: string;
+  send: string;
+  cancel: string;
+  closedFailed: string;
+  noName: string;
+  online: string;
+  offline: string;
+  repliesTo: (subject: string) => string;
+  yourReply: string;
+  replySent: string;
+  reply: string;
+  fromMyEmail: string;
+  replyFromMyEmail: string;
+  markRead: string;
+  reopen: string;
+  close: string;
+  open: (count: number) => string;
+  nothingOpen: string;
+  closed: string;
+  nothingClosed: string;
+  loading: string;
+  loadMore: string;
+  showClosed: string;
+}>(
+  {
+    status: { new: 'Nuevo', read: 'Leído', closed: 'Cerrado' },
+    alreadySent:
+      'Tu respuesta anterior sí se envió: es la que ves arriba. Este texto no se ha enviado; si quieres, envíalo como otra respuesta.',
+    replyFor: (who) => `Respuesta para ${who}`,
+    replyHelp: (email, length) =>
+      `Se envía por email a ${email} desde el buzón de CLAR, con su mensaje citado. Si contesta, llegará a ese buzón. ${length}/${REPLY_MAX_LENGTH} caracteres.`,
+    sending: 'Enviando…',
+    send: 'Enviar respuesta',
+    cancel: 'Cancelar',
+    closedFailed: 'No se pudieron cargar los mensajes cerrados.',
+    noName: 'Sin nombre',
+    online: 'con conexión',
+    offline: 'sin conexión',
+    repliesTo: (subject) => `Respuestas a «${subject}»`,
+    yourReply: 'Tu respuesta',
+    replySent: 'Respuesta enviada.',
+    reply: 'Responder',
+    fromMyEmail: 'Desde mi correo',
+    replyFromMyEmail: 'Responder desde mi correo',
+    markRead: 'Marcar como leído',
+    reopen: 'Reabrir',
+    close: 'Cerrar',
+    open: (count) => `Abiertos (${count})`,
+    nothingOpen: 'No hay mensajes por atender.',
+    closed: 'Cerrados',
+    nothingClosed: 'No hay mensajes cerrados.',
+    loading: 'Cargando…',
+    loadMore: 'Cargar más',
+    showClosed: 'Ver los cerrados'
+  },
+  {
+    status: { new: 'New', read: 'Read', closed: 'Closed' },
+    alreadySent:
+      "Your previous reply was sent: it's the one you see above. This text hasn't been sent; if you want, send it as another reply.",
+    replyFor: (who) => `Reply to ${who}`,
+    replyHelp: (email, length) =>
+      `It's emailed to ${email} from the CLAR mailbox, quoting their message. If they answer, it goes to that mailbox. ${length}/${REPLY_MAX_LENGTH} characters.`,
+    sending: 'Sending…',
+    send: 'Send reply',
+    cancel: 'Cancel',
+    closedFailed: "Couldn't load the closed messages.",
+    noName: 'No name',
+    online: 'online',
+    offline: 'offline',
+    repliesTo: (subject) => `Replies to “${subject}”`,
+    yourReply: 'Your reply',
+    replySent: 'Reply sent.',
+    reply: 'Reply',
+    fromMyEmail: 'From my email',
+    replyFromMyEmail: 'Reply from my email',
+    markRead: 'Mark as read',
+    reopen: 'Reopen',
+    close: 'Close',
+    open: (count) => `Open (${count})`,
+    nothingOpen: 'No messages to deal with.',
+    closed: 'Closed',
+    nothingClosed: 'No closed messages.',
+    loading: 'Loading…',
+    loadMore: 'Load more',
+    showClosed: 'Show closed messages'
+  }
+);
+
+const dateTime = new Intl.DateTimeFormat(LOCALE_TAG, { dateStyle: 'medium', timeStyle: 'short' });
 const typeLabel = (type: FeedbackTicket['type']) => FEEDBACK_TYPES.find((t) => t.value === type)?.label ?? type;
-const STATUS_LABEL: Record<FeedbackStatus, string> = { new: 'Nuevo', read: 'Leído', closed: 'Cerrado' };
+const STATUS_LABEL: Record<FeedbackStatus, string> = m.status;
 const STATUS_CLASS: Record<FeedbackStatus, string> = {
   new: 'border-orange-200 bg-orange-50 text-orange-800',
   read: 'border-slate-200 bg-slate-100 text-slate-700',
@@ -68,15 +162,13 @@ const ReplyForm: React.FC<{
     // Con este id ya había salido un texto anterior (un intento que dio error sin que se supiera que salió): el
     // servidor devuelve ese sin reenviar nada. Este texto no ha salido; se queda aquí y, si se envía, es otra respuesta
     setReplyId(newReplyId());
-    setError(
-      'Tu respuesta anterior sí se envió: es la que ves arriba. Este texto no se ha enviado; si quieres, envíalo como otra respuesta.'
-    );
+    setError(m.alreadySent);
   };
 
   return (
     <form onSubmit={submit} className="space-y-2 rounded-xl border border-indigo-200 bg-indigo-50/40 p-3">
       <label htmlFor={id} className="block text-xs font-bold text-slate-800">
-        Respuesta para {ticket.name || ticket.email}
+        {m.replyFor(ticket.name || ticket.email)}
       </label>
       <textarea
         ref={field}
@@ -92,8 +184,7 @@ const ReplyForm: React.FC<{
         className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-400 focus:outline-none"
       />
       <p id={`${id}-help`} className="text-[11px] text-slate-600">
-        Se envía por email a {ticket.email} desde el buzón de CLAR, con su mensaje citado. Si contesta, llegará a ese
-        buzón. {message.length}/{REPLY_MAX_LENGTH} caracteres.
+        {m.replyHelp(ticket.email, message.length)}
       </p>
       {error && (
         <p role="alert" className="rounded-xl border border-red-200 bg-red-50 p-2.5 text-xs text-red-700">
@@ -106,7 +197,7 @@ const ReplyForm: React.FC<{
           disabled={busy || !message.trim()}
           className="min-h-11 rounded-xl bg-slate-900 px-4 text-xs font-bold text-white hover:bg-slate-800 disabled:opacity-60"
         >
-          {busy ? 'Enviando…' : 'Enviar respuesta'}
+          {busy ? m.sending : m.send}
         </button>
         <button
           type="button"
@@ -114,7 +205,7 @@ const ReplyForm: React.FC<{
           disabled={busy}
           className="min-h-11 rounded-xl px-3 text-xs font-semibold text-slate-600 hover:bg-slate-100 hover:text-slate-900"
         >
-          Cancelar
+          {m.cancel}
         </button>
       </div>
     </form>
@@ -160,7 +251,7 @@ export const FeedbackAdminView: React.FC<FeedbackAdminViewProps> = ({
       setClosedPage(page);
     } catch (e) {
       console.error('Error loading closed feedback:', e);
-      setClosedError('No se pudieron cargar los mensajes cerrados.');
+      setClosedError(m.closedFailed);
     } finally {
       setLoadingClosed(false);
     }
@@ -216,21 +307,21 @@ export const FeedbackAdminView: React.FC<FeedbackAdminViewProps> = ({
       <h4 className="text-sm font-bold break-words text-slate-900">{ticket.subject}</h4>
       <p className="text-xs break-words whitespace-pre-wrap text-slate-700">{ticket.description}</p>
       <p className="text-xs break-words text-slate-600">
-        {ticket.name || 'Sin nombre'} · {ticket.email}
+        {ticket.name || m.noName} · {ticket.email}
       </p>
       {ticket.context && (
         <p className="text-[11px] text-slate-500">
           CLAR {ticket.context.appVersion} · {ticket.context.os} · {ticket.context.browser} ·{' '}
-          {ticket.context.deviceClass} · {ticket.context.language} ·{' '}
-          {ticket.context.online ? 'con conexión' : 'sin conexión'}
+          {deviceLabel(ticket.context.deviceClass)} · {ticket.context.language} ·{' '}
+          {ticket.context.online ? m.online : m.offline}
         </p>
       )}
       {(ticket.replies?.length ?? 0) > 0 && (
-        <ol aria-label={`Respuestas a «${ticket.subject}»`} className="space-y-2 border-l-2 border-indigo-200 pl-3">
+        <ol aria-label={m.repliesTo(ticket.subject)} className="space-y-2 border-l-2 border-indigo-200 pl-3">
           {ticket.replies!.map((reply: FeedbackReply) => (
             <li key={reply.id} className="space-y-0.5">
               <p className="text-[11px] font-semibold text-indigo-800">
-                Tu respuesta · {dateTime.format(new Date(reply.sentAt))}
+                {m.yourReply} · {dateTime.format(new Date(reply.sentAt))}
               </p>
               <p className="text-xs break-words whitespace-pre-wrap text-slate-700">{reply.message}</p>
             </li>
@@ -239,7 +330,7 @@ export const FeedbackAdminView: React.FC<FeedbackAdminViewProps> = ({
       )}
       {repliedId === ticket.id && (
         <p role="status" className="text-xs font-semibold text-emerald-700">
-          Respuesta enviada.
+          {m.replySent}
         </p>
       )}
       {replying?.ticketId === ticket.id && (
@@ -260,30 +351,30 @@ export const FeedbackAdminView: React.FC<FeedbackAdminViewProps> = ({
               setRepliedId(null);
               setReplying({ ticketId: ticket.id, form: ++forms.current });
             }}
-            aria-label={`Responder: ${ticket.subject}`}
+            aria-label={`${m.reply}: ${ticket.subject}`}
             className="inline-flex min-h-11 items-center gap-1.5 rounded-xl bg-slate-900 px-3 text-xs font-bold text-white hover:bg-slate-800"
           >
             <Reply className="h-4 w-4" aria-hidden="true" />
-            Responder
+            {m.reply}
           </button>
         )}
         <a
           href={`mailto:${ticket.email}?subject=${encodeURIComponent(`Re: ${ticket.subject}`)}`}
-          aria-label={`Responder desde mi correo: ${ticket.subject}`}
+          aria-label={`${m.replyFromMyEmail}: ${ticket.subject}`}
           className="inline-flex min-h-11 items-center gap-1.5 rounded-xl border border-slate-200 px-3 text-xs font-semibold text-slate-700 hover:bg-slate-50"
         >
           <Mail className="h-4 w-4" aria-hidden="true" />
-          Desde mi correo
+          {m.fromMyEmail}
         </a>
         {ticket.status === 'new' && (
           <button
             type="button"
             disabled={busyId === ticket.id}
             onClick={() => setStatus(ticket, 'read')}
-            aria-label={`Marcar como leído: ${ticket.subject}`}
+            aria-label={`${m.markRead}: ${ticket.subject}`}
             className={actionClass}
           >
-            Marcar como leído
+            {m.markRead}
           </button>
         )}
         {ticket.status === 'closed' ? (
@@ -291,20 +382,20 @@ export const FeedbackAdminView: React.FC<FeedbackAdminViewProps> = ({
             type="button"
             disabled={busyId === ticket.id}
             onClick={() => setStatus(ticket, 'read')}
-            aria-label={`Reabrir: ${ticket.subject}`}
+            aria-label={`${m.reopen}: ${ticket.subject}`}
             className={actionClass}
           >
-            Reabrir
+            {m.reopen}
           </button>
         ) : (
           <button
             type="button"
             disabled={busyId === ticket.id}
             onClick={() => setStatus(ticket, 'closed')}
-            aria-label={`Cerrar: ${ticket.subject}`}
+            aria-label={`${m.close}: ${ticket.subject}`}
             className={actionClass}
           >
-            Cerrar
+            {m.close}
           </button>
         )}
       </div>
@@ -320,17 +411,18 @@ export const FeedbackAdminView: React.FC<FeedbackAdminViewProps> = ({
       )}
       <section aria-labelledby="feedback-open" className="space-y-3">
         <h3 id="feedback-open" className="text-xs font-bold tracking-wider text-slate-700 uppercase">
-          Abiertos ({open.length})
+          {m.open(open.length)}
         </h3>
         {open.length === 0 ? (
-          <p className="text-xs text-slate-600">No hay mensajes por atender.</p>
+          <p className="text-xs text-slate-600">{m.nothingOpen}</p>
         ) : (
           <ul className="space-y-3">{open.map(renderTicket)}</ul>
         )}
       </section>
       <section aria-labelledby="feedback-closed" className="space-y-3">
         <h3 id="feedback-closed" className="text-xs font-bold tracking-wider text-slate-700 uppercase">
-          Cerrados{closed ? ` (${closed.length}${closedPage?.hasMore ? '+' : ''})` : ''}
+          {m.closed}
+          {closed ? ` (${closed.length}${closedPage?.hasMore ? '+' : ''})` : ''}
         </h3>
         {closedError && (
           <p role="alert" className="text-xs text-red-700">
@@ -338,12 +430,12 @@ export const FeedbackAdminView: React.FC<FeedbackAdminViewProps> = ({
           </p>
         )}
         {closed && closed.length === 0 && !closedPage?.hasMore && (
-          <p className="text-xs text-slate-600">No hay mensajes cerrados.</p>
+          <p className="text-xs text-slate-600">{m.nothingClosed}</p>
         )}
         {closed && closed.length > 0 && <ul className="space-y-3">{closed.map(renderTicket)}</ul>}
         {(!closed || closedPage?.hasMore) && (
           <button type="button" onClick={loadMoreClosed} disabled={loadingClosed} className={actionClass}>
-            {loadingClosed ? 'Cargando…' : closed ? 'Cargar más' : 'Ver los cerrados'}
+            {loadingClosed ? m.loading : closed ? m.loadMore : m.showClosed}
           </button>
         )}
       </section>

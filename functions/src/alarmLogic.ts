@@ -1,3 +1,5 @@
+import { LANGUAGE_TAG, messages, type Language } from './i18n';
+
 // ALARMAS EN EL SERVIDOR (para avisar con CLAR cerrada): el mismo cálculo que la app (src/services/alarms.ts), pero en
 // la zona horaria del dispositivo de la persona en lugar de la del equipo que lo ejecuta. Así el momento coincide al
 // milisegundo con el de la app y la notificación lleva la misma etiqueta: si las dos la muestran, se sustituye.
@@ -97,27 +99,73 @@ export interface QueuedAlarm {
   due: number;
   // Igual que en la app: `${id}@${momento ISO}`. Es la etiqueta de la notificación
   key: string;
-  // Hora de la alarma (HH:mm, en la zona del dispositivo), nombre de la tarea y cuándo vence. La notificación solo lleva
-  // el nombre en los dispositivos que lo piden (ver notificationText)
+  // Hora de la alarma (HH:mm, en la zona del dispositivo; igual en los dos idiomas), nombre de la tarea y cuándo vence.
+  // La notificación solo lleva el nombre en los dispositivos que lo piden (ver notificationText)
   clock: string;
   taskTitle: string;
+  // Lo que hace falta para escribir cuándo vence en el idioma de cada dispositivo (ver alarmBody): la zona en la que se
+  // calculó y si el plazo tiene hora
+  timeZone: string;
+  hasDueTime: boolean;
+  // «Vence el …», en el idioma pedido a queuedAlarm
   body: string;
 }
 
-// Texto de la notificación: por defecto sin el nombre de la tarea (se ve con el móvil bloqueado y pasa por FCM)
-export const notificationText = (alarm: Pick<QueuedAlarm, 'clock' | 'taskTitle'>, showTitle: boolean) =>
-  showTitle && alarm.taskTitle
-    ? `Alarma de las ${alarm.clock}: ${alarm.taskTitle}`
-    : `Tienes una alarma de CLAR a las ${alarm.clock}`;
+const texts = messages(
+  {
+    withTitle: (clock: string, taskTitle: string) => `Alarma de las ${clock}: ${taskTitle}`,
+    withoutTitle: (clock: string) => `Tienes una alarma de CLAR a las ${clock}`,
+    due: (day: string) => `Vence el ${day}`,
+    dueAt: (day: string, clock: string) => `Vence el ${day} a las ${clock}`,
+    test: 'Así te avisará CLAR de tus alarmas, también con la app cerrada.'
+  },
+  {
+    withTitle: (clock, taskTitle) => `Alarm at ${clock}: ${taskTitle}`,
+    withoutTitle: (clock) => `You have a CLAR alarm at ${clock}`,
+    due: (day) => `Due ${day}`,
+    dueAt: (day, clock) => `Due ${day} at ${clock}`,
+    test: 'This is how CLAR will notify you of your alarms, even when the app is closed.'
+  }
+);
 
-const clock = (instant: number, timeZone: string) =>
-  new Intl.DateTimeFormat('es-ES', { timeZone, hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }).format(instant);
-const day = (instant: number, timeZone: string) =>
-  new Intl.DateTimeFormat('es-ES', { timeZone, day: 'numeric', month: 'short' }).format(instant);
+// Texto de la notificación: por defecto sin el nombre de la tarea (se ve con el móvil bloqueado y pasa por FCM)
+export const notificationText = (
+  alarm: Pick<QueuedAlarm, 'clock' | 'taskTitle'>,
+  showTitle: boolean,
+  language: Language = 'es'
+) =>
+  showTitle && alarm.taskTitle
+    ? texts[language].withTitle(alarm.clock, alarm.taskTitle)
+    : texts[language].withoutTitle(alarm.clock);
+
+// El aviso de «Probar notificación»
+export const testNotificationBody = (language: Language = 'es') => texts[language].test;
+
+const clock = (instant: number, timeZone: string, language: Language = 'es') =>
+  new Intl.DateTimeFormat(LANGUAGE_TAG[language], {
+    timeZone,
+    hour: '2-digit',
+    minute: '2-digit',
+    hourCycle: 'h23'
+  }).format(instant);
+const day = (instant: number, timeZone: string, language: Language) =>
+  new Intl.DateTimeFormat(LANGUAGE_TAG[language], { timeZone, day: 'numeric', month: 'short' }).format(instant);
+
+// Cuándo vence, en un idioma («Vence el 17 oct a las 11:00»), en la zona en la que se calculó la alarma
+export const alarmBody = (alarm: Pick<QueuedAlarm, 'due' | 'timeZone' | 'hasDueTime'>, language: Language = 'es') =>
+  alarm.hasDueTime
+    ? texts[language].dueAt(day(alarm.due, alarm.timeZone, language), clock(alarm.due, alarm.timeZone, language))
+    : texts[language].due(day(alarm.due, alarm.timeZone, language));
 
 // La alarma por avisar de una tarea, o null: sin alarma, archivada, en «Algún día», con el plazo ya vencido o puesta
-// (o cambiada) después de su hora: como en la app, no suena
-export const queuedAlarm = (taskId: string, task: AlarmTask, timeZone: string, now: number): QueuedAlarm | null => {
+// (o cambiada) después de su hora: como en la app, no suena. `language`: el de su texto (body)
+export const queuedAlarm = (
+  taskId: string,
+  task: AlarmTask,
+  timeZone: string,
+  now: number,
+  language: Language = 'es'
+): QueuedAlarm | null => {
   if (isArchived(task) || task.isSomeday === true) return null;
   const at = alarmInstant(task, timeZone);
   const due = dueInstant(task, timeZone);
@@ -133,6 +181,8 @@ export const queuedAlarm = (taskId: string, task: AlarmTask, timeZone: string, n
     key: `${taskId}@${new Date(at).toISOString()}`,
     clock: clock(at, timeZone),
     taskTitle: typeof task.title === 'string' ? task.title.slice(0, 200) : '',
-    body: hasDueTime ? `Vence el ${day(due, timeZone)} a las ${clock(due, timeZone)}` : `Vence el ${day(due, timeZone)}`
+    timeZone,
+    hasDueTime,
+    body: alarmBody({ due, timeZone, hasDueTime }, language)
   };
 };

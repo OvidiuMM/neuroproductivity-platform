@@ -1,6 +1,24 @@
 import React, { useCallback, useEffect, useId, useLayoutEffect, useRef, useState } from 'react';
 import { ArrowLeft, ArrowRight } from 'lucide-react';
 import { useModalFocus } from '../hooks/useModalFocus';
+import { messages } from '../i18n/locale';
+
+const m = messages(
+  {
+    stepOf: (n: number, total: number) => `Recorrido guiado · Paso ${n} de ${total}`,
+    exit: 'Salir del recorrido',
+    previous: 'Paso anterior',
+    finish: 'Terminar',
+    next: 'Siguiente'
+  },
+  {
+    stepOf: (n, total) => `Guided tour · Step ${n} of ${total}`,
+    exit: 'Exit the tour',
+    previous: 'Previous step',
+    finish: 'Finish',
+    next: 'Next'
+  }
+);
 
 export interface TourStep {
   id: string;
@@ -179,9 +197,7 @@ export const ProductTour: React.FC<ProductTourProps> = ({ steps, onFinish }) => 
         // Hasta saber dónde va, transparente (no oculto: así el foco ya puede entrar)
         style={bubble ?? { top: MARGIN, left: MARGIN, opacity: 0 }}
       >
-        <p className="text-[11px] font-semibold text-slate-600">
-          Recorrido guiado · Paso {index + 1} de {steps.length}
-        </p>
+        <p className="text-[11px] font-semibold text-slate-600">{m.stepOf(index + 1, steps.length)}</p>
         <h2
           id={titleId}
           ref={headingRef}
@@ -200,14 +216,14 @@ export const ProductTour: React.FC<ProductTourProps> = ({ steps, onFinish }) => 
             onClick={() => onFinish('skipped')}
             className="min-h-11 rounded-xl px-2 text-sm font-semibold text-slate-600 hover:bg-slate-100 hover:text-slate-900"
           >
-            Salir del recorrido
+            {m.exit}
           </button>
           <div className="flex items-center gap-1.5">
             {index > 0 && (
               <button
                 type="button"
                 onClick={() => go(-1)}
-                aria-label="Paso anterior"
+                aria-label={m.previous}
                 className="flex h-11 w-11 items-center justify-center rounded-xl text-slate-700 hover:bg-slate-100"
               >
                 <ArrowLeft className="h-5 w-5" aria-hidden="true" />
@@ -218,7 +234,7 @@ export const ProductTour: React.FC<ProductTourProps> = ({ steps, onFinish }) => 
               onClick={() => go(1)}
               className="inline-flex min-h-11 items-center gap-1.5 rounded-xl bg-slate-900 px-4 text-sm font-bold text-white hover:bg-slate-800"
             >
-              {isLast ? 'Terminar' : 'Siguiente'}
+              {isLast ? m.finish : m.next}
               {!isLast && <ArrowRight className="h-4 w-4" aria-hidden="true" />}
             </button>
           </div>

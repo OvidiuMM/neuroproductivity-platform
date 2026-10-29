@@ -1,5 +1,11 @@
 import { EmailDraft, MeetingGuard, TaskItem, UserProfile, WheelOfLifeLog } from '../types';
 import type { UserData } from './repository';
+import { messages } from '../i18n/locale';
+
+const m = messages(
+  { orphans: 'Datos creados en los perfiles de demostración', unnamed: 'Perfil sin nombre' },
+  { orphans: 'Data created in the demo profiles', unnamed: 'Unnamed profile' }
+);
 
 // Datos que versiones anteriores (sin cuentas) guardaban en localStorage.
 // Solo se leen para ofrecer importarlos a la cuenta en el primer inicio de sesión.
@@ -55,7 +61,7 @@ const LEGACY_DEMO_RECORD_IDS = new Set([
 
 // Lo creado dentro de un perfil de demostración se ofrece como un perfil aparte en lugar de perderse
 export const ORPHAN_PROFILE_ID = 'local-orphans';
-const ORPHAN_PROFILE_NAME = 'Datos creados en los perfiles de demostración';
+const ORPHAN_PROFILE_NAME = m.orphans;
 
 type Owned = { id: string; userId: string };
 
@@ -105,7 +111,7 @@ export const getLocalProfiles = (storage: Storage = localStorage): LocalProfileS
     const owner = ownerOf(record);
     if (!knownIds.has(owner)) {
       knownIds.add(owner);
-      candidates.push({ id: owner, name: 'Perfil sin nombre' });
+      candidates.push({ id: owner, name: m.unnamed });
     }
   }
 

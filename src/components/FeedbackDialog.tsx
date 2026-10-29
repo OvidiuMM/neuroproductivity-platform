@@ -8,9 +8,11 @@ import {
   FEEDBACK_SUBJECT_MAX,
   FEEDBACK_TYPES,
   describeDevice,
+  deviceLabel,
   type FeedbackType
 } from '../services/feedback';
 import { submitFeedback } from '../services/feedbackApi';
+import { messages } from '../i18n/locale';
 
 interface FeedbackDialogProps {
   functions: Functions;
@@ -19,11 +21,81 @@ interface FeedbackDialogProps {
   returnFocusTo?: () => HTMLElement | null;
 }
 
-const SEND_ERRORS: Record<string, string> = {
-  'functions/resource-exhausted': 'Has enviado varios mensajes seguidos. Inténtalo de nuevo en un rato.',
-  'functions/permission-denied': 'Confirma tu email para poder escribirnos.',
-  'functions/invalid-argument': 'Revisa el tipo, el asunto y la descripción.'
-};
+const SEND_ERRORS: Record<string, string> = messages(
+  {
+    'functions/resource-exhausted': 'Has enviado varios mensajes seguidos. Inténtalo de nuevo en un rato.',
+    'functions/permission-denied': 'Confirma tu email para poder escribirnos.',
+    'functions/invalid-argument': 'Revisa el tipo, el asunto y la descripción.'
+  },
+  {
+    'functions/resource-exhausted': "You've sent several messages in a row. Try again in a while.",
+    'functions/permission-denied': 'Confirm your email to be able to contact us.',
+    'functions/invalid-argument': 'Check the type, the subject and the description.'
+  }
+);
+
+const m = messages(
+  {
+    sendFailed: 'No se pudo enviar. Comprueba la conexión e inténtalo de nuevo.',
+    rows: {
+      version: 'Versión de CLAR',
+      os: 'Sistema',
+      browser: 'Navegador',
+      device: 'Dispositivo',
+      language: 'Idioma',
+      connection: 'Conexión'
+    },
+    online: 'Con conexión',
+    offline: 'Sin conexión',
+    title: 'Escríbenos',
+    close: 'Cerrar',
+    thanks: '¡Gracias! Hemos recibido tu mensaje.',
+    willReply: 'Si hace falta, te responderemos a tu email.',
+    intro: 'Una idea, un fallo o cualquier cosa que quieras contarnos. Te responderemos a tu email.',
+    type: 'Tipo de mensaje',
+    subject: 'Asunto',
+    description: 'Descripción',
+    characters: (length: number) => `${length}/${FEEDBACK_DESCRIPTION_MAX} caracteres`,
+    attach: 'Adjuntar información técnica',
+    attachHelp:
+      'Solo lo que ves aquí, sin el identificador completo del navegador. Se guarda con tu mensaje y nos ayuda a reproducir un fallo.',
+    privacy:
+      'Para responderte guardamos el mensaje con tu nombre y tu email. Si eliminas tu cuenta, tus mensajes se borran con ella.',
+    cancel: 'Cancelar',
+    sending: 'Enviando…',
+    send: 'Enviar'
+  },
+  {
+    sendFailed: "Couldn't send it. Check your connection and try again.",
+    rows: {
+      version: 'CLAR version',
+      os: 'System',
+      browser: 'Browser',
+      device: 'Device',
+      language: 'Language',
+      connection: 'Connection'
+    },
+    online: 'Online',
+    offline: 'Offline',
+    title: 'Contact us',
+    close: 'Close',
+    thanks: "Thank you! We've received your message.",
+    willReply: "If needed, we'll reply to your email.",
+    intro: "An idea, a bug or anything you'd like to tell us. We'll reply to your email.",
+    type: 'Message type',
+    subject: 'Subject',
+    description: 'Description',
+    characters: (length) => `${length}/${FEEDBACK_DESCRIPTION_MAX} characters`,
+    attach: 'Attach technical information',
+    attachHelp:
+      "Only what you see here, without your browser's full identifier. It's saved with your message and helps us reproduce a bug.",
+    privacy:
+      'To reply to you, we save your message with your name and email. If you delete your account, your messages are deleted with it.',
+    cancel: 'Cancel',
+    sending: 'Sending…',
+    send: 'Send'
+  }
+);
 
 const inputClass =
   'w-full rounded-xl border border-slate-300 px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-400 focus:outline-none';
@@ -61,22 +133,19 @@ export const FeedbackDialog: React.FC<FeedbackDialogProps> = ({ functions, onClo
       });
       setSent(true);
     } catch (err) {
-      setError(
-        (err instanceof FirebaseError && SEND_ERRORS[err.code]) ||
-          'No se pudo enviar. Comprueba la conexión e inténtalo de nuevo.'
-      );
+      setError((err instanceof FirebaseError && SEND_ERRORS[err.code]) || m.sendFailed);
     } finally {
       setBusy(false);
     }
   };
 
   const contextRows: [string, string][] = [
-    ['Versión de CLAR', context.appVersion],
-    ['Sistema', context.os],
-    ['Navegador', context.browser],
-    ['Dispositivo', context.deviceClass],
-    ['Idioma', context.language],
-    ['Conexión', context.online ? 'Con conexión' : 'Sin conexión']
+    [m.rows.version, context.appVersion],
+    [m.rows.os, context.os],
+    [m.rows.browser, context.browser],
+    [m.rows.device, deviceLabel(context.deviceClass)],
+    [m.rows.language, context.language],
+    [m.rows.connection, context.online ? m.online : m.offline]
   ];
 
   return (
@@ -91,12 +160,12 @@ export const FeedbackDialog: React.FC<FeedbackDialogProps> = ({ functions, onClo
         <div className="flex items-center justify-between border-b border-slate-100 bg-slate-50/70 px-6 py-4">
           <h2 id="feedback-title" className="flex items-center gap-2 text-base font-bold text-slate-900">
             <MessageSquare className="h-5 w-5 text-indigo-600" aria-hidden="true" />
-            Escríbenos
+            {m.title}
           </h2>
           <button
             type="button"
             onClick={onClose}
-            aria-label="Cerrar"
+            aria-label={m.close}
             className="rounded-lg p-1.5 text-slate-500 transition-colors hover:bg-slate-200/60 hover:text-slate-600"
           >
             <X className="h-5 w-5" aria-hidden="true" />
@@ -107,25 +176,23 @@ export const FeedbackDialog: React.FC<FeedbackDialogProps> = ({ functions, onClo
           <div className="space-y-4 p-6 text-center">
             <CheckCircle2 className="mx-auto h-10 w-10 text-emerald-600" aria-hidden="true" />
             <h3 ref={doneRef} tabIndex={-1} className="text-base font-bold text-slate-900 focus:outline-none">
-              ¡Gracias! Hemos recibido tu mensaje.
+              {m.thanks}
             </h3>
-            <p className="text-sm text-slate-600">Si hace falta, te responderemos a tu email.</p>
+            <p className="text-sm text-slate-600">{m.willReply}</p>
             <button
               type="button"
               onClick={onClose}
               className="min-h-11 rounded-xl bg-slate-900 px-5 text-sm font-bold text-white hover:bg-slate-800"
             >
-              Cerrar
+              {m.close}
             </button>
           </div>
         ) : (
           <form onSubmit={handleSubmit} className="space-y-4 p-6">
-            <p className="text-xs leading-relaxed text-slate-600">
-              Una idea, un fallo o cualquier cosa que quieras contarnos. Te responderemos a tu email.
-            </p>
+            <p className="text-xs leading-relaxed text-slate-600">{m.intro}</p>
 
             <fieldset>
-              <legend className={labelClass}>Tipo de mensaje</legend>
+              <legend className={labelClass}>{m.type}</legend>
               <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
                 {FEEDBACK_TYPES.map((option) => (
                   <label
@@ -152,7 +219,7 @@ export const FeedbackDialog: React.FC<FeedbackDialogProps> = ({ functions, onClo
 
             <div>
               <label htmlFor="feedback-subject" className={labelClass}>
-                Asunto
+                {m.subject}
               </label>
               <input
                 id="feedback-subject"
@@ -168,7 +235,7 @@ export const FeedbackDialog: React.FC<FeedbackDialogProps> = ({ functions, onClo
 
             <div>
               <label htmlFor="feedback-description" className={labelClass}>
-                Descripción
+                {m.description}
               </label>
               <textarea
                 id="feedback-description"
@@ -181,7 +248,7 @@ export const FeedbackDialog: React.FC<FeedbackDialogProps> = ({ functions, onClo
                 className={inputClass}
               />
               <p id="feedback-description-count" className="mt-1 text-right text-[11px] text-slate-500">
-                {description.length}/{FEEDBACK_DESCRIPTION_MAX} caracteres
+                {m.characters(description.length)}
               </p>
             </div>
 
@@ -195,9 +262,8 @@ export const FeedbackDialog: React.FC<FeedbackDialogProps> = ({ functions, onClo
                   className="mt-0.5 h-4 w-4 rounded border-slate-300 text-indigo-600"
                 />
                 <span className="text-xs text-slate-700">
-                  <span className="block font-bold text-slate-800">Adjuntar información técnica</span>
-                  Solo lo que ves aquí, sin el identificador completo del navegador. Se guarda con tu mensaje y nos
-                  ayuda a reproducir un fallo.
+                  <span className="block font-bold text-slate-800">{m.attach}</span>
+                  {m.attachHelp}
                 </span>
               </label>
               {/* Siempre en la página (lo controla la casilla con aria-controls), oculta hasta marcarla */}
@@ -223,10 +289,7 @@ export const FeedbackDialog: React.FC<FeedbackDialogProps> = ({ functions, onClo
               </p>
             )}
 
-            <p className="text-[11px] leading-relaxed text-slate-600">
-              Para responderte guardamos el mensaje con tu nombre y tu email. Si eliminas tu cuenta, tus mensajes se
-              borran con ella.
-            </p>
+            <p className="text-[11px] leading-relaxed text-slate-600">{m.privacy}</p>
 
             <div className="flex items-center justify-end gap-2 border-t border-slate-100 pt-4">
               <button
@@ -234,14 +297,14 @@ export const FeedbackDialog: React.FC<FeedbackDialogProps> = ({ functions, onClo
                 onClick={onClose}
                 className="min-h-11 rounded-xl px-4 text-sm font-semibold text-slate-600 hover:bg-slate-100 hover:text-slate-900"
               >
-                Cancelar
+                {m.cancel}
               </button>
               <button
                 type="submit"
                 disabled={busy}
                 className="min-h-11 rounded-xl bg-slate-900 px-5 text-sm font-bold text-white hover:bg-slate-800 disabled:opacity-60"
               >
-                {busy ? 'Enviando…' : 'Enviar'}
+                {busy ? m.sending : m.send}
               </button>
             </div>
           </form>

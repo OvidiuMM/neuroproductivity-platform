@@ -1,8 +1,10 @@
 import { alarmInstant, isTimeZone, zonedInstant } from './alarmLogic';
+import { LANGUAGE_TAG, messages, type Language } from './i18n';
 
 // EVENTOS DE GOOGLE CALENDAR a partir de las tareas, para la función extra «Sincronizar con Google Calendar»: las
 // mismas reglas que «Añadir al calendario» de la app (src/services/calendar.ts), pero en la zona horaria de la cuenta
-// y con el formato de la API de Google Calendar. tests/unit/calendarSync.test.ts compara los dos.
+// y con el formato de la API de Google Calendar. tests/unit/calendarSync.test.ts compara los dos. Los textos que pone
+// CLAR (las etiquetas de la descripción), en el idioma de la cuenta; la RRULE no depende del idioma.
 
 const DAY = /^\d{4}-\d{2}-\d{2}$/;
 const TIME = /^([01]\d|2[0-3]):[0-5]\d$/;
@@ -84,6 +86,24 @@ export const taskIdForEvent = (eventId: string) => {
   return hex && hex.length % 2 === 0 && /^[0-9a-f]+$/.test(hex) ? Buffer.from(hex, 'hex').toString('utf8') : null;
 };
 
+const texts = messages(
+  {
+    notes: 'Notas:',
+    task: 'Tarea de CLAR:',
+    deadline: (day: string) => `Fecha límite: ${day}`,
+    calendarDescription: 'Tareas con fecha de CLAR (se actualizan solas).'
+  },
+  {
+    notes: 'Notes:',
+    task: 'CLAR task:',
+    deadline: (day) => `Due date: ${day}`,
+    calendarDescription: 'CLAR tasks with a date (they update automatically).'
+  }
+);
+
+// La descripción del calendario «CLAR» que se crea en Google
+export const calendarDescription = (language: Language = 'es') => texts[language].calendarDescription;
+
 const notesOf = (observations: unknown) =>
   Array.isArray(observations)
     ? observations
@@ -92,14 +112,14 @@ const notesOf = (observations: unknown) =>
     : [];
 
 // Las notas de la tarea, una por línea; las de lista, con su casilla (como en la app)
-const notesText = (observations: unknown) => {
+const notesText = (observations: unknown, language: Language) => {
   const lines = notesOf(observations).map((o) => {
     const box = o.type === 'checklist' ? (o.completed === true ? '[x] ' : '[ ] ') : '';
     const url = text(o.url);
     const link = url && url !== text(o.text) ? ` (${url})` : '';
     return `- ${box}${text(o.text).trim()}${link}`;
   });
-  return lines.length ? `Notas:\n${lines.join('\n')}` : '';
+  return lines.length ? `${texts[language].notes}\n${lines.join('\n')}` : '';
 };
 
 const escapeHtml = (value: string) =>
@@ -109,7 +129,7 @@ const isWebUrl = (url: string) => /^https?:\/\/[^\s]+$/i.test(url);
 
 // Las notas, en HTML (Google Calendar lo muestra): una lista con viñetas, las de casilla con ☐ o ☑, y los enlaces, que
 // se pueden pulsar. Todo el texto de la tarea va escapado
-const notesHtml = (observations: unknown) => {
+const notesHtml = (observations: unknown, language: Language) => {
   const items = notesOf(observations).map((o) => {
     const box = o.type === 'checklist' ? (o.completed === true ? '☑ ' : '☐ ') : '';
     const label = text(o.text).trim();
@@ -117,23 +137,25 @@ const notesHtml = (observations: unknown) => {
     if (url && isWebUrl(url)) return `<li>${box}<a href="${escapeHtml(url)}">${htmlLines(label || url)}</a></li>`;
     return `<li>${box}${htmlLines(label)}${url && url !== text(o.text) ? ` (${escapeHtml(url)})` : ''}</li>`;
   });
-  return items.length ? `Notas:<ul>${items.join('')}</ul>` : '';
+  return items.length ? `${escapeHtml(texts[language].notes)}<ul>${items.join('')}</ul>` : '';
 };
 
 // La descripción del evento, en texto (la misma que «Añadir al calendario» de la app, que compara
 // tests/unit/calendarSync.test.ts) y la que se envía: con notas, en HTML, para que se vean como lista (si no cabe, en
 // texto). Si hay que recortar, se recorta lo de la tarea: el enlace a CLAR del final se queda
-export const eventDescription = (task: SyncTask, appUrl: string, deadlineNote: string) => {
-  const link = `Tarea de CLAR: ${appUrl}`;
-  const body = [text(task.description), notesText(task.observations), deadlineNote].filter(Boolean).join('\n\n');
+export const eventDescription = (task: SyncTask, appUrl: string, deadlineNote: string, language: Language = 'es') => {
+  const link = `${texts[language].task} ${appUrl}`;
+  const body = [text(task.description), notesText(task.observations, language), deadlineNote]
+    .filter(Boolean)
+    .join('\n\n');
   const plain = body ? `${cap(body, DESCRIPTION_MAX - Array.from(link).length - 2)}\n\n${link}` : link;
-  const notes = notesHtml(task.observations);
+  const notes = notesHtml(task.observations, language);
   if (!notes) return { text: plain, sent: plain };
   const html = [
     text(task.description) && htmlLines(text(task.description)),
     notes,
     deadlineNote && escapeHtml(deadlineNote),
-    `Tarea de CLAR: <a href="${escapeHtml(appUrl)}">${escapeHtml(appUrl)}</a>`
+    `${escapeHtml(texts[language].task)} <a href="${escapeHtml(appUrl)}">${escapeHtml(appUrl)}</a>`
   ]
     .filter(Boolean)
     .join('<br><br>');
@@ -145,12 +167,15 @@ const nextDay = (date: string) => {
   const [y, m, d] = parseDay(date);
   return new Date(Date.UTC(y, m - 1, d + 1)).toISOString().slice(0, 10);
 };
-// «16 oct 2026», como formatDay de la app
-const formatDay = (date: string) => {
+// «16 oct 2026» («16 Oct 2026» en inglés), como formatDay de la app
+const formatDay = (date: string, language: Language) => {
   const [y, m, d] = parseDay(date);
-  return new Intl.DateTimeFormat('es-ES', { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'UTC' }).format(
-    Date.UTC(y, m - 1, d)
-  );
+  return new Intl.DateTimeFormat(LANGUAGE_TAG[language], {
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric',
+    timeZone: 'UTC'
+  }).format(Date.UTC(y, m - 1, d));
 };
 
 // RRULE (RFC 5545) de la serie, como toRRule de la app (src/services/recurrence.ts). null si la repetición no vale o
@@ -213,8 +238,13 @@ const isDone = (task: SyncTask) => task.status === 'DONE' || (task.status === un
 
 // El evento de una tarea, o null si no va al calendario: sin fecha límite o en «Algún día». Las hechas y las canceladas
 // se quedan, con «✓» o «✕» delante. Una serie la lleva la tarea pendiente: al completarla, la app crea la siguiente
-// repetición (que continúa la serie) y la hecha queda como un evento suelto.
-export const buildTaskEvent = (task: SyncTask, timeZone: string, appUrl: string): CalendarEventBody | null => {
+// repetición (que continúa la serie) y la hecha queda como un evento suelto. `language`: el de la cuenta
+export const buildTaskEvent = (
+  task: SyncTask,
+  timeZone: string,
+  appUrl: string,
+  language: Language = 'es'
+): CalendarEventBody | null => {
   const dueDate = day(task.dueDate);
   if (!dueDate || task.isSomeday === true || !isTimeZone(timeZone)) return null;
   const closed = isDone(task) ? '✓ ' : task.status === 'CANCELLED' ? '✕ ' : '';
@@ -227,8 +257,9 @@ export const buildTaskEvent = (task: SyncTask, timeZone: string, appUrl: string)
   const allDay = !startTime && !dueTime && Boolean(startDate && startDate < dueDate);
   const dateOnly = !startTime && !dueTime && !allDay;
   const oneHour = Boolean(startTime && !dueTime);
-  const deadlineNote = oneHour && (startDate ?? dueDate) !== dueDate ? `Fecha límite: ${formatDay(dueDate)}` : '';
-  const description = eventDescription(task, appUrl, deadlineNote).sent;
+  const deadlineNote =
+    oneHour && (startDate ?? dueDate) !== dueDate ? texts[language].deadline(formatDay(dueDate, language)) : '';
+  const description = eventDescription(task, appUrl, deadlineNote, language).sent;
   const rule = repeats ? recurrenceRule(task.recurrence, allDay, dueDate, timeZone) : null;
   // La hora de la alarma, también en una tarea hecha o cancelada: al cerrarla, su evento no se mueve
   const alarmAt = alarmInstant(task, timeZone);

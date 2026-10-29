@@ -19,17 +19,36 @@ import { deleteAccount, downloadAccountData } from './services/account';
 import { signOutAndClearCache, type FirebaseServices } from './services/firebase';
 import { recordTermsAcceptance, saveUserProfile } from './services/repository';
 import { LEGAL_UPDATED } from './services/legal';
+import { messages } from './i18n/locale';
 
 interface AccessGateProps {
   user: User;
   services: FirebaseServices;
 }
 
-const REQUEST_ERRORS: Record<string, string> = {
-  'functions/resource-exhausted': 'Podrás volver a pedir acceso más adelante.',
-  'functions/failed-precondition': 'Tu cuenta no tiene un email con el que avisarte.',
-  'functions/permission-denied': 'Confirma tu email antes de solicitar acceso.'
-};
+const REQUEST_ERRORS: Record<string, string | undefined> = messages(
+  {
+    'functions/resource-exhausted': 'Podrás volver a pedir acceso más adelante.',
+    'functions/failed-precondition': 'Tu cuenta no tiene un email con el que avisarte.',
+    'functions/permission-denied': 'Confirma tu email antes de solicitar acceso.'
+  },
+  {
+    'functions/resource-exhausted': 'You can request access again later.',
+    'functions/failed-precondition': "Your account doesn't have an email we can notify you at.",
+    'functions/permission-denied': 'Confirm your email before you request access.'
+  }
+);
+
+const m = messages(
+  {
+    requestFailed: 'No se pudo enviar la solicitud. Comprueba la conexión e inténtalo de nuevo.',
+    checking: 'Comprobando tu acceso…'
+  },
+  {
+    requestFailed: "Couldn't send the request. Check your connection and try again.",
+    checking: 'Checking your access…'
+  }
+);
 
 // Si el email ya está confirmado (p. ej. en otra pestaña) pero el token aún no lo dice, que es lo que lee el servidor y
 // puede tardar hasta una hora, se renueva antes de preguntar por el acceso
@@ -87,9 +106,7 @@ export const AccessGate: React.FC<AccessGateProps> = ({ user, services }) => {
       await requestAccess(services.functions, message);
     } catch (e) {
       const known = e instanceof FirebaseError ? REQUEST_ERRORS[e.code] : undefined;
-      throw new Error(known ?? 'No se pudo enviar la solicitud. Comprueba la conexión e inténtalo de nuevo.', {
-        cause: e
-      });
+      throw new Error(known ?? m.requestFailed, { cause: e });
     }
   };
 
@@ -111,7 +128,7 @@ export const AccessGate: React.FC<AccessGateProps> = ({ user, services }) => {
 
   // Mientras se consulta al servidor no se muestra el formulario (la administración se aprueba en ese paso)
   if (isChecking && (effectiveStatus === 'unknown' || effectiveStatus === 'none')) {
-    return <LoadingScreen text="Comprobando tu acceso…" />;
+    return <LoadingScreen text={m.checking} />;
   }
 
   return (

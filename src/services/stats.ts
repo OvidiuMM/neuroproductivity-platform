@@ -6,6 +6,7 @@ import { dueMoment, formatDay, isArchived, isCancelled, isDone } from './tasks';
 import { blockerOf, tasksById } from './dependencies';
 import { projectDeadline, sortProjects } from './projects';
 import { DEFAULT_AREAS, areaLabel } from './wheel';
+import { messages } from '../i18n/locale';
 
 // Estadísticas de la pantalla de Inicio, a partir de las tareas de una lista (las hechas guardan doneAt)
 
@@ -134,6 +135,51 @@ export interface Recommendation {
   action?: { label: string; tab: AppTab };
 }
 
+const m = messages(
+  {
+    projectOverdue: (title: string, day: string, open: number) =>
+      `El proyecto «${title}» va fuera de plazo: terminaba el ${day} y le ${open === 1 ? 'queda 1 tarea' : `quedan ${open} tareas`}. Cambia la fecha de fin o reparte sus tareas.`,
+    viewProjects: 'Ver los proyectos',
+    overdueOne: (title: string) => `Tienes una tarea vencida: «${title}». Hazla o cámbiale el plazo.`,
+    overdueMany: (count: number, title: string) =>
+      `Tienes ${count} tareas vencidas. Empieza por la más antigua: «${title}».`,
+    viewAgenda: 'Ver la agenda',
+    busyWeek: (count: number) =>
+      `Esta semana vencen ${count} tareas. Revisa si alguna puede esperar o pasar a «Algún día».`,
+    viewLists: 'Ver las listas',
+    late: (percent: number) =>
+      `En el último mes terminaste a tiempo el ${percent} % de las tareas con plazo. Prueba a dividir las largas o a poner plazos más realistas.`,
+    restart: 'Esta semana aún no has completado ninguna tarea. Elige una corta del Top 10 y hazla hoy.',
+    goal: (area: string, score: number | undefined) =>
+      `«${area}» tiene ${score}/10 en tu última evaluación y aún no tiene metas. Ponle una meta concreta y añádele la primera tarea.`,
+    goToGoals: 'Ir a Metas',
+    wheelStale:
+      'Hace más de un mes que no evalúas tu Rueda de la Vida. Revisarla ayuda a elegir en qué centrarte y qué metas ponerte.',
+    wheelNever: 'Aún no has evaluado tu Rueda de la Vida. Es el punto de partida para elegir tus metas.',
+    goToWheel: 'Ir a la Rueda'
+  },
+  {
+    projectOverdue: (title, day, open) =>
+      `The project “${title}” is overdue: it was due to end on ${day} and ${open === 1 ? 'has 1 task left' : `has ${open} tasks left`}. Change its end date or spread out its tasks.`,
+    viewProjects: 'View projects',
+    overdueOne: (title) => `You have an overdue task: “${title}”. Do it or change its deadline.`,
+    overdueMany: (count, title) => `You have ${count} overdue tasks. Start with the oldest: “${title}”.`,
+    viewAgenda: 'View the agenda',
+    busyWeek: (count) => `${count} tasks are due this week. See if any can wait or move to “Someday”.`,
+    viewLists: 'View lists',
+    late: (percent) =>
+      `In the last month you finished ${percent}% of your tasks with a deadline on time. Try splitting the long ones or setting more realistic deadlines.`,
+    restart: 'You haven’t completed any tasks this week yet. Pick a short one from your Top 10 and do it today.',
+    goal: (area, score) =>
+      `“${area}” scored ${score}/10 in your last assessment and has no goals yet. Set a concrete goal and add its first task.`,
+    goToGoals: 'Go to Goals',
+    wheelStale:
+      'You haven’t assessed your Wheel of Life in over a month. Reviewing it helps you choose what to focus on and which goals to set.',
+    wheelNever: 'You haven’t assessed your Wheel of Life yet. It’s the starting point for choosing your goals.',
+    goToWheel: 'Go to the Wheel'
+  }
+);
+
 // Recomendaciones sencillas a partir de las estadísticas y las metas (como mucho tres, de más a menos urgente)
 export const recommendationsFor = (
   stats: TaskStats,
@@ -156,8 +202,8 @@ export const recommendationsFor = (
     const open = deadline.open;
     list.push({
       id: 'project-overdue',
-      text: `El proyecto «${project.title}» va fuera de plazo: terminaba el ${formatDay(project.endDate)} y le ${open === 1 ? 'queda 1 tarea' : `quedan ${open} tareas`}. Cambia la fecha de fin o reparte sus tareas.`,
-      action: { label: 'Ver los proyectos', tab: 'projects' }
+      text: m.projectOverdue(project.title, formatDay(project.endDate), open),
+      action: { label: m.viewProjects, tab: 'projects' }
     });
   }
   if (stats.overdue > 0) {
@@ -166,31 +212,28 @@ export const recommendationsFor = (
       .sort((a, b) => dueMoment(a)!.getTime() - dueMoment(b)!.getTime())[0];
     list.push({
       id: 'overdue',
-      text:
-        stats.overdue === 1
-          ? `Tienes una tarea vencida: «${oldest.title}». Hazla o cámbiale el plazo.`
-          : `Tienes ${stats.overdue} tareas vencidas. Empieza por la más antigua: «${oldest.title}».`,
-      action: { label: 'Ver la agenda', tab: 'agenda' }
+      text: stats.overdue === 1 ? m.overdueOne(oldest.title) : m.overdueMany(stats.overdue, oldest.title),
+      action: { label: m.viewAgenda, tab: 'agenda' }
     });
   }
   if (stats.dueThisWeek >= 5) {
     list.push({
       id: 'busy-week',
-      text: `Esta semana vencen ${stats.dueThisWeek} tareas. Revisa si alguna puede esperar o pasar a «Algún día».`,
-      action: { label: 'Ver las listas', tab: 'tasks' }
+      text: m.busyWeek(stats.dueThisWeek),
+      action: { label: m.viewLists, tab: 'tasks' }
     });
   }
   if (stats.onTimeRate !== null && stats.onTime + stats.late >= 5 && stats.onTimeRate < 0.6) {
     list.push({
       id: 'late',
-      text: `En el último mes terminaste a tiempo el ${Math.round(stats.onTimeRate * 100)} % de las tareas con plazo. Prueba a dividir las largas o a poner plazos más realistas.`
+      text: m.late(Math.round(stats.onTimeRate * 100))
     });
   }
   if (stats.open > 0 && stats.doneThisWeek === 0) {
     list.push({
       id: 'restart',
-      text: 'Esta semana aún no has completado ninguna tarea. Elige una corta del Top 10 y hazla hoy.',
-      action: { label: 'Ver las listas', tab: 'tasks' }
+      text: m.restart,
+      action: { label: m.viewLists, tab: 'tasks' }
     });
   }
   // El área más baja de la última evaluación, si necesita atención y aún no tiene metas
@@ -198,18 +241,16 @@ export const recommendationsFor = (
   if (weakest?.weak && weakest.goals.length === 0) {
     list.push({
       id: 'goal',
-      text: `«${areaLabel(areas, weakest.area)}» tiene ${weakest.score}/10 en tu última evaluación y aún no tiene metas. Ponle una meta concreta y añádele la primera tarea.`,
-      action: { label: 'Ir a Metas', tab: 'goals' }
+      text: m.goal(areaLabel(areas, weakest.area), weakest.score),
+      action: { label: m.goToGoals, tab: 'goals' }
     });
   }
   const lastWheel = wheelLogs[wheelLogs.length - 1];
   if (!lastWheel || now.getTime() - new Date(lastWheel.timestamp).getTime() > RECENT_DAYS * DAY_MS) {
     list.push({
       id: 'wheel',
-      text: lastWheel
-        ? 'Hace más de un mes que no evalúas tu Rueda de la Vida. Revisarla ayuda a elegir en qué centrarte y qué metas ponerte.'
-        : 'Aún no has evaluado tu Rueda de la Vida. Es el punto de partida para elegir tus metas.',
-      action: { label: 'Ir a la Rueda', tab: 'wheel' }
+      text: lastWheel ? m.wheelStale : m.wheelNever,
+      action: { label: m.goToWheel, tab: 'wheel' }
     });
   }
   return list.slice(0, 3);

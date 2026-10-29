@@ -3,9 +3,11 @@ import { Root } from './Root.tsx';
 import './index.css';
 import { applyA11yPrefs, loadA11yPrefs } from './services/a11yPrefs';
 import { registerServiceWorker } from './services/notifications';
+import { applyDocumentLocale } from './i18n/locale';
 
-// Preferencias de accesibilidad antes del primer render, para que no haya parpadeo
+// Preferencias de accesibilidad y el idioma de la página antes del primer render, para que no haya parpadeo
 applyA11yPrefs(loadA11yPrefs());
+applyDocumentLocale();
 
 createRoot(document.getElementById('root')!).render(<Root />);
 

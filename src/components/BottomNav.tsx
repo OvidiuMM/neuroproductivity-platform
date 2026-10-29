@@ -2,6 +2,24 @@ import React from 'react';
 import { MoreHorizontal } from 'lucide-react';
 import { AppTab } from '../types';
 import { PRIMARY_TABS, SECTIONS } from '../navigation';
+import { messages } from '../i18n/locale';
+
+const m = messages(
+  {
+    pending: (n: number) => (n === 1 ? '1 pendiente en Administración' : `${n} pendientes en Administración`),
+    moreSections: 'Más secciones',
+    moreSectionsPending: (pending: string) => `Más secciones, ${pending}`,
+    sections: 'Secciones',
+    more: 'Más'
+  },
+  {
+    pending: (n) => `${n} pending in Admin`,
+    moreSections: 'More sections',
+    moreSectionsPending: (pending) => `More sections, ${pending}`,
+    sections: 'Sections',
+    more: 'More'
+  }
+);
 
 interface BottomNavProps {
   activeTab: AppTab;
@@ -30,13 +48,11 @@ export const BottomNav: React.FC<BottomNavProps> = ({
 }) => {
   const primary = SECTIONS.filter(({ tab }) => PRIMARY_TABS.includes(tab));
   const moreIsCurrent = !PRIMARY_TABS.includes(activeTab);
-  const pending =
-    pendingAccessCount === 1 ? '1 pendiente en Administración' : `${pendingAccessCount} pendientes en Administración`;
-  const moreLabel = pendingAccessCount > 0 ? `Más secciones, ${pending}` : 'Más secciones';
+  const moreLabel = pendingAccessCount > 0 ? m.moreSectionsPending(m.pending(pendingAccessCount)) : m.moreSections;
 
   return (
     <nav
-      aria-label="Secciones"
+      aria-label={m.sections}
       className="fixed inset-x-0 bottom-0 z-40 border-t border-slate-200 bg-white/95 pr-[env(safe-area-inset-right)] pb-[env(safe-area-inset-bottom)] pl-[env(safe-area-inset-left)] backdrop-blur-md md:hidden"
     >
       <ul className="mx-auto grid max-w-lg grid-cols-5">
@@ -77,7 +93,7 @@ export const BottomNav: React.FC<BottomNavProps> = ({
                 />
               )}
             </span>
-            Más
+            {m.more}
           </button>
         </li>
       </ul>

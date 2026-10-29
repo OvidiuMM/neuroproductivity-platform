@@ -1,21 +1,32 @@
 import { createHash } from 'node:crypto';
-import { HttpsError, onCall } from 'firebase-functions/https';
 import { onDocumentWritten } from 'firebase-functions/firestore';
 import { onSchedule } from 'firebase-functions/scheduler';
 import * as logger from 'firebase-functions/logger';
 import { Timestamp, type DocumentReference, type WriteBatch } from 'firebase-admin/firestore';
 import { getMessaging, type BatchResponse, type MulticastMessage } from 'firebase-admin/messaging';
 import { adminDb } from './adminApp';
-import { REGION, requireAuth } from './access';
-import { isTimeZone, notificationText, queuedAlarm, type AlarmTask, type QueuedAlarm } from './alarmLogic';
+import { REGION } from './access';
+import {
+  alarmBody,
+  isTimeZone,
+  notificationText,
+  queuedAlarm,
+  testNotificationBody,
+  type AlarmTask,
+  type QueuedAlarm
+} from './alarmLogic';
+import { invalidRequest, onUserCall, requireAuth, userErrors } from './callable';
+import { isLanguage, LANGUAGES, languageOf, messages } from './i18n';
 import { forgetPushDevices } from './pushCleanup';
 
 // NOTIFICACIONES PUSH DE LAS ALARMAS: suenan aunque CLAR esté cerrada, en los dispositivos que las activan.
 // - push_devices/{uid} (zona horaria del último dispositivo) y push_devices/{uid}/tokens/{id} (un token de FCM por
-//   dispositivo, diez como mucho, con si quiere ver el nombre de la tarea). push_tokens/{id} dice de qué cuenta es cada
-//   token y cuándo se renovó: un dispositivo compartido solo recibe las alarmas de la última cuenta registrada en él, y
-//   un token sin renovar en 30 días (el dispositivo no ha abierto CLAR) se borra.
-// - alarm_queue/{uid}__{taskId}: la próxima alarma de cada tarea, que mantiene al día el trigger de las tareas.
+//   dispositivo, diez como mucho, con si quiere ver el nombre de la tarea y su idioma, el de la app en él).
+//   push_tokens/{id} dice de qué cuenta es cada token y cuándo se renovó: un dispositivo compartido solo recibe las
+//   alarmas de la última cuenta registrada en él, y un token sin renovar en 30 días (el dispositivo no ha abierto CLAR)
+//   se borra.
+// - alarm_queue/{uid}__{taskId}: la próxima alarma de cada tarea, que mantiene al día el trigger de las tareas. Sin
+//   textos: los de cada notificación se escriben al enviarla, en el idioma de cada dispositivo.
 // - alarm_sent/{uid}__{taskId}: la última alarma enviada de cada tarea, para no volver a enviarla.
 // - sendDueAlarms, cada minuto, envía las que ya tocan.
 // Nada de esto se lee ni se escribe desde la app (firestore.rules no tiene reglas para estas colecciones).
@@ -38,6 +49,28 @@ const queueRef = (uid: string, taskId: string) => db().doc(`alarm_queue/${uid}__
 const sentRef = (uid: string, taskId: string) => db().doc(`alarm_sent/${uid}__${taskId}`);
 export const tokenId = (token: string) => createHash('sha256').update(token).digest('hex').slice(0, 40);
 
+const m = messages(
+  {
+    noAccess: 'Tu cuenta aún no tiene acceso.',
+    tooManyRegistrations: 'Demasiados intentos seguidos. Inténtalo de nuevo en un rato.',
+    notRegistered: 'Activa antes las alarmas con CLAR cerrada en este dispositivo.',
+    tooManyTests: 'Ya has probado varias veces. Inténtalo de nuevo en un rato.',
+    tokenGone: 'Este dispositivo ya no recibe avisos: desactívalos y actívalos otra vez.',
+    unavailable: 'No se pudo enviar ahora. Inténtalo de nuevo en un rato.'
+  },
+  {
+    noAccess: "Your account doesn't have access yet.",
+    tooManyRegistrations: 'Too many attempts in a row. Try again in a while.',
+    notRegistered: 'First turn on notifications when CLAR is closed on this device.',
+    tooManyTests: "You've already tested it several times. Try again in a while.",
+    tokenGone: 'This device no longer receives notifications: turn them off and on again.',
+    unavailable: "Couldn't send it right now. Try again in a while."
+  }
+);
+const fail = userErrors(m);
+
+// Lo que se guarda de cada alarma en la cola: sus datos, sin textos. Los escribe sendQueued en el idioma de cada
+// dispositivo
 const queueDoc = (uid: string, taskId: string, alarm: QueuedAlarm) => ({
   uid,
   taskId,
@@ -46,7 +79,8 @@ const queueDoc = (uid: string, taskId: string, alarm: QueuedAlarm) => ({
   key: alarm.key,
   clock: alarm.clock,
   taskTitle: alarm.taskTitle,
-  body: alarm.body,
+  timeZone: alarm.timeZone,
+  hasDueTime: alarm.hasDueTime,
   attempts: 0
 });
 
@@ -109,18 +143,21 @@ const dropToken = async (uid: string, id: string) => {
 const isValidToken = (token: unknown): token is string =>
   typeof token === 'string' && token.length >= 20 && token.length <= 4096 && /^[\w:.-]+$/.test(token);
 
-// Registra el dispositivo que activó las alarmas con CLAR cerrada: su token de FCM, su zona horaria y si quiere ver el
-// nombre de la tarea en la notificación (por defecto no: se vería con el móvil bloqueado)
-export const registerPushDevice = onCall({ region: REGION }, async (request) => {
+// Registra el dispositivo que activó las alarmas con CLAR cerrada: su token de FCM, su zona horaria, si quiere ver el
+// nombre de la tarea en la notificación (por defecto no: se vería con el móvil bloqueado) y el idioma de la app en él
+// (sin él, de antes de 1.2.0: español)
+export const registerPushDevice = onUserCall({ region: REGION }, async (request) => {
   const auth = requireAuth(request);
-  const { token, timeZone, showTitle } = (request.data ?? {}) as {
+  const { token, timeZone, showTitle, language } = (request.data ?? {}) as {
     token?: unknown;
     timeZone?: unknown;
     showTitle?: unknown;
+    language?: unknown;
   };
-  if (!isValidToken(token) || !isTimeZone(timeZone)) throw new HttpsError('invalid-argument', 'Solicitud no válida.');
+  if (!isValidToken(token) || !isTimeZone(timeZone) || (language !== undefined && !isLanguage(language)))
+    throw invalidRequest();
   const access = await db().doc(`access/${auth.uid}`).get();
-  if (access.data()?.status !== 'approved') throw new HttpsError('permission-denied', 'Tu cuenta aún no tiene acceso.');
+  if (access.data()?.status !== 'approved') throw fail('permission-denied', (t) => t.noAccess);
   // Cada registro vuelve a poner al día la cola de la cuenta: como mucho 20 por hora
   const limitRef = db().doc(`push_limits/${auth.uid}`);
   await db().runTransaction(async (tx) => {
@@ -128,8 +165,7 @@ export const registerPushDevice = onCall({ region: REGION }, async (request) => 
     const recent = (((await tx.get(limitRef)).data()?.at as string[] | undefined) ?? []).filter(
       (at) => Date.parse(at) > hourAgo
     );
-    if (recent.length >= MAX_REGISTRATIONS_PER_HOUR)
-      throw new HttpsError('resource-exhausted', 'Demasiados intentos seguidos. Inténtalo de nuevo en un rato.');
+    if (recent.length >= MAX_REGISTRATIONS_PER_HOUR) throw fail('resource-exhausted', (t) => t.tooManyRegistrations);
     tx.set(limitRef, { at: [...recent, new Date().toISOString()] }, { merge: true });
   });
 
@@ -151,7 +187,7 @@ export const registerPushDevice = onCall({ region: REGION }, async (request) => 
     devicesRef(auth.uid).set({ timeZone, updatedAt }),
     tokensRef(auth.uid)
       .doc(id)
-      .set({ token, timeZone, showTitle: showTitle === true, updatedAt }),
+      .set({ token, timeZone, showTitle: showTitle === true, language: languageOf(language), updatedAt }),
     tokenIndexRef(id).set({ uid: auth.uid, updatedAt })
   ]);
   // Como mucho diez dispositivos por cuenta: los que llevan más tiempo sin registrarse salen
@@ -163,10 +199,10 @@ export const registerPushDevice = onCall({ region: REGION }, async (request) => 
 });
 
 // Al desactivarlas en un dispositivo o cerrar sesión en él: su token se borra
-export const unregisterPushDevice = onCall({ region: REGION }, async (request) => {
+export const unregisterPushDevice = onUserCall({ region: REGION }, async (request) => {
   const auth = requireAuth(request);
   const { token } = (request.data ?? {}) as { token?: unknown };
-  if (!isValidToken(token)) throw new HttpsError('invalid-argument', 'Solicitud no válida.');
+  if (!isValidToken(token)) throw invalidRequest();
   await dropToken(auth.uid, tokenId(token));
   logger.info('Push device unregistered');
   return { ok: true };
@@ -259,19 +295,34 @@ export const sendQueued = async (ref: DocumentReference, now: number, send: Send
   if (tokens.length === 0) return 'skipped';
 
   const ttl = Math.min(24 * 60 * 60, Math.max(60, Math.floor((claimed.due.toMillis() - now) / 1000)));
-  const alarm = { clock: String(claimed.clock), taskTitle: String(claimed.taskTitle) };
-  // Un envío por cada forma del texto: con el nombre de la tarea solo a los dispositivos que lo piden
+  const alarm = {
+    clock: claimed.clock,
+    taskTitle: claimed.taskTitle,
+    due: claimed.due.toMillis(),
+    timeZone: claimed.timeZone,
+    hasDueTime: claimed.hasDueTime
+  };
+  // Un envío por cada forma del texto: con el nombre de la tarea solo a los dispositivos que lo piden, y en el idioma
+  // de cada dispositivo
   const groups = [true, false]
-    .map((showTitle) => ({ showTitle, docs: tokens.filter((d) => (d.data().showTitle === true) === showTitle) }))
+    .flatMap((showTitle) =>
+      LANGUAGES.map((language) => ({
+        showTitle,
+        language,
+        docs: tokens.filter(
+          (d) => (d.data().showTitle === true) === showTitle && languageOf(d.data().language) === language
+        )
+      }))
+    )
     .filter((group) => group.docs.length > 0);
   const results = await Promise.all(
-    groups.map(async ({ showTitle, docs }) => ({
+    groups.map(async ({ showTitle, language, docs }) => ({
       docs,
       result: await send({
         tokens: docs.map((d) => d.data().token as string),
         data: {
-          title: notificationText(alarm, showTitle),
-          body: String(claimed.body),
+          title: notificationText(alarm, showTitle, language),
+          body: alarmBody(alarm, language),
           tag: String(claimed.key),
           // El momento de la alarma (la notificación lo muestra como su hora) y la dirección que abre su tarea
           at: claimed.at.toDate().toISOString(),
@@ -305,46 +356,42 @@ export const sendQueued = async (ref: DocumentReference, now: number, send: Send
 };
 
 // «PROBAR NOTIFICACIÓN»: un aviso ahora mismo a un dispositivo registrado de la cuenta, por el mismo camino que las
-// alarmas. Como mucho 5 por hora (push_limits/{uid}.tests, aparte de los registros). Si el token ya no vale, se borra
-// y se dice
+// alarmas y en su idioma. Como mucho 5 por hora (push_limits/{uid}.tests, aparte de los registros). Si el token ya no
+// vale, se borra y se dice
 const MAX_TESTS_PER_HOUR = 5;
 export const testPush = async (uid: string, token: string, send: SendMulticast = sendWithFcm, now = Date.now()) => {
   const id = tokenId(token);
-  if (!(await tokensRef(uid).doc(id).get()).exists)
-    throw new HttpsError('failed-precondition', 'Activa antes las alarmas con CLAR cerrada en este dispositivo.');
+  const device = await tokensRef(uid).doc(id).get();
+  if (!device.exists) throw fail('failed-precondition', (t) => t.notRegistered);
   const limitRef = db().doc(`push_limits/${uid}`);
   await db().runTransaction(async (tx) => {
     const recent = (((await tx.get(limitRef)).data()?.tests as string[] | undefined) ?? []).filter(
       (at) => Date.parse(at) > now - 60 * 60 * 1000
     );
-    if (recent.length >= MAX_TESTS_PER_HOUR)
-      throw new HttpsError('resource-exhausted', 'Ya has probado varias veces. Inténtalo de nuevo en un rato.');
+    if (recent.length >= MAX_TESTS_PER_HOUR) throw fail('resource-exhausted', (t) => t.tooManyTests);
     tx.set(limitRef, { tests: [...recent, new Date(now).toISOString()] }, { merge: true });
   });
   const result = await send({
     tokens: [token],
-    data: { title: 'CLAR', body: 'Así te avisará CLAR de tus alarmas, también con la app cerrada.', tag: 'clar-test' },
+    data: { title: 'CLAR', body: testNotificationBody(languageOf(device.data()?.language)), tag: 'clar-test' },
     webpush: { headers: { Urgency: 'high', TTL: '120' } }
   });
   const response = result.responses[0];
   if (response?.success) return;
   if (INVALID_TOKEN.has(response?.error?.code ?? '')) {
     await dropToken(uid, id);
-    throw new HttpsError(
-      'failed-precondition',
-      'Este dispositivo ya no recibe avisos: desactívalos y actívalos otra vez.'
-    );
+    throw fail('failed-precondition', (t) => t.tokenGone);
   }
   logger.warn('Test push failed', { code: response?.error?.code ?? 'unknown' });
-  throw new HttpsError('unavailable', 'No se pudo enviar ahora. Inténtalo de nuevo en un rato.');
+  throw fail('unavailable', (t) => t.unavailable);
 };
 
-export const sendTestPush = onCall({ region: REGION }, async (request) => {
+export const sendTestPush = onUserCall({ region: REGION }, async (request) => {
   const auth = requireAuth(request);
   const { token } = (request.data ?? {}) as { token?: unknown };
-  if (!isValidToken(token)) throw new HttpsError('invalid-argument', 'Solicitud no válida.');
+  if (!isValidToken(token)) throw invalidRequest();
   const access = await db().doc(`access/${auth.uid}`).get();
-  if (access.data()?.status !== 'approved') throw new HttpsError('permission-denied', 'Tu cuenta aún no tiene acceso.');
+  if (access.data()?.status !== 'approved') throw fail('permission-denied', (t) => t.noAccess);
   await testPush(auth.uid, token);
   return { ok: true };
 });

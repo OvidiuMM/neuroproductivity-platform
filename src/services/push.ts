@@ -1,12 +1,14 @@
 import { httpsCallable } from 'firebase/functions';
+import { LOCALE, messages } from '../i18n/locale';
 import { usingEmulators, type FirebaseServices } from './firebase';
 import { PUSH_SHOWN_CACHE } from './notifications';
 
 // NOTIFICACIONES PUSH de las alarmas, para que suenen con CLAR cerrada. Se activan en cada dispositivo («Avisarme
 // también con CLAR cerrada», en el menú de la cuenta): el dispositivo se registra con su token de Firebase Cloud
-// Messaging, su zona horaria y si quiere ver el nombre de la tarea, y el servidor (functions/src/push.ts) envía cada
-// alarma a su hora. El service worker (public/sw.js) la muestra. Sin la clave pública VAPID en la compilación
-// (VITE_FCM_VAPID_KEY) o con los emuladores, no se ofrece: las alarmas siguen avisando con CLAR abierta.
+// Messaging, su zona horaria, si quiere ver el nombre de la tarea y su idioma (el de la app en él: el servidor escribe
+// las notificaciones en ese idioma), y el servidor (functions/src/push.ts) envía cada alarma a su hora. El service
+// worker (public/sw.js) la muestra. Sin la clave pública VAPID en la compilación (VITE_FCM_VAPID_KEY) o con los
+// emuladores, no se ofrece: las alarmas siguen avisando con CLAR abierta.
 const VAPID_KEY = import.meta.env.VITE_FCM_VAPID_KEY?.trim();
 // El registro se renueva una vez al día como mucho (FCM cambia el token de vez en cuando; el servidor borra los que no
 // se renuevan en 30 días)
@@ -18,9 +20,25 @@ const registeredKey = (uid: string) => `${REGISTERED_PREFIX}${uid}`;
 const enabledKey = (uid: string) => `clar_push_enabled:${uid}`;
 const showTitleKey = (uid: string) => `clar_push_show_title:${uid}`;
 const timeZoneKey = (uid: string) => `clar_push_time_zone:${uid}`;
+const languageKey = (uid: string) => `clar_push_language:${uid}`;
 const ENDPOINT_PREFIX = 'clar_push_endpoint:';
 const endpointKey = (uid: string) => `${ENDPOINT_PREFIX}${uid}`;
 const currentTimeZone = () => Intl.DateTimeFormat().resolvedOptions().timeZone;
+
+const m = messages(
+  {
+    notReady: 'CLAR aún no está lista en este dispositivo. Ábrela con conexión e inténtalo de nuevo.',
+    notSupported: 'Este navegador no permite recibir las alarmas con CLAR cerrada.',
+    enableFirst: 'Activa antes las alarmas con CLAR cerrada.',
+    testFailed: 'No se pudo enviar ahora. Inténtalo de nuevo en un rato.'
+  },
+  {
+    notReady: "CLAR isn't ready on this device yet. Open it with a connection and try again.",
+    notSupported: "This browser can't receive alarms when CLAR is closed.",
+    enableFirst: 'First turn on notifications when CLAR is closed.',
+    testFailed: "Couldn't send it right now. Try again in a while."
+  }
+);
 
 export const pushAvailable = () =>
   Boolean(VAPID_KEY) &&
@@ -61,11 +79,7 @@ const currentToken = async ({ app }: FirebaseServices) => {
   const { getMessaging, getToken, isSupported } = await import('firebase/messaging');
   if (!(await isSupported())) return null;
   const registration = await navigator.serviceWorker.register('/sw.js');
-  await withTimeout(
-    navigator.serviceWorker.ready,
-    READY_TIMEOUT_MS,
-    'CLAR aún no está lista en este dispositivo. Ábrela con conexión e inténtalo de nuevo.'
-  );
+  await withTimeout(navigator.serviceWorker.ready, READY_TIMEOUT_MS, m.notReady);
   return (await getToken(getMessaging(app), { vapidKey: VAPID_KEY, serviceWorkerRegistration: registration })) || null;
 };
 
@@ -84,13 +98,21 @@ const unsubscribeHere = async () => {
 };
 
 // Registra este dispositivo si las tiene activadas y hay permiso. `force`: al momento (acaban de activarse o de
-// cambiar). También al momento si cambió la zona horaria del dispositivo (p. ej. de viaje) o si su suscripción push ya
-// no es la registrada (se perdió o cambió): se comprueba cada vez que se abre CLAR.
+// cambiar). También al momento si cambió la zona horaria del dispositivo (p. ej. de viaje), su idioma (o se registró
+// antes de 1.2.0, sin él) o si su suscripción push ya no es la registrada (se perdió o cambió): se comprueba cada vez
+// que se abre CLAR.
 export const registerPushDevice = async (services: FirebaseServices, uid: string, force = false) => {
   if (!isPushEnabled(uid) || Notification.permission !== 'granted') return false;
   const sameZone = read(timeZoneKey(uid)) === currentTimeZone();
+  const sameLanguage = read(languageKey(uid)) === LOCALE;
   const sameSubscription = (await currentEndpoint().catch(() => null)) === read(endpointKey(uid));
-  if (!force && sameZone && sameSubscription && Date.now() - Number(read(registeredKey(uid)) ?? 0) < REFRESH_MS)
+  if (
+    !force &&
+    sameZone &&
+    sameLanguage &&
+    sameSubscription &&
+    Date.now() - Number(read(registeredKey(uid)) ?? 0) < REFRESH_MS
+  )
     return true;
   const token = await currentToken(services);
   if (!token) return false;
@@ -100,10 +122,12 @@ export const registerPushDevice = async (services: FirebaseServices, uid: string
   )({
     token,
     timeZone: currentTimeZone(),
-    showTitle: isPushTitleShown(uid)
+    showTitle: isPushTitleShown(uid),
+    language: LOCALE
   });
   write(registeredKey(uid), String(Date.now()));
   write(timeZoneKey(uid), currentTimeZone());
+  write(languageKey(uid), LOCALE);
   write(endpointKey(uid), await currentEndpoint().catch(() => null));
   return true;
 };
@@ -115,22 +139,23 @@ export const unregisterPushDevice = async (services: FirebaseServices, uid: stri
   if (!pushAvailable() || !read(registeredKey(uid))) return;
   write(registeredKey(uid), null);
   write(timeZoneKey(uid), null);
+  write(languageKey(uid), null);
   write(endpointKey(uid), null);
   let token: string | null = null;
   if (Notification.permission === 'granted')
     token = await withTimeout(currentToken(services), UNREGISTER_TIMEOUT_MS).catch(() => null);
   await unsubscribeHere().catch(() => undefined);
   if (!token) return;
-  await withTimeout(httpsCallable(services.functions, 'unregisterPushDevice')({ token }), UNREGISTER_TIMEOUT_MS).catch(
-    () => undefined
-  );
+  await withTimeout(
+    httpsCallable(services.functions, 'unregisterPushDevice')({ token, language: LOCALE }),
+    UNREGISTER_TIMEOUT_MS
+  ).catch(() => undefined);
 };
 
 export const enablePush = async (services: FirebaseServices, uid: string) => {
   write(enabledKey(uid), '1');
   try {
-    if (!(await registerPushDevice(services, uid, true)))
-      throw new Error('Este navegador no permite recibir las alarmas con CLAR cerrada.');
+    if (!(await registerPushDevice(services, uid, true))) throw new Error(m.notSupported);
   } catch (e) {
     write(enabledKey(uid), null);
     throw e;
@@ -153,15 +178,14 @@ const TEST_ERRORS = new Set([
   'functions/not-found'
 ]);
 export const sendTestPush = async (services: FirebaseServices, uid: string) => {
-  if (!(await registerPushDevice(services, uid, true))) throw new Error('Activa antes las alarmas con CLAR cerrada.');
+  if (!(await registerPushDevice(services, uid, true))) throw new Error(m.enableFirst);
   const token = await currentToken(services);
-  if (!token) throw new Error('Este navegador no permite recibir las alarmas con CLAR cerrada.');
+  if (!token) throw new Error(m.notSupported);
   try {
-    await httpsCallable(services.functions, 'sendTestPush')({ token });
+    await httpsCallable(services.functions, 'sendTestPush')({ token, language: LOCALE });
   } catch (e) {
     const code = (e as { code?: unknown } | null)?.code;
-    if (typeof code === 'string' && TEST_ERRORS.has(code))
-      throw new Error('No se pudo enviar ahora. Inténtalo de nuevo en un rato.', { cause: e });
+    if (typeof code === 'string' && TEST_ERRORS.has(code)) throw new Error(m.testFailed, { cause: e });
     throw e;
   }
 };
