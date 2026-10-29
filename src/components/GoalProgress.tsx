@@ -7,13 +7,13 @@ const m = messages(
   {
     noTasks: 'Aún no tiene tareas vinculadas.',
     progressOf: (title: string) => `Progreso de «${title}»`,
-    valueText: (done: number, total: number) => `${done} de ${total} tareas hechas`,
+    valueText: (done: number, total: number) => `${done} de ${total} ${total === 1 ? 'tarea hecha' : 'tareas hechas'}`,
     summary: (done: number, total: number) => `${done} de ${total} ${total === 1 ? 'tarea hecha' : 'tareas hechas'}`
   },
   {
     noTasks: 'No linked tasks yet.',
     progressOf: (title) => `Progress of “${title}”`,
-    valueText: (done, total) => `${done} of ${total} tasks done`,
+    valueText: (done, total) => `${done} of ${total} ${total === 1 ? 'task done' : 'tasks done'}`,
     summary: (done, total) => `${done} of ${total} ${total === 1 ? 'task done' : 'tasks done'}`
   }
 );

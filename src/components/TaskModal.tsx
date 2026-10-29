@@ -1318,6 +1318,7 @@ export const TaskModal: React.FC<TaskModalProps> = ({
             >
               <span>
                 {m.moreOptions}
+                <span className="sr-only">: </span>
                 <span className="ml-2 font-normal tracking-normal text-slate-500 normal-case">{m.moreOptionsList}</span>
               </span>
               <ChevronDown

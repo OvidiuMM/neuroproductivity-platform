@@ -14,7 +14,7 @@ const m = messages(
     releaseNotes: (version: string) => `v${version}: novedades de esta versión`,
     sections: 'Secciones',
     activeList: 'Lista activa',
-    listCount: (label: string, count: number) => `${label}, ${count} tareas`,
+    listCount: (label: string, count: number) => `${label}, ${count} ${count === 1 ? 'tarea' : 'tareas'}`,
     accountOf: (name: string) => `Tu cuenta: ${name}`,
     account: 'Tu cuenta'
   },
