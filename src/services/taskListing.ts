@@ -9,6 +9,12 @@ import {
   type ArchivedStatus
 } from './tasks';
 import { isAreaId } from './wheel';
+import { LOCALE_TAG, messages } from '../i18n/locale';
+
+const m = messages(
+  { halfDay: 'Medio día (4 h)', oneDay: '1 día (8 h)', moreThanADay: 'Más de 1 día' },
+  { halfDay: 'Half a day (4 h)', oneDay: '1 day (8 h)', moreThanADay: 'More than 1 day' }
+);
 
 // ESTIMACIÓN: duración estimada de la tarea, en minutos
 export const ESTIMATE_OPTIONS: { value: number; label: string }[] = [
@@ -16,9 +22,9 @@ export const ESTIMATE_OPTIONS: { value: number; label: string }[] = [
   { value: 30, label: '30 min' },
   { value: 60, label: '1 h' },
   { value: 120, label: '2 h' },
-  { value: 240, label: 'Medio día (4 h)' },
-  { value: 480, label: '1 día (8 h)' },
-  { value: 960, label: 'Más de 1 día' }
+  { value: 240, label: m.halfDay },
+  { value: 480, label: m.oneDay },
+  { value: 960, label: m.moreThanADay }
 ];
 
 export const formatEstimate = (minutes: number) =>
@@ -93,7 +99,7 @@ const byEstimateAsc = (a: TaskItem, b: TaskItem) => (a.estimateMinutes ?? Infini
 // sirve: localeCompare no lo ordena el último)
 type AreaName = (id: string) => string;
 const byCategoryAsc = (a: TaskItem, b: TaskItem, name: AreaName) => {
-  if (a.wheelCategory && b.wheelCategory) return name(a.wheelCategory).localeCompare(name(b.wheelCategory), 'es');
+  if (a.wheelCategory && b.wheelCategory) return name(a.wheelCategory).localeCompare(name(b.wheelCategory), LOCALE_TAG);
   return (a.wheelCategory ? 0 : 1) - (b.wheelCategory ? 0 : 1);
 };
 

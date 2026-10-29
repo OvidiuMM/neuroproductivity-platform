@@ -5,6 +5,52 @@ import { useModalFocus } from '../hooks/useModalFocus';
 import { TaskStatusSelect } from './TaskStatusSelect';
 import { TaskDates } from './TaskDates';
 import { isCancelled } from '../services/tasks';
+import { LOCALE_TAG, messages } from '../i18n/locale';
+
+const m = messages(
+  {
+    archivedTasks: 'Tareas archivadas',
+    title: (count: number) => `Tareas archivadas (${count})`,
+    close: 'Cerrar',
+    intro: (
+      <>
+        Las tareas marcadas como <strong>Hecha</strong> o <strong>Cancelada</strong> se guardan aquí. Cambia su estado
+        para devolverlas a su lista.
+      </>
+    ),
+    searchPlaceholder: 'Buscar en las tareas archivadas…',
+    search: 'Buscar en las tareas archivadas',
+    none: 'Todavía no hay tareas archivadas.',
+    noMatch: 'Ninguna tarea archivada coincide con la búsqueda.',
+    work: 'Profesional',
+    personal: 'Personal',
+    closedOn: (cancelled: boolean, date: string) => `· ${cancelled ? 'Cancelada' : 'Hecha'} el ${date}`,
+    confirmDelete: (title: string) => `¿Eliminar definitivamente «${title}»?`,
+    deleteTitle: 'Eliminar tarea',
+    deleteTask: (title: string) => `Eliminar «${title}»`
+  },
+  {
+    archivedTasks: 'Archived tasks',
+    title: (count) => `Archived tasks (${count})`,
+    close: 'Close',
+    intro: (
+      <>
+        Tasks marked as <strong>Done</strong> or <strong>Canceled</strong> are kept here. Change their status to send
+        them back to their list.
+      </>
+    ),
+    searchPlaceholder: 'Search archived tasks…',
+    search: 'Search archived tasks',
+    none: 'No archived tasks yet.',
+    noMatch: 'No archived tasks match your search.',
+    work: 'Work',
+    personal: 'Personal',
+    closedOn: (cancelled, date) => `· ${cancelled ? 'Canceled' : 'Done'} on ${date}`,
+    confirmDelete: (title) => `Delete “${title}” permanently?`,
+    deleteTitle: 'Delete task',
+    deleteTask: (title) => `Delete “${title}”`
+  }
+);
 
 interface ArchivedTasksModalProps {
   isOpen: boolean;
@@ -14,7 +60,7 @@ interface ArchivedTasksModalProps {
   onDeleteTask: (id: string) => void;
 }
 
-const doneFormat = new Intl.DateTimeFormat('es-ES', { day: 'numeric', month: 'short', year: 'numeric' });
+const doneFormat = new Intl.DateTimeFormat(LOCALE_TAG, { day: 'numeric', month: 'short', year: 'numeric' });
 
 // Tareas hechas de las dos listas; cambiar el estado las devuelve a su lista
 export const ArchivedTasksModal: React.FC<ArchivedTasksModalProps> = ({
@@ -41,17 +87,17 @@ export const ArchivedTasksModal: React.FC<ArchivedTasksModalProps> = ({
         ref={dialogRef}
         role="dialog"
         aria-modal="true"
-        aria-label="Tareas archivadas"
+        aria-label={m.archivedTasks}
         className="animate-in fade-in zoom-in-95 my-auto w-full max-w-2xl overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-2xl duration-200"
       >
         <div className="flex items-center justify-between border-b border-slate-100 bg-slate-50/90 px-6 py-4">
           <h2 className="flex items-center gap-2 text-sm font-bold text-slate-900">
             <Archive className="h-4 w-4 text-indigo-600" />
-            Tareas archivadas ({tasks.length})
+            {m.title(tasks.length)}
           </h2>
           <button
             onClick={onClose}
-            aria-label="Cerrar"
+            aria-label={m.close}
             className="rounded-lg p-1.5 text-slate-500 transition-colors hover:bg-slate-200/60 hover:text-slate-600"
           >
             <X className="h-5 w-5" />
@@ -59,10 +105,7 @@ export const ArchivedTasksModal: React.FC<ArchivedTasksModalProps> = ({
         </div>
 
         <div className="space-y-4 p-6">
-          <p className="text-xs text-slate-600">
-            Las tareas marcadas como <strong>Hecha</strong> o <strong>Cancelada</strong> se guardan aquí. Cambia su
-            estado para devolverlas a su lista.
-          </p>
+          <p className="text-xs text-slate-600">{m.intro}</p>
 
           <label className="relative block">
             <Search className="absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-slate-500" />
@@ -70,8 +113,8 @@ export const ArchivedTasksModal: React.FC<ArchivedTasksModalProps> = ({
               type="search"
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              placeholder="Buscar en las tareas archivadas…"
-              aria-label="Buscar en las tareas archivadas"
+              placeholder={m.searchPlaceholder}
+              aria-label={m.search}
               data-autofocus
               className="w-full rounded-xl border border-slate-300 py-2 pr-3 pl-9 text-xs focus:ring-2 focus:ring-indigo-400 focus:outline-none"
             />
@@ -79,9 +122,7 @@ export const ArchivedTasksModal: React.FC<ArchivedTasksModalProps> = ({
 
           {visible.length === 0 ? (
             <p className="rounded-2xl border border-slate-200 bg-slate-50 p-6 text-center text-xs text-slate-500">
-              {tasks.length === 0
-                ? 'Todavía no hay tareas archivadas.'
-                : 'Ninguna tarea archivada coincide con la búsqueda.'}
+              {tasks.length === 0 ? m.none : m.noMatch}
             </p>
           ) : (
             <ul className="max-h-[55vh] space-y-2 overflow-y-auto pr-1">
@@ -93,11 +134,9 @@ export const ArchivedTasksModal: React.FC<ArchivedTasksModalProps> = ({
                   <div className="min-w-0 flex-1 space-y-1">
                     <span className="block text-xs font-bold break-words text-slate-900">{task.title}</span>
                     <span className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[11px] text-slate-500">
-                      <span>{task.listContext === 'WORK' ? 'Profesional' : 'Personal'}</span>
+                      <span>{task.listContext === 'WORK' ? m.work : m.personal}</span>
                       {task.doneAt && (
-                        <span>
-                          · {isCancelled(task) ? 'Cancelada' : 'Hecha'} el {doneFormat.format(new Date(task.doneAt))}
-                        </span>
+                        <span>{m.closedOn(isCancelled(task), doneFormat.format(new Date(task.doneAt)))}</span>
                       )}
                       <TaskDates task={task} />
                     </span>
@@ -111,11 +150,11 @@ export const ArchivedTasksModal: React.FC<ArchivedTasksModalProps> = ({
                     <button
                       type="button"
                       onClick={() => {
-                        if (window.confirm(`¿Eliminar definitivamente «${task.title}»?`)) onDeleteTask(task.id);
+                        if (window.confirm(m.confirmDelete(task.title))) onDeleteTask(task.id);
                       }}
                       className="rounded-lg p-1.5 text-slate-500 hover:bg-slate-100 hover:text-red-600"
-                      title="Eliminar tarea"
-                      aria-label={`Eliminar «${task.title}»`}
+                      title={m.deleteTitle}
+                      aria-label={m.deleteTask(task.title)}
                     >
                       <Trash2 className="h-4 w-4" />
                     </button>

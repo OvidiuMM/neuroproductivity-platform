@@ -4,6 +4,41 @@ import { TaskItem, TaskStatus } from '../types';
 import { buildCalendarEvent, buildIcs, googleCalendarUrl, outlookCalendarUrl } from '../services/calendar';
 import { TaskStatusSelect } from './TaskStatusSelect';
 import { downloadFile, fileSlug } from '../services/download';
+import { messages } from '../i18n/locale';
+
+const m = messages(
+  {
+    actionsFor: (title: string) => `Acciones de «${title}»`,
+    actions: 'Acciones',
+    status: 'Estado',
+    addToCalendar: 'Añadir al calendario',
+    outlookPersonal: 'Outlook.com (cuenta personal)',
+    outlookWork: 'Outlook / Microsoft 365 (trabajo)',
+    downloadIcs: 'Descargar .ics (Apple y otros)',
+    needsDueDate: 'Pon una fecha límite para añadirla al calendario.',
+    downloadJsonFor: (title: string) => `Descargar «${title}» (JSON)`,
+    downloadJson: 'Descargar (JSON)',
+    deleteTask: (title: string) => `Eliminar «${title}»`,
+    delete: 'Eliminar',
+    // Si el título no deja nombre de archivo
+    fileFallback: 'tarea'
+  },
+  {
+    actionsFor: (title) => `Actions for “${title}”`,
+    actions: 'Actions',
+    status: 'Status',
+    addToCalendar: 'Add to calendar',
+    outlookPersonal: 'Outlook.com (personal account)',
+    outlookWork: 'Outlook / Microsoft 365 (work)',
+    downloadIcs: 'Download .ics (Apple and others)',
+    needsDueDate: 'Set a due date to add it to your calendar.',
+    downloadJsonFor: (title) => `Download “${title}” (JSON)`,
+    downloadJson: 'Download (JSON)',
+    deleteTask: (title) => `Delete “${title}”`,
+    delete: 'Delete',
+    fileFallback: 'task'
+  }
+);
 
 interface TaskActionsMenuProps {
   task: TaskItem;
@@ -82,8 +117,8 @@ export const TaskActionsMenu: React.FC<TaskActionsMenuProps> = ({
         onClick={toggle}
         aria-expanded={isOpen}
         aria-controls={panelId}
-        aria-label={`Acciones de «${task.title}»`}
-        title="Acciones"
+        aria-label={m.actionsFor(task.title)}
+        title={m.actions}
         className="flex h-11 w-11 items-center justify-center rounded-xl text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-800"
       >
         <MoreHorizontal className="h-5 w-5" aria-hidden="true" />
@@ -98,7 +133,7 @@ export const TaskActionsMenu: React.FC<TaskActionsMenuProps> = ({
         >
           <div className="flex items-center justify-between gap-2 px-3 py-2">
             <span className="text-xs font-semibold text-slate-600" aria-hidden="true">
-              Estado
+              {m.status}
             </span>
             <TaskStatusSelect
               status={task.status}
@@ -110,7 +145,7 @@ export const TaskActionsMenu: React.FC<TaskActionsMenuProps> = ({
 
           <div className="border-t border-slate-100 py-1">
             <p id={calendarId} className="px-3 pt-1 pb-0.5 text-[11px] font-semibold text-slate-500">
-              Añadir al calendario
+              {m.addToCalendar}
             </p>
             {event ? (
               <ul aria-labelledby={calendarId}>
@@ -133,7 +168,7 @@ export const TaskActionsMenu: React.FC<TaskActionsMenuProps> = ({
                     rel="noopener noreferrer"
                     onClick={() => setIsOpen(false)}
                   >
-                    Outlook.com (cuenta personal)
+                    {m.outlookPersonal}
                   </a>
                 </li>
                 <li>
@@ -144,7 +179,7 @@ export const TaskActionsMenu: React.FC<TaskActionsMenuProps> = ({
                     rel="noopener noreferrer"
                     onClick={() => setIsOpen(false)}
                   >
-                    Outlook / Microsoft 365 (trabajo)
+                    {m.outlookWork}
                   </a>
                 </li>
                 <li>
@@ -153,18 +188,18 @@ export const TaskActionsMenu: React.FC<TaskActionsMenuProps> = ({
                     className={linkClass}
                     onClick={act(() =>
                       downloadFile(
-                        `${fileSlug(task.title, 'tarea')}.ics`,
+                        `${fileSlug(task.title, m.fileFallback)}.ics`,
                         buildIcs(event),
                         'text/calendar;charset=utf-8'
                       )
                     )}
                   >
-                    Descargar .ics (Apple y otros)
+                    {m.downloadIcs}
                   </button>
                 </li>
               </ul>
             ) : (
-              <p className="px-3 pb-1 text-xs text-slate-600">Pon una fecha límite para añadirla al calendario.</p>
+              <p className="px-3 pb-1 text-xs text-slate-600">{m.needsDueDate}</p>
             )}
           </div>
 
@@ -172,22 +207,22 @@ export const TaskActionsMenu: React.FC<TaskActionsMenuProps> = ({
             <button
               type="button"
               onClick={act(onDownload)}
-              aria-label={`Descargar «${task.title}» (JSON)`}
+              aria-label={m.downloadJsonFor(task.title)}
               className={`${itemClass} border-t border-slate-100`}
             >
               <FileDown className="h-4 w-4 text-indigo-600" aria-hidden="true" />
-              Descargar (JSON)
+              {m.downloadJson}
             </button>
           )}
 
           <button
             type="button"
             onClick={act(onDelete)}
-            aria-label={`Eliminar «${task.title}»`}
+            aria-label={m.deleteTask(task.title)}
             className={`${itemClass} border-t border-slate-100 text-red-700 hover:bg-red-50`}
           >
             <Trash2 className="h-4 w-4" aria-hidden="true" />
-            Eliminar
+            {m.delete}
           </button>
         </div>
       )}

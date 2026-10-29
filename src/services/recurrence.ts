@@ -1,5 +1,56 @@
 import { MonthlyMode, Recurrence, RecurrenceFrequency, TaskItem } from '../types';
 import { toLocalDate } from './tasks';
+import { LOCALE_TAG, messages } from '../i18n/locale';
+
+// «1st», «2nd», «3rd», «4th», «11th», «22nd»…
+const englishOrdinal = (n: number) => {
+  if (n % 100 >= 11 && n % 100 <= 13) return `${n}th`;
+  if (n % 10 === 1) return `${n}st`;
+  if (n % 10 === 2) return `${n}nd`;
+  if (n % 10 === 3) return `${n}rd`;
+  return `${n}th`;
+};
+
+const m = messages(
+  {
+    units: {
+      DAILY: ['día', 'días'],
+      WEEKLY: ['semana', 'semanas'],
+      MONTHLY: ['mes', 'meses'],
+      YEARLY: ['año', 'años']
+    } satisfies Record<RecurrenceFrequency, [string, string]>,
+    weekdayNames: ['domingo', 'lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado'],
+    weekdayShort: ['dom', 'lun', 'mar', 'mié', 'jue', 'vie', 'sáb'],
+    ordinals: ['', '1.er', '2.º', '3.er', '4.º'],
+    every: (unit: string) => `Cada ${unit}`,
+    everyN: (n: number, units: string) => `Cada ${n} ${units}`,
+    nthWeekday: (ordinal: string, weekday: string) => `el ${ordinal} ${weekday}`,
+    lastWeekday: (weekday: string) => `el último ${weekday}`,
+    monthDay: (day: number) => `el día ${day}`,
+    yearDay: (date: string) => `el ${date}`,
+    afterDone: (n: number, units: string) => `${n} ${units} después de hacerla`,
+    until: (text: string, date: string) => `${text} (hasta el ${date})`
+  },
+  {
+    units: {
+      DAILY: ['day', 'days'],
+      WEEKLY: ['week', 'weeks'],
+      MONTHLY: ['month', 'months'],
+      YEARLY: ['year', 'years']
+    },
+    weekdayNames: ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'],
+    weekdayShort: ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'],
+    ordinals: ['', '1st', '2nd', '3rd', '4th'],
+    every: (unit) => `Every ${unit}`,
+    everyN: (n, units) => `Every ${n} ${units}`,
+    nthWeekday: (ordinal, weekday) => `on the ${ordinal} ${weekday}`,
+    lastWeekday: (weekday) => `on the last ${weekday}`,
+    monthDay: (day) => `on the ${englishOrdinal(day)}`,
+    yearDay: (date) => `on ${date}`,
+    afterDone: (n, units) => `${n} ${units} after you do it`,
+    until: (text, date) => `${text} (until ${date})`
+  }
+);
 
 // Fechas locales (YYYY-MM-DD) sin hora: la hora de la tarea se conserva aparte
 const pad = (n: number) => String(n).padStart(2, '0');
@@ -38,14 +89,8 @@ export const repeatsFromCompletion = (rec: Recurrence) =>
 // Días entre el día en que se hace y la siguiente (repetición desde que se hace)
 const completionStep = (rec: Recurrence) => intervalOf(rec) * (rec.frequency === 'WEEKLY' ? 7 : 1);
 
-const UNITS: Record<RecurrenceFrequency, [string, string]> = {
-  DAILY: ['día', 'días'],
-  WEEKLY: ['semana', 'semanas'],
-  MONTHLY: ['mes', 'meses'],
-  YEARLY: ['año', 'años']
-};
 // «día» o «días» según N
-export const repeatUnit = (frequency: RecurrenceFrequency, n: number) => UNITS[frequency][n === 1 ? 0 : 1];
+export const repeatUnit = (frequency: RecurrenceFrequency, n: number) => m.units[frequency][n === 1 ? 0 : 1];
 
 // Siguiente fecha después de `from` según la regla (sin comprobar `until` ni el día de hoy)
 const stepAfter = (from: Date, rec: Recurrence): Date => {
@@ -217,15 +262,22 @@ export const nextRecurringTask = (task: TaskItem, now = new Date()): TaskItem | 
   };
 };
 
-const WEEKDAY_NAMES = ['domingo', 'lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado'];
-const WEEKDAY_SHORT = ['dom', 'lun', 'mar', 'mié', 'jue', 'vie', 'sáb'];
-const ORDINALS = ['', '1.er', '2.º', '3.er', '4.º'];
-const untilFormat = new Intl.DateTimeFormat('es-ES', { day: 'numeric', month: 'short', year: 'numeric' });
-const dayMonthFormat = new Intl.DateTimeFormat('es-ES', { day: 'numeric', month: 'long' });
+const untilFormat = new Intl.DateTimeFormat(LOCALE_TAG, { day: 'numeric', month: 'short', year: 'numeric' });
+const dayMonthFormat = new Intl.DateTimeFormat(LOCALE_TAG, { day: 'numeric', month: 'long' });
 
 // «Cada día», «Cada 3 días»…
 export const everyPeriod = (n: number, frequency: RecurrenceFrequency) =>
-  n === 1 ? `Cada ${repeatUnit(frequency, 1)}` : `Cada ${n} ${repeatUnit(frequency, n)}`;
+  n === 1 ? m.every(repeatUnit(frequency, 1)) : m.everyN(n, repeatUnit(frequency, n));
+
+// «3 días después de hacerla» (contando desde el día en que se hace)
+export const afterDoneText = (n: number, frequency: RecurrenceFrequency) => m.afterDone(n, repeatUnit(frequency, n));
+
+// El día de cada mes: «el día 15», «el 2.º lunes» o «el último lunes» (`weekday` sigue a Date.getDay())
+export const monthlyDayText = (mode: MonthlyMode, monthDay: number, weekday: number, nth: number) => {
+  if (mode === 'NTH_WEEKDAY') return m.nthWeekday(m.ordinals[nth], m.weekdayNames[weekday]);
+  if (mode === 'LAST_WEEKDAY') return m.lastWeekday(m.weekdayNames[weekday]);
+  return m.monthDay(monthDay);
+};
 
 // Regla en fechas fijas, p. ej. "Cada mes, el 2.º lunes"
 const describeSchedule = (rec: Recurrence, due?: Date): string => {
@@ -237,18 +289,20 @@ const describeSchedule = (rec: Recurrence, due?: Date): string => {
       const days = (rec.weekdays?.length ? rec.weekdays : due ? [due.getDay()] : [])
         .slice()
         .sort((a, b) => ((a + 6) % 7) - ((b + 6) % 7))
-        .map((d) => WEEKDAY_SHORT[d]);
+        .map((d) => m.weekdayShort[d]);
       return `${everyPeriod(n, 'WEEKLY')}${days.length ? `: ${days.join(', ')}` : ''}`;
     }
     case 'MONTHLY': {
-      const prefix = everyPeriod(n, 'MONTHLY');
-      const weekday = WEEKDAY_NAMES[rec.weekday ?? due?.getDay() ?? 1];
-      if (rec.monthlyMode === 'NTH_WEEKDAY') return `${prefix}, el ${ORDINALS[rec.nth ?? 1]} ${weekday}`;
-      if (rec.monthlyMode === 'LAST_WEEKDAY') return `${prefix}, el último ${weekday}`;
-      return `${prefix}, el día ${rec.monthDay ?? due?.getDate() ?? 1}`;
+      const day = monthlyDayText(
+        rec.monthlyMode ?? 'DAY_OF_MONTH',
+        rec.monthDay ?? due?.getDate() ?? 1,
+        rec.weekday ?? due?.getDay() ?? 1,
+        rec.nth ?? 1
+      );
+      return `${everyPeriod(n, 'MONTHLY')}, ${day}`;
     }
     case 'YEARLY':
-      return `${everyPeriod(n, 'YEARLY')}${due ? `, el ${dayMonthFormat.format(due)}` : ''}`;
+      return `${everyPeriod(n, 'YEARLY')}${due ? `, ${m.yearDay(dayMonthFormat.format(due))}` : ''}`;
   }
 };
 
@@ -256,9 +310,9 @@ const describeSchedule = (rec: Recurrence, due?: Date): string => {
 export const describeRecurrence = (rec: Recurrence, dueDate?: string): string => {
   const n = intervalOf(rec);
   const text = repeatsFromCompletion(rec)
-    ? `${n} ${repeatUnit(rec.frequency, n)} después de hacerla`
+    ? afterDoneText(n, rec.frequency)
     : describeSchedule(rec, dueDate ? toLocalDate(dueDate) : undefined);
-  return rec.until ? `${text} (hasta el ${untilFormat.format(toLocalDate(rec.until))})` : text;
+  return rec.until ? m.until(text, untilFormat.format(toLocalDate(rec.until))) : text;
 };
 
 // RRULE (RFC 5545) para exportar la serie al calendario

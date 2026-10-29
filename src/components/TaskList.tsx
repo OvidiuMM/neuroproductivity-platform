@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Goal, TaskItem, ListContext, TaskPriority, TaskStatus } from '../types';
-import { PRIORITY_LABEL, isArchived } from '../services/tasks';
+import { PRIORITY_LABEL, isArchived, statusLabel } from '../services/tasks';
 import { blockerOf, tasksById } from '../services/dependencies';
 import {
   DEFAULT_LIST_PREFS,
@@ -20,21 +20,119 @@ import { TaskCard } from './TaskCard';
 import { BottomSheet } from './BottomSheet';
 import { DRAFTS_BUTTON_ID } from './TaskDraftsModal';
 import { Plus, Archive, Layers, ArrowUpDown, CheckCircle2, FilePen, SlidersHorizontal, X } from 'lucide-react';
+import { messages } from '../i18n/locale';
 
-const DEADLINE_FILTERS: { value: DeadlineFilter; label: string }[] = [
-  { value: 'ALL', label: 'Todas' },
-  { value: 'OVERDUE', label: 'Vencidas' },
-  { value: 'NEXT_7_DAYS', label: 'Próximos 7 días' },
-  { value: 'WITH_DATE', label: 'Con fecha límite' },
-  { value: 'NO_DATE', label: 'Sin fecha límite' }
-];
-const SORT_OPTIONS: { value: SortBy; label: string }[] = [
-  { value: 'priority', label: 'Prioridad (de crítica a baja)' },
-  { value: 'deadline', label: 'Fecha límite (más próxima primero)' },
-  { value: 'estimate', label: 'Estimación (más cortas primero)' },
-  { value: 'date', label: 'Cambiadas hace menos' },
-  { value: 'category', label: 'Área de la Rueda (o de la meta)' }
-];
+const m = messages(
+  {
+    deadlineFilters: {
+      ALL: 'Todas',
+      OVERDUE: 'Vencidas',
+      NEXT_7_DAYS: 'Próximos 7 días',
+      WITH_DATE: 'Con fecha límite',
+      NO_DATE: 'Sin fecha límite'
+    } satisfies Record<DeadlineFilter, string>,
+    sortOptions: {
+      priority: 'Prioridad (de crítica a baja)',
+      deadline: 'Fecha límite (más próxima primero)',
+      estimate: 'Estimación (más cortas primero)',
+      date: 'Cambiadas hace menos',
+      category: 'Área de la Rueda (o de la meta)'
+    } satisfies Record<SortBy, string>,
+    priority: 'Prioridad',
+    allFeminine: 'Todas',
+    allMasculine: 'Todos',
+    estimateUpTo: 'Estimación hasta',
+    any: 'Cualquiera',
+    dueDate: 'Fecha límite',
+    status: 'Estado',
+    wheelArea: 'Área de la Rueda',
+    hiddenByFilters: (count: number) =>
+      `${count === 1 ? '1 tarea oculta' : `${count} tareas ocultas`} por los filtros.`,
+    addTask: 'Añadir tarea',
+    active: 'Activas',
+    someday: 'Algún día',
+    archived: 'Archivadas',
+    drafts: 'Borradores',
+    sortAndFilter: 'Ordenar y filtrar',
+    sortBy: 'Ordenar por:',
+    filters: 'Filtros',
+    activeFilters: 'Filtros activos',
+    removeFilter: (text: string) => `Quitar el filtro ${text}`,
+    top10Filters: 'Filtros del Top 10',
+    clearFilters: 'Quitar filtros',
+    showTasks: (count: number) => (count === 1 ? 'Ver 1 tarea' : `Ver ${count} tareas`),
+    yourTop10: 'Tu Top 10',
+    allBlocked: 'Todas las tareas de esta lista esperan a otra. Las tienes debajo.',
+    noneMatch: (hidden: number) =>
+      `Ninguna tarea coincide con los filtros (${hidden} ${hidden === 1 ? 'oculta' : 'ocultas'}).`,
+    showAll: 'Mostrar todas las tareas',
+    emptyList: 'No hay tareas en esta lista.',
+    addFirst: 'Añadir la primera tarea',
+    rest: (from: number) => `El resto de tareas (de la ${from} en adelante)`,
+    restList: (from: number) => `Posición ${from} en adelante`,
+    forSomeday: 'Para algún día',
+    somedayIntro:
+      'Lo que quieres hacer algún día, sin prisa. No entra en tu Top 10, pero queda aquí para que lo revises cuando quieras.',
+    somedayEmpty: 'No tienes nada guardado para algún día.'
+  },
+  {
+    deadlineFilters: {
+      ALL: 'All',
+      OVERDUE: 'Overdue',
+      NEXT_7_DAYS: 'Next 7 days',
+      WITH_DATE: 'With a due date',
+      NO_DATE: 'No due date'
+    },
+    sortOptions: {
+      priority: 'Priority (critical to low)',
+      deadline: 'Due date (soonest first)',
+      estimate: 'Estimate (shortest first)',
+      date: 'Recently changed',
+      category: "Wheel area (or the goal's)"
+    },
+    priority: 'Priority',
+    allFeminine: 'All',
+    allMasculine: 'All',
+    estimateUpTo: 'Estimate up to',
+    any: 'Any',
+    dueDate: 'Due date',
+    status: 'Status',
+    wheelArea: 'Wheel area',
+    hiddenByFilters: (count) => `${count === 1 ? '1 task' : `${count} tasks`} hidden by the filters.`,
+    addTask: 'Add task',
+    active: 'Active',
+    someday: 'Someday',
+    archived: 'Archived',
+    drafts: 'Drafts',
+    sortAndFilter: 'Sort and filter',
+    sortBy: 'Sort by:',
+    filters: 'Filters',
+    activeFilters: 'Active filters',
+    removeFilter: (text) => `Remove the filter ${text}`,
+    top10Filters: 'Top 10 filters',
+    clearFilters: 'Clear filters',
+    showTasks: (count) => (count === 1 ? 'Show 1 task' : `Show ${count} tasks`),
+    yourTop10: 'Your Top 10',
+    allBlocked: "Every task in this list is waiting for another one. You'll find them below.",
+    noneMatch: (hidden) => `No tasks match the filters (${hidden} hidden).`,
+    showAll: 'Show all tasks',
+    emptyList: 'There are no tasks in this list.',
+    addFirst: 'Add the first task',
+    rest: (from) => `The rest of your tasks (from number ${from} on)`,
+    restList: (from) => `Position ${from} onward`,
+    forSomeday: 'For someday',
+    somedayIntro:
+      "Things you'd like to do someday, with no rush. They don't go into your Top 10, but they stay here for you to review whenever you like.",
+    somedayEmpty: "You haven't saved anything for someday."
+  }
+);
+
+const DEADLINE_FILTERS: { value: DeadlineFilter; label: string }[] = (
+  ['ALL', 'OVERDUE', 'NEXT_7_DAYS', 'WITH_DATE', 'NO_DATE'] as const
+).map((value) => ({ value, label: m.deadlineFilters[value] }));
+const SORT_OPTIONS: { value: SortBy; label: string }[] = (
+  ['priority', 'deadline', 'estimate', 'date', 'category'] as const
+).map((value) => ({ value, label: m.sortOptions[value] }));
 const FILTERS_BUTTON_ID = 'list-filters-button';
 
 interface FilterField {
@@ -115,10 +213,10 @@ export const TaskList: React.FC<TaskListProps> = ({
     {
       key: 'priority',
       id: 'filter-priority',
-      label: 'Prioridad',
+      label: m.priority,
       value: prefs.filters.priority,
       options: [
-        { value: 'ALL', label: 'Todas' },
+        { value: 'ALL', label: m.allFeminine },
         ...(['CRITICAL', 'HIGH', 'MEDIUM', 'LOW'] as TaskPriority[]).map((p) => ({
           value: p,
           label: PRIORITY_LABEL[p]
@@ -128,39 +226,40 @@ export const TaskList: React.FC<TaskListProps> = ({
     {
       key: 'maxEstimate',
       id: 'filter-estimate',
-      label: 'Estimación hasta',
+      label: m.estimateUpTo,
       value: String(prefs.filters.maxEstimate),
       options: [
-        { value: 'ALL', label: 'Cualquiera' },
+        { value: 'ALL', label: m.any },
         ...ESTIMATE_OPTIONS.map((o) => ({ value: String(o.value), label: o.label }))
       ]
     },
     {
       key: 'deadline',
       id: 'filter-deadline',
-      label: 'Fecha límite',
+      label: m.dueDate,
       value: prefs.filters.deadline,
       options: DEADLINE_FILTERS
     },
     {
       key: 'status',
       id: 'filter-status',
-      label: 'Estado',
+      label: m.status,
       value: prefs.filters.status,
       options: [
-        { value: 'ALL', label: 'Todos' },
-        { value: 'PENDING', label: 'Pendiente' },
-        { value: 'IN_PROGRESS', label: 'En progreso' },
-        { value: 'BLOCKED', label: 'Bloqueada' }
+        { value: 'ALL', label: m.allMasculine },
+        ...(['PENDING', 'IN_PROGRESS', 'BLOCKED'] as const).map((status) => ({
+          value: status,
+          label: statusLabel(status)
+        }))
       ]
     },
     {
       key: 'category',
       id: 'filter-category',
-      label: 'Área de la Rueda',
+      label: m.wheelArea,
       value: prefs.filters.category,
       options: [
-        { value: 'ALL', label: 'Todas' },
+        { value: 'ALL', label: m.allFeminine },
         ...selectableAreas(prefs.filters.category === 'ALL' ? undefined : prefs.filters.category).map((a) => ({
           value: a.id,
           label: a.label
@@ -214,11 +313,7 @@ export const TaskList: React.FC<TaskListProps> = ({
     </div>
   ));
 
-  const hiddenSummary = (
-    <span role="status">
-      {hiddenByFilters === 1 ? '1 tarea oculta' : `${hiddenByFilters} tareas ocultas`} por los filtros.
-    </span>
-  );
+  const hiddenSummary = <span role="status">{m.hiddenByFilters(hiddenByFilters)}</span>;
 
   // Cada tarjeta muestra la meta a la que contribuye
   const goalsById = new Map(goals.map((g) => [g.id, g]));
@@ -239,7 +334,7 @@ export const TaskList: React.FC<TaskListProps> = ({
       className="flex w-full items-center justify-center gap-2 rounded-2xl border-2 border-dashed border-slate-300 py-3 text-xs font-bold text-slate-600 transition-colors hover:border-slate-400 hover:bg-white hover:text-slate-900"
     >
       <Plus className="h-4 w-4" />
-      Añadir tarea
+      {m.addTask}
     </button>
   );
 
@@ -258,7 +353,7 @@ export const TaskList: React.FC<TaskListProps> = ({
             }`}
           >
             <Layers className="h-3.5 w-3.5" />
-            <span>Activas</span>
+            <span>{m.active}</span>
             <span className="py-0.2 rounded-full bg-slate-700 px-2 font-mono text-[10px] text-white">
               {activeTasks.length}
             </span>
@@ -273,7 +368,7 @@ export const TaskList: React.FC<TaskListProps> = ({
             }`}
           >
             <Archive className="h-3.5 w-3.5" />
-            <span>Algún día</span>
+            <span>{m.someday}</span>
             <span className="py-0.2 rounded-full bg-slate-200 px-2 font-mono text-[10px] text-slate-800">
               {somedayTasks.length}
             </span>
@@ -284,7 +379,7 @@ export const TaskList: React.FC<TaskListProps> = ({
             className="flex items-center gap-2 rounded-xl border border-emerald-200 px-3.5 py-2 text-xs font-bold text-emerald-700 transition-all hover:bg-emerald-50"
           >
             <CheckCircle2 className="h-3.5 w-3.5" />
-            <span>Archivadas</span>
+            <span>{m.archived}</span>
             <span className="py-0.2 rounded-full bg-emerald-100 px-2 font-mono text-[10px] text-emerald-800">
               {archivedCount}
             </span>
@@ -297,7 +392,7 @@ export const TaskList: React.FC<TaskListProps> = ({
               className="flex items-center gap-2 rounded-xl border border-indigo-200 px-3.5 py-2 text-xs font-bold text-indigo-700 transition-all hover:bg-indigo-50"
             >
               <FilePen className="h-3.5 w-3.5" aria-hidden="true" />
-              <span>Borradores</span>
+              <span>{m.drafts}</span>
               <span className="py-0.2 rounded-full bg-indigo-100 px-2 font-mono text-[10px] text-indigo-800">
                 {draftsCount}
               </span>
@@ -321,13 +416,14 @@ export const TaskList: React.FC<TaskListProps> = ({
               }`}
             >
               <SlidersHorizontal className="h-4 w-4" aria-hidden="true" />
-              Ordenar y filtrar{activeFilterCount > 0 ? ` (${activeFilterCount})` : ''}
+              {m.sortAndFilter}
+              {activeFilterCount > 0 ? ` (${activeFilterCount})` : ''}
             </button>
           ) : (
             <div className="flex flex-wrap items-center gap-2 text-xs">
               <label htmlFor="list-sort" className="flex items-center gap-1 text-slate-500">
                 <ArrowUpDown className="h-3.5 w-3.5" aria-hidden="true" />
-                Ordenar por:
+                {m.sortBy}
               </label>
               {sortSelect}
               <button
@@ -343,7 +439,8 @@ export const TaskList: React.FC<TaskListProps> = ({
                 }`}
               >
                 <SlidersHorizontal className="h-3.5 w-3.5" aria-hidden="true" />
-                Filtros{activeFilterCount > 0 ? ` (${activeFilterCount})` : ''}
+                {m.filters}
+                {activeFilterCount > 0 ? ` (${activeFilterCount})` : ''}
               </button>
             </div>
           ))}
@@ -351,7 +448,7 @@ export const TaskList: React.FC<TaskListProps> = ({
 
       {/* Filtros activos: cada uno se quita con un toque */}
       {viewMode === 'active' && activeFilters.length > 0 && (
-        <ul aria-label="Filtros activos" className="flex flex-wrap items-center gap-2">
+        <ul aria-label={m.activeFilters} className="flex flex-wrap items-center gap-2">
           {activeFilters.map((f) => {
             const text = `${f.label}: ${f.options.find((o) => o.value === f.value)?.label ?? f.value}`;
             return (
@@ -359,7 +456,7 @@ export const TaskList: React.FC<TaskListProps> = ({
                 <button
                   type="button"
                   onClick={() => changeFilter(f, 'ALL')}
-                  aria-label={`Quitar el filtro ${text}`}
+                  aria-label={m.removeFilter(text)}
                   className="inline-flex min-h-9 items-center gap-1.5 rounded-full border border-indigo-200 bg-indigo-50 py-1 pr-2 pl-3 text-xs font-semibold text-indigo-800 hover:bg-indigo-100"
                 >
                   {text}
@@ -376,7 +473,7 @@ export const TaskList: React.FC<TaskListProps> = ({
         <div
           id="list-filters"
           role="group"
-          aria-label="Filtros del Top 10"
+          aria-label={m.top10Filters}
           className="grid grid-cols-1 gap-3 rounded-2xl border border-slate-200 bg-white p-4 text-xs shadow-xs sm:grid-cols-2 lg:grid-cols-5"
         >
           {filterSelects}
@@ -388,7 +485,7 @@ export const TaskList: React.FC<TaskListProps> = ({
                 onClick={clearFilters}
                 className="font-semibold text-indigo-700 hover:text-indigo-900"
               >
-                Quitar filtros
+                {m.clearFilters}
               </button>
             </div>
           )}
@@ -399,17 +496,17 @@ export const TaskList: React.FC<TaskListProps> = ({
       <BottomSheet
         isOpen={isPhone && isFilterSheetOpen}
         onClose={() => setIsFilterSheetOpen(false)}
-        title="Ordenar y filtrar"
+        title={m.sortAndFilter}
         returnFocusTo={() => document.getElementById(FILTERS_BUTTON_ID)}
       >
         <div className="space-y-3 text-xs">
           <div className="space-y-1">
             <label htmlFor="list-sort" className="block font-semibold text-slate-600">
-              Ordenar por:
+              {m.sortBy}
             </label>
             {sortSelect}
           </div>
-          <div role="group" aria-label="Filtros del Top 10" className="grid grid-cols-1 gap-3">
+          <div role="group" aria-label={m.top10Filters} className="grid grid-cols-1 gap-3">
             {filterSelects}
           </div>
           {activeFilterCount > 0 && (
@@ -420,7 +517,7 @@ export const TaskList: React.FC<TaskListProps> = ({
                 onClick={clearFilters}
                 className="min-h-11 font-semibold text-indigo-700 hover:text-indigo-900"
               >
-                Quitar filtros
+                {m.clearFilters}
               </button>
             </div>
           )}
@@ -429,7 +526,7 @@ export const TaskList: React.FC<TaskListProps> = ({
             onClick={() => setIsFilterSheetOpen(false)}
             className="flex min-h-12 w-full items-center justify-center rounded-xl bg-slate-900 text-sm font-bold text-white hover:bg-slate-800"
           >
-            {arrangedTasks.length === 1 ? 'Ver 1 tarea' : `Ver ${arrangedTasks.length} tareas`}
+            {m.showTasks(arrangedTasks.length)}
           </button>
         </div>
       </BottomSheet>
@@ -442,36 +539,33 @@ export const TaskList: React.FC<TaskListProps> = ({
             <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1 px-1">
               <div className="flex items-center gap-2">
                 <span className="h-2.5 w-2.5 animate-pulse rounded-full bg-indigo-600" />
-                <h3 className="text-xs font-bold tracking-wider text-slate-900 uppercase">Tu Top 10</h3>
+                <h3 className="text-xs font-bold tracking-wider text-slate-900 uppercase">{m.yourTop10}</h3>
               </div>
             </div>
 
             {top10Tasks.length === 0 && arrangedTasks.length > 0 ? (
               <p className="rounded-2xl border border-slate-200 bg-white p-8 text-center text-sm font-semibold text-slate-600">
-                Todas las tareas de esta lista esperan a otra. Las tienes debajo.
+                {m.allBlocked}
               </p>
             ) : top10Tasks.length === 0 && activeTasks.length > 0 ? (
               // Hay tareas, pero los filtros las ocultan todas: no se invita a crear otra
               <div className="space-y-3 rounded-2xl border border-slate-200 bg-white p-8 text-center text-slate-600">
-                <p className="text-sm font-semibold">
-                  Ninguna tarea coincide con los filtros ({hiddenByFilters}{' '}
-                  {hiddenByFilters === 1 ? 'oculta' : 'ocultas'}).
-                </p>
+                <p className="text-sm font-semibold">{m.noneMatch(hiddenByFilters)}</p>
                 <button
                   onClick={clearFilters}
                   className="inline-flex items-center gap-2 rounded-xl bg-slate-900 px-4 py-2 text-xs font-bold text-white"
                 >
-                  <SlidersHorizontal className="h-4 w-4" aria-hidden="true" /> Mostrar todas las tareas
+                  <SlidersHorizontal className="h-4 w-4" aria-hidden="true" /> {m.showAll}
                 </button>
               </div>
             ) : top10Tasks.length === 0 ? (
               <div className="space-y-3 rounded-2xl border border-slate-200 bg-white p-8 text-center text-slate-500">
-                <p className="text-sm font-semibold">No hay tareas en esta lista.</p>
+                <p className="text-sm font-semibold">{m.emptyList}</p>
                 <button
                   onClick={() => onOpenNewTask()}
                   className="inline-flex items-center gap-2 rounded-xl bg-slate-900 px-4 py-2 text-xs font-bold text-white"
                 >
-                  <Plus className="h-4 w-4" /> Añadir la primera tarea
+                  <Plus className="h-4 w-4" /> {m.addFirst}
                 </button>
               </div>
             ) : (
@@ -497,11 +591,11 @@ export const TaskList: React.FC<TaskListProps> = ({
             <div className="space-y-3 border-t border-slate-200 pt-4">
               <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1 px-1">
                 <h3 className="text-xs font-bold tracking-wider text-slate-500 uppercase">
-                  El resto de tareas (de la {top10Tasks.length + 1} en adelante)
+                  {m.rest(top10Tasks.length + 1)}
                 </h3>
               </div>
 
-              <ol aria-label={`Posición ${top10Tasks.length + 1} en adelante`} className="space-y-1.5">
+              <ol aria-label={m.restList(top10Tasks.length + 1)} className="space-y-1.5">
                 {peripheralTasks.map((task, index) => (
                   <TaskCard
                     key={task.id}
@@ -526,19 +620,16 @@ export const TaskList: React.FC<TaskListProps> = ({
       {viewMode === 'someday' && (
         <div className="space-y-4">
           <div className="space-y-1 rounded-2xl border border-indigo-200 bg-indigo-50/60 p-4 text-xs text-indigo-950">
-            <p className="font-bold">Para algún día</p>
-            <p className="text-[11px] leading-relaxed text-indigo-800">
-              Lo que quieres hacer algún día, sin prisa. No entra en tu Top 10, pero queda aquí para que lo revises
-              cuando quieras.
-            </p>
+            <p className="font-bold">{m.forSomeday}</p>
+            <p className="text-[11px] leading-relaxed text-indigo-800">{m.somedayIntro}</p>
           </div>
 
           {somedayTasks.length === 0 ? (
             <div className="rounded-2xl border border-slate-200 bg-white p-8 text-center text-slate-500">
-              <p className="text-xs font-semibold">No tienes nada guardado para algún día.</p>
+              <p className="text-xs font-semibold">{m.somedayEmpty}</p>
             </div>
           ) : (
-            <ul aria-label="Algún día" className="space-y-2.5">
+            <ul aria-label={m.someday} className="space-y-2.5">
               {somedayTasks.map((task) => (
                 <TaskCard
                   key={task.id}

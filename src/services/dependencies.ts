@@ -1,5 +1,6 @@
 import type { TaskItem } from '../types';
 import { isArchived } from './tasks';
+import { LOCALE_TAG } from '../i18n/locale';
 
 // TAREAS DEPENDIENTES: una tarea puede esperar a otra (dependsOn, una sola). Mientras esa siga abierta, esta está
 // bloqueada: no entra en el Top 10 ni se puede marcar como hecha o en progreso. Al hacerse o cancelarse la otra, se
@@ -36,5 +37,5 @@ export const dependencyCandidates = (taskId: string | undefined, tasks: TaskItem
   const byId = tasksById(tasks);
   return tasks
     .filter((t) => !isArchived(t) && t.id !== taskId && !createsCycle(taskId, t.id, byId))
-    .sort((a, b) => a.title.localeCompare(b.title, 'es'));
+    .sort((a, b) => a.title.localeCompare(b.title, LOCALE_TAG));
 };

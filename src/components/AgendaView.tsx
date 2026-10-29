@@ -5,6 +5,63 @@ import { AgendaItem, buildAgenda, daysFrom, overdueTasks, startOfWeek } from '..
 import { toDateString } from '../services/recurrence';
 import { DEADLINE_TITLE_CLASS, formatTaskDates, toLocalDate } from '../services/tasks';
 import { useNow } from '../hooks/useNow';
+import { LOCALE_TAG, messages } from '../i18n/locale';
+
+const m = messages(
+  {
+    // Las etiquetas de cada elemento (AgendaItem.label es un identificador: en español coincide con el texto)
+    labels: {
+      Vence: 'Vence',
+      Empieza: 'Empieza',
+      'En curso': 'En curso',
+      'Repetición prevista': 'Repetición prevista',
+      Reunión: 'Reunión'
+    } satisfies Record<AgendaItem['label'], string>,
+    allDay: 'Todo el día',
+    work: 'Profesional',
+    personal: 'Personal',
+    dueToday: '(vence hoy)',
+    title: 'Agenda',
+    intro: 'Tareas con fecha de tus dos listas, repeticiones previstas y reuniones. Pulsa una tarea para editarla.',
+    view: 'Vista de la agenda',
+    week: 'Semana',
+    byDay: 'Por días',
+    previousWeek: 'Semana anterior',
+    today: 'Hoy',
+    nextWeek: 'Semana siguiente',
+    legend: 'Leyenda',
+    meeting: 'Reunión',
+    upcomingRepeat: 'Repetición prevista',
+    nothingScheduled: 'Sin nada programado',
+    overdue: (count: number) => `Vencidas (${count})`
+  },
+  {
+    labels: {
+      Vence: 'Due',
+      Empieza: 'Starts',
+      'En curso': 'Ongoing',
+      'Repetición prevista': 'Upcoming repeat',
+      Reunión: 'Meeting'
+    },
+    allDay: 'All day',
+    work: 'Work',
+    personal: 'Personal',
+    dueToday: '(due today)',
+    title: 'Agenda',
+    intro: 'Tasks with dates from both your lists, upcoming repeats and meetings. Tap a task to edit it.',
+    view: 'Agenda view',
+    week: 'Week',
+    byDay: 'By day',
+    previousWeek: 'Previous week',
+    today: 'Today',
+    nextWeek: 'Next week',
+    legend: 'Legend',
+    meeting: 'Meeting',
+    upcomingRepeat: 'Upcoming repeat',
+    nothingScheduled: 'Nothing scheduled',
+    overdue: (count) => `Overdue (${count})`
+  }
+);
 
 interface AgendaViewProps {
   tasks: TaskItem[];
@@ -15,9 +72,9 @@ interface AgendaViewProps {
 type AgendaMode = 'week' | 'days';
 
 const DAYS_VIEW_LENGTH = 14;
-const weekdayFormat = new Intl.DateTimeFormat('es-ES', { weekday: 'short' });
-const longDayFormat = new Intl.DateTimeFormat('es-ES', { weekday: 'long', day: 'numeric', month: 'long' });
-const rangeFormat = new Intl.DateTimeFormat('es-ES', { day: 'numeric', month: 'short', year: 'numeric' });
+const weekdayFormat = new Intl.DateTimeFormat(LOCALE_TAG, { weekday: 'short' });
+const longDayFormat = new Intl.DateTimeFormat(LOCALE_TAG, { weekday: 'long', day: 'numeric', month: 'long' });
+const rangeFormat = new Intl.DateTimeFormat(LOCALE_TAG, { day: 'numeric', month: 'short', year: 'numeric' });
 
 const CONTEXT_STYLE = {
   WORK: 'border-l-indigo-500',
@@ -29,10 +86,10 @@ const titleClass = (item: AgendaItem) =>
   `${item.deadline === 'today' ? 'font-bold' : 'font-semibold'} ${DEADLINE_TITLE_CLASS[item.deadline] || 'text-slate-900'}`;
 
 const AgendaEntry: React.FC<{ item: AgendaItem; onEditTask: (task: TaskItem) => void }> = ({ item, onEditTask }) => {
-  const time = item.time ? `${item.time}${item.endTime ? `–${item.endTime}` : ''}` : 'Todo el día';
+  const time = item.time ? `${item.time}${item.endTime ? `–${item.endTime}` : ''}` : m.allDay;
   const meta = [
-    item.label,
-    item.context === 'WORK' ? 'Profesional' : item.context === 'PERSONAL' ? 'Personal' : undefined
+    m.labels[item.label],
+    item.context === 'WORK' ? m.work : item.context === 'PERSONAL' ? m.personal : undefined
   ]
     .filter(Boolean)
     .join(' · ');
@@ -65,7 +122,7 @@ const AgendaEntry: React.FC<{ item: AgendaItem; onEditTask: (task: TaskItem) => 
       >
         {isOccurrence && <Repeat className="h-3 w-3 shrink-0" aria-hidden="true" />}
         {item.title}
-        {!isOccurrence && item.deadline === 'today' && <span className="sr-only">(vence hoy)</span>}
+        {!isOccurrence && item.deadline === 'today' && <span className="sr-only">{m.dueToday}</span>}
       </span>
       <span className="block text-[10px] text-slate-500">{meta}</span>
     </button>
@@ -98,23 +155,21 @@ export const AgendaView: React.FC<AgendaViewProps> = ({ tasks, meetings, onEditT
         <div>
           <h2 className="flex items-center gap-2 text-xl font-bold text-slate-900">
             <CalendarDays className="h-6 w-6 text-indigo-600" aria-hidden="true" />
-            Agenda
+            {m.title}
           </h2>
-          <p className="mt-1 text-xs text-slate-500">
-            Tareas con fecha de tus dos listas, repeticiones previstas y reuniones. Pulsa una tarea para editarla.
-          </p>
+          <p className="mt-1 text-xs text-slate-500">{m.intro}</p>
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
           <div
             role="group"
-            aria-label="Vista de la agenda"
+            aria-label={m.view}
             className="flex items-center rounded-lg border border-slate-200 bg-slate-100 p-0.5"
           >
             {(
               [
-                ['week', 'Semana'],
-                ['days', 'Por días']
+                ['week', m.week],
+                ['days', m.byDay]
               ] as const
             ).map(([value, label]) => (
               <button
@@ -132,7 +187,7 @@ export const AgendaView: React.FC<AgendaViewProps> = ({ tasks, meetings, onEditT
             <button
               type="button"
               onClick={() => moveWeeks(-1)}
-              aria-label="Semana anterior"
+              aria-label={m.previousWeek}
               className="rounded-lg border border-slate-200 p-1.5 text-slate-700 hover:bg-slate-50"
             >
               <ChevronLeft className="h-4 w-4" aria-hidden="true" />
@@ -142,12 +197,12 @@ export const AgendaView: React.FC<AgendaViewProps> = ({ tasks, meetings, onEditT
               onClick={() => setWeekStart(startOfWeek(new Date()))}
               className="rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-50"
             >
-              Hoy
+              {m.today}
             </button>
             <button
               type="button"
               onClick={() => moveWeeks(1)}
-              aria-label="Semana siguiente"
+              aria-label={m.nextWeek}
               className="rounded-lg border border-slate-200 p-1.5 text-slate-700 hover:bg-slate-50"
             >
               <ChevronRight className="h-4 w-4" aria-hidden="true" />
@@ -160,27 +215,27 @@ export const AgendaView: React.FC<AgendaViewProps> = ({ tasks, meetings, onEditT
       </div>
 
       {/* Leyenda */}
-      <ul className="flex flex-wrap gap-x-4 gap-y-1 px-1 text-[11px] text-slate-600" aria-label="Leyenda">
+      <ul className="flex flex-wrap gap-x-4 gap-y-1 px-1 text-[11px] text-slate-600" aria-label={m.legend}>
         <li className="flex items-center gap-1.5">
           <span className="h-3 w-3 rounded-sm bg-indigo-500" aria-hidden="true" />
-          Profesional
+          {m.work}
         </li>
         <li className="flex items-center gap-1.5">
           <span className="h-3 w-3 rounded-sm bg-emerald-500" aria-hidden="true" />
-          Personal
+          {m.personal}
         </li>
         <li className="flex items-center gap-1.5">
           <span className="h-3 w-3 rounded-sm bg-amber-500" aria-hidden="true" />
-          Reunión
+          {m.meeting}
         </li>
         <li className="flex items-center gap-1.5">
           <Repeat className="h-3 w-3" aria-hidden="true" />
-          Repetición prevista
+          {m.upcomingRepeat}
         </li>
       </ul>
 
       {mode === 'week' ? (
-        <ol className="grid grid-cols-1 gap-2 md:grid-cols-7" aria-label="Semana">
+        <ol className="grid grid-cols-1 gap-2 md:grid-cols-7" aria-label={m.week}>
           {days.map((date) => {
             const isToday = date === today;
             const dayItems = agenda.get(date)!;
@@ -200,7 +255,7 @@ export const AgendaView: React.FC<AgendaViewProps> = ({ tasks, meetings, onEditT
                   </span>
                 </div>
                 {dayItems.length === 0 ? (
-                  <p className="px-0.5 text-[10px] text-slate-600">Sin nada programado</p>
+                  <p className="px-0.5 text-[10px] text-slate-600">{m.nothingScheduled}</p>
                 ) : (
                   <ul className="space-y-1.5">
                     {dayItems.map((item) => (
@@ -222,7 +277,7 @@ export const AgendaView: React.FC<AgendaViewProps> = ({ tasks, meetings, onEditT
               className="space-y-2 rounded-2xl border border-red-200 bg-red-50/60 p-4"
             >
               <h3 id="agenda-overdue" className="text-xs font-bold tracking-wider text-red-700 uppercase">
-                Vencidas ({overdue.length})
+                {m.overdue(overdue.length)}
               </h3>
               <ul className="space-y-1.5">
                 {overdue.map((task) => (
@@ -258,9 +313,9 @@ export const AgendaView: React.FC<AgendaViewProps> = ({ tasks, meetings, onEditT
                 <div className="flex flex-wrap items-baseline justify-between gap-x-3">
                   <h3 id={`agenda-day-${date}`} className="text-sm font-bold text-slate-900 first-letter:uppercase">
                     {longDayFormat.format(toLocalDate(date))}
-                    {isToday && <span className="ml-2 text-[10px] font-bold text-indigo-700 uppercase">Hoy</span>}
+                    {isToday && <span className="ml-2 text-[10px] font-bold text-indigo-700 uppercase">{m.today}</span>}
                   </h3>
-                  {items.length === 0 && <p className="text-xs text-slate-600">Sin nada programado</p>}
+                  {items.length === 0 && <p className="text-xs text-slate-600">{m.nothingScheduled}</p>}
                 </div>
                 {items.length > 0 && (
                   <ul className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3">

@@ -10,7 +10,8 @@ export interface AgendaItem {
   date: string; // YYYY-MM-DD
   time?: string; // HH:mm (sin hora: todo el día)
   endTime?: string;
-  // task: vence / empieza / en curso (intervalo) · occurrence: repetición prevista de una tarea recurrente
+  // task: vence / empieza / en curso (intervalo) · occurrence: repetición prevista de una tarea recurrente. Es un
+  // identificador: el texto que se ve, en el idioma de la app, lo pone AgendaView
   label: 'Vence' | 'Empieza' | 'En curso' | 'Repetición prevista' | 'Reunión';
   context?: ListContext;
   deadline: DeadlineState;
