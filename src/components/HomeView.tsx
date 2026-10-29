@@ -19,6 +19,7 @@ import { formatDay, toLocalDate } from '../services/tasks';
 import { useAreas } from '../hooks/useAreas';
 import { projectDeadline, sortProjects } from '../services/projects';
 import { ProjectProgress } from './ProjectProgress';
+import { LOCALE_TAG, messages } from '../i18n/locale';
 
 interface HomeViewProps {
   tasks: TaskItem[];
@@ -35,9 +36,143 @@ interface HomeViewProps {
   onNavigate: (tab: AppTab) => void;
 }
 
-const dayLetter = new Intl.DateTimeFormat('es-ES', { weekday: 'narrow' });
-const dayLong = new Intl.DateTimeFormat('es-ES', { weekday: 'long', day: 'numeric', month: 'long' });
-const decimal = new Intl.NumberFormat('es-ES', { maximumFractionDigits: 1 });
+const dayLetter = new Intl.DateTimeFormat(LOCALE_TAG, { weekday: 'narrow' });
+const dayLong = new Intl.DateTimeFormat(LOCALE_TAG, { weekday: 'long', day: 'numeric', month: 'long' });
+const decimal = new Intl.NumberFormat(LOCALE_TAG, { maximumFractionDigits: 1 });
+
+const m = messages(
+  {
+    list: 'Lista:',
+    work: 'Profesional',
+    personal: 'Personal',
+    yourAccount: 'Tu cuenta',
+    account: (name: string) => `Cuenta: ${name}`,
+    focusWork: 'Tu foco profesional',
+    focusPersonal: 'Tu foco personal',
+    intro: 'Lo más importante de tu lista, cómo vas y qué te conviene hacer ahora.',
+    top10: 'Top 10',
+    priorityTasks: 'tareas prioritarias',
+    wheel: 'Rueda de la Vida',
+    evaluations: (n: number) => `${n} ${n === 1 ? 'evaluación' : 'evaluaciones'}`,
+    meetings: 'Reuniones',
+    freeMornings: 'Mañanas libres',
+    performance: 'Tu rendimiento',
+    tasksDone: 'Tareas hechas',
+    today: 'Hoy',
+    thisWeek: 'Esta semana',
+    thisMonth: 'Este mes',
+    cancelledThisMonth: (n: number) =>
+      `Este mes también ${n === 1 ? 'cancelaste 1 tarea' : `cancelaste ${n} tareas`}, que no cuentan como hechas.`,
+    last14Days: 'Últimos 14 días',
+    dailyChart: (total: number) =>
+      `Tareas hechas por día en los últimos 14 días: ${total} en total. El detalle por día está en la tabla siguiente.`,
+    dailyCaption: 'Tareas hechas por día',
+    onTimeOrLate: 'A tiempo o con retraso',
+    noDatedDone: 'En el último mes no has terminado tareas con fecha límite.',
+    percent: (n: number) => `${n} %`,
+    onTimeSr: ' a tiempo',
+    onTimeDetail: (onTime: number, late: number) =>
+      `${onTime} antes del plazo · ${late} después del plazo (último mes)`,
+    velocity: 'Velocidad',
+    tasksPerWeek: 'Tareas por semana',
+    hoursPerWeek: 'Horas estimadas por semana',
+    velocityRange: 'Media de las últimas cuatro semanas.',
+    cycle: (days: string) => `De media tardas ${days} días desde que creas una tarea hasta que la terminas.`,
+    streakAndOpen: 'Constancia y pendientes',
+    streak: 'Racha',
+    daysInARow: (n: number): string => (n === 1 ? 'día seguido' : 'días seguidos'),
+    open: 'Pendientes',
+    openDetail: (overdue: number, dueThisWeek: number, blocked: number) =>
+      `${overdue} ${overdue === 1 ? 'vencida' : 'vencidas'} · ${dueThisWeek} esta semana · ${blocked} ${blocked === 1 ? 'bloqueada' : 'bloqueadas'}`,
+    byArea: 'Por área (último mes)',
+    noAreas: 'Vincula tus tareas a una meta (o a un área de la Rueda) para ver en qué inviertes el esfuerzo.',
+    goals: 'Metas',
+    noGoals:
+      'Aún no tienes metas. Ponle una meta concreta al área de tu Rueda que más quieres mejorar; en «Metas» verás primero las más bajas.',
+    createGoal: 'Crear una meta',
+    allGoals: (n: number) => `Ver las ${n} metas`,
+    manageGoals: 'Gestionar las metas',
+    projects: 'Proyectos',
+    noProjects:
+      'No tienes proyectos activos. Un proyecto agrupa las tareas de algo con fecha de fin dentro de una meta.',
+    goToProjects: 'Ir a Proyectos',
+    activeProjects: (n: number) => (n === 1 ? '1 activo' : `${n} activos`),
+    lateProjects: (n: number) => ` · ${n} fuera de plazo`,
+    endsOn: (overdue: boolean, day: string) => `${overdue ? 'Terminaba' : 'Termina'} el ${day}`,
+    overdue: ' · Fuera de plazo',
+    endsSoon: ' · Termina pronto',
+    allDone: ' · Todo hecho',
+    allProjects: (n: number) => `Ver los ${n} proyectos`,
+    viewProjects: 'Ver los proyectos',
+    recommendations: 'Recomendaciones',
+    upToDate: 'Vas al día. Sigue con tu Top 10.'
+  },
+  {
+    list: 'List:',
+    work: 'Work',
+    personal: 'Personal',
+    yourAccount: 'Your account',
+    account: (name) => `Account: ${name}`,
+    focusWork: 'Your work focus',
+    focusPersonal: 'Your personal focus',
+    intro: 'The most important things on your list, how you’re doing and what to do next.',
+    top10: 'Top 10',
+    priorityTasks: 'priority tasks',
+    wheel: 'Wheel of Life',
+    evaluations: (n) => `${n} ${n === 1 ? 'assessment' : 'assessments'}`,
+    meetings: 'Meetings',
+    freeMornings: 'Free mornings',
+    performance: 'Your performance',
+    tasksDone: 'Tasks done',
+    today: 'Today',
+    thisWeek: 'This week',
+    thisMonth: 'This month',
+    cancelledThisMonth: (n) =>
+      n === 1
+        ? 'This month you also canceled 1 task, which doesn’t count as done.'
+        : `This month you also canceled ${n} tasks, which don’t count as done.`,
+    last14Days: 'Last 14 days',
+    dailyChart: (total) =>
+      `Tasks done per day in the last 14 days: ${total} in total. The table below has the breakdown by day.`,
+    dailyCaption: 'Tasks done per day',
+    onTimeOrLate: 'On time or late',
+    noDatedDone: 'In the last month you haven’t finished any tasks with a due date.',
+    percent: (n) => `${n}%`,
+    onTimeSr: ' on time',
+    onTimeDetail: (onTime, late) => `${onTime} before the deadline · ${late} after the deadline (last month)`,
+    velocity: 'Pace',
+    tasksPerWeek: 'Tasks per week',
+    hoursPerWeek: 'Estimated hours per week',
+    velocityRange: 'Average over the last four weeks.',
+    cycle: (days) => `On average, you take ${days} days from creating a task to finishing it.`,
+    streakAndOpen: 'Streak and pending',
+    streak: 'Streak',
+    daysInARow: (n) => (n === 1 ? 'day in a row' : 'days in a row'),
+    open: 'Pending',
+    openDetail: (overdue, dueThisWeek, blocked) => `${overdue} overdue · ${dueThisWeek} this week · ${blocked} blocked`,
+    byArea: 'By area (last month)',
+    noAreas: 'Link your tasks to a goal (or to a Wheel area) to see where your effort goes.',
+    goals: 'Goals',
+    noGoals:
+      'You have no goals yet. Set a concrete goal for the Wheel area you most want to improve; “Goals” shows the lowest areas first.',
+    createGoal: 'Create a goal',
+    allGoals: (n) => `View all ${n} goals`,
+    manageGoals: 'Manage goals',
+    projects: 'Projects',
+    noProjects: 'You have no active projects. A project groups the tasks of something with an end date, within a goal.',
+    goToProjects: 'Go to Projects',
+    activeProjects: (n) => `${n} active`,
+    lateProjects: (n) => ` · ${n} overdue`,
+    endsOn: (overdue, day) => `${overdue ? 'Was due to end on' : 'Ends on'} ${day}`,
+    overdue: ' · Overdue',
+    endsSoon: ' · Ends soon',
+    allDone: ' · All done',
+    allProjects: (n) => `View all ${n} projects`,
+    viewProjects: 'View projects',
+    recommendations: 'Recommendations',
+    upToDate: 'You’re up to date. Keep going with your Top 10.'
+  }
+);
 
 const Card: React.FC<{ title: string; icon: React.ReactNode; children: React.ReactNode; className?: string }> = ({
   title,
@@ -109,9 +244,9 @@ export const HomeView: React.FC<HomeViewProps> = ({
             <div className="flex flex-wrap items-center gap-2 text-xs font-semibold text-indigo-700">
               <Brain className="h-4 w-4" aria-hidden="true" />
               <span className="text-slate-600">
-                Lista:{' '}
+                {m.list}{' '}
                 <strong className={activeContext === 'WORK' ? 'text-indigo-600' : 'text-emerald-700'}>
-                  {activeContext === 'WORK' ? 'Profesional' : 'Personal'}
+                  {activeContext === 'WORK' ? m.work : m.personal}
                 </strong>
               </span>
               <span className="text-slate-300" aria-hidden="true">
@@ -121,33 +256,31 @@ export const HomeView: React.FC<HomeViewProps> = ({
                 type="button"
                 onClick={onOpenAccount}
                 className="inline-flex items-center gap-1.5 rounded-full bg-slate-100 px-2.5 py-0.5 text-[11px] font-semibold text-slate-700 transition-colors hover:bg-slate-200"
-                title="Tu cuenta"
+                title={m.yourAccount}
               >
                 <span className="h-2 w-2 rounded-full bg-indigo-500" aria-hidden="true" />
-                <span>Cuenta: {accountName}</span>
+                <span>{m.account(accountName)}</span>
               </button>
             </div>
             <h1 className="text-2xl leading-tight font-extrabold tracking-tight text-slate-900 sm:text-3xl">
-              {activeContext === 'WORK' ? 'Tu foco profesional' : 'Tu foco personal'}
+              {activeContext === 'WORK' ? m.focusWork : m.focusPersonal}
             </h1>
-            <p className="text-xs leading-relaxed text-slate-600 sm:text-sm">
-              Lo más importante de tu lista, cómo vas y qué te conviene hacer ahora.
-            </p>
+            <p className="text-xs leading-relaxed text-slate-600 sm:text-sm">{m.intro}</p>
           </div>
 
           <div className="grid min-w-0 shrink-0 grid-cols-3 gap-2 sm:gap-3">
             {[
-              { label: 'Top 10', value: `${top10Count}/10`, hint: 'tareas prioritarias', hintClass: 'text-indigo-600' },
+              { label: m.top10, value: `${top10Count}/10`, hint: m.priorityTasks, hintClass: 'text-indigo-600' },
               {
-                label: 'Rueda de la Vida',
+                label: m.wheel,
                 value: `${wheelAverage}/10`,
-                hint: `${wheelLogs.length} ${wheelLogs.length === 1 ? 'evaluación' : 'evaluaciones'}`,
+                hint: m.evaluations(wheelLogs.length),
                 hintClass: 'text-emerald-700'
               },
               {
-                label: 'Reuniones',
+                label: m.meetings,
                 value: String(meetings.length),
-                hint: 'Mañanas libres',
+                hint: m.freeMornings,
                 hintClass: 'text-amber-700'
               }
             ].map(({ label, value, hint, hintClass }) => (
@@ -168,34 +301,26 @@ export const HomeView: React.FC<HomeViewProps> = ({
 
       {/* ESTADÍSTICAS DE LA LISTA ACTIVA */}
       <h2 className="px-1 text-lg font-bold text-slate-900">
-        Tu rendimiento · {activeContext === 'WORK' ? 'Profesional' : 'Personal'}
+        {m.performance} · {activeContext === 'WORK' ? m.work : m.personal}
       </h2>
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-        <Card title="Tareas hechas" icon={<CalendarCheck className="h-4 w-4 text-indigo-600" aria-hidden="true" />}>
+        <Card title={m.tasksDone} icon={<CalendarCheck className="h-4 w-4 text-indigo-600" aria-hidden="true" />}>
           <div className="grid grid-cols-3 gap-2">
-            <Metric label="Hoy" value={String(stats.doneToday)} />
-            <Metric label="Esta semana" value={String(stats.doneThisWeek)} />
-            <Metric label="Este mes" value={String(stats.doneThisMonth)} />
+            <Metric label={m.today} value={String(stats.doneToday)} />
+            <Metric label={m.thisWeek} value={String(stats.doneThisWeek)} />
+            <Metric label={m.thisMonth} value={String(stats.doneThisMonth)} />
           </div>
           {stats.cancelledThisMonth > 0 && (
-            <p className="text-[11px] text-slate-600">
-              Este mes también{' '}
-              {stats.cancelledThisMonth === 1 ? 'cancelaste 1 tarea' : `cancelaste ${stats.cancelledThisMonth} tareas`},
-              que no cuentan como hechas.
-            </p>
+            <p className="text-[11px] text-slate-600">{m.cancelledThisMonth(stats.cancelledThisMonth)}</p>
           )}
         </Card>
 
         <Card
-          title="Últimos 14 días"
+          title={m.last14Days}
           icon={<ListChecks className="h-4 w-4 text-indigo-600" aria-hidden="true" />}
           className="lg:col-span-2"
         >
-          <div
-            role="img"
-            aria-label={`Tareas hechas por día en los últimos 14 días: ${dailyTotal} en total. El detalle por día está en la tabla siguiente.`}
-            className="flex h-28 items-end gap-1.5"
-          >
+          <div role="img" aria-label={m.dailyChart(dailyTotal)} className="flex h-28 items-end gap-1.5">
             {stats.daily.map(({ date, count }) => (
               <div
                 key={date}
@@ -212,7 +337,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
             ))}
           </div>
           <table className="sr-only">
-            <caption>Tareas hechas por día</caption>
+            <caption>{m.dailyCaption}</caption>
             <tbody>
               {stats.daily.map(({ date, count }) => (
                 <tr key={date}>
@@ -224,60 +349,48 @@ export const HomeView: React.FC<HomeViewProps> = ({
           </table>
         </Card>
 
-        <Card title="A tiempo o con retraso" icon={<Timer className="h-4 w-4 text-indigo-600" aria-hidden="true" />}>
+        <Card title={m.onTimeOrLate} icon={<Timer className="h-4 w-4 text-indigo-600" aria-hidden="true" />}>
           {datedDone === 0 ? (
-            <p className="text-xs text-slate-600">En el último mes no has terminado tareas con fecha límite.</p>
+            <p className="text-xs text-slate-600">{m.noDatedDone}</p>
           ) : (
             <>
               <p className="font-mono text-3xl font-extrabold text-slate-900">
-                {Math.round((stats.onTimeRate ?? 0) * 100)} %<span className="sr-only"> a tiempo</span>
+                {m.percent(Math.round((stats.onTimeRate ?? 0) * 100))}
+                <span className="sr-only">{m.onTimeSr}</span>
               </p>
               <div className="flex h-3 overflow-hidden rounded-full bg-slate-200" aria-hidden="true">
                 <div className="bg-emerald-600" style={{ width: `${(stats.onTime / datedDone) * 100}%` }} />
                 <div className="bg-red-600" style={{ width: `${(stats.late / datedDone) * 100}%` }} />
               </div>
-              <p className="text-xs text-slate-600">
-                {stats.onTime} antes del plazo · {stats.late} después del plazo (último mes)
-              </p>
+              <p className="text-xs text-slate-600">{m.onTimeDetail(stats.onTime, stats.late)}</p>
             </>
           )}
         </Card>
 
-        <Card title="Velocidad" icon={<Gauge className="h-4 w-4 text-indigo-600" aria-hidden="true" />}>
+        <Card title={m.velocity} icon={<Gauge className="h-4 w-4 text-indigo-600" aria-hidden="true" />}>
           <div className="grid grid-cols-2 gap-2">
-            <Metric label="Tareas por semana" value={decimal.format(stats.weeklyVelocity)} />
-            <Metric label="Horas estimadas por semana" value={decimal.format(stats.weeklyEstimatedHours)} />
+            <Metric label={m.tasksPerWeek} value={decimal.format(stats.weeklyVelocity)} />
+            <Metric label={m.hoursPerWeek} value={decimal.format(stats.weeklyEstimatedHours)} />
           </div>
           <p className="text-xs text-slate-600">
-            {stats.avgCycleDays === null
-              ? 'Media de las últimas cuatro semanas.'
-              : `De media tardas ${decimal.format(stats.avgCycleDays)} días desde que creas una tarea hasta que la terminas.`}
+            {stats.avgCycleDays === null ? m.velocityRange : m.cycle(decimal.format(stats.avgCycleDays))}
           </p>
         </Card>
 
-        <Card title="Constancia y pendientes" icon={<Flame className="h-4 w-4 text-indigo-600" aria-hidden="true" />}>
+        <Card title={m.streakAndOpen} icon={<Flame className="h-4 w-4 text-indigo-600" aria-hidden="true" />}>
           <div className="grid grid-cols-2 gap-2">
+            <Metric label={m.streak} value={String(stats.streak)} hint={m.daysInARow(stats.streak)} />
             <Metric
-              label="Racha"
-              value={String(stats.streak)}
-              hint={stats.streak === 1 ? 'día seguido' : 'días seguidos'}
-            />
-            <Metric
-              label="Pendientes"
+              label={m.open}
               value={String(stats.open)}
-              hint={`${stats.overdue} ${stats.overdue === 1 ? 'vencida' : 'vencidas'} · ${stats.dueThisWeek} esta semana · ${stats.blocked} ${stats.blocked === 1 ? 'bloqueada' : 'bloqueadas'}`}
+              hint={m.openDetail(stats.overdue, stats.dueThisWeek, stats.blocked)}
             />
           </div>
         </Card>
 
-        <Card
-          title="Por área (último mes)"
-          icon={<ListChecks className="h-4 w-4 text-indigo-600" aria-hidden="true" />}
-        >
+        <Card title={m.byArea} icon={<ListChecks className="h-4 w-4 text-indigo-600" aria-hidden="true" />}>
           {stats.byArea.length === 0 ? (
-            <p className="text-xs text-slate-600">
-              Vincula tus tareas a una meta (o a un área de la Rueda) para ver en qué inviertes el esfuerzo.
-            </p>
+            <p className="text-xs text-slate-600">{m.noAreas}</p>
           ) : (
             <ul className="space-y-2">
               {stats.byArea.map(({ area, count }) => (
@@ -300,22 +413,19 @@ export const HomeView: React.FC<HomeViewProps> = ({
 
         {/* METAS: las activas con su progreso (de las dos listas); se gestionan en «Metas» */}
         <Card
-          title="Metas"
+          title={m.goals}
           icon={<Target className="h-4 w-4 text-indigo-600" aria-hidden="true" />}
           className="md:col-span-2 lg:col-span-3"
         >
           {activeGoals.length === 0 ? (
             <div className="flex flex-wrap items-center justify-between gap-3">
-              <p className="text-xs text-slate-600">
-                Aún no tienes metas. Ponle una meta concreta al área de tu Rueda que más quieres mejorar; en «Metas»
-                verás primero las más bajas.
-              </p>
+              <p className="text-xs text-slate-600">{m.noGoals}</p>
               <button
                 type="button"
                 onClick={() => onNavigate('goals')}
                 className="inline-flex min-h-11 items-center gap-1.5 text-xs font-semibold text-indigo-700 hover:text-indigo-900"
               >
-                Crear una meta <ArrowRight className="h-3.5 w-3.5" aria-hidden="true" />
+                {m.createGoal} <ArrowRight className="h-3.5 w-3.5" aria-hidden="true" />
               </button>
             </div>
           ) : (
@@ -334,7 +444,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
                 onClick={() => onNavigate('goals')}
                 className="inline-flex min-h-11 items-center gap-1.5 text-xs font-semibold text-indigo-700 hover:text-indigo-900"
               >
-                {activeGoals.length > 6 ? `Ver las ${activeGoals.length} metas` : 'Gestionar las metas'}
+                {activeGoals.length > 6 ? m.allGoals(activeGoals.length) : m.manageGoals}
                 <ArrowRight className="h-3.5 w-3.5" aria-hidden="true" />
               </button>
             </>
@@ -343,40 +453,36 @@ export const HomeView: React.FC<HomeViewProps> = ({
 
         {/* PROYECTOS: los activos con su avance y su plazo; se gestionan en «Proyectos» */}
         <Card
-          title="Proyectos"
+          title={m.projects}
           icon={<FolderKanban className="h-4 w-4 text-indigo-600" aria-hidden="true" />}
           className="md:col-span-2 lg:col-span-3"
         >
           {activeProjects.length === 0 ? (
             <div className="flex flex-wrap items-center justify-between gap-3">
-              <p className="text-xs text-slate-600">
-                No tienes proyectos activos. Un proyecto agrupa las tareas de algo con fecha de fin dentro de una meta.
-              </p>
+              <p className="text-xs text-slate-600">{m.noProjects}</p>
               <button
                 type="button"
                 onClick={() => onNavigate('projects')}
                 className="inline-flex min-h-11 items-center gap-1.5 text-xs font-semibold text-indigo-700 hover:text-indigo-900"
               >
-                Ir a Proyectos <ArrowRight className="h-3.5 w-3.5" aria-hidden="true" />
+                {m.goToProjects} <ArrowRight className="h-3.5 w-3.5" aria-hidden="true" />
               </button>
             </div>
           ) : (
             <>
               <p className="text-xs text-slate-600">
-                {activeProjects.length === 1 ? '1 activo' : `${activeProjects.length} activos`}
-                {lateProjects > 0 && (
-                  <span className="font-semibold text-red-700"> · {lateProjects} fuera de plazo</span>
-                )}
+                {m.activeProjects(activeProjects.length)}
+                {lateProjects > 0 && <span className="font-semibold text-red-700">{m.lateProjects(lateProjects)}</span>}
               </p>
               <ul className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
                 {activeProjects.slice(0, 6).map(({ project, deadline }) => (
                   <li key={project.id} className="space-y-1.5">
                     <p className="text-sm font-semibold wrap-anywhere text-slate-900">{project.title}</p>
                     <p className="text-[11px] text-slate-600">
-                      {deadline === 'overdue' ? 'Terminaba' : 'Termina'} el {formatDay(project.endDate)}
-                      {deadline === 'overdue' && <span className="font-semibold text-red-700"> · Fuera de plazo</span>}
-                      {deadline === 'soon' && <span className="font-semibold text-violet-700"> · Termina pronto</span>}
-                      {deadline === 'ready' && <span className="font-semibold text-emerald-700"> · Todo hecho</span>}
+                      {m.endsOn(deadline === 'overdue', formatDay(project.endDate))}
+                      {deadline === 'overdue' && <span className="font-semibold text-red-700">{m.overdue}</span>}
+                      {deadline === 'soon' && <span className="font-semibold text-violet-700">{m.endsSoon}</span>}
+                      {deadline === 'ready' && <span className="font-semibold text-emerald-700">{m.allDone}</span>}
                     </p>
                     <ProjectProgress project={project} tasks={tasks} compact />
                   </li>
@@ -387,7 +493,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
                 onClick={() => onNavigate('projects')}
                 className="inline-flex min-h-11 items-center gap-1.5 text-xs font-semibold text-indigo-700 hover:text-indigo-900"
               >
-                {activeProjects.length > 6 ? `Ver los ${activeProjects.length} proyectos` : 'Ver los proyectos'}
+                {activeProjects.length > 6 ? m.allProjects(activeProjects.length) : m.viewProjects}
                 <ArrowRight className="h-3.5 w-3.5" aria-hidden="true" />
               </button>
             </>
@@ -395,12 +501,12 @@ export const HomeView: React.FC<HomeViewProps> = ({
         </Card>
 
         <Card
-          title="Recomendaciones"
+          title={m.recommendations}
           icon={<Lightbulb className="h-4 w-4 text-indigo-600" aria-hidden="true" />}
           className="md:col-span-2 lg:col-span-3"
         >
           {recommendations.length === 0 ? (
-            <p className="text-xs text-slate-600">Vas al día. Sigue con tu Top 10.</p>
+            <p className="text-xs text-slate-600">{m.upToDate}</p>
           ) : (
             <ul className="space-y-2">
               {recommendations.map((rec) => (
