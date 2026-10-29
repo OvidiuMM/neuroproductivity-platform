@@ -69,14 +69,22 @@ export const clearPendingLocale = () => {
 
 // Cambia el idioma y vuelve a cargar la app. `pending`: lo eligió la persona en este dispositivo (se guardará en su
 // cuenta al entrar); sin él, viene de la cuenta. `reload: false`: se aplica la próxima vez que se abra. Si el
-// dispositivo no deja guardarlo, no se recarga (se quedaría igual) y devuelve false. Elegir el que ya está no cambia
-// nada (tampoco pasa a la cuenta). Contra bucles, al adoptar el de la cuenta: si una recarga por ese idioma no sirvió
+// dispositivo no deja guardarlo, no se recarga (se quedaría igual) y devuelve false. Elegir el que ya se ve no cambia
+// nada (tampoco pasa a la cuenta, aunque en este dispositivo aún no se hubiera elegido ninguno). Contra bucles, al adoptar el de la cuenta: si una recarga por ese idioma no sirvió
 // (la página volvió a cargar en otro), no se repite. Cuando sí sirvió, al cargar se olvida.
 export const setLocale = (
   next: Locale,
   { pending = true, reload = true }: { pending?: boolean; reload?: boolean } = {}
 ) => {
-  if (next === LOCALE && next === storedLocale()) return true;
+  // El que ya se ve: no es un cambio (tampoco una elección que deba pasar a la cuenta)
+  if (next === LOCALE) {
+    try {
+      if (storedLocale() !== next) localStorage.setItem(STORAGE_KEY, next);
+    } catch {
+      // Sin almacenamiento: no hace falta
+    }
+    return true;
+  }
   try {
     localStorage.setItem(STORAGE_KEY, next);
     if (pending) localStorage.setItem(PENDING_KEY, '1');
