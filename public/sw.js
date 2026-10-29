@@ -112,8 +112,26 @@ const onFetch = (event) => {
 if (PRECACHE.length) self.addEventListener('fetch', onFetch);
 
 // Notificaciones push de las alarmas (functions/src/push.ts): llegan como mensaje de datos de Firebase Cloud
-// Messaging, con el título, el texto y la etiqueta de la alarma. La etiqueta es la misma que usa la app con CLAR
-// abierta: si las dos la muestran, una sustituye a la otra.
+// Messaging, con el título, el texto, la etiqueta de la alarma (su clave, «tarea@momento») y su momento. La etiqueta es
+// la misma que usa la app con CLAR abierta: si las dos la muestran, una sustituye a la otra sin volver a sonar. Cada
+// alarma mostrada se apunta (SHOWN): así, al abrir CLAR después, la app no la vuelve a avisar con otra notificación.
+const SHOWN = 'clar-push-shown';
+const KEEP_SHOWN_MS = 2 * 24 * 60 * 60 * 1000;
+const shownUrl = (key) => `/__clar/push-shown/${encodeURIComponent(key)}`;
+const rememberShown = async (key) => {
+  const cache = await caches.open(SHOWN);
+  await cache.put(shownUrl(key), new Response(String(Date.now())));
+  // Las de hace más de dos días ya no hacen falta
+  const now = Date.now();
+  for (const request of await cache.keys()) {
+    const response = await cache.match(request);
+    if (now - Number(await response?.text()) > KEEP_SHOWN_MS) await cache.delete(request);
+  }
+};
+
+// La dirección que abre la tarea de una alarma (App.tsx, ?alarma=)
+const alarmUrl = (key) => (key ? `/?alarma=${encodeURIComponent(key)}` : '/');
+
 self.addEventListener('push', (event) => {
   let message = {};
   try {
@@ -122,25 +140,48 @@ self.addEventListener('push', (event) => {
     message = {};
   }
   const data = message.data || message.notification || message;
+  const key = typeof data.tag === 'string' && data.tag.includes('@') ? data.tag : null;
+  const at = Date.parse(data.at);
   event.waitUntil(
-    self.registration.showNotification(data.title || 'CLAR', {
-      body: data.body || '',
-      tag: data.tag || undefined,
-      icon: '/icon-192.png',
-      badge: '/icon-192.png'
-    })
+    (async () => {
+      // Si CLAR ya la mostró en este dispositivo, sale sin volver a sonar. Siempre se muestra (en el iPhone, un aviso
+      // push que no se ve hace perder el permiso)
+      const already = key ? Boolean(await (await caches.open(SHOWN)).match(shownUrl(key)).catch(() => null)) : false;
+      await self.registration.showNotification(data.title || 'CLAR', {
+        silent: already,
+        body: data.body || '',
+        tag: data.tag || undefined,
+        icon: '/icon-192.png',
+        badge: '/badge-96.png',
+        // La hora de la alarma, no la de llegada
+        timestamp: Number.isFinite(at) ? at : undefined,
+        data: { key }
+      });
+      if (key) await rememberShown(key).catch(() => undefined);
+    })()
   );
 });
 
-// Al pulsar una notificación se vuelve a CLAR: a una ventana ya abierta o, si no hay ninguna, a una nueva
+// Al pulsar una notificación de una alarma se abre su tarea: en una ventana ya abierta (se le pide con un mensaje) o en
+// una nueva. Las demás notificaciones solo vuelven a CLAR.
 self.addEventListener('notificationclick', (event) => {
   event.notification.close();
+  const key = event.notification.data?.key ?? null;
   event.waitUntil(
     (async () => {
-      const windows = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });
-      const open = windows.find((client) => new URL(client.url).origin === self.location.origin);
-      if (open) return open.focus();
-      return self.clients.openWindow('/');
+      const windows = (await self.clients.matchAll({ type: 'window', includeUncontrolled: true })).filter(
+        (client) => new URL(client.url).origin === self.location.origin
+      );
+      // La ventana que se está usando, si no la que se ve, si no cualquiera
+      const open =
+        windows.find((client) => client.focused) ??
+        windows.find((client) => client.visibilityState === 'visible') ??
+        windows[0];
+      if (open) {
+        if (key) open.postMessage({ type: 'clar:open-alarm', key });
+        return open.focus();
+      }
+      return self.clients.openWindow(alarmUrl(key));
     })()
   );
 });

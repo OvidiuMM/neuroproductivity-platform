@@ -21,20 +21,26 @@ import { createsCycle, dependencyCandidates, dependentsOf, tasksById } from '../
 import { ESTIMATE_OPTIONS } from '../services/taskListing';
 import {
   buildRecurrence,
+  canRepeatFromCompletion,
   describeRecurrence,
+  everyPeriod,
   firstOccurrence,
   isLastWeekdayOfMonth,
   nextOccurrence,
   nthOfMonth,
+  repeatUnit,
   toDateString
 } from '../services/recurrence';
 
-const REPEAT_UNITS: Record<RecurrenceFrequency, string> = {
-  DAILY: 'días',
-  WEEKLY: 'semanas',
-  MONTHLY: 'meses',
-  YEARLY: 'años'
+const REPEAT_FREQUENCIES: RecurrenceFrequency[] = ['DAILY', 'WEEKLY', 'MONTHLY', 'YEARLY'];
+// Nombre completo del campo «Cada N» (se lee con el lector de pantalla)
+const REPEAT_HOW_MANY: Record<RecurrenceFrequency, string> = {
+  DAILY: 'cuántos días',
+  WEEKLY: 'cuántas semanas',
+  MONTHLY: 'cuántos meses',
+  YEARLY: 'cuántos años'
 };
+const REPEAT_INTERVAL_MAX = 99;
 const WEEKDAY_NAMES = ['domingo', 'lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado'];
 const ORDINAL_LABELS = ['', '1.er', '2.º', '3.er', '4.º'];
 // Semana empezando en lunes; `day` es el número de JavaScript (0 = domingo)
@@ -139,7 +145,8 @@ const formFor = (
         repeatFrequency: editingTask.recurrence?.frequency ?? '',
         repeatInterval: editingTask.recurrence?.interval ?? 1,
         repeatWeekdays: editingTask.recurrence?.weekdays ?? [],
-        repeatMonthlyMode: editingTask.recurrence?.monthlyMode ?? 'DAY_OF_MONTH'
+        repeatMonthlyMode: editingTask.recurrence?.monthlyMode ?? 'DAY_OF_MONTH',
+        repeatFromCompletion: editingTask.recurrence?.from === 'COMPLETION'
       }
     : {
         title: '',
@@ -164,7 +171,8 @@ const formFor = (
         repeatFrequency: '',
         repeatInterval: 1,
         repeatWeekdays: [],
-        repeatMonthlyMode: 'DAY_OF_MONTH'
+        repeatMonthlyMode: 'DAY_OF_MONTH',
+        repeatFromCompletion: false
       };
 
 // Si el formulario tiene algo escrito o elegido que valga la pena guardar como borrador (la lista, la prioridad o la
@@ -238,8 +246,11 @@ export const TaskModal: React.FC<TaskModalProps> = ({
   const [estimateMinutes, setEstimateMinutes] = useState<number | undefined>();
   const [repeatFrequency, setRepeatFrequency] = useState<RecurrenceFrequency | ''>('');
   const [repeatInterval, setRepeatInterval] = useState(1);
+  // Lo que se escribe en «Cada N» mientras se edita (null: no se está editando y se ve el número que cuenta)
+  const [intervalText, setIntervalText] = useState<string | null>(null);
   const [repeatWeekdays, setRepeatWeekdays] = useState<number[]>([]);
   const [repeatMonthlyMode, setRepeatMonthlyMode] = useState<MonthlyMode>('DAY_OF_MONTH');
+  const [repeatFromCompletion, setRepeatFromCompletion] = useState(false);
 
   // Estados de validación en tiempo real
   const [touched, setTouched] = useState<{ [key: string]: boolean }>({});
@@ -295,8 +306,10 @@ export const TaskModal: React.FC<TaskModalProps> = ({
     setEstimateMinutes(form.estimateMinutes);
     setRepeatFrequency(form.repeatFrequency);
     setRepeatInterval(form.repeatInterval);
+    setIntervalText(null);
     setRepeatWeekdays(form.repeatWeekdays);
     setRepeatMonthlyMode(form.repeatMonthlyMode);
+    setRepeatFromCompletion(form.repeatFromCompletion);
     setNewGoalOpen(false);
     setCreatedGoals([]);
     setCreatedGoalId(null);
@@ -361,7 +374,8 @@ export const TaskModal: React.FC<TaskModalProps> = ({
     repeatFrequency,
     repeatInterval,
     repeatWeekdays,
-    repeatMonthlyMode
+    repeatMonthlyMode,
+    repeatFromCompletion
   };
   // Una fecha a medio escribir (o imposible) aún no está en el formulario, pero también es un cambio
   const [dateDrafts, setDateDrafts] = useState<Record<string, boolean>>({});
@@ -533,18 +547,36 @@ export const TaskModal: React.FC<TaskModalProps> = ({
     : 'DAY_OF_MONTH';
   // Semanal: mientras no se elijan días, se repite el mismo día de la semana que el inicio (y sigue al inicio si cambia)
   const weekdays = repeatWeekdays.length ? repeatWeekdays : [anchor.getDay()];
+  // «N días o semanas después de hacerla»: solo en días y semanas (en meses y años, la elección se guarda pero no cuenta)
+  const fromCompletion = repeatFromCompletion && canRepeatFromCompletion(repeatFrequency);
   const built = repeatFrequency
     ? buildRecurrence(repeatFrequency, seriesStart, {
         interval: repeatInterval,
         weekdays,
         monthlyMode: effectiveMonthlyMode,
-        until: dueDate || undefined
+        until: dueDate || undefined,
+        from: fromCompletion ? 'COMPLETION' : undefined
       })
     : undefined;
   const recurrence = built?.monthDay !== undefined ? { ...built, monthDay: anchorDay } : built;
   const firstRepetition = recurrence ? firstOccurrence(seriesStart, recurrence) : null;
+  // La siguiente si se completa el día de la primera (contando desde que se hace, depende de ese día)
   const nextRepetition =
     recurrence && firstRepetition ? nextOccurrence(firstRepetition, recurrence, toLocalDate(firstRepetition)) : null;
+  // «Cada N»: lo escrito se ve tal cual (se puede vaciar para escribir otro número) y, si es un número, cuenta ya,
+  // ajustado de 1 a 99. Al salir del campo se ve el número que cuenta (si se dejó vacío, el de antes)
+  const intervalInput = intervalText ?? String(repeatInterval);
+  const validInterval = (value: string) =>
+    /^\d+$/.test(value) && Number(value) >= 1 && Number(value) <= REPEAT_INTERVAL_MAX;
+  const typeInterval = (value: string) => {
+    setIntervalText(value);
+    if (validInterval(value)) setRepeatInterval(Number(value));
+  };
+  // Vacío mientras se escribe otro número no es un error; «0» o letras, sí (y no deja guardar)
+  const intervalError =
+    intervalText !== null && intervalText !== '' && !validInterval(intervalText)
+      ? `Escribe un número del 1 al ${REPEAT_INTERVAL_MAX}.`
+      : null;
   const recurrenceError = !isRepeating
     ? null
     : dueDate && dueDate < seriesStart
@@ -578,6 +610,7 @@ export const TaskModal: React.FC<TaskModalProps> = ({
     !isSyntaxInvalid &&
     !datesError &&
     !recurrenceError &&
+    !(isRepeating && intervalError) &&
     !dependencyError &&
     !alarmProblem &&
     Boolean(listContext) &&
@@ -1243,7 +1276,7 @@ export const TaskModal: React.FC<TaskModalProps> = ({
               </div>
 
               {/* FECHAS OPCIONALES: plazo (solo fecha límite) o intervalo (inicio + fecha límite), con hora opcional */}
-              <fieldset className="space-y-3 rounded-xl border border-slate-200 p-3.5">
+              <fieldset className="min-w-0 space-y-3 rounded-xl border border-slate-200 p-3.5">
                 <legend className="flex items-center gap-1.5 px-1 text-xs font-bold tracking-wider text-slate-600 uppercase">
                   <CalendarClock className="h-3.5 w-3.5 text-indigo-600" />
                   Inicio y repetición (opcional)
@@ -1287,10 +1320,11 @@ export const TaskModal: React.FC<TaskModalProps> = ({
                   </p>
                 )}
 
-                {/* REPETICIÓN: al marcarla Hecha se archiva y se crea la siguiente con la nueva fecha */}
+                {/* REPETICIÓN: al marcarla Hecha se archiva y se crea la siguiente con la nueva fecha. Se lee en una línea:
+                    «Repetir: No se repite» o «Repetir: Cada [N] [días]» */}
                 <div className="space-y-3 border-t border-slate-100 pt-2">
-                  <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                    <div className="space-y-1">
+                  <div className="space-y-1">
+                    <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
                       <label
                         htmlFor="task-repeat"
                         className="flex items-center gap-1 text-[11px] font-semibold text-slate-700"
@@ -1298,50 +1332,98 @@ export const TaskModal: React.FC<TaskModalProps> = ({
                         <Repeat className="h-3.5 w-3.5 text-indigo-600" aria-hidden="true" />
                         Repetir
                       </label>
-                      <select
-                        id="task-repeat"
-                        value={repeatFrequency}
-                        onChange={(e) => {
-                          const value = e.target.value as RecurrenceFrequency | '';
-                          // Al dejar de repetir, las fechas vuelven a ser las de una tarea normal: la fecha límite pasa
-                          // a ser la primera repetición y desaparece el inicio de la serie (si no, quedaría un intervalo)
-                          if (!value && isRepeating) {
-                            setDueDate(firstRepetition ?? startDate);
-                            setStartDate('');
-                          }
-                          setRepeatFrequency(value);
-                        }}
-                        className="w-full rounded-lg border border-slate-300 bg-white px-2.5 py-1.5 text-xs focus:ring-2 focus:ring-indigo-400 focus:outline-none"
-                      >
-                        <option value="">No se repite</option>
-                        <option value="DAILY">Cada día</option>
-                        <option value="WEEKLY">Cada semana</option>
-                        <option value="MONTHLY">Cada mes</option>
-                        <option value="YEARLY">Cada año</option>
-                      </select>
-                    </div>
-                    {repeatFrequency && (
-                      <div className="space-y-1">
-                        <label
-                          htmlFor="task-repeat-interval"
-                          className="block text-[11px] font-semibold text-slate-700"
+                      {/* «Cada [N] [unidad]» va junto: si no cabe en la línea, pasa entero a la siguiente (y, con el
+                          texto muy grande, la unidad baja también) */}
+                      <div className="flex min-w-0 flex-wrap items-center gap-2">
+                        {repeatFrequency && (
+                          <>
+                            <label htmlFor="task-repeat-interval" className="text-xs text-slate-700">
+                              Cada<span className="sr-only"> {REPEAT_HOW_MANY[repeatFrequency]}</span>
+                            </label>
+                            <input
+                              id="task-repeat-interval"
+                              type="text"
+                              inputMode="numeric"
+                              autoComplete="off"
+                              maxLength={2}
+                              value={intervalInput}
+                              onChange={(e) => typeInterval(e.target.value)}
+                              onBlur={() => setIntervalText(null)}
+                              aria-invalid={Boolean(intervalError)}
+                              aria-describedby={intervalError ? 'task-repeat-interval-error' : undefined}
+                              className="w-12 rounded-lg border border-slate-300 px-2 py-1.5 text-center text-xs focus:ring-2 focus:ring-indigo-400 focus:outline-none aria-invalid:border-red-500"
+                            />
+                          </>
+                        )}
+                        <select
+                          id="task-repeat"
+                          value={repeatFrequency}
+                          onChange={(e) => {
+                            const value = e.target.value as RecurrenceFrequency | '';
+                            // Al dejar de repetir, las fechas vuelven a ser las de una tarea normal: la fecha límite pasa
+                            // a ser la primera repetición y desaparece el inicio de la serie (si no, quedaría un intervalo)
+                            if (!value && isRepeating) {
+                              setDueDate(firstRepetition ?? startDate);
+                              setStartDate('');
+                            }
+                            setIntervalText(null);
+                            setRepeatFrequency(value);
+                          }}
+                          className="max-w-full min-w-0 rounded-lg border border-slate-300 bg-white px-2.5 py-1.5 text-xs focus:ring-2 focus:ring-indigo-400 focus:outline-none"
                         >
-                          Cada cuántos ({REPEAT_UNITS[repeatFrequency]})
-                        </label>
-                        <input
-                          id="task-repeat-interval"
-                          type="number"
-                          min={1}
-                          max={99}
-                          value={repeatInterval}
-                          onChange={(e) => setRepeatInterval(Math.max(1, Math.min(99, Number(e.target.value) || 1)))}
-                          className="w-full rounded-lg border border-slate-300 px-2.5 py-1.5 text-xs focus:ring-2 focus:ring-indigo-400 focus:outline-none"
-                        />
+                          <option value="">No se repite</option>
+                          {/* Al repetir, tras «Cada N» solo va la unidad, en singular o plural según N. Sin repetir, la
+                              regla entera, con el N que se usará (si se cambió antes) */}
+                          {REPEAT_FREQUENCIES.map((frequency) => (
+                            <option key={frequency} value={frequency}>
+                              {repeatFrequency
+                                ? repeatUnit(frequency, repeatInterval)
+                                : everyPeriod(repeatInterval, frequency)}
+                            </option>
+                          ))}
+                        </select>
                       </div>
+                    </div>
+                    {intervalError && (
+                      <p
+                        id="task-repeat-interval-error"
+                        role="alert"
+                        className="flex items-center gap-1 text-xs font-medium text-red-600"
+                      >
+                        <AlertTriangle className="h-3.5 w-3.5" />
+                        {intervalError}
+                      </p>
                     )}
                   </div>
 
-                  {repeatFrequency === 'WEEKLY' && (
+                  {/* Días y semanas: en fechas fijas o contando desde el día en que se hace */}
+                  {canRepeatFromCompletion(repeatFrequency) && (
+                    <fieldset className="space-y-1">
+                      <legend className="text-[11px] font-semibold text-slate-700">Cuándo vence la siguiente</legend>
+                      <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-slate-700">
+                        <label className="flex cursor-pointer items-center gap-1.5">
+                          <input
+                            type="radio"
+                            name="task-repeat-from"
+                            checked={!fromCompletion}
+                            onChange={() => setRepeatFromCompletion(false)}
+                          />
+                          En fechas fijas
+                        </label>
+                        <label className="flex cursor-pointer items-center gap-1.5">
+                          <input
+                            type="radio"
+                            name="task-repeat-from"
+                            checked={fromCompletion}
+                            onChange={() => setRepeatFromCompletion(true)}
+                          />
+                          {repeatInterval} {repeatUnit(repeatFrequency, repeatInterval)} después de hacerla
+                        </label>
+                      </div>
+                    </fieldset>
+                  )}
+
+                  {repeatFrequency === 'WEEKLY' && !fromCompletion && (
                     <fieldset className="space-y-1">
                       <legend className="text-[11px] font-semibold text-slate-700">Días de la semana</legend>
                       <div className="flex flex-wrap gap-1.5">
@@ -1395,9 +1477,10 @@ export const TaskModal: React.FC<TaskModalProps> = ({
                     <p className="text-[11px] font-medium text-indigo-700" role="status">
                       {describeRecurrence(recurrence, firstRepetition)}
                       {` · Primera: ${formatTaskDates({ dueDate: firstRepetition })?.replace('Vence: ', '')}`}
+                      {fromCompletion ? ' · Si la haces ese día, ' : ' · Al completarla, '}
                       {nextRepetition
-                        ? ` · Al completarla, la siguiente vencerá el ${formatTaskDates({ dueDate: nextRepetition })?.replace('Vence: ', '')}`
-                        : ' · No habrá más repeticiones'}
+                        ? `la siguiente vencerá el ${formatTaskDates({ dueDate: nextRepetition })?.replace('Vence: ', '')}`
+                        : 'no habrá más repeticiones'}
                     </p>
                   )}
                   {recurrenceError && (

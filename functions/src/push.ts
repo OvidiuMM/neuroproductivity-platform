@@ -36,7 +36,7 @@ const tokensRef = (uid: string) => devicesRef(uid).collection('tokens');
 const tokenIndexRef = (id: string) => db().doc(`push_tokens/${id}`);
 const queueRef = (uid: string, taskId: string) => db().doc(`alarm_queue/${uid}__${taskId}`);
 const sentRef = (uid: string, taskId: string) => db().doc(`alarm_sent/${uid}__${taskId}`);
-const tokenId = (token: string) => createHash('sha256').update(token).digest('hex').slice(0, 40);
+export const tokenId = (token: string) => createHash('sha256').update(token).digest('hex').slice(0, 40);
 
 const queueDoc = (uid: string, taskId: string, alarm: QueuedAlarm) => ({
   uid,
@@ -130,7 +130,7 @@ export const registerPushDevice = onCall({ region: REGION }, async (request) => 
     );
     if (recent.length >= MAX_REGISTRATIONS_PER_HOUR)
       throw new HttpsError('resource-exhausted', 'Demasiados intentos seguidos. Inténtalo de nuevo en un rato.');
-    tx.set(limitRef, { at: [...recent, new Date().toISOString()] });
+    tx.set(limitRef, { at: [...recent, new Date().toISOString()] }, { merge: true });
   });
 
   const id = tokenId(token);
@@ -273,7 +273,9 @@ export const sendQueued = async (ref: DocumentReference, now: number, send: Send
           title: notificationText(alarm, showTitle),
           body: String(claimed.body),
           tag: String(claimed.key),
-          url: '/'
+          // El momento de la alarma (la notificación lo muestra como su hora) y la dirección que abre su tarea
+          at: claimed.at.toDate().toISOString(),
+          url: `/?alarma=${encodeURIComponent(String(claimed.key))}`
         },
         webpush: { headers: { Urgency: 'high', TTL: String(ttl) } }
       })
@@ -301,6 +303,51 @@ export const sendQueued = async (ref: DocumentReference, now: number, send: Send
   }
   return 'failed';
 };
+
+// «PROBAR NOTIFICACIÓN»: un aviso ahora mismo a un dispositivo registrado de la cuenta, por el mismo camino que las
+// alarmas. Como mucho 5 por hora (push_limits/{uid}.tests, aparte de los registros). Si el token ya no vale, se borra
+// y se dice
+const MAX_TESTS_PER_HOUR = 5;
+export const testPush = async (uid: string, token: string, send: SendMulticast = sendWithFcm, now = Date.now()) => {
+  const id = tokenId(token);
+  if (!(await tokensRef(uid).doc(id).get()).exists)
+    throw new HttpsError('failed-precondition', 'Activa antes las alarmas con CLAR cerrada en este dispositivo.');
+  const limitRef = db().doc(`push_limits/${uid}`);
+  await db().runTransaction(async (tx) => {
+    const recent = (((await tx.get(limitRef)).data()?.tests as string[] | undefined) ?? []).filter(
+      (at) => Date.parse(at) > now - 60 * 60 * 1000
+    );
+    if (recent.length >= MAX_TESTS_PER_HOUR)
+      throw new HttpsError('resource-exhausted', 'Ya has probado varias veces. Inténtalo de nuevo en un rato.');
+    tx.set(limitRef, { tests: [...recent, new Date(now).toISOString()] }, { merge: true });
+  });
+  const result = await send({
+    tokens: [token],
+    data: { title: 'CLAR', body: 'Así te avisará CLAR de tus alarmas, también con la app cerrada.', tag: 'clar-test' },
+    webpush: { headers: { Urgency: 'high', TTL: '120' } }
+  });
+  const response = result.responses[0];
+  if (response?.success) return;
+  if (INVALID_TOKEN.has(response?.error?.code ?? '')) {
+    await dropToken(uid, id);
+    throw new HttpsError(
+      'failed-precondition',
+      'Este dispositivo ya no recibe avisos: desactívalos y actívalos otra vez.'
+    );
+  }
+  logger.warn('Test push failed', { code: response?.error?.code ?? 'unknown' });
+  throw new HttpsError('unavailable', 'No se pudo enviar ahora. Inténtalo de nuevo en un rato.');
+};
+
+export const sendTestPush = onCall({ region: REGION }, async (request) => {
+  const auth = requireAuth(request);
+  const { token } = (request.data ?? {}) as { token?: unknown };
+  if (!isValidToken(token)) throw new HttpsError('invalid-argument', 'Solicitud no válida.');
+  const access = await db().doc(`access/${auth.uid}`).get();
+  if (access.data()?.status !== 'approved') throw new HttpsError('permission-denied', 'Tu cuenta aún no tiene acceso.');
+  await testPush(auth.uid, token);
+  return { ok: true };
+});
 
 // Tokens que llevan 30 días sin renovarse (el dispositivo no ha abierto CLAR): se borran aunque no tengan alarmas
 export const dropStaleTokens = async (now: number) => {

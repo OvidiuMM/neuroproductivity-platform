@@ -1,3 +1,4 @@
+import { isIOS } from './platform';
 // DICTAR UNA TAREA: el reconocimiento de voz del navegador (Web Speech API). CLAR no recibe el audio, solo el texto
 // que devuelve el navegador, que para pasarlo a texto lo envía a su proveedor (Google en Chrome, Apple en Safari,
 // Microsoft en Edge; lo dice la política de privacidad). Firefox no lo tiene, y entonces no se ofrece.
@@ -55,7 +56,9 @@ export const dictationErrorMessage = (code: string) => {
       return 'Para dictar, da permiso al micrófono en tu navegador.';
     // Safari, con el dictado del dispositivo desactivado (o donde no lo deja usar)
     case 'service-not-allowed':
-      return 'Aquí no se puede dictar. Activa el dictado del dispositivo o prueba en el navegador.';
+      return isIOS()
+        ? 'Aquí no se puede dictar: usa el micrófono del teclado.'
+        : 'Aquí no se puede dictar. Activa el dictado del dispositivo o prueba en el navegador.';
     case 'audio-capture':
       return 'No se encuentra el micrófono.';
     case 'network':

@@ -1,5 +1,6 @@
 // Preferencias de accesibilidad de este dispositivo. Se aplican como clases en <html> (ver index.css),
-// así funcionan también antes de iniciar sesión y en las pantallas de acceso.
+// así funcionan también antes de iniciar sesión y en las pantallas de acceso. Las celebraciones no llevan clase: la app
+// mira la preferencia al celebrar (App.tsx).
 export type TextSize = 'normal' | 'large' | 'xlarge';
 
 export interface A11yPrefs {
@@ -7,13 +8,16 @@ export interface A11yPrefs {
   highContrast: boolean;
   reduceMotion: boolean;
   strongFocus: boolean;
+  // Mensaje y animación al hacer una tarea antigua, lograr una meta o terminar un proyecto (activas por defecto)
+  celebrations: boolean;
 }
 
 export const DEFAULT_A11Y_PREFS: A11yPrefs = {
   textSize: 'normal',
   highContrast: false,
   reduceMotion: false,
-  strongFocus: false
+  strongFocus: false,
+  celebrations: true
 };
 
 export const A11Y_STORAGE_KEY = 'neuro_a11y_v1';
@@ -30,7 +34,8 @@ export const parseA11yPrefs = (raw: string | null): A11yPrefs => {
         : DEFAULT_A11Y_PREFS.textSize,
       highContrast: data.highContrast === true,
       reduceMotion: data.reduceMotion === true,
-      strongFocus: data.strongFocus === true
+      strongFocus: data.strongFocus === true,
+      celebrations: data.celebrations !== false
     };
   } catch {
     return DEFAULT_A11Y_PREFS;

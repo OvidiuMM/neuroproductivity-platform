@@ -64,14 +64,14 @@ export const buildCalendarEvent = (
   const description = [task.description, notesText(task.observations), deadlineNote, `Tarea de CLAR: ${appUrl}`]
     .filter(Boolean)
     .join('\n\n');
+  // Una repetición que cuenta desde que se hace no tiene serie: va como un evento suelto, el de la repetición actual
+  const rrule = task.recurrence ? toRRule(task.recurrence, allDay, dueDate) : null;
   const base = {
     // Dominio del UID sin cambiar (nombre anterior de la app): así reexportar actualiza el mismo evento
     uid: `${task.id}@neuroproductividad`,
     title: task.title,
     description,
-    ...(task.recurrence
-      ? { rrule: toRRule(task.recurrence, allDay, dueDate), ...(allDay || !timeZone ? {} : { timeZone }) }
-      : {})
+    ...(rrule ? { rrule, ...(allDay || !timeZone ? {} : { timeZone }) } : {})
   };
 
   // La alarma se cuenta desde un borde del evento (en una serie, la misma para cada repetición): el que marca el plazo

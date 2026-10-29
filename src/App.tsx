@@ -73,6 +73,7 @@ import { useTaskAlarms } from './hooks/useTaskAlarms';
 import { alarmLateNote, alarmSetAtFor, formatClock } from './services/alarms';
 import {
   NOTIFICATIONS_GRANTED_EVENT,
+  OPEN_ALARM_MESSAGE,
   notificationState,
   registerServiceWorker,
   requestNotifications,
@@ -84,7 +85,9 @@ import {
   isPushEnabled,
   isPushTitleShown,
   pushAvailable,
+  pushPermissionLost,
   registerPushDevice,
+  sendTestPush,
   setPushTitleShown
 } from './services/push';
 import { TOUR_STEPS } from './tourSteps';
@@ -125,6 +128,9 @@ import {
 } from './services/feedbackApi';
 import { FirebaseError } from 'firebase/app';
 import { AccessibilityPanel } from './components/AccessibilityPanel';
+import { loadA11yPrefs } from './services/a11yPrefs';
+import { createCelebrations, type CelebrationTrigger } from './services/celebrations';
+import { CelebrationBurst } from './components/CelebrationBurst';
 import {
   setAccess,
   subscribeToAccessRequests,
@@ -156,7 +162,7 @@ import { prepareAccountImport, runAccountImport } from './services/accountImport
 import type { ImportPlan } from './services/importData';
 import { changePassword, hasPassword } from './services/auth';
 import { useReauthMethods } from './hooks/useReauthMethods';
-import { CheckCircle2, Plus } from 'lucide-react';
+import { CheckCircle2, Plus, Sparkles } from 'lucide-react';
 
 interface AppProps {
   user: User;
@@ -440,15 +446,27 @@ export default function App({ user, services, isAdmin = false }: AppProps) {
   const [emailEditor, setEmailEditor] = useState<{ email?: EmailDraft } | null>(null);
 
   // Toast / Banner de notificación
-  // Con `undo`, el aviso ofrece «Deshacer» y dura un poco más
-  const [toast, setToast] = useState<{ message: string; undo?: () => void } | null>(null);
+  // Con `undo`, el aviso ofrece «Deshacer» y dura un poco más. Con `celebration`, añade ese mensaje debajo del suyo,
+  // sale con confeti y dura 3 s más (para leerlo). `id` reinicia el confeti si llega otra celebración seguida
+  const [toast, setToast] = useState<{ message: string; undo?: () => void; celebration?: string; id: number } | null>(
+    null
+  );
   const toastTimer = useRef<number | undefined>(undefined);
+  const toastCount = useRef(0);
 
-  const showToast = useCallback((message: string, undo?: () => void) => {
+  const showToast = useCallback((message: string, undo?: () => void, celebration?: string) => {
     window.clearTimeout(toastTimer.current);
-    setToast({ message, undo });
-    toastTimer.current = window.setTimeout(() => setToast(null), undo ? 5000 : 4000);
+    toastCount.current += 1;
+    setToast({ message, undo, celebration, id: toastCount.current });
+    toastTimer.current = window.setTimeout(() => setToast(null), (undo ? 5000 : 4000) + (celebration ? 3000 : 0));
   }, []);
+
+  // CELEBRACIONES (src/services/celebrations.ts): solo desde los manejadores de lo que se hace en esta pestaña (nunca
+  // desde las instantáneas, que traen también lo de otras pestañas y dispositivos, ni al importar). Se apagan en
+  // «Accesibilidad», en cada dispositivo
+  const [celebrationFor] = useState(() => createCelebrations());
+  const celebrate = (trigger: CelebrationTrigger) =>
+    loadA11yPrefs().celebrations ? celebrationFor(trigger)?.message : undefined;
 
   const reportError = useCallback(
     (action: string) => (e: unknown) => {
@@ -732,9 +750,11 @@ export default function App({ user, services, isAdmin = false }: AppProps) {
     }
     saveTask(db, uid, updated).catch(reportError('actualizar el estado'));
     if (closing) {
+      // Se celebra si se hace (no al cancelarla) una tarea que llevaba 14 días o más en la lista y no se repite
       showToast(
         `Tarea ${closedLabel} y archivada. La encontrarás en «Archivadas».${freedNote}`,
-        undo(() => undoTaskChange(db, uid, [updated], restored()))
+        undo(() => undoTaskChange(db, uid, [updated], restored())),
+        celebrate({ type: 'task', task, to: status })
       );
     } else if (isArchived(task)) {
       showToast('Tarea reactivada: vuelve a su lista.');
@@ -754,7 +774,9 @@ export default function App({ user, services, isAdmin = false }: AppProps) {
   const handleSetGoalStatus = (goal: Goal, status: GoalStatus) => {
     saveGoal(db, uid, { ...goal, status, updatedAt: new Date().toISOString() }).catch(reportError('guardar la meta'));
     showToast(
-      status === 'ACHIEVED' ? '¡Meta lograda!' : status === 'ARCHIVED' ? 'Meta archivada.' : 'Meta reactivada.'
+      status === 'ACHIEVED' ? '¡Meta lograda!' : status === 'ARCHIVED' ? 'Meta archivada.' : 'Meta reactivada.',
+      undefined,
+      celebrate({ type: 'goal', goal, to: status })
     );
   };
   const handleDeleteGoal = (goal: Goal) => {
@@ -787,7 +809,9 @@ export default function App({ user, services, isAdmin = false }: AppProps) {
         ? 'Proyecto terminado.'
         : status === 'ARCHIVED'
           ? 'Proyecto archivado.'
-          : 'Proyecto reactivado.'
+          : 'Proyecto reactivado.',
+      undefined,
+      celebrate({ type: 'project', project, to: status })
     );
   };
   const handleDeleteProject = (project: Project) => {
@@ -995,6 +1019,22 @@ export default function App({ user, services, isAdmin = false }: AppProps) {
     url.searchParams.delete('nueva');
     window.history.replaceState(window.history.state, '', url);
   }, []);
+  // ALARMA PULSADA: al tocar la notificación de una alarma se abre su tarea (public/sw.js). Con CLAR cerrada llega como
+  // /?alarma=<clave>, que se quita de la dirección al arrancar; con CLAR abierta, como mensaje del service worker. Se
+  // abre más abajo, como el acceso directo
+  const [launchAlarm, setLaunchAlarm] = useState(() => new URLSearchParams(window.location.search).get('alarma'));
+  useEffect(() => {
+    const url = new URL(window.location.href);
+    if (url.searchParams.has('alarma')) {
+      url.searchParams.delete('alarma');
+      window.history.replaceState(window.history.state, '', url);
+    }
+    const onMessage = (event: MessageEvent<{ type?: unknown; key?: unknown } | null>) => {
+      if (event.data?.type === OPEN_ALARM_MESSAGE && typeof event.data.key === 'string') setLaunchAlarm(event.data.key);
+    };
+    navigator.serviceWorker?.addEventListener('message', onMessage);
+    return () => navigator.serviceWorker?.removeEventListener('message', onMessage);
+  }, []);
   const startTour = (firstRun = false) => {
     navigate('tasks');
     setIsFirstRunTour(firstRun);
@@ -1079,6 +1119,7 @@ export default function App({ user, services, isAdmin = false }: AppProps) {
     !releaseNotesClosed &&
     !otherDialogOpen &&
     launchNewTask === null &&
+    launchAlarm === null &&
     profileOnboarding.fromServer &&
     shouldShowReleaseNotes({
       current: __APP_VERSION__,
@@ -1171,6 +1212,19 @@ export default function App({ user, services, isAdmin = false }: AppProps) {
     setEditingTask(task);
     setIsTaskModalOpen(true);
   };
+  // La alarma pulsada se abre cuando lo haría el acceso directo y su tarea ha llegado. Si mientras tanto se abre otro
+  // formulario, o la tarea ya no está (confirmado por el servidor), se descarta
+  if (launchAlarm !== null && isTaskModalOpen) setLaunchAlarm(null);
+  else if (launchAlarm !== null && launchReady) {
+    // La clave es «tarea@momento»: sin «@» no es de una alarma y no abre nada
+    const at = launchAlarm.lastIndexOf('@');
+    const taskId = at > 0 ? launchAlarm.slice(0, at) : null;
+    const task = taskId ? tasks.find((t) => t.id === taskId && !isArchived(t)) : undefined;
+    if (task) {
+      setLaunchAlarm(null);
+      openAlarmTask(task);
+    } else if (syncByCollection.tasks.fromServer) setLaunchAlarm(null);
+  }
 
   // Conteo de tareas por contexto
   const archivedTasks = tasks.filter(isArchived);
@@ -1479,12 +1533,24 @@ export default function App({ user, services, isAdmin = false }: AppProps) {
           onDismiss={(key) => setAlarmAlerts((list) => list.filter((a) => a.key !== key))}
         />
 
-        {/* BANNER TOAST DE NOTIFICACIÓN: región viva siempre presente para que los lectores de pantalla lo anuncien */}
+        {/* BANNER TOAST DE NOTIFICACIÓN: región viva siempre presente para que los lectores de pantalla lo anuncien. Una
+          celebración va en una línea aparte, después del aviso de siempre */}
         <div role="status" aria-live="polite">
           {toast && (
-            <div className="animate-in slide-in-from-bottom-3 fixed right-[calc(1rem+env(safe-area-inset-right))] bottom-[calc(9.5rem+env(safe-area-inset-bottom))] left-[calc(1rem+env(safe-area-inset-left))] z-50 flex items-center gap-2.5 rounded-2xl bg-slate-900 px-4 py-3 text-xs text-white shadow-xl duration-200 md:right-6 md:bottom-6 md:left-auto">
-              <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-400" aria-hidden="true" />
-              <span className="font-semibold">{toast.message}</span>
+            <div className="animate-in slide-in-from-bottom-3 fixed right-[calc(1rem+env(safe-area-inset-right))] bottom-[calc(9.5rem+env(safe-area-inset-bottom))] left-[calc(1rem+env(safe-area-inset-left))] z-50 flex items-center gap-2.5 rounded-2xl bg-slate-900 px-4 py-3 text-xs text-white shadow-xl duration-200 md:right-6 md:bottom-6 md:left-auto md:max-w-md">
+              {toast.celebration ? (
+                <Sparkles
+                  key={toast.id}
+                  className="celebration-icon h-4 w-4 shrink-0 text-violet-300"
+                  aria-hidden="true"
+                />
+              ) : (
+                <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-400" aria-hidden="true" />
+              )}
+              <span className="min-w-0 wrap-anywhere">
+                <span className="font-semibold">{toast.message}</span>
+                {toast.celebration && <span className="mt-0.5 block text-indigo-200">{toast.celebration}</span>}
+              </span>
               {toast.undo && (
                 <button
                   type="button"
@@ -1497,6 +1563,8 @@ export default function App({ user, services, isAdmin = false }: AppProps) {
             </div>
           )}
         </div>
+        {/* Confeti de la celebración: solo decora, debajo del aviso; se va con él (también al pulsar «Deshacer») */}
+        {toast?.celebration && <CelebrationBurst key={toast.id} />}
 
         {/* PANTALLA DE INICIO MÓVIL (SPLASH SCREEN) */}
         {showSplash && (
@@ -1574,7 +1642,9 @@ export default function App({ user, services, isAdmin = false }: AppProps) {
                   enabled: pushEnabled,
                   onChange: handleTogglePush,
                   showTitle: pushShowsTitle,
-                  onShowTitleChange: handlePushTitle
+                  onShowTitleChange: handlePushTitle,
+                  permissionLost: pushPermissionLost(uid),
+                  onTest: () => sendTestPush(services, uid)
                 }
               : null
           }

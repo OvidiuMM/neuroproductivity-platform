@@ -94,10 +94,11 @@ const screensFor = (
       'Meta: vincula la tarea a una de tus metas y tomará su área (si el título se parece a una meta, CLAR te propone vincularla). Sin meta, el motor de sugerencias te propone el área de la Rueda con la que se relaciona. Si la meta aún no existe, «Nueva meta» la crea ahí mismo con su nombre y su área.',
       'Tareas que dependen de otras: en «Más opciones», «Empieza después de» elige la tarea a la que espera. Mientras esa no esté hecha o cancelada, esta sale con un candado («Bloqueada: espera a…»), no entra en el Top 10 y no se puede marcar como hecha. Al terminar la otra se desbloquea sola. Varias tareas pueden esperar a la misma y avanzar en paralelo.',
       'Cada tarea tiene un estado: Pendiente, En progreso, Bloqueada, Hecha o Cancelada. Mientras espera a otra tarea no se puede poner «En progreso» ni «Hecha». Hecha y Cancelada la archivan; una cancelada no cuenta como hecha en las estadísticas ni en el avance de las metas. Desde «Archivadas» la reactivas cambiando su estado.',
+      'Celebraciones: al hacer una tarea que llevaba 14 días o más en tu lista, lograr una meta o terminar un proyecto, el aviso lo celebra con un mensaje y un breve confeti. Si prefieres no verlas, apágalas en «Accesibilidad».',
       'Si cierras con cambios sin guardar el formulario de una tarea que ya existe, una meta o un proyecto, o el editor de áreas, CLAR te pregunta antes de descartarlos; si cierras la pestaña, te avisa el navegador. Una tarea nueva con algo escrito se guarda sola como borrador.',
       'Puedes darle una fecha límite o un intervalo, con hora opcional: el título se pone violeta cuando falta menos de una semana y rojo cuando ha vencido. El día que vence, hasta su hora límite, destaca con la etiqueta «Hoy» y el título en negrita (en las listas, también con un borde violeta). Las fechas se escriben como dd/mm/aaaa o se eligen en el calendario, con la semana empezando en lunes.',
       'Borradores: si cierras una tarea nueva con algo escrito sin guardarla, se guarda sola en «Borradores» (junto a «Archivadas»), tal como estaba, con «Deshacer» por si no la querías. Con «Continuar» sigues con ella; al guardarla, pasa a tu lista. Los cambios de una tarea que ya existe no se guardan solos: al cerrar con cambios, CLAR te pregunta.',
-      'Dictar: en los navegadores que lo permiten, el micrófono del formulario escribe la tarea o una nota mientras hablas (hasta 30 segundos cada vez; vuelve a pulsarlo para parar). En Android, al mantener pulsado el icono de la app instalada (en el ordenador, con el botón derecho), «Nueva tarea por voz» abre una tarea nueva con el micrófono escuchando; tras instalar una versión nueva, puede tardar un día en salir.',
+      'Dictar: en los navegadores que lo permiten, el micrófono del formulario escribe la tarea o una nota mientras hablas (hasta 30 segundos cada vez; vuelve a pulsarlo para parar). En Android, al mantener pulsado el icono de la app instalada (en el ordenador, con el botón derecho), «Nueva tarea por voz» abre una tarea nueva con el micrófono escuchando; tras instalar una versión nueva, puede tardar un día en salir. En la app del iPhone no se puede dictar: usa el micrófono del teclado.',
       'Pulsa el título de una tarea, o su lápiz, para editarla. El menú «⋯» tiene el estado, el calendario, la descarga y eliminar.',
       'Con fecha límite, «Añadir al calendario», en el menú «⋯» de la tarea, la lleva a Google Calendar, Outlook o cualquier calendario (archivo .ics), con su descripción y sus notas. Con solo fecha, el evento dura una hora y empieza a la hora de su alarma o, sin alarma, a las 09:00. Si tiene hora de inicio y no hora límite, el evento dura una hora.' +
         (calendarSync
@@ -106,10 +107,10 @@ const screensFor = (
       '«Descargar (JSON)», en el menú «⋯», guarda la tarea con todos sus datos (y los nombres de su meta, su proyecto y las tareas de las que depende). Las metas y los proyectos también se descargan, con sus tareas.',
       'Alarma: una hora para que CLAR te avise el día límite. Suena ese día a esa hora; con hora límite, tiene que ser antes de ella (con la tarea a las 11:00, una alarma a las 10:57 suena 3 minutos antes). La tarjeta dice cuándo sonará («hoy 17:00»), y en una tarea que se repite, cada repetición la lleva. Si la pones cuando esa hora ya ha pasado, no suena.',
       pushAvailable()
-        ? 'La alarma avisa mientras CLAR esté abierta, también en segundo plano: dentro de la app y, si lo permites (en el formulario o en el menú de tu cuenta), con una notificación del sistema (en el iPhone, solo si instalas CLAR en la pantalla de inicio). Con «Avisarme también con CLAR cerrada», en el menú de tu cuenta, te llega aunque CLAR esté cerrada o el móvil bloqueado. Si no llegó y abres CLAR después de su hora pero antes del plazo, avisa al momento y dice a qué hora era. El archivo .ics del calendario también la lleva.'
+        ? 'La alarma avisa mientras CLAR esté abierta: dentro de la app y, si lo permites, con una notificación del sistema. Con «Avisarme también con CLAR cerrada», en el menú de tu cuenta, te llega aunque CLAR esté cerrada o el móvil bloqueado, y «Probar notificación» comprueba que llega. Al tocar la notificación se abre la tarea. En el iPhone solo funciona desde CLAR en la pantalla de inicio, con iOS 16.4 o posterior: en Safari, Compartir › «Añadir a pantalla de inicio»; después abre CLAR desde el icono y vuelve a entrar. En Android, para que salga en lo alto de la pantalla, activa «Mostrar en pantalla emergente» en los ajustes de notificaciones de CLAR. Si no llegó y abres CLAR después de su hora pero antes del plazo, avisa al momento y dice a qué hora era. El archivo .ics del calendario también la lleva.'
         : 'La alarma avisa mientras CLAR esté abierta, también en segundo plano: dentro de la app y, si lo permites (en el formulario o en el menú de tu cuenta), con una notificación del sistema (en el iPhone, solo si instalas CLAR en la pantalla de inicio). Con CLAR cerrada o el móvil bloqueado no puede sonar: si abres CLAR después de su hora pero antes del plazo, avisa al momento y dice a qué hora era. Para no perderla, añade la tarea al calendario con el archivo .ics, que lleva la alarma.',
       'Las horas (límite, de inicio, de la alarma y de las reuniones) se escriben en 24 h, de 00:00 a 23:59: 9:30, 0930 o 21:45. Lo que no es una hora no se guarda.',
-      'Las tareas pueden repetirse (cada día, semana, mes o año; por ejemplo, «cada mes, el 2.º lunes»). Al repetir, «Inicio» es desde cuándo se repite y la fecha límite hasta cuándo; cada repetición vence su propio día. Al marcarla Hecha o Cancelada se archiva y se crea la siguiente.',
+      'Las tareas pueden repetirse cada N días, semanas, meses o años (por ejemplo, «cada 3 días» o «cada mes, el 2.º lunes»): en «Más opciones», «Repetir». En días y semanas, la siguiente puede ir en fechas fijas o contar desde que la haces: con «3 días después de hacerla», vence 3 días después del día en que la marques Hecha. Al repetir, «Inicio» es desde cuándo se repite y la fecha límite hasta cuándo; cada repetición vence su propio día. Al marcarla Hecha o Cancelada se archiva y se crea la siguiente.',
       'Las ideas sin urgencia van a «Algún día» y no compiten con el Top 10.'
     ]
   },
@@ -118,7 +119,7 @@ const screensFor = (
     title: 'Agenda',
     icon: <CalendarDays className="h-5 w-5 text-indigo-600" />,
     points: [
-      'Vista semanal (de lunes a domingo) y por días con las tareas con fecha de tus dos listas, los intervalos, las próximas repeticiones de las tareas recurrentes y las reuniones.',
+      'Vista semanal (de lunes a domingo) y por días con las tareas con fecha de tus dos listas, los intervalos, las próximas repeticiones de las tareas que se repiten en fechas fijas y las reuniones.',
       'En la vista por días, las tareas vencidas aparecen aparte. Pulsa una tarea para editarla.'
     ]
   },
@@ -343,8 +344,9 @@ export const HowItWorks: React.FC<HowItWorksProps> = ({
         <h3 className="text-xs font-bold tracking-wider text-slate-700 uppercase">Accesibilidad</h3>
         <p className="text-sm leading-relaxed text-slate-600">
           En el menú de tu cuenta, <strong>Accesibilidad</strong> permite agrandar el texto, activar el alto contraste,
-          reducir las animaciones y hacer más visible el foco del teclado. Las preferencias se guardan en cada
-          dispositivo. Toda la app se puede usar con el teclado y se revisa automáticamente con las pautas WCAG 2.1 AA.
+          reducir las animaciones, hacer más visible el foco del teclado y apagar las celebraciones. Las preferencias se
+          guardan en cada dispositivo. Toda la app se puede usar con el teclado y se revisa automáticamente con las
+          pautas WCAG 2.1 AA.
         </p>
       </div>
 

@@ -3,7 +3,7 @@ import { after, beforeEach, describe, it } from 'node:test';
 import type { BatchResponse, MulticastMessage } from 'firebase-admin/messaging';
 import { Timestamp } from 'firebase-admin/firestore';
 import { adminDb } from '../../src/adminApp';
-import { dropStaleTokens, requeueAccount, sendQueued, syncTaskAlarm } from '../../src/push';
+import { dropStaleTokens, requeueAccount, sendQueued, syncTaskAlarm, testPush, tokenId } from '../../src/push';
 import { forgetPushData, forgetPushDevices } from '../../src/pushCleanup';
 
 // Se ejecuta contra el emulador de Firestore (npm run test:push): la cola de alarmas, su envío con un FCM simulado y
@@ -96,6 +96,9 @@ describe('push alarms', () => {
     ]);
     assert.equal(await queued('t1'), undefined);
     assert.equal((await db.doc(`alarm_sent/${uid}__t1`).get()).data()?.key, 't1@2026-10-16T07:30:00.000Z');
+    // La hora de la alarma (la notificación la muestra) y la dirección que abre su tarea
+    assert.equal(fcm.sent[0].data?.at, '2026-10-16T07:30:00.000Z');
+    assert.equal(fcm.sent[0].data?.url, `/?alarma=${encodeURIComponent('t1@2026-10-16T07:30:00.000Z')}`);
   });
 
   it('recomputes a queued alarm when sending: one queued before 0.9.7 for the day before waits for its day', async () => {
@@ -189,5 +192,58 @@ describe('push alarms', () => {
     assert.equal((await db.doc(`alarm_sent/${uid}__t1`).get()).exists, true);
     await forgetPushData(uid);
     assert.equal((await db.doc(`alarm_sent/${uid}__t1`).get()).exists, false);
+  });
+
+  describe('«Probar notificación»', () => {
+    const token = 'token-prueba-0123456789';
+    const registerThis = async () => {
+      const id = tokenId(token);
+      await db.doc(`push_devices/${uid}`).set({ timeZone: MADRID, updatedAt: fresh });
+      await db
+        .doc(`push_devices/${uid}/tokens/${id}`)
+        .set({ token, timeZone: MADRID, showTitle: false, updatedAt: fresh });
+      await db.doc(`push_tokens/${id}`).set({ uid, updatedAt: fresh });
+    };
+    beforeEach(() => db.doc(`push_limits/${uid}`).delete());
+
+    it('sends one notice to a registered device of the account, at most five an hour', async () => {
+      await registerThis();
+      const fcm = fakeFcm();
+      for (let i = 0; i < 5; i++) await testPush(uid, token, fcm.send, now + i * MINUTE);
+      assert.equal(fcm.sent.length, 5);
+      assert.deepEqual(fcm.sent[0].tokens, [token]);
+      assert.equal(fcm.sent[0].data?.tag, 'clar-test');
+      await assert.rejects(testPush(uid, token, fcm.send, now + 5 * MINUTE), /varias veces/);
+      // Una hora después, otra vez
+      await testPush(uid, token, fcm.send, now + 61 * MINUTE);
+      assert.equal(fcm.sent.length, 6);
+    });
+
+    it('keeps the registration limit apart from the tests', async () => {
+      await registerThis();
+      await db.doc(`push_limits/${uid}`).set({ at: [fresh] });
+      await testPush(uid, token, fakeFcm().send, now);
+      const limits = (await db.doc(`push_limits/${uid}`).get()).data();
+      assert.deepEqual(limits?.at, [fresh]);
+      assert.equal((limits?.tests as string[]).length, 1);
+    });
+
+    it('refuses a device that is not registered in the account', async () => {
+      const fcm = fakeFcm();
+      await assert.rejects(testPush(uid, token, fcm.send, now), /Activa antes/);
+      await registerThis();
+      await assert.rejects(testPush('bruno', token, fcm.send, now), /Activa antes/);
+      assert.equal(fcm.sent.length, 0);
+    });
+
+    it('drops a token that no longer works and says so; the account leaves push with its last device', async () => {
+      await registerThis();
+      await assert.rejects(
+        testPush(uid, token, fakeFcm('messaging/registration-token-not-registered').send, now),
+        /ya no recibe avisos/
+      );
+      assert.equal((await db.doc(`push_tokens/${tokenId(token)}`).get()).exists, false);
+      assert.equal((await db.doc(`push_devices/${uid}`).get()).exists, false);
+    });
   });
 });
