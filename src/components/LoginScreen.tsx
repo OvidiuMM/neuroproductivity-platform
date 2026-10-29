@@ -69,7 +69,7 @@ const m = messages<{
     features: {
       wheel: {
         title: 'Rueda de la Vida',
-        text: 'Valora de 1 a 10 cada área de tu vida y mira cómo cambia con el tiempo.'
+        text: 'Valora de 0 a 10 cada área de tu vida y mira cómo cambia con el tiempo.'
       },
       goals: {
         title: 'Metas y proyectos',
@@ -122,7 +122,7 @@ const m = messages<{
     features: {
       wheel: {
         title: 'Wheel of Life',
-        text: 'Rate each area of your life from 1 to 10 and see how it changes over time.'
+        text: 'Rate each area of your life from 0 to 10 and see how it changes over time.'
       },
       goals: {
         title: 'Goals and projects',
@@ -142,7 +142,7 @@ const m = messages<{
       },
       dictate: {
         title: 'Dictate your tasks',
-        text: 'Tap the microphone and say it, or press and hold the app icon: “New task by voice”.'
+        text: 'Tap the microphone and say it, or press and hold the app icon: “Nueva tarea por voz · New task by voice”.'
       },
       offline: {
         title: 'Offline too',

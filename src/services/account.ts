@@ -12,6 +12,7 @@ import { signOutAndClearCache, type FirebaseServices } from './firebase';
 import { deleteAllUserData, exportUserData, readWheelAreas } from './repository';
 import { IPHONE_DELETE_HELP, popupsUnreliable, signedInRecently } from './platform';
 import { downloadJson } from './download';
+import { LOCALE } from '../i18n/locale';
 
 // Descarga y borrado de la cuenta. Funcionan también sin acceso aprobado (las reglas dejan leer y borrar
 // los propios datos siempre), así una cuenta pendiente o retirada puede llevarse o eliminar lo suyo.
@@ -60,6 +61,6 @@ export const deleteAccount = async (
 // Cierra la sesión en todos los dispositivos: invalida los tokens de renovación (los demás dispositivos dejan de
 // tener acceso en menos de una hora, cuando caduca el token actual) y cierra la sesión en este
 export const signOutEverywhere = async (services: FirebaseServices) => {
-  await httpsCallable(services.functions, 'revokeSessions')();
+  await httpsCallable(services.functions, 'revokeSessions')({ language: LOCALE });
   await signOutAndClearCache(services);
 };

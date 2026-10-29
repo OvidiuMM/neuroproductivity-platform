@@ -7,6 +7,7 @@ import { DeleteAccountPanel } from './DeleteAccountPanel';
 import type { ReauthMethod } from '../services/auth';
 import { AccessibilityTrigger, AccessibleScreen } from './AccessibilityPanel';
 import { LegalLinks } from './LegalLinks';
+import { LanguageSelector } from './LanguageSelector';
 import { messages } from '../i18n/locale';
 
 interface AccessRequestScreenProps {
@@ -201,6 +202,10 @@ export const AccessRequestScreen: React.FC<AccessRequestScreenProps> = ({
       {(openAccessibility) => (
         <main className="flex min-h-screen items-center justify-center bg-slate-50 p-4 antialiased">
           <div className="w-full max-w-md space-y-6 rounded-3xl border border-slate-200 bg-white p-8 shadow-xl">
+            {/* El idioma, también antes de tener acceso (la solicitud y su email van en él) */}
+            <div className="flex justify-end">
+              <LanguageSelector />
+            </div>
             <div className="flex items-center gap-3">
               <BrandMark size={44} />
               <div>

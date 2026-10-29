@@ -52,8 +52,9 @@ test('contact: message types, unknown system and device classes in English (the 
     FEEDBACK_TYPES.map((t) => t.label),
     ['Suggestion', 'Bug or problem', 'General message']
   );
-  assert.equal(describeOs('Something else'), 'Unknown');
-  assert.equal(describeBrowser('Something else'), 'Unknown');
+  // Lo desconocido se guarda siempre igual (la administración lo lee en español)
+  assert.equal(describeOs('Something else'), 'Desconocido');
+  assert.equal(describeBrowser('Something else'), 'Desconocido');
   assert.equal(deviceLabel('móvil'), 'phone');
   assert.equal(deviceLabel('escritorio'), 'desktop');
   assert.equal(deviceLabel('other'), 'other');

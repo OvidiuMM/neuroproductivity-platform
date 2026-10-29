@@ -21,11 +21,41 @@ test('the landing page is in Spanish by default, and «English» switches it, al
   await expect(page.locator('html')).toHaveAttribute('lang', 'en');
   await expect(page.getByRole('button', { name: 'Continue with Google' })).toBeVisible();
 
-  // Los textos legales en inglés avisan de que vale la versión en español, y llevan de vuelta a ella
+  // Los textos legales en inglés avisan de que vale la versión en español y la muestran ahí mismo, sin cambiar el
+  // idioma de la app
   await page.goto('/privacidad');
   await expect(page.getByText(/The Spanish version is the one that applies/)).toBeVisible();
-  await page.getByRole('button', { name: 'Switch to Spanish' }).click();
-  await expect(page.locator('html')).toHaveAttribute('lang', 'es');
+  await page.getByRole('button', { name: 'Read the Spanish version' }).click();
+  await expect(page.locator('[lang="es"]').getByText('Qué datos tratamos y para qué')).toBeVisible();
+  await expect(page.locator('html')).toHaveAttribute('lang', 'en');
+});
+
+test('English chosen before signing in goes to the account, and the access screens offer the language too', async ({
+  page
+}) => {
+  await page.goto('/');
+  await languageGroup(page).getByRole('button', { name: 'English', exact: true }).click();
+  await expect(page.locator('html')).toHaveAttribute('lang', 'en');
+  // Sin acceso todavía: la pantalla de solicitud también tiene el selector
+  await page.evaluate(() => localStorage.setItem('clar_locale', 'es'));
+  await page.reload();
+  const email = await signInWithGoogle(page, undefined, undefined, { approve: false });
+  await expect(languageGroup(page)).toBeVisible();
+  await languageGroup(page).getByRole('button', { name: 'English', exact: true }).click();
+  await expect(page.locator('html')).toHaveAttribute('lang', 'en');
+  // Con acceso, la elección de antes de entrar pasa a la cuenta
+  const uid = await uidOf(email);
+  await patchDocument(`access/${uid}`, {
+    status: { stringValue: 'approved' },
+    email: { stringValue: email },
+    name: { stringValue: '' },
+    photoUrl: { stringValue: '' },
+    message: { stringValue: '' },
+    requestedAt: { stringValue: new Date().toISOString() },
+    decidedAt: { stringValue: new Date().toISOString() }
+  });
+  await expect.poll(async () => (await readDocument(`users/${uid}`))?.language, { timeout: 20_000 }).toBe('en');
+  await expect(page.locator('html')).toHaveAttribute('lang', 'en');
 });
 
 test('the account menu switches the language and saves it in the account; the account language wins on another device', async ({

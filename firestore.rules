@@ -63,6 +63,10 @@ service cloud.firestore {
     // Campos del perfil que escribe la app (datos de la cuenta, si ya vio la bienvenida y las novedades, sus áreas de la
     // Rueda, qué funciones extra tiene encendidas, que solo cuenta para la administración, y cuándo aceptó las
     // condiciones); cualquier otro se rechaza
+    // El idioma de la app (src/i18n/locale.ts): solo los que hay
+    function validLanguage(data) {
+      return !('language' in data) || data.language in ['es', 'en'];
+    }
     function onlyProfileFields(keys) {
       return keys.hasOnly([
         'name', 'email', 'photoUrl', 'createdAt', 'lastLoginAt',
@@ -73,8 +77,9 @@ service cloud.firestore {
 
     match /users/{uid} {
       allow read, delete: if isOwner(uid);
-      allow create: if hasAccess(uid) && onlyProfileFields(request.resource.data.keys());
-      allow update: if hasAccess(uid) && onlyProfileFields(request.resource.data.diff(resource.data).affectedKeys());
+      allow create: if hasAccess(uid) && onlyProfileFields(request.resource.data.keys()) && validLanguage(request.resource.data);
+      allow update: if hasAccess(uid) && onlyProfileFields(request.resource.data.diff(resource.data).affectedKeys())
+        && validLanguage(request.resource.data);
 
       match /{collection}/{docId} {
         // Tope de tamaño de lo que se escribe, contra abusos (con el registro abierto). Son holgados: iguales o mayores

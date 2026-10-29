@@ -1,6 +1,6 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { EMAIL_PROVIDER, MIN_AGE, OWNER, legalPath } from '../services/legal';
-import { messages, setLocale } from '../i18n/locale';
+import { LOCALE, messages } from '../i18n/locale';
 
 // Contenido de los textos legales. Si cambia, cambia también LEGAL_UPDATED y LEGAL_UPDATED_LABEL
 // (src/services/legal.ts). Cada texto está en español, el que vale, y en inglés, una traducción para facilitar la
@@ -60,9 +60,9 @@ const PrivacyPolicyEs: React.FC = () => (
       <List>
         <li>
           <strong>Tu cuenta:</strong> nombre, email, foto de perfil (si entras con Google), fecha de alta y del último
-          acceso, y cuándo aceptaste estas condiciones (y su versión). Si entras con email, la contraseña la guarda
-          Firebase Authentication de forma que nadie, tampoco CLAR, puede leerla. Sirven para crear tu cuenta y dejarte
-          entrar.
+          acceso, cuándo aceptaste estas condiciones (y su versión) y el idioma de la app que eliges. Si entras con
+          email, la contraseña la guarda Firebase Authentication de forma que nadie, tampoco CLAR, puede leerla. Sirven
+          para crear tu cuenta y dejarte entrar.
         </li>
         <li>
           <strong>Lo que escribes en CLAR:</strong> tareas (títulos, descripciones, notas, enlaces, fechas, alarmas y de
@@ -75,14 +75,15 @@ const PrivacyPolicyEs: React.FC = () => (
         </li>
         <li>
           <strong>Registro de acceso:</strong> tu nombre, email y foto, el estado de tu acceso y sus fechas y, si pides
-          acceso, el mensaje que escribas. Sirven para gestionar el acceso (aprobarlo cuando se revisan las cuentas,
-          retirarlo o bloquearlo) y evitar abusos.
+          acceso, el mensaje que escribas y el idioma de la app (para escribirte en él). Sirven para gestionar el acceso
+          (aprobarlo cuando se revisan las cuentas, retirarlo o bloquearlo) y evitar abusos.
         </li>
         <li>
-          <strong>Mensajes de «Escríbenos»:</strong> el tipo, el asunto y el texto, con tu nombre y tu email, y las
-          respuestas de la administración. Si lo marcas, también la información técnica que ves antes de enviarlo
-          (versión de CLAR, sistema, navegador, tipo de dispositivo, idioma y conexión). Para limitar los envíos a cinco
-          por hora se guardan las horas de los de la última hora. Sirven para atenderte y responderte por email.
+          <strong>Mensajes de «Escríbenos»:</strong> el tipo, el asunto y el texto, con tu nombre, tu email y el idioma
+          de tu cuenta, y las respuestas de la administración. Si lo marcas, también la información técnica que ves
+          antes de enviarlo (versión de CLAR, sistema, navegador, tipo de dispositivo, idioma y conexión). Para limitar
+          los envíos a cinco por hora se guardan las horas de los de la última hora. Sirven para atenderte y responderte
+          por email.
         </li>
         <li>
           <strong>Funciones extra:</strong> cuáles te ha activado la administración y cuándo; en la cuenta de
@@ -112,25 +113,25 @@ const PrivacyPolicyEs: React.FC = () => (
         </li>
         <li>
           <strong>Alarmas con CLAR cerrada:</strong> si activas «Avisarme también con CLAR cerrada» en un dispositivo,
-          su identificador de notificaciones (de Firebase Cloud Messaging), su zona horaria y si quieres ver el nombre
-          de la tarea y, de cada alarma pendiente, su hora, el nombre de la tarea y cuándo vence. Sirven para avisarte a
-          la hora de la alarma aunque CLAR esté cerrada. La notificación lleva solo la hora de la alarma y cuándo vence,
-          salvo que elijas ver también el nombre de la tarea (se vería con el móvil bloqueado). Llega a tu dispositivo
-          por Firebase Cloud Messaging y por el servicio push de tu navegador (el de Google en Chrome y Android; el de
-          Mozilla, Apple o Microsoft en sus navegadores), que la recibe cifrada.
+          su identificador de notificaciones (de Firebase Cloud Messaging), su zona horaria, su idioma y si quieres ver
+          el nombre de la tarea y, de cada alarma pendiente, su hora, el nombre de la tarea y cuándo vence. Sirven para
+          avisarte a la hora de la alarma aunque CLAR esté cerrada. La notificación lleva solo la hora de la alarma y
+          cuándo vence, salvo que elijas ver también el nombre de la tarea (se vería con el móvil bloqueado). Llega a tu
+          dispositivo por Firebase Cloud Messaging y por el servicio push de tu navegador (el de Google en Chrome y
+          Android; el de Mozilla, Apple o Microsoft en sus navegadores), que la recibe cifrada.
         </li>
         <li>
           <strong>En tu dispositivo:</strong> CLAR usa el almacenamiento local de tu navegador (Local Storage e
           IndexedDB) y la sesión de Firebase exclusivamente por motivos técnicos. Guarda la sesión, una copia de tus
           datos para usar la app sin conexión (se borra al cerrar sesión; ver «Cuánto tiempo se guardan») y algunas
-          preferencias: accesibilidad (también si quieres ver las celebraciones), orden y filtros de las listas, alarmas
-          ya avisadas, si viste la bienvenida y las novedades de la versión, si activaste las alarmas con CLAR cerrada
-          en ese dispositivo (y si muestran el nombre de la tarea), la configuración de la app y, en la cuenta de
-          administración, cuándo miró las solicitudes por última vez. También registra un service worker, que guarda una
-          copia de la app (sus archivos, sin tus datos) para abrirla sin conexión y muestra las notificaciones de las
-          alarmas (y apunta durante dos días cuáles llegaron con CLAR cerrada, para no repetirlas al abrirla). Todo es
-          necesario para que la app funcione (art. 22.2 de la LSSI), por eso no se pide consentimiento: CLAR no usa
-          cookies de seguimiento, analítica ni publicidad.
+          preferencias: el idioma de la app, accesibilidad (también si quieres ver las celebraciones), orden y filtros
+          de las listas, alarmas ya avisadas, si viste la bienvenida y las novedades de la versión, si activaste las
+          alarmas con CLAR cerrada en ese dispositivo (y si muestran el nombre de la tarea), la configuración de la app
+          y, en la cuenta de administración, cuándo miró las solicitudes por última vez. También registra un service
+          worker, que guarda una copia de la app (sus archivos, sin tus datos) para abrirla sin conexión y muestra las
+          notificaciones de las alarmas (y apunta durante dos días cuáles llegaron con CLAR cerrada, para no repetirlas
+          al abrirla). Todo es necesario para que la app funcione (art. 22.2 de la LSSI), por eso no se pide
+          consentimiento: CLAR no usa cookies de seguimiento, analítica ni publicidad.
         </li>
       </List>
       <p>
@@ -445,9 +446,14 @@ const LegalNoticeEs: React.FC = () => (
   </>
 );
 
-// TRADUCCIÓN AL INGLÉS: el mismo contenido, con el aviso de que vale la versión española
+// TRADUCCIÓN AL INGLÉS: el mismo contenido, con el aviso de que vale la versión española y un botón para leerla aquí
+// (solo esta página: el idioma de la app no cambia)
 
-const TranslationNotice: React.FC = () => (
+interface EnglishTextProps {
+  onShowSpanish: () => void;
+}
+
+const TranslationNotice: React.FC<EnglishTextProps> = ({ onShowSpanish }) => (
   <div role="note" className="space-y-3 rounded-xl border border-amber-200 bg-amber-50 p-4 text-amber-950">
     <p>
       This is a translation for your convenience. The Spanish version is the one that applies, and it prevails in case
@@ -455,17 +461,17 @@ const TranslationNotice: React.FC = () => (
     </p>
     <button
       type="button"
-      onClick={() => setLocale('es')}
+      onClick={onShowSpanish}
       className="inline-flex min-h-11 items-center rounded-xl border border-amber-300 bg-white px-4 text-xs font-bold text-slate-800 hover:bg-amber-100"
     >
-      Switch to Spanish
+      Read the Spanish version
     </button>
   </div>
 );
 
-const PrivacyPolicyEn: React.FC = () => (
+const PrivacyPolicyEn: React.FC<EnglishTextProps> = ({ onShowSpanish }) => (
   <>
-    <TranslationNotice />
+    <TranslationNotice onShowSpanish={onShowSpanish} />
     <p>
       CLAR is a free, ad-free app for organizing your time. This page explains what data of yours it processes, why, who
       sees it, how long it is kept and how to exercise your rights, under the General Data Protection Regulation (GDPR,
@@ -484,9 +490,9 @@ const PrivacyPolicyEn: React.FC = () => (
       <List>
         <li>
           <strong>Your account:</strong> name, email, profile photo (if you sign in with Google), the date you signed up
-          and your last sign-in, and when you accepted these terms (and which version). If you sign in with email, your
-          password is stored by Firebase Authentication in a way that nobody, CLAR included, can read it. This data is
-          used to create your account and let you sign in.
+          and your last sign-in, when you accepted these terms (and which version) and the app language you choose. If
+          you sign in with email, your password is stored by Firebase Authentication in a way that nobody, CLAR
+          included, can read it. This data is used to create your account and let you sign in.
         </li>
         <li>
           <strong>What you write in CLAR:</strong> tasks (titles, descriptions, notes, links, dates, alarms and which
@@ -499,14 +505,15 @@ const PrivacyPolicyEn: React.FC = () => (
         </li>
         <li>
           <strong>Access record:</strong> your name, email and photo, the status of your access and its dates and, if
-          you request access, the message you write. This data is used to manage access (approving it when accounts are
-          reviewed, withdrawing or blocking it) and to prevent abuse.
+          you request access, the message you write and the app language (to write to you in it). This data is used to
+          manage access (approving it when accounts are reviewed, withdrawing or blocking it) and to prevent abuse.
         </li>
         <li>
-          <strong>“Contact us” messages:</strong> the type, subject and text, with your name and email, and the
-          administrator's replies. If you tick the box, also the technical information you see before sending (CLAR
-          version, system, browser, device type, language and connection). To limit messages to five per hour, the times
-          of those sent in the last hour are stored. This data is used to help you and reply to you by email.
+          <strong>“Contact us” messages:</strong> the type, subject and text, with your name, your email and your
+          account's language, and the administrator's replies. If you tick the box, also the technical information you
+          see before sending (CLAR version, system, browser, device type, language and connection). To limit messages to
+          five per hour, the times of those sent in the last hour are stored. This data is used to help you and reply to
+          you by email.
         </li>
         <li>
           <strong>Extra features:</strong> which ones the administrator has turned on for you and when; on the
@@ -515,11 +522,11 @@ const PrivacyPolicyEn: React.FC = () => (
         <li>
           <strong>Google Calendar sync:</strong> if you have this feature and connect your Google account, CLAR stores
           the permission you give it (encrypted), the ID of its “CLAR” calendar and your time zone, and sends to that
-          calendar the title, description, notes, dates, repetition and alarm of your tasks with a date (done and
-          canceled ones are marked with “✓” or “✕”). This is used so you can see your tasks in Google Calendar. CLAR
-          only asks for permission to create and use its own calendar: it does not see or change your other calendars or
-          their events, and it does not read anything from your Google account. CLAR's use and transfer to any other app
-          of information received from Google APIs adheres to the{' '}
+          calendar the title, description, notes, dates, repeat and alarm of your tasks with a date (done and canceled
+          ones are marked with “✓” or “✕”). This is used so you can see your tasks in Google Calendar. CLAR only asks
+          for permission to create and use its own calendar: it does not see or change your other calendars or their
+          events, and it does not read anything from your Google account. CLAR's use and transfer to any other app of
+          information received from Google APIs adheres to the{' '}
           <a
             href="https://developers.google.com/terms/api-services-user-data-policy"
             target="_blank"
@@ -535,25 +542,26 @@ const PrivacyPolicyEn: React.FC = () => (
         </li>
         <li>
           <strong>Alarms when CLAR is closed:</strong> if you turn on “Also notify me when CLAR is closed” on a device,
-          its notification ID (from Firebase Cloud Messaging), its time zone and whether you want to see the task name
-          and, for each pending alarm, its time, the task name and when the task is due. This data is used to notify you
-          at the alarm time even when CLAR is closed. The notification only shows the alarm time and when the task is
-          due, unless you choose to also see the task name (it would be visible with your phone locked). It reaches your
-          device through Firebase Cloud Messaging and your browser's push service (Google's in Chrome and Android;
-          Mozilla's, Apple's or Microsoft's in their browsers), which receives it encrypted.
+          its notification ID (from Firebase Cloud Messaging), its time zone, its language and whether you want to see
+          the task name and, for each pending alarm, its time, the task name and when the task is due. This data is used
+          to notify you at the alarm time even when CLAR is closed. The notification only shows the alarm time and when
+          the task is due, unless you choose to also see the task name (it would be visible with your phone locked). It
+          reaches your device through Firebase Cloud Messaging and your browser's push service (Google's in Chrome and
+          Android; Mozilla's, Apple's or Microsoft's in their browsers), which receives it encrypted.
         </li>
         <li>
           <strong>On your device:</strong> CLAR uses your browser's local storage (Local Storage and IndexedDB) and the
           Firebase session for technical purposes only. It stores the session, a copy of your data to use the app
-          offline (deleted when you sign out; see “How long we keep it”) and some preferences: accessibility (including
-          whether you want to see celebrations), sorting and filters of the lists, alarms already notified, whether you
-          have seen the welcome and what's new in the current version, whether you turned on alarms when CLAR is closed
-          on that device (and whether they show the task name), the app settings and, on the administrator account, when
-          it last checked the access requests. It also registers a service worker, which stores a copy of the app (its
-          files, without your data) to open it offline and shows alarm notifications (and keeps a note for two days of
-          which ones arrived while CLAR was closed, so they are not repeated when you open it). All of this is necessary
-          for the app to work (Art. 22(2) of the Spanish Information Society Services and Electronic Commerce Act,
-          LSSI), so no consent is requested: CLAR does not use tracking, analytics or advertising cookies.
+          offline (deleted when you sign out; see “How long we keep it”) and some preferences: the app language,
+          accessibility (including whether you want to see celebrations), sorting and filters of the lists, alarms
+          already notified, whether you have seen the welcome and what's new in the current version, whether you turned
+          on alarms when CLAR is closed on that device (and whether they show the task name), the app settings and, on
+          the administrator account, when it last checked the access requests. It also registers a service worker, which
+          stores a copy of the app (its files, without your data) to open it offline and shows alarm notifications (and
+          keeps a note for two days of which ones arrived while CLAR was closed, so they are not repeated when you open
+          it). All of this is necessary for the app to work (Art. 22(2) of the Spanish Information Society Services and
+          Electronic Commerce Act, LSSI), so no consent is requested: CLAR does not use tracking, analytics or
+          advertising cookies.
         </li>
       </List>
       <p>
@@ -735,9 +743,9 @@ const PrivacyPolicyEn: React.FC = () => (
   </>
 );
 
-const TermsOfUseEn: React.FC = () => (
+const TermsOfUseEn: React.FC<EnglishTextProps> = ({ onShowSpanish }) => (
   <>
-    <TranslationNotice />
+    <TranslationNotice onShowSpanish={onShowSpanish} />
     <p>
       These terms govern the use of CLAR. By creating your account or continuing to use it, you accept them. How your
       data is processed is explained in the <PageLink to="privacy">privacy policy</PageLink>.
@@ -826,9 +834,9 @@ const TermsOfUseEn: React.FC = () => (
   </>
 );
 
-const LegalNoticeEn: React.FC = () => (
+const LegalNoticeEn: React.FC<EnglishTextProps> = ({ onShowSpanish }) => (
   <>
-    <TranslationNotice />
+    <TranslationNotice onShowSpanish={onShowSpanish} />
     <Section id="notice-owner" title="Owner">
       <p>
         CLAR (clar.life) is a personal project of {ownerName()}, a private individual, with an address for notices at{' '}
@@ -867,11 +875,18 @@ const LegalNoticeEn: React.FC = () => (
   </>
 );
 
-// Cada texto, en el idioma de la app
-const Privacy = messages(PrivacyPolicyEs, PrivacyPolicyEn);
-const Terms = messages(TermsOfUseEs, TermsOfUseEn);
-const Notice = messages(LegalNoticeEs, LegalNoticeEn);
+// Cada texto, en el idioma de la app. En inglés, «Read the Spanish version» muestra aquí la española (con lang="es")
+const Bilingual: React.FC<{ Es: React.FC; En: React.FC<EnglishTextProps> }> = ({ Es, En }) => {
+  const [spanish, setSpanish] = useState(false);
+  if (LOCALE !== 'en') return <Es />;
+  if (!spanish) return <En onShowSpanish={() => setSpanish(true)} />;
+  return (
+    <div lang="es" className="space-y-3">
+      <Es />
+    </div>
+  );
+};
 
-export const PrivacyPolicy: React.FC = () => <Privacy />;
-export const TermsOfUse: React.FC = () => <Terms />;
-export const LegalNotice: React.FC = () => <Notice />;
+export const PrivacyPolicy: React.FC = () => <Bilingual Es={PrivacyPolicyEs} En={PrivacyPolicyEn} />;
+export const TermsOfUse: React.FC = () => <Bilingual Es={TermsOfUseEs} En={TermsOfUseEn} />;
+export const LegalNotice: React.FC = () => <Bilingual Es={LegalNoticeEs} En={LegalNoticeEn} />;

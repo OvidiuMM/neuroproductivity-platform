@@ -89,7 +89,7 @@ test('each English legal text starts by saying the Spanish version prevails, and
   for (const [component, ids] of sections) {
     const html = render(component);
     assert.match(html, /^<div role="note"[^>]*><p>This is a translation for your convenience\. The Spanish version/);
-    assert.match(html, /<button type="button"[^>]*>Switch to Spanish<\/button>/);
+    assert.match(html, /<button type="button"[^>]*>Read the Spanish version<\/button>/);
     assert.deepEqual(
       [...html.matchAll(/<h2 id="([^"]+)"/g)].map(([, id]) => id),
       ids

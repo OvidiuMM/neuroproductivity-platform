@@ -185,7 +185,8 @@ const m = messages(
         En el menú de tu cuenta, <strong>Accesibilidad</strong> permite agrandar el texto, activar el alto contraste,
         reducir las animaciones, hacer más visible el foco del teclado y apagar las celebraciones. Las preferencias se
         guardan en cada dispositivo. Toda la app se puede usar con el teclado y se revisa automáticamente con las pautas
-        WCAG 2.1 AA.
+        WCAG 2.1 AA. El idioma (<strong>Español / English</strong>) se cambia arriba en la página de entrada o en el
+        menú de tu cuenta, y se guarda en tu cuenta.
       </>
     ),
     credits: 'Créditos',
@@ -276,19 +277,19 @@ const m = messages(
               ? " With “Sync with Google Calendar”, if you connect your Google account (in your account menu), your tasks with a date appear on their own in a “CLAR” calendar and update when you change them (not the “Someday” ones); what you change in Google doesn't come back to CLAR."
               : ''),
           '“Download (JSON)”, in the “⋯” menu, saves the task with all its data (and the names of its goal, its project and the tasks it depends on). Goals and projects can be downloaded too, with their tasks.',
-          "Alarm: a time for CLAR to notify you on the due date. It goes off that day at that time; with a due time, it has to be before it (with the task at 11:00, an alarm at 10:57 goes off 3 minutes before). The card says when it will go off (“today 17:00”), and in a repeating task, every repetition has it. If you set it when that time has already passed, it doesn't go off.",
+          "Alarm: a time for CLAR to notify you on the due date. It goes off that day at that time; with a due time, it has to be before it (with the task at 11:00, an alarm at 10:57 goes off 3 minutes before). The card says when it will go off (“today 17:00”), and in a repeating task, every repeat has it. If you set it when that time has already passed, it doesn't go off.",
           push
             ? "The alarm notifies you while CLAR is open: inside the app and, if you allow it, with a system notification. With “Also notify me when CLAR is closed”, in your account menu, it reaches you even when CLAR is closed or your phone is locked, and “Test notification” checks that it arrives. Tapping the notification opens the task. On iPhone it only works from CLAR on the Home Screen, with iOS 16.4 or later: in Safari, Share › “Add to Home Screen”; then open CLAR from the icon and sign in again. On Android, to have it appear at the top of the screen, turn on “Pop on screen” in CLAR's notification settings. If it didn't arrive and you open CLAR after its time but before the deadline, it notifies you right away and says what time it was. The calendar's .ics file includes it too."
             : "The alarm notifies you while CLAR is open, also in the background: inside the app and, if you allow it (in the form or in your account menu), with a system notification (on iPhone, only if you install CLAR on the Home Screen). With CLAR closed or your phone locked it can't go off: if you open CLAR after its time but before the deadline, it notifies you right away and says what time it was. So you don't miss it, add the task to your calendar with the .ics file, which includes the alarm.",
           "Times (due, start, alarm and meeting times) are written in 24-hour format, from 00:00 to 23:59: 9:30, 0930 or 21:45. Anything that isn't a time isn't saved.",
-          "Tasks can repeat every N days, weeks, months or years (for example, “every 3 days” or “every month, on the 2nd Monday”): in “More options”, “Repeat”. For days and weeks, the next one can fall on fixed dates or count from when you do it: with “3 days after you do it”, it's due 3 days after the day you mark it Done. When it repeats, the start date is when it starts repeating and the due date is when it stops; each repetition is due on its own day. When you mark it Done or Canceled, it's archived and the next one is created.",
+          "Tasks can repeat every N days, weeks, months or years (for example, “every 3 days” or “every month, on the 2nd Monday”): in “More options”, “Repeat”. For days and weeks, the next one can fall on fixed dates or count from when you do it: with “3 days after you do it”, it's due 3 days after the day you mark it Done. When it repeats, the start date is when it starts repeating and the due date is when it stops; each repeat is due on its own day. When you mark it Done or Canceled, it's archived and the next one is created.",
           "Ideas with no urgency go to “Someday” and don't compete with the Top 10."
         ]
       },
       agenda: {
         title: 'Agenda',
         points: [
-          'Weekly view (Monday to Sunday) and daily view with the dated tasks from both your lists, date ranges, the next repetitions of tasks that repeat on fixed dates, and meetings.',
+          'Weekly view (Monday to Sunday) and daily view with the dated tasks from both your lists, date ranges, the next repeats of tasks that repeat on fixed dates, and meetings.',
           'In the daily view, overdue tasks appear separately. Press a task to edit it.'
         ]
       },
@@ -342,7 +343,8 @@ const m = messages(
         In your account menu, <strong>Accessibility</strong> lets you make the text bigger, turn on high contrast,
         reduce animations, make the keyboard focus more visible and turn off celebrations. Preferences are saved on each
         device. The whole app can be used with the keyboard and is checked automatically against the WCAG 2.1 AA
-        guidelines.
+        guidelines. The language (<strong>Español / English</strong>) is changed at the top of the sign-in page or in
+        your account menu, and it is saved in your account.
       </>
     ),
     credits: 'Credits',

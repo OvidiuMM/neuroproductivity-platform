@@ -4,15 +4,16 @@ import { messages } from '../i18n/locale';
 
 export type FeedbackType = 'suggestion' | 'bug' | 'general';
 
+// Lo que no se reconoce se guarda siempre igual, como el tipo de dispositivo: la administración lo lee en español
+const UNKNOWN = 'Desconocido';
+
 const m = messages(
   {
     types: { suggestion: 'Sugerencia', bug: 'Error o fallo', general: 'Mensaje general' },
-    unknown: 'Desconocido',
     devices: { móvil: 'móvil', tableta: 'tableta', escritorio: 'escritorio' }
   },
   {
     types: { suggestion: 'Suggestion', bug: 'Bug or problem', general: 'General message' },
-    unknown: 'Unknown',
     devices: { móvil: 'phone', tableta: 'tablet', escritorio: 'desktop' }
   }
 );
@@ -67,7 +68,7 @@ export const describeOs = (ua: string, maxTouchPoints = 0) => {
   if (/CrOS/.test(ua)) return 'ChromeOS';
   if (/Mac OS X/.test(ua)) return 'macOS';
   if (/Linux/.test(ua)) return 'Linux';
-  return m.unknown;
+  return UNKNOWN;
 };
 
 export const describeBrowser = (ua: string) => {
@@ -83,7 +84,7 @@ export const describeBrowser = (ua: string) => {
     const version = match(ua, pattern);
     if (version) return `${name} ${version}`;
   }
-  return m.unknown;
+  return UNKNOWN;
 };
 
 export const deviceClassFor = (width: number): DeviceClass =>

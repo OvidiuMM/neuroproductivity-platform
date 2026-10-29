@@ -18,7 +18,7 @@ import { connectFunctionsEmulator, getFunctions, type Functions } from 'firebase
 // push.ts usa usingEmulators solo dentro de sus funciones: la importación circular no da problemas al cargar
 import { unregisterPushDevice } from './push';
 import { withAuthDomain } from './authDomain';
-import { LOCALE, messages } from '../i18n/locale';
+import { clearPendingLocale, LOCALE, messages } from '../i18n/locale';
 
 // Se muestran tras «No se pudo iniciar la aplicación:» (AuthGate)
 const m = messages(
@@ -133,6 +133,8 @@ export const signOutAndClearCache = async (services: FirebaseServices) => {
   if (uid)
     await unregisterPushDevice(services, uid).catch((e) => console.warn('Could not stop push notifications:', e));
   await signOut(auth);
+  // Un idioma elegido aquí y aún sin guardar no pasa a la siguiente cuenta que entre en este dispositivo
+  clearPendingLocale();
   await terminate(db);
   // Falla si hay otras pestañas abiertas con la app; en ese caso la caché se queda hasta que se cierren
   await clearIndexedDbPersistence(db).catch((e) => console.warn('Could not clear Firestore cache:', e));
