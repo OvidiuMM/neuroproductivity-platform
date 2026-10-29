@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Trash2 } from 'lucide-react';
 import type { ReauthMethod } from '../services/auth';
+import { IPHONE_DELETE_HELP, popupsUnreliable } from '../services/platform';
 
 interface DeleteAccountPanelProps {
   // Cómo se puede confirmar, primero el de la sesión actual: con la contraseña o en la ventana de Google
@@ -45,7 +46,9 @@ export const DeleteAccountPanel: React.FC<DeleteAccountPanelProps> = ({ methods,
         correos y tus mensajes de «Escríbenos»). No se puede deshacer.
         {needsPassword
           ? ' Escribe tu contraseña para confirmarlo.'
-          : ' Para confirmarlo, Google te pedirá que vuelvas a entrar.'}
+          : popupsUnreliable()
+            ? ` ${IPHONE_DELETE_HELP}`
+            : ' Para confirmarlo, Google te pedirá que vuelvas a entrar.'}
       </p>
       {needsPassword && (
         <div className="space-y-1">

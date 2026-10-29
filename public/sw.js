@@ -144,8 +144,11 @@ self.addEventListener('push', (event) => {
   const at = Date.parse(data.at);
   event.waitUntil(
     (async () => {
-      // Siempre se muestra (en el iPhone, un aviso push que no se ve hace perder el permiso)
+      // Si CLAR ya la mostró en este dispositivo, sale sin volver a sonar. Siempre se muestra (en el iPhone, un aviso
+      // push que no se ve hace perder el permiso)
+      const already = key ? Boolean(await (await caches.open(SHOWN)).match(shownUrl(key)).catch(() => null)) : false;
       await self.registration.showNotification(data.title || 'CLAR', {
+        silent: already,
         body: data.body || '',
         tag: data.tag || undefined,
         icon: '/icon-192.png',
@@ -166,8 +169,14 @@ self.addEventListener('notificationclick', (event) => {
   const key = event.notification.data?.key ?? null;
   event.waitUntil(
     (async () => {
-      const windows = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });
-      const open = windows.find((client) => new URL(client.url).origin === self.location.origin);
+      const windows = (await self.clients.matchAll({ type: 'window', includeUncontrolled: true })).filter(
+        (client) => new URL(client.url).origin === self.location.origin
+      );
+      // La ventana que se está usando, si no la que se ve, si no cualquiera
+      const open =
+        windows.find((client) => client.focused) ??
+        windows.find((client) => client.visibilityState === 'visible') ??
+        windows[0];
       if (open) {
         if (key) open.postMessage({ type: 'clar:open-alarm', key });
         return open.focus();

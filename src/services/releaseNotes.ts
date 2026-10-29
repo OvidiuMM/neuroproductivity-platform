@@ -30,7 +30,7 @@ export const RELEASE_NOTES: readonly ReleaseNote[] = [
       },
       {
         title: 'Alarmas que abren su tarea',
-        text: 'Al tocar la notificación de una alarma se abre su tarea, y CLAR ya no vuelve a avisar de ella al abrirla. Con «Probar notificación», en el menú de tu cuenta, compruebas que te llegan con CLAR cerrada.'
+        text: 'Al tocar la notificación de una alarma se abre su tarea, y al abrir CLAR después no te llega otra notificación de la misma alarma. Con «Probar notificación», en el menú de tu cuenta, compruebas que te llegan con CLAR cerrada.'
       },
       {
         title: 'En el iPhone',

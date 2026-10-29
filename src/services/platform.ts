@@ -25,3 +25,12 @@ export const isStandalone = ({ standalone }: PlatformInfo = current()) => standa
 export const needsHomeScreenForPush = (info: PlatformInfo = current()) => isIOS(info) && !isStandalone(info);
 // En la app de la pantalla de inicio del iPhone, las ventanas emergentes (Google) no devuelven el resultado
 export const popupsUnreliable = (info: PlatformInfo = current()) => isIOS(info) && isStandalone(info);
+
+// Ahí, para eliminar una cuenta de Google vale haber entrado en esta sesión hace menos de 4 minutos (el servidor pide
+// menos de 5). Se mide con las horas del token recién renovado, las dos del servidor: no depende del reloj del
+// dispositivo ni de otras sesiones
+const RECENT_SIGN_IN_MS = 4 * 60 * 1000;
+export const signedInRecently = ({ authTime, issuedAtTime }: { authTime: string; issuedAtTime: string }) =>
+  Date.parse(issuedAtTime) - Date.parse(authTime) < RECENT_SIGN_IN_MS;
+export const IPHONE_DELETE_HELP =
+  'Para eliminar la cuenta desde la app del iPhone, cierra sesión, vuelve a entrar y elimínala en los 4 minutos siguientes.';
