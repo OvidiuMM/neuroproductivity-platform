@@ -1,11 +1,19 @@
+import { messages } from '../i18n/locale';
+
 // Textos legales: páginas públicas que se ven sin iniciar sesión (Root.tsx elige la página por la ruta)
 
 export type LegalPageId = 'privacy' | 'terms' | 'notice';
 
+const m = messages(
+  { privacy: 'Política de privacidad', terms: 'Condiciones de uso', notice: 'Aviso legal' },
+  { privacy: 'Privacy policy', terms: 'Terms of use', notice: 'Legal notice' }
+);
+
+// Las rutas son las mismas en los dos idiomas
 export const LEGAL_PAGES: { id: LegalPageId; path: string; title: string }[] = [
-  { id: 'privacy', path: '/privacidad', title: 'Política de privacidad' },
-  { id: 'terms', path: '/condiciones', title: 'Condiciones de uso' },
-  { id: 'notice', path: '/aviso-legal', title: 'Aviso legal' }
+  { id: 'privacy', path: '/privacidad', title: m.privacy },
+  { id: 'terms', path: '/condiciones', title: m.terms },
+  { id: 'notice', path: '/aviso-legal', title: m.notice }
 ];
 
 // La página legal de una ruta («/privacidad», también con barra final o mayúsculas), o undefined
@@ -29,8 +37,11 @@ export const OWNER = {
 // España vale la de cada país si es mayor (el RGPD la fija en 16 años y deja a cada Estado bajarla hasta 13)
 export const MIN_AGE = 14;
 
-// Fecha de la versión vigente de los textos legales: cámbiala con cada cambio de contenido
+// Fecha de la versión vigente de los textos legales: cámbiala con cada cambio de contenido. Es también la versión de las
+// condiciones que acepta cada cuenta (se guarda tal cual, en español, sea cual sea el idioma de la app)
 export const LEGAL_UPDATED = '29 de octubre de 2026';
+// La misma fecha, en el idioma de la app: cámbiala junto con LEGAL_UPDATED (una prueba unitaria lo comprueba)
+export const LEGAL_UPDATED_LABEL = messages<string>(LEGAL_UPDATED, '29 October 2026');
 
 // Quién envía los emails de CLAR (encargado del tratamiento)
 export const EMAIL_PROVIDER = 'IONOS';
