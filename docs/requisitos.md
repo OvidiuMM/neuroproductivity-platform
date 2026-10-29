@@ -119,7 +119,7 @@ Origen: `src/components/TaskList.tsx`, `src/components/TaskCard.tsx`, `src/compo
 - **RF-TAR-24.** Cada tarea tiene un estado manual: Pendiente, En progreso, Bloqueada, Hecha o Cancelada. Una tarea nueva empieza en Pendiente.
 - **RF-TAR-25.** Hecha y Cancelada archivan la tarea con la fecha del cambio. Cualquier otro estado la devuelve a su lista.
 - **RF-TAR-26.** Una tarea cancelada no cuenta como hecha en las estadísticas ni en el avance de metas y proyectos.
-- **RF-TAR-27.** El círculo de la tarjeta marca la tarea como hecha con un toque. El aviso ofrece «Deshacer» durante 5 s.
+- **RF-TAR-27.** El círculo de la tarjeta marca la tarea como hecha con un toque. El aviso ofrece «Deshacer» durante 5 s (8 s si celebra una tarea antigua: RF-NAV-15).
 - **RF-TAR-28.** «Deshacer» comprueba en el servidor, en una transacción, que la tarea no ha cambiado entretanto. Si no hay conexión en 5 s o la tarea cambió, no deshace y lo avisa.
 - **RF-TAR-29.** El lápiz de la tarjeta o su título abren la edición. El menú «⋯» reúne el estado, «Añadir al calendario», «Descargar (JSON)» y «Eliminar».
 - **RF-TAR-30.** Eliminar desde el menú «⋯» no pide confirmación y ofrece «Deshacer». La tarea solo se recupera si nadie la ha vuelto a crear entretanto.
@@ -234,14 +234,14 @@ Origen: `src/components/HomeView.tsx`, `src/services/stats.ts`.
 
 ### 1.9 Navegación y ayuda (RF-NAV)
 
-Origen: `src/navigation.ts`, `src/components/Navbar.tsx`, `src/components/BottomNav.tsx`, `src/components/MoreSheet.tsx`, `src/components/SyncIndicator.tsx`, `src/components/HowItWorks.tsx`, `src/components/ReleaseNotes.tsx`, `src/services/releaseNotes.ts`.
+Origen: `src/navigation.ts`, `src/components/Navbar.tsx`, `src/components/BottomNav.tsx`, `src/components/MoreSheet.tsx`, `src/components/SyncIndicator.tsx`, `src/components/HowItWorks.tsx`, `src/components/ReleaseNotes.tsx`, `src/services/releaseNotes.ts`, `src/services/celebrations.ts`, `src/components/CelebrationBurst.tsx`.
 
 - **RF-NAV-01.** Las secciones son Inicio, Listas, Agenda, Rueda de la Vida, Metas, Proyectos, Tiempo protegido y Ayuda. Administración solo aparece para la persona administradora, delante de Ayuda.
 - **RF-NAV-02.** Desde 768 px de ancho, la cabecera lleva las secciones, las dos listas, el indicador de sincronización y la cuenta. «Nueva tarea» va debajo de la cabecera.
 - **RF-NAV-03.** Por debajo de 768 px, una barra inferior lleva Inicio, Listas, Agenda, Metas y «Más», que abre una hoja con las demás secciones, la sincronización y la cuenta. Un botón flotante abre «Nueva tarea».
 - **RF-NAV-04.** El indicador de sincronización está verde cuando todo está confirmado por el servidor y naranja con cambios pendientes, sin conexión o mientras sincroniza.
 - **RF-NAV-05.** Pulsar el indicador fuerza la sincronización: reabre la conexión y espera la confirmación del servidor, como mucho 15 s. Un aviso dice si lo consiguió.
-- **RF-NAV-06.** Cada acción que guarda, elimina o cambia algo muestra un aviso breve. Los avisos con «Deshacer» duran 5 s; los demás, 4 s.
+- **RF-NAV-06.** Cada acción que guarda, elimina o cambia algo muestra un aviso breve. Los avisos con «Deshacer» duran 5 s; los demás, 4 s. Con una celebración (RF-NAV-15), 3 s más.
 - **RF-NAV-07.** Al arrancar, la app muestra una pantalla de inicio que se cierra sola en 1,6 s o al tocarla.
 - **RF-NAV-08.** «Ayuda» explica cada sección con un botón «Ir a…», los primeros pasos, cómo se relacionan las secciones, dónde se guardan los datos, la accesibilidad y los créditos. Las funciones extra solo se explican a la cuenta que las tiene en uso.
 - **RF-NAV-09.** Desde «Ayuda» se puede «Repetir el recorrido», «Ver la introducción» y abrir «Escríbenos».
@@ -250,6 +250,7 @@ Origen: `src/navigation.ts`, `src/components/Navbar.tsx`, `src/components/Bottom
 - **RF-NAV-12.** Al entrar después de una actualización, una ventana «Novedades de la versión N» cuenta los cambios de esa versión, una sola vez por cuenta, cuando no hay otra ventana abierta (la bienvenida, el recorrido o la importación). Lo visto se guarda en el perfil y en el dispositivo; como la bienvenida, espera al perfil confirmado por el servidor. Las cuentas nuevas empiezan por la bienvenida, que da por vistas las novedades de la versión.
 - **RF-NAV-13.** La versión de la cabecera (desde 640 px) y la del pie abren las novedades de la versión. «Ayuda» tiene el apartado «Novedades», con la versión actual a la vista y las anteriores plegadas. Cada versión publicada tiene su entrada, con la misma versión que la app (una prueba lo comprueba). Las novedades nunca anuncian las funciones extra (otra prueba lo comprueba).
 - **RF-NAV-14.** Una dirección que no es la de la app ni la de un texto legal muestra «Página no encontrada», con «Ir a CLAR» y los textos legales. `robots.txt` deja indexar la portada y los textos legales.
+- **RF-NAV-15.** Celebraciones: al marcar como hecha, desde un estado abierto, una tarea creada hace 14 días o más (14 × 24 h; las recurrentes no cuentan, cada repetición es nueva), al lograr una meta activa o al terminar un proyecto activo, el aviso añade debajo un mensaje motivador y sale un confeti breve (unos 2 s) en los colores de la marca. El mensaje se elige al azar entre al menos 12 de cada tipo, sin repetir el último de su tipo; los de las tareas pueden decir cuántos días llevaba en la lista. Solo se celebra lo que se hace en esa pestaña, una vez por tarea, meta o proyecto y sesión (hacerla, deshacer y volver a hacerla no lo repite); nunca al cancelar, eliminar, archivar, reactivar, deshacer o importar, ni por cambios de otras pestañas o dispositivos. «Deshacer» sigue en el aviso y quita el confeti. El confeti es decorativo (oculto a los lectores de pantalla, no recibe el puntero) y con menos movimiento no se ve; el mensaje, sí. Se desactivan en el panel «Accesibilidad», en cada dispositivo (activadas por defecto).
 
 ### 1.10 Cuentas y acceso (RF-CUE)
 
@@ -424,9 +425,9 @@ Origen: `tests/e2e/a11y.spec.ts`, `src/hooks/useModalFocus.ts`, `src/components/
 - **RNF-ACC-01.** Una auditoría automática con axe-core comprueba las pautas WCAG 2.0 y 2.1, niveles A y AA, en cada pantalla, formulario y ventana. Se repite con alto contraste y texto muy grande, y con la disposición del móvil.
 - **RNF-ACC-02.** Toda la app se usa con el teclado. Al principio de la página hay un enlace «Saltar al contenido».
 - **RNF-ACC-03.** Las ventanas modales llevan el foco dentro, lo mantienen dentro con Tab, se cierran con Escape y devuelven el foco al elemento que las abrió. Mientras hay una abierta, el resto de la página queda inerte.
-- **RNF-ACC-04.** El panel «Accesibilidad» ofrece tamaño del texto (Normal, Grande o Muy grande: 100 %, 112,5 % y 125 %), alto contraste, reducir animaciones y foco muy visible. Los cambios se aplican al momento.
+- **RNF-ACC-04.** El panel «Accesibilidad» ofrece tamaño del texto (Normal, Grande o Muy grande: 100 %, 112,5 % y 125 %), alto contraste, reducir animaciones, foco muy visible y celebraciones (RF-NAV-15). Los cambios se aplican al momento.
 - **RNF-ACC-05.** Las preferencias se guardan en cada dispositivo y se aplican antes de dibujar la página. El panel está también en las pantallas de inicio de sesión, confirmación del email y solicitud de acceso.
-- **RNF-ACC-06.** La app reduce las animaciones también cuando lo pide el sistema (`prefers-reduced-motion`).
+- **RNF-ACC-06.** La app reduce las animaciones también cuando lo pide el sistema (`prefers-reduced-motion`). Con menos movimiento, las ventanas y los avisos aparecen sin animación y el confeti de las celebraciones no se ve.
 - **RNF-ACC-07.** Los avisos se anuncian a los lectores de pantalla: los normales en una región viva educada y las alarmas en una asertiva.
 - **RNF-ACC-08.** Los gráficos y las barras de progreso tienen alternativa en texto: el gráfico de 14 días tiene una tabla equivalente y las barras usan el rol `progressbar` con su valor descrito.
 - **RNF-ACC-09.** Los botones de solo icono tienen nombre accesible. El documento declara el idioma español (`lang="es"`).

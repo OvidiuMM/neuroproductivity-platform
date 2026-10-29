@@ -75,6 +75,46 @@ html.a11y-contrast a {
   }
 }
 
+/* CELEBRACIÓN (CelebrationBurst.tsx): confeti que sube desde detrás del aviso, cae un poco y se desvanece, en unos 2 s.
+   Cada pieza trae su destino (--piece-x, --piece-y), su giro (--piece-r) y su retraso (--piece-delay). Empieza y acaba
+   invisible: con menos movimiento (reglas de abajo) la animación dura 0,01 ms y no llega a verse */
+.celebration-piece {
+  position: absolute;
+  opacity: 0;
+  animation: celebration-piece 1.8s var(--piece-delay, 0s) both;
+}
+@keyframes celebration-piece {
+  0% {
+    opacity: 0;
+    transform: translate(0, 0) rotate(0deg) scale(0.4);
+    animation-timing-function: cubic-bezier(0.15, 0.65, 0.35, 1);
+  }
+  12% {
+    opacity: 1;
+  }
+  55% {
+    transform: translate(calc(var(--piece-x) * 0.85), var(--piece-y)) rotate(calc(var(--piece-r) * 0.6)) scale(1);
+    animation-timing-function: cubic-bezier(0.45, 0, 0.8, 0.5);
+  }
+  75% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+    transform: translate(var(--piece-x), calc(var(--piece-y) + 2.5rem)) rotate(var(--piece-r)) scale(0.9);
+  }
+}
+/* El icono del aviso con celebración aparece con un pequeño salto */
+.celebration-icon {
+  animation: celebration-pop 0.6s cubic-bezier(0.3, 1.4, 0.5, 1) both;
+}
+@keyframes celebration-pop {
+  from {
+    opacity: 0;
+    transform: scale(0.3) rotate(-40deg);
+  }
+}
+
 /* Menos movimiento: por la preferencia del sistema o por el panel */
 @media (prefers-reduced-motion: reduce) {
   *,
