@@ -1,6 +1,20 @@
 import React from 'react';
 import { BRAND_NAME, BrandMark } from './BrandMark';
 import { LegalLinks } from './LegalLinks';
+import { messages } from '../i18n/locale';
+
+const m = messages(
+  {
+    title: 'Página no encontrada',
+    text: `Esta dirección no existe en ${BRAND_NAME}. Puede que el enlace esté mal escrito o sea antiguo.`,
+    goTo: `Ir a ${BRAND_NAME}`
+  },
+  {
+    title: 'Page not found',
+    text: `This address doesn't exist in ${BRAND_NAME}. The link may be mistyped or out of date.`,
+    goTo: `Go to ${BRAND_NAME}`
+  }
+);
 
 // Una dirección que no existe en CLAR (Hosting sirve la app para cualquiera): lo dice y lleva a la app
 const NotFoundPage: React.FC = () => (
@@ -11,15 +25,13 @@ const NotFoundPage: React.FC = () => (
       <div className="flex justify-center">
         <BrandMark size={56} />
       </div>
-      <h1 className="text-xl font-bold text-slate-900">Página no encontrada</h1>
-      <p className="text-sm leading-relaxed text-slate-600">
-        Esta dirección no existe en {BRAND_NAME}. Puede que el enlace esté mal escrito o sea antiguo.
-      </p>
+      <h1 className="text-xl font-bold text-slate-900">{m.title}</h1>
+      <p className="text-sm leading-relaxed text-slate-600">{m.text}</p>
       <a
         href="/"
         className="inline-flex min-h-11 items-center justify-center rounded-2xl bg-slate-900 px-5 text-sm font-bold text-white hover:bg-slate-800"
       >
-        Ir a {BRAND_NAME}
+        {m.goTo}
       </a>
       <LegalLinks />
     </div>

@@ -1,3 +1,5 @@
+import { messages } from '../i18n/locale';
+
 // En qué dispositivo y cómo se abre CLAR, para lo que la web no hace igual en todos (avisos, inicio de sesión)
 interface PlatformInfo {
   userAgent: string;
@@ -32,5 +34,7 @@ export const popupsUnreliable = (info: PlatformInfo = current()) => isIOS(info) 
 const RECENT_SIGN_IN_MS = 4 * 60 * 1000;
 export const signedInRecently = ({ authTime, issuedAtTime }: { authTime: string; issuedAtTime: string }) =>
   Date.parse(issuedAtTime) - Date.parse(authTime) < RECENT_SIGN_IN_MS;
-export const IPHONE_DELETE_HELP =
-  'Para eliminar la cuenta desde la app del iPhone, cierra sesión, vuelve a entrar y elimínala en los 4 minutos siguientes.';
+export const IPHONE_DELETE_HELP = messages<string>(
+  'Para eliminar la cuenta desde la app del iPhone, cierra sesión, vuelve a entrar y elimínala en los 4 minutos siguientes.',
+  'To delete your account from the iPhone app, sign out, sign back in and delete it within the next 4 minutes.'
+);

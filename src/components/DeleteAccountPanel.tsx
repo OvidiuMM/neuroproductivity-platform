@@ -2,6 +2,34 @@ import React, { useEffect, useRef, useState } from 'react';
 import { Trash2 } from 'lucide-react';
 import type { ReauthMethod } from '../services/auth';
 import { IPHONE_DELETE_HELP, popupsUnreliable } from '../services/platform';
+import { messages } from '../i18n/locale';
+
+const m = messages(
+  {
+    title: 'Eliminar tu cuenta',
+    help: 'Se eliminarán tu cuenta y todos tus datos (tareas y sus borradores, metas, proyectos, evaluaciones, reuniones, correos y tus mensajes de «Escríbenos»). No se puede deshacer.',
+    withPassword: ' Escribe tu contraseña para confirmarlo.',
+    withGoogle: ' Para confirmarlo, Google te pedirá que vuelvas a entrar.',
+    password: 'Contraseña',
+    useGoogle: 'Confirmar con Google en su lugar',
+    usePassword: 'Confirmar con mi contraseña en su lugar',
+    deleting: 'Eliminando…',
+    confirm: 'Eliminar definitivamente',
+    cancel: 'Cancelar'
+  },
+  {
+    title: 'Delete your account',
+    help: "Your account and all your data will be deleted (tasks and their drafts, goals, projects, assessments, meetings, emails and your “Contact us” messages). This can't be undone.",
+    withPassword: ' Enter your password to confirm.',
+    withGoogle: ' To confirm, Google will ask you to sign in again.',
+    password: 'Password',
+    useGoogle: 'Confirm with Google instead',
+    usePassword: 'Confirm with my password instead',
+    deleting: 'Deleting…',
+    confirm: 'Delete permanently',
+    cancel: 'Cancel'
+  }
+);
 
 interface DeleteAccountPanelProps {
   // Cómo se puede confirmar, primero el de la sesión actual: con la contraseña o en la ventana de Google
@@ -39,21 +67,16 @@ export const DeleteAccountPanel: React.FC<DeleteAccountPanelProps> = ({ methods,
       className="space-y-3 rounded-2xl border border-red-200 bg-red-50/60 p-4"
     >
       <h3 id="delete-account-title" className="text-sm font-bold text-red-800">
-        Eliminar tu cuenta
+        {m.title}
       </h3>
       <p id="delete-account-help" className="text-xs leading-relaxed text-red-900">
-        Se eliminarán tu cuenta y todos tus datos (tareas y sus borradores, metas, proyectos, evaluaciones, reuniones,
-        correos y tus mensajes de «Escríbenos»). No se puede deshacer.
-        {needsPassword
-          ? ' Escribe tu contraseña para confirmarlo.'
-          : popupsUnreliable()
-            ? ` ${IPHONE_DELETE_HELP}`
-            : ' Para confirmarlo, Google te pedirá que vuelvas a entrar.'}
+        {m.help}
+        {needsPassword ? m.withPassword : popupsUnreliable() ? ` ${IPHONE_DELETE_HELP}` : m.withGoogle}
       </p>
       {needsPassword && (
         <div className="space-y-1">
           <label htmlFor="delete-account-password" className="block text-xs font-semibold text-red-900">
-            Contraseña
+            {m.password}
           </label>
           <input
             ref={passwordRef}
@@ -77,7 +100,7 @@ export const DeleteAccountPanel: React.FC<DeleteAccountPanelProps> = ({ methods,
           disabled={busy}
           className="min-h-9 text-xs font-semibold text-red-800 underline underline-offset-2 hover:text-red-950"
         >
-          {other === 'google' ? 'Confirmar con Google en su lugar' : 'Confirmar con mi contraseña en su lugar'}
+          {other === 'google' ? m.useGoogle : m.usePassword}
         </button>
       )}
       <div className="flex flex-wrap gap-2">
@@ -89,7 +112,7 @@ export const DeleteAccountPanel: React.FC<DeleteAccountPanelProps> = ({ methods,
           className="flex items-center gap-1.5 rounded-xl bg-red-700 px-3 py-2 text-xs font-bold text-white hover:bg-red-800 disabled:opacity-60"
         >
           <Trash2 className="h-3.5 w-3.5" aria-hidden="true" />
-          {busy ? 'Eliminando…' : 'Eliminar definitivamente'}
+          {busy ? m.deleting : m.confirm}
         </button>
         <button
           type="button"
@@ -97,7 +120,7 @@ export const DeleteAccountPanel: React.FC<DeleteAccountPanelProps> = ({ methods,
           disabled={busy}
           className="rounded-xl border border-slate-300 bg-white px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50"
         >
-          Cancelar
+          {m.cancel}
         </button>
       </div>
     </form>
