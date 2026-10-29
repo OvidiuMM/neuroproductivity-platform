@@ -2,8 +2,17 @@ import assert from 'node:assert/strict';
 import { after, beforeEach, describe, it } from 'node:test';
 import type { BatchResponse, MulticastMessage } from 'firebase-admin/messaging';
 import { Timestamp } from 'firebase-admin/firestore';
+import type { CallableRequest } from 'firebase-functions/https';
 import { adminDb } from '../../src/adminApp';
-import { dropStaleTokens, requeueAccount, sendQueued, syncTaskAlarm, testPush, tokenId } from '../../src/push';
+import {
+  dropStaleTokens,
+  requeueAccount,
+  sendQueued,
+  sendTestPush,
+  syncTaskAlarm,
+  testPush,
+  tokenId
+} from '../../src/push';
 import { forgetPushData, forgetPushDevices } from '../../src/pushCleanup';
 
 // Se ejecuta contra el emulador de Firestore (npm run test:push): la cola de alarmas, su envío con un FCM simulado y
@@ -24,11 +33,19 @@ const clear = async () => {
     await db.recursiveDelete(db.collection(name));
 };
 
-const device = async (id: string, { showTitle = false, updatedAt = fresh } = {}) => {
+// Sin `language`, como los registrados antes de 1.2.0 (español)
+const device = async (
+  id: string,
+  {
+    showTitle = false,
+    updatedAt = fresh,
+    language
+  }: { showTitle?: boolean; updatedAt?: string; language?: string } = {}
+) => {
   await db.doc(`push_devices/${uid}`).set({ timeZone: MADRID, updatedAt });
   await db
     .doc(`push_devices/${uid}/tokens/${id}`)
-    .set({ token: `token-${id}-0123456789`, timeZone: MADRID, showTitle, updatedAt });
+    .set({ token: `token-${id}-0123456789`, timeZone: MADRID, showTitle, updatedAt, ...(language && { language }) });
   await db.doc(`push_tokens/${id}`).set({ uid, updatedAt });
 };
 
@@ -62,6 +79,10 @@ describe('push alarms', () => {
     const alarm = await queued('t1');
     assert.equal(alarm?.key, 't1@2026-10-16T09:30:00.000Z');
     assert.equal(alarm?.clock, '11:30');
+    // Sin textos: se escriben al enviarla, en el idioma de cada dispositivo
+    assert.equal(alarm?.timeZone, MADRID);
+    assert.equal(alarm?.hasDueTime, true);
+    assert.equal(alarm && 'body' in alarm, false);
 
     await db.doc(`alarm_sent/${uid}__t1`).set({ uid, taskId: 't1', key: alarm?.key });
     await db.doc(`alarm_queue/${uid}__t1`).delete();
@@ -99,6 +120,29 @@ describe('push alarms', () => {
     // La hora de la alarma (la notificación la muestra) y la dirección que abre su tarea
     assert.equal(fcm.sent[0].data?.at, '2026-10-16T07:30:00.000Z');
     assert.equal(fcm.sent[0].data?.url, `/?alarma=${encodeURIComponent('t1@2026-10-16T07:30:00.000Z')}`);
+  });
+
+  it('writes each notification in the language of its device; one registered before 1.2.0, in Spanish', async () => {
+    await device('d1');
+    await device('d2', { showTitle: true, language: 'en' });
+    await device('d3', { language: 'en' });
+    await device('d4', { language: 'es' });
+    await task('t1', { dueDate: '2026-10-16', dueTime: '12:00', alarmTime: '09:30' });
+    await syncTaskAlarm(uid, 't1', now - 60 * MINUTE);
+    const fcm = fakeFcm();
+    assert.equal(await sendQueued(db.doc(`alarm_queue/${uid}__t1`), now, fcm.send), 'sent');
+    // Un envío por idioma y forma del texto: los dos dispositivos en español sin el nombre van juntos
+    const sent = (title: string) => fcm.sent.find((m) => m.data?.title === title);
+    assert.deepEqual(fcm.sent.map((m) => m.data?.title).sort(), [
+      'Alarm at 09:30: Pagar el alquiler',
+      'Tienes una alarma de CLAR a las 09:30',
+      'You have a CLAR alarm at 09:30'
+    ]);
+    assert.equal(sent('Alarm at 09:30: Pagar el alquiler')?.data?.body, 'Due 16 Oct at 12:00');
+    assert.equal(sent('You have a CLAR alarm at 09:30')?.data?.body, 'Due 16 Oct at 12:00');
+    const spanish = sent('Tienes una alarma de CLAR a las 09:30');
+    assert.match(spanish?.data?.body ?? '', /^Vence el 16 oct\.? a las 12:00$/);
+    assert.deepEqual([...(spanish?.tokens ?? [])].sort(), ['token-d1-0123456789', 'token-d4-0123456789']);
   });
 
   it('recomputes a queued alarm when sending: one queued before 0.9.7 for the day before waits for its day', async () => {
@@ -196,12 +240,12 @@ describe('push alarms', () => {
 
   describe('«Probar notificación»', () => {
     const token = 'token-prueba-0123456789';
-    const registerThis = async () => {
+    const registerThis = async (language?: string) => {
       const id = tokenId(token);
       await db.doc(`push_devices/${uid}`).set({ timeZone: MADRID, updatedAt: fresh });
       await db
         .doc(`push_devices/${uid}/tokens/${id}`)
-        .set({ token, timeZone: MADRID, showTitle: false, updatedAt: fresh });
+        .set({ token, timeZone: MADRID, showTitle: false, updatedAt: fresh, ...(language && { language }) });
       await db.doc(`push_tokens/${id}`).set({ uid, updatedAt: fresh });
     };
     beforeEach(() => db.doc(`push_limits/${uid}`).delete());
@@ -217,6 +261,30 @@ describe('push alarms', () => {
       // Una hora después, otra vez
       await testPush(uid, token, fcm.send, now + 61 * MINUTE);
       assert.equal(fcm.sent.length, 6);
+    });
+
+    it('writes the notice in the language of the device', async () => {
+      await registerThis();
+      const fcm = fakeFcm();
+      await testPush(uid, token, fcm.send, now);
+      assert.equal(fcm.sent[0].data?.body, 'Así te avisará CLAR de tus alarmas, también con la app cerrada.');
+      await registerThis('en');
+      await testPush(uid, token, fcm.send, now + MINUTE);
+      assert.equal(
+        fcm.sent[1].data?.body,
+        'This is how CLAR will notify you of your alarms, even when the app is closed.'
+      );
+    });
+
+    it('says why it failed in the language of the account', async () => {
+      // Sin acceso aprobado: el error sale en el idioma del perfil (sin él, en español)
+      const call = (data: Record<string, unknown> = {}) =>
+        sendTestPush.run({ auth: { uid, token: {} }, data: { token, ...data } } as unknown as CallableRequest);
+      await assert.rejects(call(), { code: 'permission-denied', message: 'Tu cuenta aún no tiene acceso.' });
+      await db.doc(`users/${uid}`).set({ language: 'en' });
+      await assert.rejects(call(), { code: 'permission-denied', message: "Your account doesn't have access yet." });
+      // El que envía la app con la petición, si lo envía, manda
+      await assert.rejects(call({ language: 'es' }), { message: 'Tu cuenta aún no tiene acceso.' });
     });
 
     it('keeps the registration limit apart from the tests', async () => {
