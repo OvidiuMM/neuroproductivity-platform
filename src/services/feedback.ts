@@ -1,11 +1,26 @@
+import { messages } from '../i18n/locale';
+
 // Contacto y sugerencias: tipos de mensaje, límites y la información técnica que se puede adjuntar
 
 export type FeedbackType = 'suggestion' | 'bug' | 'general';
 
+const m = messages(
+  {
+    types: { suggestion: 'Sugerencia', bug: 'Error o fallo', general: 'Mensaje general' },
+    unknown: 'Desconocido',
+    devices: { móvil: 'móvil', tableta: 'tableta', escritorio: 'escritorio' }
+  },
+  {
+    types: { suggestion: 'Suggestion', bug: 'Bug or problem', general: 'General message' },
+    unknown: 'Unknown',
+    devices: { móvil: 'phone', tableta: 'tablet', escritorio: 'desktop' }
+  }
+);
+
 export const FEEDBACK_TYPES: { value: FeedbackType; label: string }[] = [
-  { value: 'suggestion', label: 'Sugerencia' },
-  { value: 'bug', label: 'Error o fallo' },
-  { value: 'general', label: 'Mensaje general' }
+  { value: 'suggestion', label: m.types.suggestion },
+  { value: 'bug', label: m.types.bug },
+  { value: 'general', label: m.types.general }
 ];
 
 export const FEEDBACK_SUBJECT_MAX = 120;
@@ -19,6 +34,10 @@ const CONTROL = /[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F]/g;
 export const cleanReply = (text: string) => text.replace(CONTROL, '').trim().slice(0, REPLY_MAX_LENGTH);
 
 export type DeviceClass = 'móvil' | 'tableta' | 'escritorio';
+// La clase de dispositivo se guarda en español (el servidor la comprueba, functions/src/feedbackLogic.ts); esto es
+// cómo se muestra
+export const deviceLabel = (deviceClass: string) =>
+  (m.devices as Record<string, string | undefined>)[deviceClass] ?? deviceClass;
 
 // Información técnica opcional y anónima: familia y versión del sistema y del navegador, nunca el user-agent completo
 export interface FeedbackContext {
@@ -48,7 +67,7 @@ export const describeOs = (ua: string, maxTouchPoints = 0) => {
   if (/CrOS/.test(ua)) return 'ChromeOS';
   if (/Mac OS X/.test(ua)) return 'macOS';
   if (/Linux/.test(ua)) return 'Linux';
-  return 'Desconocido';
+  return m.unknown;
 };
 
 export const describeBrowser = (ua: string) => {
@@ -64,7 +83,7 @@ export const describeBrowser = (ua: string) => {
     const version = match(ua, pattern);
     if (version) return `${name} ${version}`;
   }
-  return 'Desconocido';
+  return m.unknown;
 };
 
 export const deviceClassFor = (width: number): DeviceClass =>

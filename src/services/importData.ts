@@ -14,6 +14,7 @@ import { GOAL_TITLE_MAX, GOAL_WHY_MAX } from './goals';
 import { PROJECT_DESCRIPTION_MAX, PROJECT_TITLE_MAX } from './projects';
 import { AREA_LABEL_MAX, DEFAULT_AREAS, MAX_VISIBLE_AREAS, isAreaId, validateAreas, visibleAreas } from './wheel';
 import { canRepeatFromCompletion } from './recurrence';
+import { LOCALE_TAG, messages } from '../i18n/locale';
 
 // IMPORTAR LA DESCARGA DE LA CUENTA («Descargar mis datos (JSON)»). El archivo viene de fuera: cada registro se
 // comprueba campo a campo y solo se guardan los campos conocidos, con su tipo y su formato. Lo que ya está en la cuenta
@@ -24,16 +25,43 @@ export const IMPORT_MAX_BYTES = 5 * 1024 * 1024;
 // En este orden se escriben: las metas antes que sus proyectos y estos antes que sus tareas
 export const IMPORT_ORDER: UserCollection[] = ['goals', 'projects', 'tasks', 'wheelLogs', 'meetings', 'emails'];
 
-export const IMPORT_LABELS: Record<UserCollection, string> = {
-  goals: 'Metas',
-  projects: 'Proyectos',
-  tasks: 'Tareas',
-  wheelLogs: 'Evaluaciones de la Rueda',
-  meetings: 'Reuniones',
-  emails: 'Correos',
-  // Los borradores van en la descarga, pero no se importan (son lo que se estaba escribiendo en otro momento)
-  taskDrafts: 'Borradores de tareas'
-};
+const m = messages(
+  {
+    labels: {
+      goals: 'Metas',
+      projects: 'Proyectos',
+      tasks: 'Tareas',
+      wheelLogs: 'Evaluaciones de la Rueda',
+      meetings: 'Reuniones',
+      emails: 'Correos',
+      // Los borradores van en la descarga, pero no se importan (son lo que se estaba escribiendo en otro momento)
+      taskDrafts: 'Borradores de tareas'
+    } satisfies Record<UserCollection, string>,
+    notJson: 'El archivo no es un JSON válido.',
+    notClar: 'Este archivo no es una descarga de CLAR.',
+    singleItem:
+      'Este archivo es la descarga de una sola tarea, meta o proyecto. Aquí se importa la de «Descargar mis datos (JSON)».',
+    notAccount: 'Este archivo no es una descarga de «Descargar mis datos (JSON)».'
+  },
+  {
+    labels: {
+      goals: 'Goals',
+      projects: 'Projects',
+      tasks: 'Tasks',
+      wheelLogs: 'Wheel assessments',
+      meetings: 'Meetings',
+      emails: 'Emails',
+      taskDrafts: 'Task drafts'
+    },
+    notJson: "The file isn't valid JSON.",
+    notClar: "This file isn't a CLAR download.",
+    singleItem:
+      'This file is the download of a single task, goal or project. Here you can only import the file from “Download my data (JSON)”.',
+    notAccount: "This file isn't a download from “Download my data (JSON)”."
+  }
+);
+
+export const IMPORT_LABELS: Record<UserCollection, string> = m.labels;
 
 type Obj = Record<string, unknown>;
 const isObj = (value: unknown): value is Obj => typeof value === 'object' && value !== null && !Array.isArray(value);
@@ -305,17 +333,13 @@ export const parseAccountExport = (contents: string): ParsedImport => {
   try {
     file = JSON.parse(contents);
   } catch {
-    throw new Error('El archivo no es un JSON válido.');
+    throw new Error(m.notJson);
   }
-  if (!isObj(file) || (file.app !== undefined && file.app !== 'CLAR'))
-    throw new Error('Este archivo no es una descarga de CLAR.');
-  if (file.type === 'task' || file.type === 'goal' || file.type === 'project')
-    throw new Error(
-      'Este archivo es la descarga de una sola tarea, meta o proyecto. Aquí se importa la de «Descargar mis datos (JSON)».'
-    );
+  if (!isObj(file) || (file.app !== undefined && file.app !== 'CLAR')) throw new Error(m.notClar);
+  if (file.type === 'task' || file.type === 'goal' || file.type === 'project') throw new Error(m.singleItem);
   // Las descargas de antes de la 0.9.5 no llevan tipo: se reconocen por sus listas
   if ((file.type !== undefined && file.type !== 'account') || !IMPORT_ORDER.some((name) => Array.isArray(file[name])))
-    throw new Error('Este archivo no es una descarga de «Descargar mis datos (JSON)».');
+    throw new Error(m.notAccount);
 
   const invalid = emptyCounts();
   const data = Object.fromEntries(
@@ -347,7 +371,7 @@ export const parseAccountExport = (contents: string): ParsedImport => {
 // Áreas del archivo que faltan en la cuenta, al final. Las que ya están conservan su nombre. Un nombre que ya usa
 // otra área se distingue con un número, y pasado el máximo de áreas a la vista las nuevas entran ocultas.
 export const mergeAreas = (current: WheelArea[], incoming: WheelArea[]) => {
-  const key = (label: string) => label.trim().toLocaleLowerCase('es');
+  const key = (label: string) => label.trim().toLocaleLowerCase(LOCALE_TAG);
   const merged = [...current];
   const added: WheelArea[] = [];
   const labels = new Set(current.map((a) => key(a.label)));

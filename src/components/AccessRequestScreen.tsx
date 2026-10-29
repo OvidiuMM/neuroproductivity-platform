@@ -7,6 +7,7 @@ import { DeleteAccountPanel } from './DeleteAccountPanel';
 import type { ReauthMethod } from '../services/auth';
 import { AccessibilityTrigger, AccessibleScreen } from './AccessibilityPanel';
 import { LegalLinks } from './LegalLinks';
+import { messages } from '../i18n/locale';
 
 interface AccessRequestScreenProps {
   status: Exclude<OwnAccessStatus, 'approved'>;
@@ -21,32 +22,122 @@ interface AccessRequestScreenProps {
   reauthMethods: ReauthMethod[];
 }
 
-const COPY: Record<AccessRequestScreenProps['status'], { title: string; text: string }> = {
-  none: {
-    title: 'Solicita acceso',
-    text: 'Tu cuenta aún no tiene acceso. Solicítalo: si la aprobación es automática, entrarás al momento; si no, te avisaremos por email cuando esté aprobada.'
+const m = messages<{
+  copy: Record<AccessRequestScreenProps['status'], { title: string; text: string }>;
+  downloadFailed: string;
+  deleteFailed: string;
+  requestFailed: string;
+  signedInAs: (email: string) => string;
+  messageLabel: string;
+  messagePlaceholder: string;
+  sending: string;
+  request: string;
+  requestAgain: string;
+  retry: string;
+  yourData: string;
+  dataHelp: string;
+  preparing: string;
+  download: string;
+  delete: string;
+  privacy: string;
+  contact: string;
+  signOut: string;
+}>(
+  {
+    copy: {
+      none: {
+        title: 'Solicita acceso',
+        text: 'Tu cuenta aún no tiene acceso. Solicítalo: si la aprobación es automática, entrarás al momento; si no, te avisaremos por email cuando esté aprobada.'
+      },
+      pending: {
+        title: 'Solicitud enviada',
+        text: 'Te avisaremos por email cuando se apruebe. Esta pantalla se actualizará sola en cuanto tengas acceso.'
+      },
+      rejected: {
+        title: 'Solicitud no aprobada',
+        text: 'Tu solicitud de acceso no se ha aprobado. Pasado un día puedes volver a solicitarlo, y la administración lo revisará.'
+      },
+      revoked: {
+        title: 'Acceso retirado',
+        text: 'Tu acceso a CLAR se ha retirado. Tus datos siguen guardados. Pasado un día puedes volver a solicitarlo, y la administración lo revisará.'
+      },
+      blocked: {
+        title: 'Cuenta bloqueada',
+        text: 'Esta cuenta no puede usar CLAR. Si crees que es un error, escríbenos: te responderemos por email.'
+      },
+      unknown: {
+        title: 'No se pudo comprobar tu acceso',
+        text: 'Necesitas conexión a internet para comprobar si tu cuenta tiene acceso.'
+      }
+    },
+    downloadFailed: 'No se pudieron descargar tus datos. Inténtalo de nuevo.',
+    deleteFailed: 'No se pudo eliminar la cuenta. Inténtalo de nuevo.',
+    requestFailed: 'No se pudo enviar la solicitud. Inténtalo de nuevo.',
+    signedInAs: (email) => `Has entrado como ${email}`,
+    messageLabel: 'Mensaje para la administración (opcional)',
+    messagePlaceholder: 'Por ejemplo, quién eres o para qué quieres usar la app',
+    sending: 'Enviando…',
+    request: 'Solicitar acceso',
+    requestAgain: 'Volver a solicitar acceso',
+    retry: 'Reintentar',
+    yourData: 'Tus datos',
+    dataHelp: 'Aunque no tengas acceso, puedes descargar o eliminar los datos que tengas guardados.',
+    preparing: 'Preparando descarga…',
+    download: 'Descargar mis datos',
+    delete: 'Eliminar mi cuenta y mis datos',
+    privacy:
+      'Para gestionar tu acceso se guardan tu nombre, tu email, tu foto de perfil (si entras con Google) y el mensaje, en servidores de Google Cloud en la Unión Europea (Bélgica).',
+    contact: '¿Alguna duda o problema? Escríbenos',
+    signOut: 'Cerrar sesión'
   },
-  pending: {
-    title: 'Solicitud enviada',
-    text: 'Te avisaremos por email cuando se apruebe. Esta pantalla se actualizará sola en cuanto tengas acceso.'
-  },
-  rejected: {
-    title: 'Solicitud no aprobada',
-    text: 'Tu solicitud de acceso no se ha aprobado. Pasado un día puedes volver a solicitarlo, y la administración lo revisará.'
-  },
-  revoked: {
-    title: 'Acceso retirado',
-    text: 'Tu acceso a CLAR se ha retirado. Tus datos siguen guardados. Pasado un día puedes volver a solicitarlo, y la administración lo revisará.'
-  },
-  blocked: {
-    title: 'Cuenta bloqueada',
-    text: 'Esta cuenta no puede usar CLAR. Si crees que es un error, escríbenos: te responderemos por email.'
-  },
-  unknown: {
-    title: 'No se pudo comprobar tu acceso',
-    text: 'Necesitas conexión a internet para comprobar si tu cuenta tiene acceso.'
+  {
+    copy: {
+      none: {
+        title: 'Request access',
+        text: "Your account doesn't have access yet. Request it: if approval is automatic, you'll get in right away; if not, we'll email you when it's approved."
+      },
+      pending: {
+        title: 'Request sent',
+        text: "We'll email you when it's approved. This screen will update by itself as soon as you have access."
+      },
+      rejected: {
+        title: 'Request not approved',
+        text: "Your access request wasn't approved. After a day you can request it again, and the admin will review it."
+      },
+      revoked: {
+        title: 'Access removed',
+        text: 'Your access to CLAR has been removed. Your data is still saved. After a day you can request it again, and the admin will review it.'
+      },
+      blocked: {
+        title: 'Account blocked',
+        text: "This account can't use CLAR. If you think this is a mistake, contact us: we'll reply by email."
+      },
+      unknown: {
+        title: "Couldn't check your access",
+        text: 'You need an internet connection to check whether your account has access.'
+      }
+    },
+    downloadFailed: "Couldn't download your data. Try again.",
+    deleteFailed: "Couldn't delete your account. Try again.",
+    requestFailed: "Couldn't send the request. Try again.",
+    signedInAs: (email) => `Signed in as ${email}`,
+    messageLabel: 'Message for the admin (optional)',
+    messagePlaceholder: 'For example, who you are or what you want to use the app for',
+    sending: 'Sending…',
+    request: 'Request access',
+    requestAgain: 'Request access again',
+    retry: 'Retry',
+    yourData: 'Your data',
+    dataHelp: "Even without access, you can download or delete the data you've saved.",
+    preparing: 'Preparing download…',
+    download: 'Download my data',
+    delete: 'Delete my account and my data',
+    privacy:
+      'To manage your access, we store your name, your email, your profile photo (if you sign in with Google) and your message on Google Cloud servers in the European Union (Belgium).',
+    contact: 'Any questions or problems? Contact us',
+    signOut: 'Sign out'
   }
-};
+);
 
 const ICONS = {
   none: Send,
@@ -84,14 +175,7 @@ export const AccessRequestScreen: React.FC<AccessRequestScreenProps> = ({
       await action();
     } catch (err) {
       console.error(`Account ${kind} failed:`, err);
-      setError(
-        describeAuthError(
-          err,
-          kind === 'download'
-            ? 'No se pudieron descargar tus datos. Inténtalo de nuevo.'
-            : 'No se pudo eliminar la cuenta. Inténtalo de nuevo.'
-        )
-      );
+      setError(describeAuthError(err, kind === 'download' ? m.downloadFailed : m.deleteFailed));
     } finally {
       setDataBusy(null);
     }
@@ -106,9 +190,7 @@ export const AccessRequestScreen: React.FC<AccessRequestScreenProps> = ({
     try {
       await onRequest(message.trim());
     } catch (err) {
-      setError(
-        err instanceof Error && err.message ? err.message : 'No se pudo enviar la solicitud. Inténtalo de nuevo.'
-      );
+      setError(err instanceof Error && err.message ? err.message : m.requestFailed);
     } finally {
       setIsSending(false);
     }
@@ -123,16 +205,16 @@ export const AccessRequestScreen: React.FC<AccessRequestScreenProps> = ({
               <BrandMark size={44} />
               <div>
                 <p className="text-xl font-bold tracking-[0.2em] text-slate-900">{BRAND_NAME}</p>
-                <p className="text-xs text-slate-600">Has entrado como {email}</p>
+                <p className="text-xs text-slate-600">{m.signedInAs(email)}</p>
               </div>
             </div>
 
             <div aria-live="polite" className="space-y-2">
               <h1 className="flex items-center gap-2 text-lg font-bold text-slate-900">
                 <Icon className="h-5 w-5 text-indigo-600" aria-hidden="true" />
-                {COPY[status].title}
+                {m.copy[status].title}
               </h1>
-              <p className="text-sm leading-relaxed text-slate-700">{COPY[status].text}</p>
+              <p className="text-sm leading-relaxed text-slate-700">{m.copy[status].text}</p>
             </div>
 
             {canRequest && (
@@ -140,7 +222,7 @@ export const AccessRequestScreen: React.FC<AccessRequestScreenProps> = ({
                 <div className="space-y-1">
                   <div className="flex items-baseline justify-between">
                     <label htmlFor="access-message" className="text-xs font-semibold text-slate-700">
-                      Mensaje para la administración (opcional)
+                      {m.messageLabel}
                     </label>
                     <span className="font-mono text-[10px] text-slate-500" aria-hidden="true">
                       {message.length}/{ACCESS_MESSAGE_MAX_LENGTH}
@@ -152,7 +234,7 @@ export const AccessRequestScreen: React.FC<AccessRequestScreenProps> = ({
                     onChange={(e) => setMessage(e.target.value)}
                     maxLength={ACCESS_MESSAGE_MAX_LENGTH}
                     rows={3}
-                    placeholder="Por ejemplo, quién eres o para qué quieres usar la app"
+                    placeholder={m.messagePlaceholder}
                     className="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-400 focus:outline-none"
                   />
                 </div>
@@ -162,7 +244,7 @@ export const AccessRequestScreen: React.FC<AccessRequestScreenProps> = ({
                   className="flex w-full items-center justify-center gap-2 rounded-2xl bg-slate-900 px-4 py-3 text-sm font-bold text-white hover:bg-slate-800 disabled:opacity-60"
                 >
                   <Send className="h-4 w-4" aria-hidden="true" />
-                  {isSending ? 'Enviando…' : status === 'none' ? 'Solicitar acceso' : 'Volver a solicitar acceso'}
+                  {isSending ? m.sending : status === 'none' ? m.request : m.requestAgain}
                 </button>
               </form>
             )}
@@ -173,7 +255,7 @@ export const AccessRequestScreen: React.FC<AccessRequestScreenProps> = ({
                 onClick={onRetry}
                 className="w-full rounded-2xl bg-slate-900 px-4 py-3 text-sm font-bold text-white hover:bg-slate-800"
               >
-                Reintentar
+                {m.retry}
               </button>
             )}
 
@@ -186,11 +268,9 @@ export const AccessRequestScreen: React.FC<AccessRequestScreenProps> = ({
             {status !== 'unknown' && (
               <section aria-labelledby="access-data-title" className="space-y-2 border-t border-slate-100 pt-3">
                 <h2 id="access-data-title" className="text-xs font-bold tracking-wider text-slate-700 uppercase">
-                  Tus datos
+                  {m.yourData}
                 </h2>
-                <p className="text-[11px] leading-relaxed text-slate-600">
-                  Aunque no tengas acceso, puedes descargar o eliminar los datos que tengas guardados.
-                </p>
+                <p className="text-[11px] leading-relaxed text-slate-600">{m.dataHelp}</p>
                 <div className="flex flex-col gap-2 sm:flex-row">
                   <button
                     type="button"
@@ -199,7 +279,7 @@ export const AccessRequestScreen: React.FC<AccessRequestScreenProps> = ({
                     className="flex flex-1 items-center justify-center gap-1.5 rounded-xl border border-slate-300 px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-60"
                   >
                     <Download className="h-3.5 w-3.5" aria-hidden="true" />
-                    {dataBusy === 'download' ? 'Preparando descarga…' : 'Descargar mis datos'}
+                    {dataBusy === 'download' ? m.preparing : m.download}
                   </button>
                   <button
                     type="button"
@@ -210,7 +290,7 @@ export const AccessRequestScreen: React.FC<AccessRequestScreenProps> = ({
                     className="flex flex-1 items-center justify-center gap-1.5 rounded-xl border border-red-300 px-3 py-2 text-xs font-semibold text-red-700 hover:bg-red-50 disabled:opacity-60"
                   >
                     <Trash2 className="h-3.5 w-3.5" aria-hidden="true" />
-                    Eliminar mi cuenta y mis datos
+                    {m.delete}
                   </button>
                 </div>
                 {isDeleting && (
@@ -227,17 +307,14 @@ export const AccessRequestScreen: React.FC<AccessRequestScreenProps> = ({
               </section>
             )}
 
-            <p className="text-[11px] leading-relaxed text-slate-600">
-              Para gestionar tu acceso se guardan tu nombre, tu email, tu foto de perfil (si entras con Google) y el
-              mensaje, en servidores de Google Cloud en la Unión Europea (Bélgica).
-            </p>
+            <p className="text-[11px] leading-relaxed text-slate-600">{m.privacy}</p>
 
             <button
               type="button"
               onClick={onContact}
               className="flex w-full items-center justify-center gap-2 rounded-2xl border border-slate-200 px-4 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50"
             >
-              ¿Alguna duda o problema? Escríbenos
+              {m.contact}
             </button>
 
             <button
@@ -246,7 +323,7 @@ export const AccessRequestScreen: React.FC<AccessRequestScreenProps> = ({
               className="flex w-full items-center justify-center gap-2 rounded-2xl border border-slate-200 px-4 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50"
             >
               <LogOut className="h-3.5 w-3.5" aria-hidden="true" />
-              Cerrar sesión
+              {m.signOut}
             </button>
 
             <div className="space-y-2 text-center">
