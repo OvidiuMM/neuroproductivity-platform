@@ -16,7 +16,11 @@ const TEXT_SIZES: { value: TextSize; label: string; sample: string }[] = [
   { value: 'xlarge', label: 'Muy grande', sample: 'text-lg' }
 ];
 
-const SWITCHES: { key: 'highContrast' | 'reduceMotion' | 'strongFocus'; label: string; hint: string }[] = [
+const SWITCHES: {
+  key: 'highContrast' | 'reduceMotion' | 'strongFocus' | 'celebrations';
+  label: string;
+  hint: string;
+}[] = [
   { key: 'highContrast', label: 'Alto contraste', hint: 'Textos y bordes más oscuros, y enlaces subrayados.' },
   {
     key: 'reduceMotion',
@@ -27,6 +31,11 @@ const SWITCHES: { key: 'highContrast' | 'reduceMotion' | 'strongFocus'; label: s
     key: 'strongFocus',
     label: 'Foco muy visible',
     hint: 'Contorno grueso alrededor del elemento activo al usar el teclado.'
+  },
+  {
+    key: 'celebrations',
+    label: 'Celebraciones',
+    hint: 'Un mensaje y una breve animación al hacer una tarea antigua, lograr una meta o terminar un proyecto.'
   }
 ];
 

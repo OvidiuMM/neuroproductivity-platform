@@ -94,6 +94,7 @@ const screensFor = (
       'Meta: vincula la tarea a una de tus metas y tomará su área (si el título se parece a una meta, CLAR te propone vincularla). Sin meta, el motor de sugerencias te propone el área de la Rueda con la que se relaciona. Si la meta aún no existe, «Nueva meta» la crea ahí mismo con su nombre y su área.',
       'Tareas que dependen de otras: en «Más opciones», «Empieza después de» elige la tarea a la que espera. Mientras esa no esté hecha o cancelada, esta sale con un candado («Bloqueada: espera a…»), no entra en el Top 10 y no se puede marcar como hecha. Al terminar la otra se desbloquea sola. Varias tareas pueden esperar a la misma y avanzar en paralelo.',
       'Cada tarea tiene un estado: Pendiente, En progreso, Bloqueada, Hecha o Cancelada. Mientras espera a otra tarea no se puede poner «En progreso» ni «Hecha». Hecha y Cancelada la archivan; una cancelada no cuenta como hecha en las estadísticas ni en el avance de las metas. Desde «Archivadas» la reactivas cambiando su estado.',
+      'Celebraciones: al hacer una tarea que llevaba 14 días o más en tu lista, lograr una meta o terminar un proyecto, el aviso lo celebra con un mensaje y un breve confeti. Si prefieres no verlas, apágalas en «Accesibilidad».',
       'Si cierras con cambios sin guardar el formulario de una tarea que ya existe, una meta o un proyecto, o el editor de áreas, CLAR te pregunta antes de descartarlos; si cierras la pestaña, te avisa el navegador. Una tarea nueva con algo escrito se guarda sola como borrador.',
       'Puedes darle una fecha límite o un intervalo, con hora opcional: el título se pone violeta cuando falta menos de una semana y rojo cuando ha vencido. El día que vence, hasta su hora límite, destaca con la etiqueta «Hoy» y el título en negrita (en las listas, también con un borde violeta). Las fechas se escriben como dd/mm/aaaa o se eligen en el calendario, con la semana empezando en lunes.',
       'Borradores: si cierras una tarea nueva con algo escrito sin guardarla, se guarda sola en «Borradores» (junto a «Archivadas»), tal como estaba, con «Deshacer» por si no la querías. Con «Continuar» sigues con ella; al guardarla, pasa a tu lista. Los cambios de una tarea que ya existe no se guardan solos: al cerrar con cambios, CLAR te pregunta.',
@@ -343,8 +344,9 @@ export const HowItWorks: React.FC<HowItWorksProps> = ({
         <h3 className="text-xs font-bold tracking-wider text-slate-700 uppercase">Accesibilidad</h3>
         <p className="text-sm leading-relaxed text-slate-600">
           En el menú de tu cuenta, <strong>Accesibilidad</strong> permite agrandar el texto, activar el alto contraste,
-          reducir las animaciones y hacer más visible el foco del teclado. Las preferencias se guardan en cada
-          dispositivo. Toda la app se puede usar con el teclado y se revisa automáticamente con las pautas WCAG 2.1 AA.
+          reducir las animaciones, hacer más visible el foco del teclado y apagar las celebraciones. Las preferencias se
+          guardan en cada dispositivo. Toda la app se puede usar con el teclado y se revisa automáticamente con las
+          pautas WCAG 2.1 AA.
         </p>
       </div>
 
