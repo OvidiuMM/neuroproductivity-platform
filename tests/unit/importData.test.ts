@@ -100,6 +100,26 @@ test('counts invalid records and repeated ids, and drops invalid optional fields
   assert.equal(parsed.invalid.wheelLogs, 1);
 });
 
+test('keeps a repetition from completion on days and weeks, and drops any other mode', () => {
+  const repeating = (recurrence: Record<string, unknown>) =>
+    parseAccountExport(file({ tasks: [{ ...task, dueDate: '2026-10-20', recurrence }] })).data.tasks[0].recurrence;
+  assert.equal(repeating({ frequency: 'DAILY', interval: 3, from: 'COMPLETION' })?.from, 'COMPLETION');
+  // Contando desde que se hace no hay días de la semana
+  const weekly = repeating({ frequency: 'WEEKLY', interval: 2, from: 'COMPLETION', weekdays: [1, 3] });
+  assert.equal(weekly?.from, 'COMPLETION');
+  assert.equal(weekly?.weekdays, undefined);
+  // Otros valores, o en meses y años: fechas fijas (sin `from`), y la tarea se importa igual
+  for (const from of ['SCHEDULE', 'completion', 1, true, null]) {
+    assert.equal(repeating({ frequency: 'DAILY', interval: 3, from })?.from, undefined);
+  }
+  assert.equal(repeating({ frequency: 'MONTHLY', interval: 1, from: 'COMPLETION', monthDay: 20 })?.from, undefined);
+  assert.deepEqual(repeating({ frequency: 'WEEKLY', interval: 1, from: 'X', weekdays: [1] })?.weekdays, [1]);
+  // Cada N: de 1 a 999 (el formulario deja hasta 99, pero un archivo que antes valía sigue valiendo)
+  assert.equal(repeating({ frequency: 'DAILY', interval: 150 })?.interval, 150);
+  assert.equal(repeating({ frequency: 'DAILY', interval: 1000 })?.interval, 1);
+  assert.equal(repeating({ frequency: 'DAILY', interval: 0 })?.interval, 1);
+});
+
 test('rejects files that are not the account download, with a reason', () => {
   assert.throws(() => parseAccountExport('{nope'), /no es un JSON válido/);
   assert.throws(() => parseAccountExport('[]'), /no es una descarga de CLAR/);
