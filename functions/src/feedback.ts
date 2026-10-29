@@ -1,19 +1,11 @@
-import { HttpsError, onCall } from 'firebase-functions/https';
 import { onSchedule } from 'firebase-functions/scheduler';
 import * as logger from 'firebase-functions/logger';
 import { FieldPath, FieldValue } from 'firebase-admin/firestore';
 import { adminDb } from './adminApp';
 import { isAdminToken, normalizeEmail } from './accessLogic';
-import {
-  adminEmail,
-  appUrl,
-  emailSecrets,
-  isEmulator,
-  REGION,
-  removeStaleAdminMarkers,
-  requireAuth,
-  sendEmail
-} from './access';
+import { adminEmail, appUrl, emailSecrets, isEmulator, REGION, removeStaleAdminMarkers, sendEmail } from './access';
+import { callerLanguage, onUserCall, requireAuth, userErrors } from './callable';
+import { messages } from './i18n';
 import {
   FEEDBACK_LIMIT,
   buildFeedbackDigestEmail,
@@ -33,15 +25,44 @@ const db = adminDb;
 const NOTICE_DOC = 'feedback_notice/state';
 const FLUSH_SLACK_MS = 60 * 1000;
 
+const fail = userErrors(
+  messages(
+    {
+      confirmEmail: 'Confirma tu email para poder escribirnos.',
+      invalidFeedback: 'Revisa el tipo, el asunto y la descripción.',
+      tooMany: 'Has enviado varios mensajes seguidos. Inténtalo de nuevo en un rato.',
+      adminOnly: 'Solo la administración puede responder los mensajes.',
+      emptyReply: 'Escribe la respuesta.',
+      ticketGone: 'El mensaje ya no existe.',
+      uncertain: 'Esta respuesta ya se estaba enviando y no se sabe si salió: para no duplicarla, no se reenvía.',
+      sendFailed: 'No se pudo enviar la respuesta. Inténtalo de nuevo.',
+      noEmail: 'El envío de correos no está configurado.'
+    },
+    {
+      confirmEmail: 'Confirm your email so you can write to us.',
+      invalidFeedback: 'Check the type, the subject and the description.',
+      tooMany: "You've sent several messages in a row. Try again in a while.",
+      adminOnly: 'Only the admin can reply to messages.',
+      emptyReply: 'Write the reply.',
+      ticketGone: 'The message no longer exists.',
+      uncertain:
+        "This reply was already being sent and we can't tell whether it went out, so it won't be sent again (to avoid a duplicate).",
+      sendFailed: "Couldn't send the reply. Try again.",
+      noEmail: "Email sending isn't set up."
+    }
+  )
+);
+
 // Contacto: guarda el mensaje (feedback_tickets, solo lo lee la administración) y avisa por email. Funciona también
 // con una cuenta pendiente de aprobación, pero exige el email confirmado para poder responder. Como mucho 5 por hora.
-export const submitFeedback = onCall({ region: REGION, secrets: emailSecrets }, async (request) => {
+// Guarda también el idioma de quien escribe, el de la respuesta (ver callerLanguage)
+export const submitFeedback = onUserCall({ region: REGION, secrets: emailSecrets }, async (request) => {
   const auth = requireAuth(request);
   if (!auth.token.email || auth.token.email_verified !== true) {
-    throw new HttpsError('permission-denied', 'Confirma tu email para poder escribirnos.');
+    throw fail('permission-denied', (t) => t.confirmEmail);
   }
   const input = parseFeedback(request.data);
-  if (!input) throw new HttpsError('invalid-argument', 'Revisa el tipo, el asunto y la descripción.');
+  if (!input) throw fail('invalid-argument', (t) => t.invalidFeedback);
 
   const now = new Date();
   const ticketRef = db().collection('feedback_tickets').doc();
@@ -53,6 +74,7 @@ export const submitFeedback = onCall({ region: REGION, secrets: emailSecrets }, 
     email: normalizeEmail(auth.token.email),
     name: typeof auth.token.name === 'string' ? auth.token.name.slice(0, 200) : '',
     status: 'new',
+    language: await callerLanguage(request),
     createdAt: now.toISOString(),
     updatedAt: now.toISOString()
   };
@@ -60,12 +82,7 @@ export const submitFeedback = onCall({ region: REGION, secrets: emailSecrets }, 
   await db().runTransaction(async (tx) => {
     const limit = await tx.get(limitRef);
     const sent = recentSends((limit.data()?.sent as string[] | undefined) ?? [], now);
-    if (sent.length >= FEEDBACK_LIMIT) {
-      throw new HttpsError(
-        'resource-exhausted',
-        'Has enviado varios mensajes seguidos. Inténtalo de nuevo en un rato.'
-      );
-    }
+    if (sent.length >= FEEDBACK_LIMIT) throw fail('resource-exhausted', (t) => t.tooMany);
     tx.set(limitRef, { sent: [...sent, now.toISOString()] });
     tx.set(ticketRef, ticket);
   });
@@ -119,33 +136,28 @@ export const flushFeedbackNotices = onSchedule(
 // 2. Se envía, fuera de cualquier transacción (sus reintentos no la reenvían). Si falla, se quita la anotación.
 // 3. Se guarda leyendo el estado del momento: un mensaje nuevo pasa a leído; uno cerrado o reabierto entretanto, no
 //    cambia. En los emuladores no se envía nada y se guarda igual, para poder probarlo.
-export const replyToFeedback = onCall({ region: REGION, secrets: emailSecrets }, async (request) => {
+export const replyToFeedback = onUserCall({ region: REGION, secrets: emailSecrets }, async (request) => {
   const auth = requireAuth(request);
   await removeStaleAdminMarkers();
   if (!isAdminToken(auth.token, adminEmail())) {
-    throw new HttpsError('permission-denied', 'Solo la administración puede responder los mensajes.');
+    throw fail('permission-denied', (t) => t.adminOnly);
   }
   const reply = parseReply(request.data);
-  if (!reply) throw new HttpsError('invalid-argument', 'Escribe la respuesta.');
+  if (!reply) throw fail('invalid-argument', (t) => t.emptyReply);
 
   const ref = db().doc(`feedback_tickets/${reply.ticketId}`);
   const pending = new FieldPath('pendingReplies', reply.replyId);
 
   const start = await db().runTransaction(async (tx) => {
     const snapshot = await tx.get(ref);
-    if (!snapshot.exists) throw new HttpsError('not-found', 'El mensaje ya no existe.');
+    if (!snapshot.exists) throw fail('not-found', (t) => t.ticketGone);
     const ticket = snapshot.data() as FeedbackTicket;
     const state = replyState(ticket, reply.replyId);
     if (state.kind === 'new') tx.update(ref, pending, new Date().toISOString());
     return { ticket, state };
   });
   if (start.state.kind === 'sent') return start.state.reply;
-  if (start.state.kind === 'uncertain') {
-    throw new HttpsError(
-      'aborted',
-      'Esta respuesta ya se estaba enviando y no se sabe si salió: para no duplicarla, no se reenvía.'
-    );
-  }
+  if (start.state.kind === 'uncertain') throw fail('aborted', (t) => t.uncertain);
 
   const result = await sendEmail(
     'feedback-reply',
@@ -156,8 +168,8 @@ export const replyToFeedback = onCall({ region: REGION, secrets: emailSecrets },
     // No salió: se quita la anotación para poder reintentarlo
     await ref.update(pending, FieldValue.delete()).catch(() => undefined);
     throw result === 'failed'
-      ? new HttpsError('unavailable', 'No se pudo enviar la respuesta. Inténtalo de nuevo.')
-      : new HttpsError('failed-precondition', 'El envío de correos no está configurado.');
+      ? fail('unavailable', (t) => t.sendFailed)
+      : fail('failed-precondition', (t) => t.noEmail);
   }
 
   const saved: FeedbackReply = { id: reply.replyId, message: reply.message, sentAt: new Date().toISOString() };

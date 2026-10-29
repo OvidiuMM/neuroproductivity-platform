@@ -1,3 +1,5 @@
+import { languageOf, messages, type Language } from './i18n';
+
 // Reglas puras de los mensajes de contacto (sin dependencias de Firebase, para probarlas aisladas)
 
 export const FEEDBACK_TYPES = ['suggestion', 'bug', 'general'] as const;
@@ -47,6 +49,8 @@ export interface FeedbackTicket extends FeedbackInput {
   replies?: FeedbackReply[];
   // Respuestas que se están enviando (id → cuándo empezó); se borran al guardarlas o si el envío falla
   pendingReplies?: Record<string, string>;
+  // El idioma de quien escribió (desde 1.2.0; sin él, español): el de la respuesta por email
+  language?: Language;
 }
 
 export const REPLY_MAX_LENGTH = 5000;
@@ -115,11 +119,13 @@ export const recentSends = (sent: string[], now: Date) =>
     return Number.isFinite(time) && now.getTime() - time < FEEDBACK_WINDOW_MS;
   });
 
-const TYPE_LABEL: Record<FeedbackType, string> = {
-  suggestion: 'Sugerencia',
-  bug: 'Error o fallo',
-  general: 'Mensaje general'
-};
+// Los nombres de los tipos, como en la app (src/services/feedback.ts)
+const TYPE_LABELS = messages<Record<FeedbackType, string>>(
+  { suggestion: 'Sugerencia', bug: 'Error o fallo', general: 'Mensaje general' },
+  { suggestion: 'Suggestion', bug: 'Bug or problem', general: 'General message' }
+);
+// Los avisos a la administración, siempre en español
+const TYPE_LABEL = TYPE_LABELS.es;
 
 // Aviso a la administración, en texto plano y sin datos de quien escribe ni su mensaje (minimización): se leen y se
 // contestan en la app
@@ -145,21 +151,39 @@ export const buildFeedbackDigestEmail = (count: number, appUrl: string) => ({
   text: `Hay ${count === 1 ? 'un mensaje nuevo' : `${count} mensajes nuevos`} desde el último aviso. Léelos y contesta en «Administración» → «Mensajes»: ${appUrl}`
 });
 
-// Respuesta a quien escribió, en texto plano y con su mensaje citado. Si contesta, le llega al buzón que la envía.
-export const buildReplyEmail = (ticket: FeedbackTicket, message: string, appUrl: string) => ({
-  subject: `Re: [CLAR] ${ticket.subject}`,
-  text: [
-    ticket.name ? `Hola, ${ticket.name}:` : 'Hola:',
-    '',
-    message,
-    '',
-    '—',
-    'Equipo de CLAR',
-    appUrl,
-    '',
-    `Tu mensaje (${TYPE_LABEL[ticket.type]}):`,
-    `> ${ticket.subject}`,
-    '>',
-    ...ticket.description.split(/\r?\n/).map((line) => (line ? `> ${line}` : '>'))
-  ].join('\n')
-});
+const replyEmail = messages(
+  {
+    greeting: (name: string) => (name ? `Hola, ${name}:` : 'Hola:'),
+    team: 'Equipo de CLAR',
+    yourMessage: (type: string) => `Tu mensaje (${type}):`
+  },
+  {
+    greeting: (name) => (name ? `Hi ${name},` : 'Hi,'),
+    team: 'The CLAR team',
+    yourMessage: (type) => `Your message (${type}):`
+  }
+);
+
+// Respuesta a quien escribió, en texto plano, en su idioma y con su mensaje citado. Si contesta, le llega al buzón que
+// la envía.
+export const buildReplyEmail = (ticket: FeedbackTicket, message: string, appUrl: string) => {
+  const language = languageOf(ticket.language);
+  const t = replyEmail[language];
+  return {
+    subject: `Re: [CLAR] ${ticket.subject}`,
+    text: [
+      t.greeting(ticket.name),
+      '',
+      message,
+      '',
+      '—',
+      t.team,
+      appUrl,
+      '',
+      t.yourMessage(TYPE_LABELS[language][ticket.type]),
+      `> ${ticket.subject}`,
+      '>',
+      ...ticket.description.split(/\r?\n/).map((line) => (line ? `> ${line}` : '>'))
+    ].join('\n')
+  };
+};
