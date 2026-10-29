@@ -38,6 +38,15 @@ const initial = (): Locale => {
   return isLocale(saved) ? saved : 'es';
 };
 export const LOCALE: Locale = initial();
+const RELOADED_KEY = 'clar_locale_reloaded';
+// La recarga para adoptar el idioma de la cuenta funcionó: se olvida (ver setLocale)
+if (typeof window !== 'undefined') {
+  try {
+    if (sessionStorage.getItem(RELOADED_KEY) === LOCALE) sessionStorage.removeItem(RELOADED_KEY);
+  } catch {
+    // Sin sessionStorage
+  }
+}
 // Para Intl (fechas, números, orden alfabético): el inglés, con el formato europeo (24 h, día antes que el mes)
 export const LOCALE_TAG = LOCALE === 'en' ? 'en-GB' : 'es-ES';
 
@@ -61,8 +70,8 @@ export const clearPendingLocale = () => {
 // Cambia el idioma y vuelve a cargar la app. `pending`: lo eligió la persona en este dispositivo (se guardará en su
 // cuenta al entrar); sin él, viene de la cuenta. `reload: false`: se aplica la próxima vez que se abra. Si el
 // dispositivo no deja guardarlo, no se recarga (se quedaría igual) y devuelve false. Elegir el que ya está no cambia
-// nada (tampoco pasa a la cuenta). Contra bucles: si una recarga por el mismo idioma ya no sirvió, no se repite.
-const RELOADED_KEY = 'clar_locale_reloaded';
+// nada (tampoco pasa a la cuenta). Contra bucles, al adoptar el de la cuenta: si una recarga por ese idioma no sirvió
+// (la página volvió a cargar en otro), no se repite. Cuando sí sirvió, al cargar se olvida.
 export const setLocale = (
   next: Locale,
   { pending = true, reload = true }: { pending?: boolean; reload?: boolean } = {}
@@ -77,11 +86,13 @@ export const setLocale = (
   }
   if (read(STORAGE_KEY) !== next) return false;
   if (next === LOCALE || !reload) return true;
-  try {
-    if (sessionStorage.getItem(RELOADED_KEY) === next) return true;
-    sessionStorage.setItem(RELOADED_KEY, next);
-  } catch {
-    // Sin sessionStorage no hay forma de saberlo: se recarga
+  if (!pending) {
+    try {
+      if (sessionStorage.getItem(RELOADED_KEY) === next) return true;
+      sessionStorage.setItem(RELOADED_KEY, next);
+    } catch {
+      // Sin sessionStorage no hay forma de saberlo: se recarga
+    }
   }
   window.location.reload();
   return true;
