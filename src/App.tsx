@@ -101,7 +101,7 @@ import {
   shouldShowReleaseNotes
 } from './services/releaseNotes';
 import { applyGoalAreas, latestScores } from './services/goals';
-import { DEFAULT_AREAS, logAverage, resolveAreas } from './services/wheel';
+import { DEFAULT_AREAS, logAverage, resolveAreas, storableAreas } from './services/wheel';
 import { AreasContext } from './hooks/useAreas';
 import { applyProjectGoals, projectsOfGoal } from './services/projects';
 import { exportFilename, goalExport, projectExport, taskExport } from './services/exports';
@@ -1198,7 +1198,8 @@ export default function App({ user, services, isAdmin = false }: AppProps) {
     : null;
   const [isAreasEditorOpen, setIsAreasEditorOpen] = useState(false);
   const handleSaveAreas = (areas: WheelArea[]) => {
-    saveWheelAreas(db, uid, areas).catch(reportError(m.actions.saveAreas));
+    // Las de partida sin renombrar se guardan con su identificador: así se ven en el idioma de cada momento
+    saveWheelAreas(db, uid, storableAreas(areas)).catch(reportError(m.actions.saveAreas));
     showToast(m.areasSaved);
   };
 

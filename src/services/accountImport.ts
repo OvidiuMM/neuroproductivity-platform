@@ -3,6 +3,7 @@ import type { WheelArea } from '../types';
 import { existingIds, importRecords, saveWheelAreas } from './repository';
 import { IMPORT_MAX_BYTES, IMPORT_ORDER, parseAccountExport, planImport, type ImportPlan } from './importData';
 import { messages } from '../i18n/locale';
+import { storableAreas } from './wheel';
 
 const m = messages(
   {
@@ -53,7 +54,8 @@ export const runAccountImport = async (
   let done = 0;
   try {
     // Las áreas primero: así lo importado ya tiene su nombre al llegar
-    if (plan.areas) await saveWheelAreas(db, uid, plan.areas);
+    // Las de partida sin renombrar, con su identificador (se ven en el idioma de cada momento)
+    if (plan.areas) await saveWheelAreas(db, uid, storableAreas(plan.areas));
     await importRecords(db, uid, plan.data, IMPORT_ORDER, (written, total) => {
       done = written;
       onProgress(written, total);
