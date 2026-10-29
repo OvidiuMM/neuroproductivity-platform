@@ -4,6 +4,13 @@ import { projectDeadline, projectProgress, projectTasks } from './projects';
 import { dependentsOf } from './dependencies';
 import { fileSlug } from './download';
 import { DEFAULT_AREAS, areaLabel } from './wheel';
+import { messages } from '../i18n/locale';
+
+// La palabra del nombre del archivo, en el idioma de la app («clar-tarea-…», «clar-task-…»)
+const FILE_KIND = messages(
+  { tarea: 'tarea', meta: 'meta', proyecto: 'proyecto' },
+  { tarea: 'task', meta: 'goal', proyecto: 'project' }
+);
 
 // DESCARGAS EN JSON de una tarea, una meta o un proyecto, con todos sus datos y lo necesario para entenderlas solas:
 // los nombres de su meta, su proyecto y las tareas de las que dependen, y las tareas asociadas.
@@ -90,5 +97,6 @@ export const projectExport = (project: Project, context: ExportContext) => {
 export const exportFilename = (kind: 'tarea' | 'meta' | 'proyecto', title: string, now = new Date()) => {
   const pad = (n: number) => String(n).padStart(2, '0');
   const day = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`;
-  return `clar-${kind}-${fileSlug(title, kind).toLowerCase()}-${day}.json`;
+  const word = FILE_KIND[kind];
+  return `clar-${word}-${fileSlug(title, word).toLowerCase()}-${day}.json`;
 };
