@@ -1,5 +1,6 @@
 import { collection, doc, onSnapshot, orderBy, query, type Firestore } from 'firebase/firestore';
 import { httpsCallable, type Functions } from 'firebase/functions';
+import { LOCALE, type Locale } from '../i18n/locale';
 
 // Aprobación de accesos: access/{uid} y admins/{uid} solo los escriben las Cloud Functions (functions/src/access.ts)
 // blocked: lista negra (también su email)
@@ -56,8 +57,15 @@ export const subscribeToAccessRequests = (
 export const syncAccess = async (functions: Functions) =>
   (await httpsCallable<void, { status: OwnAccessStatus; isAdmin: boolean }>(functions, 'syncAccess')()).data;
 
+// Con el idioma de la app: el servidor lo guarda en la solicitud (el email de la aprobación va en ese idioma) y lo usa
+// en sus mensajes de error
 export const requestAccess = async (functions: Functions, message: string) =>
-  (await httpsCallable<{ message: string }, { status: AccessStatus }>(functions, 'requestAccess')({ message })).data;
+  (
+    await httpsCallable<{ message: string; language: Locale }, { status: AccessStatus }>(
+      functions,
+      'requestAccess'
+    )({ message, language: LOCALE })
+  ).data;
 
 export const setAccess = async (functions: Functions, uid: string, status: DecisionStatus) =>
   (
