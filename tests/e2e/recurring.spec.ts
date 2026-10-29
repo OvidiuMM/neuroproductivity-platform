@@ -176,21 +176,24 @@ test('every 3 days with the «Cada N» control: the number can be cleared and re
   await expect(every).toHaveValue('1');
   await expect(repeat.locator('option:checked')).toHaveText('día');
 
-  // Vaciar el campo no lo rellena con 1: se puede escribir otro número (4, no 14)
+  // Vaciar el campo no lo rellena con 1 ni es un error: se puede escribir otro número (4, no 14)
+  const invalid = page.getByRole('alert').filter({ hasText: 'Escribe un número del 1 al 99.' });
   await every.fill('');
   await expect(every).toHaveValue('');
-  await expect(page.getByRole('alert').filter({ hasText: 'Escribe un número del 1 al 99.' })).toBeVisible();
+  await expect(invalid).toHaveCount(0);
   await every.pressSequentially('4');
   await expect(every).toHaveValue('4');
-  await expect(page.getByRole('alert').filter({ hasText: 'Escribe un número del 1 al 99.' })).toHaveCount(0);
   await expect(repeat.locator('option:checked')).toHaveText('días');
-  // Vacío al salir: vuelve el número de antes; 0 al salir: 1
+  // Vacío al salir: vuelve el número de antes. «0» es un error, no deja guardar y, al salir, vuelve el de antes
   await every.fill('');
   await every.blur();
   await expect(every).toHaveValue('4');
   await every.fill('0');
+  await expect(invalid).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Guardar la tarea' })).toBeDisabled();
   await every.blur();
-  await expect(every).toHaveValue('1');
+  await expect(every).toHaveValue('4');
+  await expect(invalid).toHaveCount(0);
 
   await every.fill('3');
   await every.blur();
