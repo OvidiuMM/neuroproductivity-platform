@@ -26,4 +26,4 @@ export {
 } from './calendarSync';
 
 // Notificaciones push de las alarmas: registro de dispositivos, cola de alarmas y envío cada minuto
-export { queueTaskAlarm, registerPushDevice, sendDueAlarms, unregisterPushDevice } from './push';
+export { queueTaskAlarm, registerPushDevice, sendDueAlarms, sendTestPush, unregisterPushDevice } from './push';

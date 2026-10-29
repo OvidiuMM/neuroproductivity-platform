@@ -119,6 +119,16 @@ test('series: weekly, monthly on the last days, yearly on 29 February and with a
   );
 });
 
+test('a task repeated from completion is a single event in both, without a series', () => {
+  for (const frequency of ['DAILY', 'WEEKLY'] as const) {
+    const recurrence = { frequency, interval: 2, from: 'COMPLETION' as const };
+    expectSameEvent(task({ dueDate: '2026-10-20', recurrence }));
+    expectSameEvent(task({ dueDate: '2026-10-20', dueTime: '09:00', alarmTime: '08:45', recurrence }));
+    expectSameEvent(task({ dueDate: '2026-10-20', startTime: '08:00', dueTime: '09:00', recurrence }));
+    assert.equal(buildTaskEvent(task({ dueDate: '2026-10-20', recurrence }), timeZone, URL)?.recurrence, undefined);
+  }
+});
+
 test('hours around the changes of time of Madrid and New York', () => {
   for (const dueDate of ['2026-03-29', '2026-10-25', '2026-03-08', '2026-11-01']) {
     expectSameEvent(task({ dueDate, dueTime: '02:30' }));

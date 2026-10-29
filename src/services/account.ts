@@ -10,6 +10,7 @@ import { forgetAccess } from './access';
 import { disconnectGoogleCalendar } from './googleCalendar';
 import { signOutAndClearCache, type FirebaseServices } from './firebase';
 import { deleteAllUserData, exportUserData, readWheelAreas } from './repository';
+import { IPHONE_DELETE_HELP, popupsUnreliable, signedInRecently } from './platform';
 import { downloadJson } from './download';
 
 // Descarga y borrado de la cuenta. Funcionan también sin acceso aprobado (las reglas dejan leer y borrar
@@ -30,11 +31,14 @@ export const downloadAccountData = async ({ db }: FirebaseServices, user: User) 
 };
 
 // Firebase exige un inicio de sesión reciente para eliminar la cuenta: con la contraseña si la cuenta la tiene
-// (y se ha escrito), si no con Google
-const reauthenticate = (user: User, password?: string) =>
-  password
-    ? reauthenticateWithCredential(user, EmailAuthProvider.credential(user.email ?? '', password))
-    : reauthenticateWithPopup(user, new GoogleAuthProvider());
+// (y se ha escrito), si no con Google. En la app de la pantalla de inicio del iPhone la ventana de Google no vuelve:
+// vale haber entrado hace poco en esta sesión (signedInRecently)
+const reauthenticate = async (user: User, password?: string) => {
+  if (password) return reauthenticateWithCredential(user, EmailAuthProvider.credential(user.email ?? '', password));
+  if (!popupsUnreliable()) return reauthenticateWithPopup(user, new GoogleAuthProvider());
+  if (signedInRecently(await user.getIdTokenResult(true))) return;
+  throw new Error(IPHONE_DELETE_HELP);
+};
 
 // `withCalendar`: la cuenta usa la sincronización con Google Calendar. Entonces se desconecta primero: así borrar las
 // tareas no borra sus eventos, que se quedan en Google. Si no se puede, la eliminación sigue (la función la desconecta

@@ -1,14 +1,14 @@
 {
   "name": "CLAR",
   "short_name": "CLAR",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "Decide qué hacer ahora, con claridad",
   "lang": "es",
+  "id": "/",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#0f172a",
   "theme_color": "#0f172a",
-  "orientation": "portrait-primary",
   "shortcuts": [
     {
       "name": "Nueva tarea por voz",
@@ -47,6 +47,12 @@
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "maskable"
+    },
+    {
+      "src": "/badge-96.png",
+      "sizes": "96x96",
+      "type": "image/png",
+      "purpose": "monochrome"
     }
   ]
 }

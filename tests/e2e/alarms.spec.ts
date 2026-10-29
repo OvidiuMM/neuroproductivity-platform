@@ -291,6 +291,108 @@ test('on Android the notification comes from the service worker, and the account
   await context.close();
 });
 
+// Una tarea con alarma puesta hace diez minutos, escrita en el servidor (como si llegara de otro dispositivo). Devuelve
+// su título y la clave de su alarma («tarea@momento», la etiqueta de la notificación)
+const serverTaskWithAlarm = async (page: Page, email: string, alarmInMinutes: number) => {
+  const uid = await uidOf(email);
+  const title = `Pagar el recibo ${Date.now().toString(36)}`;
+  const id = `task-qa-${Date.now()}`;
+  const alarm = await fromNow(page, alarmInMinutes);
+  const due = await fromNow(page, alarmInMinutes + 20);
+  const setAt = await page.evaluate(() => new Date(Date.now() - 10 * 60_000).toISOString());
+  const text = (value: string) => ({ stringValue: value });
+  // La alarma es ese día a esa hora, en la zona de la página
+  const at = await page.evaluate(({ date, time }) => new Date(`${date}T${time}:00`).toISOString(), {
+    date: due.date,
+    time: alarm.time
+  });
+  const key = `${id}@${at}`;
+  const write = () =>
+    patchDocument(`users/${uid}/tasks/${id}`, {
+      id: text(id),
+      userId: text(uid),
+      listContext: text('WORK'),
+      title: text(title),
+      description: text(''),
+      priority: text('MEDIUM'),
+      status: text('PENDING'),
+      isSomeday: { booleanValue: false },
+      observations: { arrayValue: {} },
+      createdAt: text(setAt),
+      updatedAt: text(setAt),
+      dueDate: text(due.date),
+      dueTime: text(due.time),
+      alarmTime: text(alarm.time),
+      alarmSetAt: text(setAt)
+    });
+  return { title, key, write };
+};
+
+test('an alarm that already arrived by push is not notified again on opening CLAR; the in-app alert stays', async ({
+  page
+}) => {
+  await fakeNotifications(page, 'granted');
+  const email = uniqueEmail();
+  await page.goto('/');
+  await signInWithGoogle(page, email);
+  await openSection(page, 'Listas');
+  const { title, key, write } = await serverTaskWithAlarm(page, email, -5);
+  // El service worker apuntó que la mostró con CLAR cerrada (public/sw.js)
+  await page.evaluate(async (k) => {
+    const cache = await caches.open('clar-push-shown');
+    await cache.put(`/__clar/push-shown/${encodeURIComponent(k)}`, new Response(String(Date.now())));
+  }, key);
+  await write();
+  await expect(page.getByRole('region', { name: `Alarma: ${title}` })).toBeVisible({ timeout: 15_000 });
+  expect((await notifications(page)).filter((n) => n.title.endsWith(`: ${title}`))).toEqual([]);
+});
+
+test('tapping an alarm notification opens its task, with CLAR closed or open', async ({ page }) => {
+  const email = uniqueEmail();
+  await page.goto('/');
+  await signInWithGoogle(page, email);
+  const { title, key, write } = await serverTaskWithAlarm(page, email, 30);
+  await write();
+  await openSection(page, 'Listas');
+  await expect(page.getByRole('heading', { name: title })).toBeVisible({ timeout: 15_000 });
+
+  // Con CLAR cerrada, la notificación abre /?alarma=<clave>, que se quita de la dirección
+  await page.goto(`/?alarma=${encodeURIComponent(key)}`);
+  const editor = page.getByRole('dialog', { name: 'Editar la tarea' });
+  await expect(editor).toBeVisible({ timeout: 15_000 });
+  await expect(editor.getByPlaceholder('ej. Llamar al proveedor para acordar el plazo de entrega')).toHaveValue(title);
+  expect(new URL(page.url()).searchParams.has('alarma')).toBe(false);
+  await editor.getByRole('button', { name: 'Cerrar' }).first().click();
+  await expect(editor).toBeHidden();
+
+  // Con CLAR abierta, el service worker se lo pide con un mensaje
+  await page.evaluate((k) => {
+    navigator.serviceWorker.dispatchEvent(new MessageEvent('message', { data: { type: 'clar:open-alarm', key: k } }));
+  }, key);
+  await expect(editor).toBeVisible();
+});
+
+test('on an iPhone, Safari explains how to get the alarms: from CLAR on the Home Screen', async ({ browser }) => {
+  test.slow(); // Contexto propio con el navegador de un iPhone
+  const context = await browser.newContext({
+    timezoneId: 'Europe/Madrid',
+    userAgent:
+      'Mozilla/5.0 (iPhone; CPU iPhone OS 18_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.5 Mobile/15E148 Safari/604.1'
+  });
+  // Safari en una pestaña no tiene notificaciones
+  await context.addInitScript(() => {
+    Reflect.deleteProperty(window, 'Notification');
+  });
+  const page = await context.newPage();
+  await page.goto('/');
+  await signInWithGoogle(page);
+  await page.getByRole('button', { name: 'Tu cuenta' }).click();
+  const account = page.getByRole('dialog', { name: 'Tu cuenta' });
+  await expect(account.getByText(/«Añadir a pantalla de inicio»/)).toBeVisible();
+  await expect(account.getByText(/iOS 16\.4 o posterior/)).toBeVisible();
+  await context.close();
+});
+
 test('times are written in 24 hours; half-written or impossible ones are not saved', async ({ page }) => {
   await page.goto('/');
   await signInWithGoogle(page);
