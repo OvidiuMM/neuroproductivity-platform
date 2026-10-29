@@ -17,6 +17,28 @@ export interface ReleaseNote {
 
 export const RELEASE_NOTES: readonly ReleaseNote[] = [
   {
+    version: '1.1.0',
+    month: 'octubre de 2026',
+    changes: [
+      {
+        title: 'Celebraciones',
+        text: 'Al terminar una tarea que llevaba 14 días o más en tu lista, lograr una meta o terminar un proyecto, CLAR te lo celebra con un mensaje y un poco de confeti. Si prefieres que no, se desactivan en Accesibilidad.'
+      },
+      {
+        title: 'Repite a tu manera',
+        text: 'En «Más opciones», «Repetir» se lee como «Cada 3 días» o «Cada 2 semanas», y el número se escribe sin pelearte con él. Y hay un modo nuevo, «3 días después de hacerla», para lo que se repite contando desde que lo haces.'
+      },
+      {
+        title: 'Alarmas que abren su tarea',
+        text: 'Al tocar la notificación de una alarma se abre su tarea, y CLAR ya no vuelve a avisar de ella al abrirla. Con «Probar notificación», en el menú de tu cuenta, compruebas que te llegan con CLAR cerrada.'
+      },
+      {
+        title: 'En el iPhone',
+        text: 'CLAR explica cómo añadirla a la pantalla de inicio, que es desde donde puede avisarte de las alarmas (con iOS 16.4 o posterior). Desde el icono, entrar con Google abre la página de Google en lugar de una ventana, y si no se puede dictar, te propone el micrófono del teclado.'
+      }
+    ]
+  },
+  {
     version: '1.0.0',
     month: 'octubre de 2026',
     changes: [
