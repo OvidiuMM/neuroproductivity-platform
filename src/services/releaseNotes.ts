@@ -24,6 +24,32 @@ const released = (year: number, month: number) => monthFormat.format(Date.UTC(ye
 
 export const RELEASE_NOTES: readonly ReleaseNote[] = [
   {
+    version: '1.2.0',
+    month: released(2026, 11),
+    changes: [
+      messages(
+        {
+          title: 'CLAR en inglés',
+          text: 'Ahora puedes usar CLAR en inglés: elige «English» en la página de entrada o en el menú de tu cuenta. El idioma se guarda en tu cuenta, y las notificaciones y los emails te llegan en él. El español sigue siendo el idioma por defecto.'
+        },
+        {
+          title: 'CLAR in English',
+          text: 'You can now use CLAR in English: choose “English” on the sign-in page or in your account menu. The language is saved in your account, and notifications and emails reach you in it. Spanish is still the default.'
+        }
+      ),
+      messages(
+        {
+          title: 'Escríbenos también en inglés',
+          text: 'En «Escríbenos» puedes escribir en español o en inglés.'
+        },
+        {
+          title: 'Write to us in English too',
+          text: 'In “Contact us” you can write in Spanish or English.'
+        }
+      )
+    ]
+  },
+  {
     version: '1.1.0',
     month: released(2026, 10),
     changes: [

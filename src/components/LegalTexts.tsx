@@ -391,8 +391,8 @@ const TermsOfUseEs: React.FC = () => (
 
     <Section id="terms-contact" title="Contacto y avisos de contenido ilícito">
       <p>
-        Para cualquier duda, o para avisar de contenido ilícito, escribe a <Contact />, en español. Es también el punto
-        de contacto del Reglamento de Servicios Digitales (Reglamento (UE) 2022/2065).
+        Para cualquier duda, o para avisar de contenido ilícito, escribe a <Contact />, en español o en inglés. Es
+        también el punto de contacto del Reglamento de Servicios Digitales (Reglamento (UE) 2022/2065).
       </p>
     </Section>
 
@@ -812,8 +812,8 @@ const TermsOfUseEn: React.FC = () => (
 
     <Section id="terms-contact" title="Contact and notices of illegal content">
       <p>
-        For any question, or to report illegal content, write to <Contact />, in Spanish. This is also the point of
-        contact under the Digital Services Act (Regulation (EU) 2022/2065).
+        For any question, or to report illegal content, write to <Contact />, in Spanish or English. This is also the
+        point of contact under the Digital Services Act (Regulation (EU) 2022/2065).
       </p>
     </Section>
 

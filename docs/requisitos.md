@@ -1,9 +1,9 @@
 # Requisitos del sistema — CLAR
 
-- **Versión:** 1.1.0
-- **Última revisión:** 2026-10-29
+- **Versión:** 1.2.0
+- **Última revisión:** 2026-10-30
 
-Este documento describe qué hace CLAR en la versión 1.1.0: sus requisitos funcionales y no funcionales tal como están implementados en el código de esta versión (la SPA de `src/`, las Cloud Functions de `functions/src/`, las reglas de Firestore, la configuración de Firebase Hosting y las pruebas). No recoge planes ni funciones futuras. Donde el README y el código no coinciden, manda el código.
+Este documento describe qué hace CLAR en la versión 1.2.0: sus requisitos funcionales y no funcionales tal como están implementados en el código de esta versión (la SPA de `src/`, las Cloud Functions de `functions/src/`, las reglas de Firestore, la configuración de Firebase Hosting y las pruebas). No recoge planes ni funciones futuras. Donde el README y el código no coinciden, manda el código.
 
 **Convenciones.** RF: requisito funcional. RNF: requisito no funcional. Los identificadores son estables: un requisito nuevo toma el siguiente número libre de su sección y uno retirado no se reutiliza. Los textos entre «» son etiquetas de la interfaz. «Origen» señala los archivos principales de cada sección.
 
@@ -304,6 +304,7 @@ Origen: `src/AuthGate.tsx`, `src/AccessGate.tsx`, `src/services/auth.ts`, `src/s
 - **RF-CUE-30.** «Funciones extra», en el menú de la cuenta, muestra las que la persona administradora le ha activado, con su descripción y sin interruptor. La persona administradora las tiene todas, con un interruptor por función: empiezan apagadas y lo que elige se guarda en su perfil.
 - **RF-CUE-31.** «Compartir CLAR», en el menú de la cuenta, abre el menú de compartir del dispositivo con el nombre, la frase de la app y su dirección; donde no lo hay, copia la dirección y lo dice. Cerrar el menú de compartir no es un error.
 - **RF-CUE-32.** Sin sesión iniciada, la pantalla de entrada es también la página de presentación: qué es CLAR (la Rueda, las metas y proyectos, el Top 10, la agenda y las alarmas, el tiempo protegido, el dictado y el uso sin conexión), cómo se tratan los datos, que es de código abierto (con enlace al repositorio) y, al lado (debajo en el móvil), cómo entrar. «Crear cuenta gratis» lleva al formulario en «Crear una cuenta», y «Ya tengo cuenta», a «Entrar». Las funciones extra no se anuncian. Al compartir el enlace, se ve una tarjeta con el logo, el nombre y la frase (Open Graph, `public/og-image.png`).
+- **RF-CUE-33.** La app está en español (por defecto) o en inglés. «Español / English» está arriba en la página de inicio y en el menú de la cuenta; al cambiarlo, la app se vuelve a cargar en ese idioma. La elección se guarda en el dispositivo y en la cuenta (`users/{uid}.language`): elegida antes de entrar, pasa a la cuenta al entrar; si no, al abrir la app manda la de la cuenta (solo al abrirla, no mientras se usa). Se traducen la interfaz, la ayuda, las novedades, los textos legales (en inglés, con el aviso de que vale la versión en español y un botón para cambiar a ella), los emails a la persona (verificación y contraseña, acceso aprobado, respuestas a sus mensajes), las notificaciones push (cada dispositivo registra su idioma), los mensajes de error del servidor y los eventos de Google Calendar. Lo que escribe la persona no se traduce; las áreas de partida de la Rueda sin renombrar se ven en el idioma de la app. Las fechas y los números siguen el idioma (en inglés, con el formato europeo: 24 h y el día antes que el mes) y el dictado se hace en él. Los emails a la administración siguen en español. Los accesos directos del icono y la descripción del enlace al compartir van en los dos idiomas.
 
 ### 1.11 Administración (RF-ADM)
 
@@ -350,7 +351,7 @@ Origen: `src/components/FeedbackDialog.tsx`, `src/services/feedback.ts`, `functi
 Origen: `src/Root.tsx`, `src/components/LegalPage.tsx`, `src/components/LegalTexts.tsx`, `src/services/legal.ts`.
 
 - **RF-LEG-01.** La política de privacidad (`/privacidad`), las condiciones de uso (`/condiciones`) y el aviso legal (`/aviso-legal`) son páginas públicas. Se ven sin iniciar sesión y sin cargar Firebase.
-- **RF-LEG-02.** Las rutas admiten barra final y mayúsculas. Cada página muestra su título, enlaces a las otras dos, la fecha de su última actualización y «Volver a CLAR».
+- **RF-LEG-02.** Las rutas admiten barra final y mayúsculas. En inglés, cada texto es una traducción con el aviso de que vale la versión en español (RF-CUE-33). Cada página muestra su título, enlaces a las otras dos, la fecha de su última actualización y «Volver a CLAR».
 - **RF-LEG-03.** Los textos legales se enlazan desde las pantallas de inicio de sesión, confirmación del email y solicitud de acceso, el pie, el menú de la cuenta y la Ayuda.
 - **RF-LEG-04.** La pantalla de inicio de sesión indica que, al continuar, se confirma tener al menos 14 años (o la edad mínima del país de residencia, si es mayor) y se aceptan las condiciones de uso. La app no pide ni comprueba la edad.
 - **RF-LEG-05.** La política de privacidad trata el responsable, los datos y sus fines, la base jurídica, los destinatarios, la ubicación y las transferencias, la conservación, los derechos, los menores, las decisiones automatizadas, la seguridad y los cambios.
@@ -483,6 +484,7 @@ Origen: `package.json`, `tsconfig.json`, `.github/workflows/ci.yml`, `tests/`, `
 - **RNF-MAN-05.** En cada push y pull request, CI comprueba el formato, el linter, los tipos, la compilación de la app y de las funciones, y todas las pruebas. Solo despliega desde la rama principal, si todo pasa, y de un despliegue en uno.
 - **RNF-MAN-06.** La app toma la versión de `package.json`; `public/manifest.json` la repite y se actualiza a mano. Se muestra en la cabecera, el inicio de sesión y el pie, y va en las descargas y en la información técnica del contacto.
 - **RNF-MAN-07.** La app sigue leyendo los datos de versiones anteriores: tareas sin estado (con `completed`), correos sin estado, adjuntos sin bytes, repeticiones con fecha de inicio y repeticiones sin `from` (en fechas fijas), y borradores de tareas sin la elección de contar desde que se hace.
+- **RNF-MAN-08.** Los textos de la app van junto a donde se usan, con `messages(es, en)` (`src/i18n/locale.ts`): el catálogo inglés tiene la misma forma que el español, así que si falta un texto, no compila. El idioma es fijo mientras la página está abierta. Las fechas y los números usan `LOCALE_TAG`. En el servidor, `functions/src/i18n.ts` hace lo mismo, y los mensajes de error van en el idioma de quien llama (`functions/src/callable.ts`). Hay pruebas unitarias en inglés (`tests/unit/*-en.test.ts`, `functions/test/english.test.ts`) y una e2e del cambio de idioma.
 
 ---
 

@@ -205,6 +205,13 @@ La lista completa y numerada de lo que hace la app, con sus requisitos no funcio
 - **Repetir:** «Repetir: Cada [N] [días|semanas|meses|años]» en una línea, con un número que se escribe con normalidad (1 a 99). Modo nuevo «N días/semanas después de hacerla» (`recurrence.from: 'COMPLETION'`): la siguiente vence N días o semanas después del día en que se completa; sin serie en el calendario ni repeticiones previstas en la Agenda.
 - **Alarmas en el móvil:** tocar la notificación abre la tarea (`/?alarma=<clave>` o un mensaje del service worker), y una alarma que ya llegó por push no vuelve a notificarse al abrir CLAR (el service worker apunta las mostradas durante dos días). Icono monocromo para la barra de estado, la hora de la alarma en la notificación, «Probar notificación» (`sendTestPush`, 5 por hora), aviso si se quitó el permiso, y el dispositivo se vuelve a registrar si su suscripción se perdió. En el iPhone, Safari explica cómo añadir CLAR a la pantalla de inicio (las alarmas push solo llegan ahí, iOS 16.4+), y desde el icono Google entra por redirección (`src/services/platform.ts`).
 
+### CLAR en inglés (1.2.0)
+
+- **Idioma:** español (por defecto) o inglés, con «Español / English» en la página de inicio y en el menú de la cuenta. Se guarda en el dispositivo y en la cuenta (`users/{uid}.language`, `useAccountLanguage`); cambiarlo vuelve a cargar la app, así el idioma es fijo mientras está abierta.
+- **Cómo se traduce:** `messages(es, en)` de `src/i18n/locale.ts`, junto a cada texto; el inglés tiene que tener la misma forma que el español o no compila. Fechas y números con `LOCALE_TAG` (`en-GB` en inglés). Las áreas de partida de la Rueda sin renombrar se guardan con su identificador y se ven en el idioma de la app (`storableAreas`).
+- **Servidor:** `functions/src/i18n.ts` y `callable.ts`: los errores en el idioma de quien llama, los emails a la persona en el suyo (los de la administración, en español), las notificaciones push en el de cada dispositivo (`push_devices/{uid}/tokens/{id}.language`) y los eventos de Google Calendar en el de la cuenta.
+- **Textos legales en inglés:** traducción con el aviso de que vale la versión en español. Al contacto se puede escribir en español o en inglés.
+
 ---
 
 ## 🛠️ Stack Tecnológico
