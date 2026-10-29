@@ -2,6 +2,7 @@ import React, { useRef, useState } from 'react';
 import { useModalFocus } from '../hooks/useModalFocus';
 import { LocalProfileSummary } from '../services/localData';
 import { Upload, X } from 'lucide-react';
+import { messages } from '../i18n/locale';
 
 interface ImportLocalDataModalProps {
   profiles: LocalProfileSummary[];
@@ -10,12 +11,47 @@ interface ImportLocalDataModalProps {
   onLater: () => void;
 }
 
+const m = messages(
+  {
+    tasks: (n: number) => `${n} ${n === 1 ? 'tarea' : 'tareas'}`,
+    wheelLogs: (n: number) => `${n} ${n === 1 ? 'evaluación' : 'evaluaciones'}`,
+    meetings: (n: number) => `${n} ${n === 1 ? 'reunión' : 'reuniones'}`,
+    emails: (n: number) => `${n} ${n === 1 ? 'correo' : 'correos'}`,
+    importFailed: 'No se pudieron importar los datos.',
+    confirmDiscard: 'Se borrarán de este navegador los datos que no hayas importado. ¿Continuar?',
+    title: 'Importar datos de este navegador',
+    later: 'Decidir más tarde',
+    intro:
+      'Este navegador tiene datos de la versión anterior, que los guardaba solo aquí. Elige qué perfiles quieres pasar a tu cuenta. Al importar se borran todos los datos locales de este navegador, también los de los perfiles que no marques.',
+    discard: 'Descartar',
+    notNow: 'Más tarde',
+    importing: 'Importando…',
+    import: 'Importar a mi cuenta'
+  },
+  {
+    tasks: (n) => `${n} ${n === 1 ? 'task' : 'tasks'}`,
+    wheelLogs: (n) => `${n} ${n === 1 ? 'assessment' : 'assessments'}`,
+    meetings: (n) => `${n} ${n === 1 ? 'meeting' : 'meetings'}`,
+    emails: (n) => `${n} ${n === 1 ? 'email' : 'emails'}`,
+    importFailed: 'The data couldn’t be imported.',
+    confirmDiscard: 'The data you haven’t imported will be deleted from this browser. Continue?',
+    title: 'Import data from this browser',
+    later: 'Decide later',
+    intro:
+      'This browser has data from the previous version, which only saved it here. Choose which profiles you want to move to your account. Importing deletes all the local data in this browser, including that of the profiles you don’t check.',
+    discard: 'Discard',
+    notNow: 'Later',
+    importing: 'Importing…',
+    import: 'Import to my account'
+  }
+);
+
 const describeCounts = ({ tasks, wheelLogs, meetings, emails }: LocalProfileSummary['counts']) =>
   [
-    tasks && `${tasks} ${tasks === 1 ? 'tarea' : 'tareas'}`,
-    wheelLogs && `${wheelLogs} ${wheelLogs === 1 ? 'evaluación' : 'evaluaciones'}`,
-    meetings && `${meetings} ${meetings === 1 ? 'reunión' : 'reuniones'}`,
-    emails && `${emails} ${emails === 1 ? 'correo' : 'correos'}`
+    tasks && m.tasks(tasks),
+    wheelLogs && m.wheelLogs(wheelLogs),
+    meetings && m.meetings(meetings),
+    emails && m.emails(emails)
   ]
     .filter(Boolean)
     .join(', ');
@@ -48,13 +84,13 @@ export const ImportLocalDataModal: React.FC<ImportLocalDataModalProps> = ({
     try {
       await onImport([...selected]);
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'No se pudieron importar los datos.');
+      setError(e instanceof Error ? e.message : m.importFailed);
       setIsImporting(false);
     }
   };
 
   const handleDiscard = () => {
-    if (window.confirm('Se borrarán de este navegador los datos que no hayas importado. ¿Continuar?')) {
+    if (window.confirm(m.confirmDiscard)) {
       onDiscard();
     }
   };
@@ -65,17 +101,17 @@ export const ImportLocalDataModal: React.FC<ImportLocalDataModalProps> = ({
         ref={dialogRef}
         role="dialog"
         aria-modal="true"
-        aria-label="Importar datos de este navegador"
+        aria-label={m.title}
         className="animate-in fade-in zoom-in-95 my-auto w-full max-w-lg overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-2xl duration-200"
       >
         <div className="flex items-center justify-between border-b border-slate-100 bg-slate-50/90 px-6 py-4">
           <h2 className="flex items-center gap-2 text-sm font-bold text-slate-900">
             <Upload className="h-4 w-4 text-indigo-600" />
-            Importar datos de este navegador
+            {m.title}
           </h2>
           <button
             onClick={onLater}
-            aria-label="Decidir más tarde"
+            aria-label={m.later}
             className="rounded-lg p-1.5 text-slate-500 transition-colors hover:bg-slate-200/60 hover:text-slate-600"
           >
             <X className="h-5 w-5" />
@@ -83,11 +119,7 @@ export const ImportLocalDataModal: React.FC<ImportLocalDataModalProps> = ({
         </div>
 
         <div className="space-y-4 p-6">
-          <p className="text-xs leading-relaxed text-slate-600">
-            Este navegador tiene datos de la versión anterior, que los guardaba solo aquí. Elige qué perfiles quieres
-            pasar a tu cuenta. Al importar se borran todos los datos locales de este navegador, también los de los
-            perfiles que no marques.
-          </p>
+          <p className="text-xs leading-relaxed text-slate-600">{m.intro}</p>
 
           <div className="space-y-2">
             {profiles.map((p) => (
@@ -122,7 +154,7 @@ export const ImportLocalDataModal: React.FC<ImportLocalDataModalProps> = ({
               disabled={isImporting}
               className="rounded-xl px-3 py-2 text-xs text-red-600 hover:bg-red-50 disabled:opacity-60"
             >
-              Descartar
+              {m.discard}
             </button>
             <button
               type="button"
@@ -130,7 +162,7 @@ export const ImportLocalDataModal: React.FC<ImportLocalDataModalProps> = ({
               disabled={isImporting}
               className="rounded-xl px-3 py-2 text-xs text-slate-600 hover:bg-slate-100 disabled:opacity-60"
             >
-              Más tarde
+              {m.notNow}
             </button>
             <button
               type="button"
@@ -138,7 +170,7 @@ export const ImportLocalDataModal: React.FC<ImportLocalDataModalProps> = ({
               disabled={isImporting || selected.size === 0}
               className="rounded-xl bg-slate-900 px-4 py-2 text-xs font-bold text-white shadow-xs hover:bg-slate-800 disabled:opacity-60"
             >
-              {isImporting ? 'Importando…' : 'Importar a mi cuenta'}
+              {isImporting ? m.importing : m.import}
             </button>
           </div>
         </div>

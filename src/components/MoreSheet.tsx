@@ -5,6 +5,12 @@ import { Avatar, PendingBadge } from './NavParts';
 import { SyncIndicator, type SyncStatus } from './SyncIndicator';
 import { MORE_BUTTON_ID } from './BottomNav';
 import { BottomSheet } from './BottomSheet';
+import { messages } from '../i18n/locale';
+
+const m = messages(
+  { more: 'Más', moreSections: 'Más secciones', account: 'Tu cuenta' },
+  { more: 'More', moreSections: 'More sections', account: 'Your account' }
+);
 
 interface MoreSheetProps {
   isOpen: boolean;
@@ -38,10 +44,10 @@ export const MoreSheet: React.FC<MoreSheetProps> = ({
     <BottomSheet
       isOpen={isOpen}
       onClose={onClose}
-      title="Más"
+      title={m.more}
       returnFocusTo={() => document.getElementById(MORE_BUTTON_ID)}
     >
-      <nav aria-label="Más secciones">
+      <nav aria-label={m.moreSections}>
         <ul className="space-y-1">
           {sections.map((section) => {
             const { tab, label, icon: Icon } = section;
@@ -80,7 +86,7 @@ export const MoreSheet: React.FC<MoreSheetProps> = ({
           className="flex min-h-12 w-full items-center gap-3 rounded-xl border border-slate-200 px-3 text-sm font-semibold text-slate-700 hover:bg-slate-50"
         >
           <Avatar user={activeUser} />
-          Tu cuenta
+          {m.account}
         </button>
       </div>
     </BottomSheet>

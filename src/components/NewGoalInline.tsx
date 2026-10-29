@@ -1,6 +1,28 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { GOAL_TITLE_MAX, validateGoal } from '../services/goals';
 import { useAreas } from '../hooks/useAreas';
+import { messages } from '../i18n/locale';
+
+const m = messages(
+  {
+    newGoal: 'Nueva meta',
+    name: 'Nombre de la nueva meta',
+    placeholder: 'ej. Correr una media maratón',
+    area: 'Área de la nueva meta',
+    create: 'Crear la meta',
+    cancel: 'Cancelar',
+    note: 'Se guarda al crearla, aunque luego no guardes la tarea. El para qué y la fecha objetivo los puedes añadir en «Metas».'
+  },
+  {
+    newGoal: 'New goal',
+    name: 'Name of the new goal',
+    placeholder: 'e.g. Run a half marathon',
+    area: 'Area of the new goal',
+    create: 'Create goal',
+    cancel: 'Cancel',
+    note: 'It’s saved when you create it, even if you don’t save the task. You can add the why and the target date in “Goals”.'
+  }
+);
 
 // Crear una meta sin salir del formulario de la tarea: nombre y área (lo demás se completa luego en «Metas»). Enter
 // en el nombre o en el área la crea (no guarda la tarea) y Escape cierra solo esta parte, no el formulario.
@@ -51,7 +73,7 @@ export const NewGoalInline: React.FC<{
       className="mt-2 space-y-2 rounded-xl border border-indigo-200 bg-indigo-50/50 p-3"
     >
       <p id="task-new-goal-heading" className="text-xs font-bold text-slate-800">
-        Nueva meta
+        {m.newGoal}
       </p>
       <div className="grid gap-2 sm:grid-cols-[1fr_auto]">
         <input
@@ -63,16 +85,16 @@ export const NewGoalInline: React.FC<{
             setError(null);
           }}
           maxLength={GOAL_TITLE_MAX}
-          aria-label="Nombre de la nueva meta"
+          aria-label={m.name}
           aria-invalid={Boolean(error)}
           aria-describedby={error ? 'task-new-goal-error' : undefined}
-          placeholder="ej. Correr una media maratón"
+          placeholder={m.placeholder}
           className="min-w-0 rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-400 focus:outline-none"
         />
         <select
           value={area}
           onChange={(e) => setArea(e.target.value)}
-          aria-label="Área de la nueva meta"
+          aria-label={m.area}
           className="rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-400 focus:outline-none"
         >
           {selectable(area || undefined).map((a) => (
@@ -93,20 +115,17 @@ export const NewGoalInline: React.FC<{
           onClick={create}
           className="min-h-11 rounded-xl bg-slate-900 px-4 text-xs font-bold text-white hover:bg-slate-800"
         >
-          Crear la meta
+          {m.create}
         </button>
         <button
           type="button"
           onClick={onCancel}
           className="min-h-11 rounded-xl px-3 text-xs font-semibold text-slate-600 hover:bg-slate-100 hover:text-slate-900"
         >
-          Cancelar
+          {m.cancel}
         </button>
       </div>
-      <p className="text-[11px] text-slate-600">
-        Se guarda al crearla, aunque luego no guardes la tarea. El para qué y la fecha objetivo los puedes añadir en
-        «Metas».
-      </p>
+      <p className="text-[11px] text-slate-600">{m.note}</p>
     </div>
   );
 };
