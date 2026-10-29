@@ -6,6 +6,28 @@ import type { ClosedFeedbackPage, FeedbackStatus, FeedbackTicket, ReplyResult } 
 import { AccessAdminView } from './AccessAdminView';
 import { FeedbackAdminView } from './FeedbackAdminView';
 import { adminAlerts } from '../services/adminAlerts';
+import { messages } from '../i18n/locale';
+
+const m = messages(
+  {
+    title: 'Administración',
+    section: 'Apartado',
+    requests: 'Solicitudes',
+    messages: 'Mensajes',
+    pending: (n: number) => `${n} ${n === 1 ? 'pendiente' : 'pendientes'}`,
+    newAccounts: (n: number) => `${n} ${n === 1 ? 'cuenta nueva' : 'cuentas nuevas'}`,
+    unread: (n: number) => `${n} ${n === 1 ? 'nuevo' : 'nuevos'}`
+  },
+  {
+    title: 'Admin',
+    section: 'Section',
+    requests: 'Requests',
+    messages: 'Messages',
+    pending: (n) => `${n} pending`,
+    newAccounts: (n) => `${n} ${n === 1 ? 'new account' : 'new accounts'}`,
+    unread: (n) => `${n} new`
+  }
+);
 
 interface AdminViewProps {
   requests: AccessRequest[];
@@ -54,20 +76,12 @@ export const AdminView: React.FC<AdminViewProps> = ({
     if (panel === 'requests') onSeenRequests();
   }, [panel, requests, onSeenRequests]);
   const { pending, newAccounts, unread } = adminAlerts(requests, tickets, requestsSeenAt);
-  const requestsLabel = [
-    pending > 0 && `${pending} ${pending === 1 ? 'pendiente' : 'pendientes'}`,
-    newAccounts > 0 && `${newAccounts} ${newAccounts === 1 ? 'cuenta nueva' : 'cuentas nuevas'}`
-  ]
+  const requestsLabel = [pending > 0 && m.pending(pending), newAccounts > 0 && m.newAccounts(newAccounts)]
     .filter(Boolean)
     .join(', ');
   const options: { value: Panel; label: string; count: number; countLabel: string }[] = [
-    { value: 'requests', label: 'Solicitudes', count: pending + newAccounts, countLabel: requestsLabel },
-    {
-      value: 'messages',
-      label: 'Mensajes',
-      count: unread,
-      countLabel: `${unread} ${unread === 1 ? 'nuevo' : 'nuevos'}`
-    }
+    { value: 'requests', label: m.requests, count: pending + newAccounts, countLabel: requestsLabel },
+    { value: 'messages', label: m.messages, count: unread, countLabel: m.unread(unread) }
   ];
 
   return (
@@ -75,9 +89,9 @@ export const AdminView: React.FC<AdminViewProps> = ({
       <div className="space-y-4 rounded-2xl border border-slate-200 bg-white p-5 shadow-xs">
         <h2 className="flex items-center gap-2 text-xl font-bold text-slate-900">
           <UserCheck className="h-6 w-6 text-indigo-600" aria-hidden="true" />
-          Administración
+          {m.title}
         </h2>
-        <div role="group" aria-label="Apartado" className="flex flex-wrap gap-2">
+        <div role="group" aria-label={m.section} className="flex flex-wrap gap-2">
           {options.map(({ value, label, count, countLabel }) => (
             <button
               key={value}

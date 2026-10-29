@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { Upload, X } from 'lucide-react';
 import { useModalFocus } from '../hooks/useModalFocus';
 import { IMPORT_LABELS, IMPORT_ORDER, type ImportPlan } from '../services/importData';
+import { LOCALE_TAG, messages } from '../i18n/locale';
 
 interface ImportAccountDialogProps {
   plan: ImportPlan;
@@ -12,7 +13,77 @@ interface ImportAccountDialogProps {
 }
 
 const formatExportedAt = (iso: string) =>
-  new Date(iso).toLocaleString('es-ES', { dateStyle: 'long', timeStyle: 'short' });
+  new Date(iso).toLocaleString(LOCALE_TAG, { dateStyle: 'long', timeStyle: 'short' });
+
+const m = messages(
+  {
+    importItems: (n: number) => `Importar ${n} ${n === 1 ? 'elemento' : 'elementos'}`,
+    restoreAreas: 'Recuperar las áreas',
+    addArea: 'Añadir el área',
+    addAreas: 'Añadir las áreas',
+    lostConnection:
+      'Se perdió la conexión: la importación seguirá sola cuando vuelva y puedes cerrar esta ventana. Si cierras CLAR antes, importa otra vez el archivo para completar el resto: lo que ya entró no se repite.',
+    stalled:
+      'La importación no avanza: puede que no haya conexión. Seguirá sola cuando vuelva y puedes cerrar esta ventana. Si cierras CLAR antes, importa otra vez el archivo para completar el resto: lo que ya entró no se repite.',
+    offline: 'Sin conexión no se puede importar. Vuelve a intentarlo cuando tengas conexión.',
+    failed: 'No se pudo importar.',
+    title: 'Importar datos',
+    close: 'Cerrar',
+    exportedAt: (date: string) => `Descarga del ${date}. `,
+    summary:
+      'Lo que ya está en tu cuenta no se toca y lo que no es válido se descarta: importar dos veces el mismo archivo no duplica nada.',
+    caption: 'Qué hay en el archivo',
+    type: 'Tipo',
+    fresh: 'Nuevos',
+    existing: 'Ya en tu cuenta',
+    invalid: 'No válidos',
+    empty: 'El archivo no tiene tareas, metas ni otros datos.',
+    restored:
+      'Tu Rueda aún tiene las áreas de partida: se recupera la del archivo, con sus nombres y sus áreas ocultas.',
+    added: (labels: string, count: number) =>
+      `Se añaden a tu Rueda ${count === 1 ? 'el área' : 'las áreas'} ${labels}.`,
+    hidden: ' (oculta)',
+    quote: (label: string) => `«${label}»`,
+    nothingNew: 'Ya tienes en tu cuenta todo lo de este archivo.',
+    progress: (done: number, total: number) => `Importando… ${done} de ${total}`,
+    progressLabel: 'Avance de la importación',
+    cancel: 'Cancelar',
+    importing: 'Importando…'
+  },
+  {
+    importItems: (n) => `Import ${n} ${n === 1 ? 'item' : 'items'}`,
+    restoreAreas: 'Restore the areas',
+    addArea: 'Add the area',
+    addAreas: 'Add the areas',
+    lostConnection:
+      "The connection was lost: the import will continue by itself when it's back, and you can close this window. If you close CLAR before that, import the file again to finish the rest: what's already in won't be repeated.",
+    stalled:
+      "The import isn't moving forward: you may be offline. It will continue by itself when the connection is back, and you can close this window. If you close CLAR before that, import the file again to finish the rest: what's already in won't be repeated.",
+    offline: "You can't import while offline. Try again when you have a connection.",
+    failed: "Couldn't import.",
+    title: 'Import data',
+    close: 'Close',
+    exportedAt: (date) => `Downloaded on ${date}. `,
+    summary:
+      "What's already in your account isn't touched and anything invalid is discarded: importing the same file twice doesn't duplicate anything.",
+    caption: "What's in the file",
+    type: 'Type',
+    fresh: 'New',
+    existing: 'Already in your account',
+    invalid: 'Invalid',
+    empty: "The file doesn't have any tasks, goals or other data.",
+    restored:
+      "Your Wheel still has the starting areas: the file's Wheel is restored, with its names and its hidden areas.",
+    added: (labels, count) => `${count === 1 ? 'This area is' : 'These areas are'} added to your Wheel: ${labels}.`,
+    hidden: ' (hidden)',
+    quote: (label) => `“${label}”`,
+    nothingNew: 'Everything in this file is already in your account.',
+    progress: (done, total) => `Importing… ${done} of ${total}`,
+    progressLabel: 'Import progress',
+    cancel: 'Cancel',
+    importing: 'Importing…'
+  }
+);
 
 // Vista previa de la importación de «Descargar mis datos (JSON)»: qué entra, qué ya está y qué no es válido. Mientras
 // importa no se puede cerrar (lo escrito se quedaría a medias sin aviso).
@@ -40,21 +111,19 @@ export const ImportAccountDialog: React.FC<ImportAccountDialogProps> = ({ plan, 
   const hasWork = plan.total > 0 || plan.areas !== null;
   const importLabel =
     plan.total > 0
-      ? `Importar ${plan.total} ${plan.total === 1 ? 'elemento' : 'elementos'}`
+      ? m.importItems(plan.total)
       : plan.restoredAreas
-        ? 'Recuperar las áreas'
+        ? m.restoreAreas
         : plan.addedAreas.length === 1
-          ? 'Añadir el área'
-          : 'Añadir las áreas';
+          ? m.addArea
+          : m.addAreas;
 
   // Sin conexión, las escrituras esperan a que vuelva y el avance se pararía sin decir nada: se explica y se puede
   // cerrar (lo ya enviado se guarda al volver la conexión)
   useEffect(() => {
     if (!importing) return;
     const onOffline = () => {
-      setError(
-        'Se perdió la conexión: la importación seguirá sola cuando vuelva y puedes cerrar esta ventana. Si cierras CLAR antes, importa otra vez el archivo para completar el resto: lo que ya entró no se repite.'
-      );
+      setError(m.lostConnection);
       requestAnimationFrame(() => closeRef.current?.focus());
     };
     window.addEventListener('offline', onOffline);
@@ -67,9 +136,7 @@ export const ImportAccountDialog: React.FC<ImportAccountDialogProps> = ({ plan, 
   useEffect(() => {
     if (!importing) return;
     const timer = window.setTimeout(() => {
-      setError(
-        'La importación no avanza: puede que no haya conexión. Seguirá sola cuando vuelva y puedes cerrar esta ventana. Si cierras CLAR antes, importa otra vez el archivo para completar el resto: lo que ya entró no se repite.'
-      );
+      setError(m.stalled);
       requestAnimationFrame(() => closeRef.current?.focus());
     }, STALL_MS);
     return () => window.clearTimeout(timer);
@@ -78,7 +145,7 @@ export const ImportAccountDialog: React.FC<ImportAccountDialogProps> = ({ plan, 
   const handleImport = async () => {
     if (importing) return;
     if (!navigator.onLine) {
-      setError('Sin conexión no se puede importar. Vuelve a intentarlo cuando tengas conexión.');
+      setError(m.offline);
       return;
     }
     setError(null);
@@ -86,7 +153,7 @@ export const ImportAccountDialog: React.FC<ImportAccountDialogProps> = ({ plan, 
     try {
       await onImport((done, total) => setProgress({ done, total }));
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'No se pudo importar.');
+      setError(e instanceof Error ? e.message : m.failed);
       // El botón de importar ya no está: el foco pasa a «Cerrar»
       requestAnimationFrame(() => closeRef.current?.focus());
     }
@@ -105,13 +172,13 @@ export const ImportAccountDialog: React.FC<ImportAccountDialogProps> = ({ plan, 
         <div className="flex items-center justify-between border-b border-slate-100 bg-slate-50/90 px-6 py-4">
           <h2 id="import-account-title" className="flex items-center gap-2 text-sm font-bold text-slate-900">
             <Upload className="h-4 w-4 text-indigo-600" aria-hidden="true" />
-            Importar datos
+            {m.title}
           </h2>
           <button
             type="button"
             onClick={onClose}
             disabled={importing}
-            aria-label="Cerrar"
+            aria-label={m.close}
             className="rounded-lg p-1.5 text-slate-500 transition-colors hover:bg-slate-200/60 hover:text-slate-700 disabled:opacity-40"
           >
             <X className="h-5 w-5" aria-hidden="true" />
@@ -120,27 +187,26 @@ export const ImportAccountDialog: React.FC<ImportAccountDialogProps> = ({ plan, 
 
         <div className="space-y-4 p-6">
           <p id="import-account-summary" className="text-xs leading-relaxed text-slate-600">
-            {plan.exportedAt ? `Descarga del ${formatExportedAt(plan.exportedAt)}. ` : ''}
-            Lo que ya está en tu cuenta no se toca y lo que no es válido se descarta: importar dos veces el mismo
-            archivo no duplica nada.
+            {plan.exportedAt ? m.exportedAt(formatExportedAt(plan.exportedAt)) : ''}
+            {m.summary}
           </p>
 
           {rows.length > 0 ? (
             <table className="w-full text-left text-xs">
-              <caption className="sr-only">Qué hay en el archivo</caption>
+              <caption className="sr-only">{m.caption}</caption>
               <thead>
                 <tr className="border-b border-slate-200 text-[11px] text-slate-600">
                   <th scope="col" className="py-1.5 pr-2 font-semibold">
-                    Tipo
+                    {m.type}
                   </th>
                   <th scope="col" className="px-2 py-1.5 text-right font-semibold">
-                    Nuevos
+                    {m.fresh}
                   </th>
                   <th scope="col" className="px-2 py-1.5 text-right font-semibold">
-                    Ya en tu cuenta
+                    {m.existing}
                   </th>
                   <th scope="col" className="py-1.5 pl-2 text-right font-semibold">
-                    No válidos
+                    {m.invalid}
                   </th>
                 </tr>
               </thead>
@@ -163,33 +229,29 @@ export const ImportAccountDialog: React.FC<ImportAccountDialogProps> = ({ plan, 
               </tbody>
             </table>
           ) : (
-            <p className="text-xs text-slate-600">El archivo no tiene tareas, metas ni otros datos.</p>
+            <p className="text-xs text-slate-600">{m.empty}</p>
           )}
 
-          {plan.restoredAreas && (
-            <p className="text-xs text-slate-700">
-              Tu Rueda aún tiene las áreas de partida: se recupera la del archivo, con sus nombres y sus áreas ocultas.
-            </p>
-          )}
+          {plan.restoredAreas && <p className="text-xs text-slate-700">{m.restored}</p>}
           {!plan.restoredAreas && plan.addedAreas.length > 0 && (
             <p className="text-xs text-slate-700">
-              Se añaden a tu Rueda {plan.addedAreas.length === 1 ? 'el área' : 'las áreas'}{' '}
-              {plan.addedAreas.map((a) => `«${a.label}»${a.hidden ? ' (oculta)' : ''}`).join(', ')}.
+              {m.added(
+                plan.addedAreas.map((a) => `${m.quote(a.label)}${a.hidden ? m.hidden : ''}`).join(', '),
+                plan.addedAreas.length
+              )}
             </p>
           )}
-          {!hasWork && rows.length > 0 && (
-            <p className="text-xs font-medium text-slate-700">Ya tienes en tu cuenta todo lo de este archivo.</p>
-          )}
+          {!hasWork && rows.length > 0 && <p className="text-xs font-medium text-slate-700">{m.nothingNew}</p>}
 
           {progress && !error && (
             <div className="space-y-1">
               <p role="status" className="text-xs font-medium text-slate-700">
-                Importando… {progress.done} de {progress.total}
+                {m.progress(progress.done, progress.total)}
               </p>
               <progress
                 value={progress.done}
                 max={Math.max(progress.total, 1)}
-                aria-label="Avance de la importación"
+                aria-label={m.progressLabel}
                 className="h-2 w-full overflow-hidden rounded-full accent-indigo-600"
               />
             </div>
@@ -209,7 +271,7 @@ export const ImportAccountDialog: React.FC<ImportAccountDialogProps> = ({ plan, 
               data-autofocus={!hasWork || error ? true : undefined}
               className="min-h-11 rounded-xl px-4 text-xs font-semibold text-slate-600 hover:bg-slate-100 disabled:opacity-60"
             >
-              {failed || !hasWork ? 'Cerrar' : 'Cancelar'}
+              {failed || !hasWork ? m.close : m.cancel}
             </button>
             {hasWork && !failed && (
               <button
@@ -220,7 +282,7 @@ export const ImportAccountDialog: React.FC<ImportAccountDialogProps> = ({ plan, 
                 data-autofocus
                 className="min-h-11 rounded-xl bg-slate-900 px-4 text-xs font-bold text-white shadow-xs hover:bg-slate-800 aria-disabled:opacity-60"
               >
-                {importing ? 'Importando…' : importLabel}
+                {importing ? m.importing : importLabel}
               </button>
             )}
           </div>
