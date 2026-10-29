@@ -320,6 +320,7 @@ const m = messages(
     importedAreas: (n: number) => `${n} ${n === 1 ? 'área' : 'áreas'}`,
     imported: (parts: string[]) => `Importado: ${parts.join(' y ')}.`,
     localImported: 'Datos importados a tu cuenta.',
+    localImportFailed: 'No se pudieron importar los datos. Comprueba tu conexión e inténtalo de nuevo.',
     areasSaved: 'Áreas guardadas.',
     allowNotifications: 'Para recibirlas, permite las notificaciones de CLAR en este navegador.',
     alarmTitle: (time: string, title: string) => `Alarma de las ${time}: ${title}`,
@@ -423,6 +424,7 @@ const m = messages(
     importedAreas: (n) => `${n} ${n === 1 ? 'area' : 'areas'}`,
     imported: (parts) => `Imported: ${parts.join(' and ')}.`,
     localImported: 'Data imported into your account.',
+    localImportFailed: "Couldn't import the data. Check your connection and try again.",
     areasSaved: 'Areas saved.',
     allowNotifications: 'To get them, allow notifications for CLAR in this browser.',
     alarmTitle: (time, title) => `Alarm at ${time}: ${title}`,
@@ -1105,7 +1107,12 @@ export default function App({ user, services, isAdmin = false }: AppProps) {
 
   // IMPORTACIÓN DE DATOS DE LA VERSIÓN SIN CUENTAS
   const handleImportLocalData = async (profileIds: string[]) => {
-    await importUserData(db, uid, buildImport(profileIds));
+    try {
+      await importUserData(db, uid, buildImport(profileIds));
+    } catch (e) {
+      // La ventana muestra el mensaje: el del SDK de Firebase es técnico y en inglés
+      throw new Error(m.localImportFailed, { cause: e });
+    }
     clearLocalData();
     setLocalProfiles([]);
     showToast(m.localImported);
