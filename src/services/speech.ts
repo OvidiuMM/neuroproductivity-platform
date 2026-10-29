@@ -55,7 +55,7 @@ export const dictationErrorMessage = (code: string) => {
       return 'Para dictar, da permiso al micrófono en tu navegador.';
     // Safari, con el dictado del dispositivo desactivado (o donde no lo deja usar)
     case 'service-not-allowed':
-      return 'Aquí no se puede dictar. Activa el dictado del dispositivo o prueba en el navegador.';
+      return 'Aquí no se puede dictar (p. ej. en la app del iPhone): usa el micrófono del teclado.';
     case 'audio-capture':
       return 'No se encuentra el micrófono.';
     case 'network':

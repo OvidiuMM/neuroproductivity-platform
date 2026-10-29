@@ -13,11 +13,15 @@ import {
   KeyRound,
   MonitorSmartphone,
   MessageSquare,
-  Sparkles
+  Sparkles,
+  Bell,
+  AlertTriangle
 } from 'lucide-react';
 import { DeleteAccountPanel } from './DeleteAccountPanel';
 import { LegalLink } from './LegalLinks';
 import { NotificationPermission } from './NotificationPermission';
+import { notificationState } from '../services/notifications';
+import { isAndroid } from '../services/platform';
 import type { ExtraFeature, FeatureId } from '../services/features';
 import { CalendarConnection, type CalendarConnectionProps } from './CalendarConnection';
 import { ShareAppButton } from './ShareApp';
@@ -41,6 +45,10 @@ interface AccountMenuProps {
     // Si la notificación lleva el nombre de la tarea (por defecto no: se vería con el móvil bloqueado)
     showTitle: boolean;
     onShowTitleChange: (show: boolean) => Promise<void>;
+    // Activadas, pero el permiso se quitó después en los ajustes: no llega ninguna
+    permissionLost: boolean;
+    // «Probar notificación»: el servidor envía un aviso ahora a este dispositivo
+    onTest: () => Promise<void>;
   } | null;
   // Funciones extra: la administración las tiene todas y las enciende o apaga aquí (onToggle); el resto ve las que la
   // administración le ha activado. Sin ninguna, el apartado no aparece
@@ -60,7 +68,7 @@ interface AccountMenuProps {
   returnFocusTo?: () => HTMLElement | null;
 }
 
-type Busy = 'export' | 'import' | 'push' | 'delete' | 'password' | 'everywhere' | null;
+type Busy = 'export' | 'import' | 'push' | 'push-test' | 'delete' | 'password' | 'everywhere' | null;
 type Panel = 'password' | 'everywhere' | 'delete' | null;
 
 const actionClass =
@@ -268,7 +276,12 @@ export const AccountMenu: React.FC<AccountMenuProps> = ({
             />
             <div className="rounded-xl border border-slate-200 px-4 py-2.5">
               <p className="text-xs font-bold text-slate-700">Notificaciones de las alarmas</p>
-              <NotificationPermission buttonLabel="Activar las notificaciones de las alarmas" />
+              {/* Con push, la casilla de abajo pide también el permiso: el botón solo haría falta sin ella */}
+              {push ? (
+                notificationState() === 'denied' && !push.enabled && <NotificationPermission />
+              ) : (
+                <NotificationPermission buttonLabel="Activar las notificaciones de las alarmas" />
+              )}
               {push && (
                 <div className="mt-2 space-y-1">
                   <label className="flex min-h-9 cursor-pointer items-center gap-2 text-xs font-semibold text-slate-800">
@@ -295,6 +308,39 @@ export const AccountMenu: React.FC<AccountMenuProps> = ({
                     La hora de la alarma (y el nombre de la tarea, si lo muestras) pasa por Firebase Cloud Messaging
                     (Google) hasta este dispositivo.
                   </p>
+                  {push.permissionLost && (
+                    <p className="flex items-start gap-1.5 rounded-lg bg-amber-50 p-2 text-[11px] text-amber-900">
+                      <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+                      Las notificaciones de CLAR están bloqueadas en los ajustes de este dispositivo: así no te llega
+                      ninguna alarma. Vuelve a permitirlas o desactiva esta opción.
+                    </p>
+                  )}
+                  {push.enabled && !push.permissionLost && (
+                    <div className="space-y-1 pl-6">
+                      <button
+                        type="button"
+                        disabled={busy !== null}
+                        onClick={() =>
+                          void run(
+                            'push-test',
+                            push.onTest,
+                            'Enviada: te llegará en unos segundos, también si cierras CLAR ahora.'
+                          )
+                        }
+                        className="inline-flex min-h-9 items-center gap-1.5 rounded-lg border border-indigo-200 bg-indigo-50 px-2.5 text-xs font-semibold text-indigo-800 hover:bg-indigo-100 disabled:opacity-60"
+                      >
+                        <Bell className="h-3.5 w-3.5" aria-hidden="true" />
+                        {busy === 'push-test' ? 'Enviando…' : 'Probar notificación'}
+                      </button>
+                      {isAndroid() && (
+                        <p className="text-[11px] text-slate-600">
+                          En Android, para que aparezca en lo alto de la pantalla: Ajustes › Notificaciones › CLAR (o
+                          Chrome) › «Mostrar en pantalla emergente». Si llegan tarde, quita las restricciones de batería
+                          de Chrome.
+                        </p>
+                      )}
+                    </div>
+                  )}
                   {push.enabled && (
                     <label className="flex min-h-9 cursor-pointer items-center gap-2 pl-6 text-xs text-slate-800">
                       <input

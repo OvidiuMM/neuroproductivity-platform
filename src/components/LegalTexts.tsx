@@ -119,9 +119,10 @@ export const PrivacyPolicy: React.FC = () => (
           novedades de la versión, si activaste las alarmas con CLAR cerrada en ese dispositivo (y si muestran el nombre
           de la tarea), la configuración de la app y, en la cuenta de administración, cuándo miró las solicitudes por
           última vez. También registra un service worker, que guarda una copia de la app (sus archivos, sin tus datos)
-          para abrirla sin conexión y muestra las notificaciones de las alarmas. Todo es necesario para que la app
-          funcione (art. 22.2 de la LSSI), por eso no se pide consentimiento: CLAR no usa cookies de seguimiento,
-          analítica ni publicidad.
+          para abrirla sin conexión y muestra las notificaciones de las alarmas (y apunta durante dos días cuáles
+          llegaron con CLAR cerrada, para no repetirlas al abrirla). Todo es necesario para que la app funcione (art.
+          22.2 de la LSSI), por eso no se pide consentimiento: CLAR no usa cookies de seguimiento, analítica ni
+          publicidad.
         </li>
       </List>
       <p>

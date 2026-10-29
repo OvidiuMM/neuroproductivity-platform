@@ -17,6 +17,7 @@ const registeredKey = (uid: string) => `${REGISTERED_PREFIX}${uid}`;
 const enabledKey = (uid: string) => `clar_push_enabled:${uid}`;
 const showTitleKey = (uid: string) => `clar_push_show_title:${uid}`;
 const timeZoneKey = (uid: string) => `clar_push_time_zone:${uid}`;
+const endpointKey = (uid: string) => `clar_push_endpoint:${uid}`;
 const currentTimeZone = () => Intl.DateTimeFormat().resolvedOptions().timeZone;
 
 export const pushAvailable = () =>
@@ -46,13 +47,26 @@ const write = (key: string, value: string | null) => {
 // Si este dispositivo tiene activadas las alarmas con CLAR cerrada para esta cuenta, y si muestran el nombre de la tarea
 export const isPushEnabled = (uid: string) => pushAvailable() && read(enabledKey(uid)) === '1';
 export const isPushTitleShown = (uid: string) => read(showTitleKey(uid)) === '1';
+// Activadas aquí, pero sin permiso: se quitó después en los ajustes del navegador o del móvil, y no llega ninguna
+export const pushPermissionLost = (uid: string) => isPushEnabled(uid) && Notification.permission !== 'granted';
 
+const withTimeout = <T>(promise: Promise<T>, ms: number) =>
+  Promise.race([promise, new Promise<never>((_, reject) => setTimeout(() => reject(new Error('timeout')), ms))]);
+
+// Lo que se espera al service worker: si no llega a instalarse (p. ej. sin conexión), se avisa en vez de esperar siempre
+const READY_TIMEOUT_MS = 15_000;
 const currentToken = async ({ app }: FirebaseServices) => {
   const { getMessaging, getToken, isSupported } = await import('firebase/messaging');
   if (!(await isSupported())) return null;
   const registration = await navigator.serviceWorker.register('/sw.js');
-  await navigator.serviceWorker.ready;
+  await withTimeout(navigator.serviceWorker.ready, READY_TIMEOUT_MS);
   return (await getToken(getMessaging(app), { vapidKey: VAPID_KEY, serviceWorkerRegistration: registration })) || null;
+};
+
+// La suscripción push de este navegador, si la tiene: el navegador puede anularla (el iPhone lo hace sin avisar)
+const currentEndpoint = async () => {
+  const registration = await navigator.serviceWorker?.getRegistration();
+  return (await registration?.pushManager?.getSubscription())?.endpoint ?? null;
 };
 
 // Corta la suscripción push de este navegador: funciona sin conexión y, desde ese momento, no llega ninguna alarma.
@@ -64,11 +78,14 @@ const unsubscribeHere = async () => {
 };
 
 // Registra este dispositivo si las tiene activadas y hay permiso. `force`: al momento (acaban de activarse o de
-// cambiar). También al momento si cambió la zona horaria del dispositivo (p. ej. de viaje).
+// cambiar). También al momento si cambió la zona horaria del dispositivo (p. ej. de viaje) o si su suscripción push ya
+// no es la registrada (se perdió o cambió): se comprueba cada vez que se abre CLAR.
 export const registerPushDevice = async (services: FirebaseServices, uid: string, force = false) => {
   if (!isPushEnabled(uid) || Notification.permission !== 'granted') return false;
   const sameZone = read(timeZoneKey(uid)) === currentTimeZone();
-  if (!force && sameZone && Date.now() - Number(read(registeredKey(uid)) ?? 0) < REFRESH_MS) return true;
+  const sameSubscription = (await currentEndpoint().catch(() => null)) === read(endpointKey(uid));
+  if (!force && sameZone && sameSubscription && Date.now() - Number(read(registeredKey(uid)) ?? 0) < REFRESH_MS)
+    return true;
   const token = await currentToken(services);
   if (!token) return false;
   await httpsCallable(
@@ -81,11 +98,9 @@ export const registerPushDevice = async (services: FirebaseServices, uid: string
   });
   write(registeredKey(uid), String(Date.now()));
   write(timeZoneKey(uid), currentTimeZone());
+  write(endpointKey(uid), await currentEndpoint().catch(() => null));
   return true;
 };
-
-const withTimeout = <T>(promise: Promise<T>, ms: number) =>
-  Promise.race([promise, new Promise<never>((_, reject) => setTimeout(() => reject(new Error('timeout')), ms))]);
 
 // Este dispositivo deja de recibir las alarmas de la cuenta: al desactivarlas y al cerrar sesión (así un dispositivo
 // compartido no recibe las de una cuenta que ya no está abierta en él). Primero se corta la suscripción aquí, que no
@@ -94,6 +109,7 @@ export const unregisterPushDevice = async (services: FirebaseServices, uid: stri
   if (!pushAvailable() || !read(registeredKey(uid))) return;
   write(registeredKey(uid), null);
   write(timeZoneKey(uid), null);
+  write(endpointKey(uid), null);
   let token: string | null = null;
   if (Notification.permission === 'granted')
     token = await withTimeout(currentToken(services), UNREGISTER_TIMEOUT_MS).catch(() => null);
@@ -118,6 +134,15 @@ export const enablePush = async (services: FirebaseServices, uid: string) => {
 export const disablePush = async (services: FirebaseServices, uid: string) => {
   write(enabledKey(uid), null);
   await unregisterPushDevice(services, uid);
+};
+
+// «PROBAR NOTIFICACIÓN»: el servidor envía ahora un aviso a este dispositivo, por el mismo camino que las alarmas. Así se
+// comprueba que llegan con CLAR cerrada (el aviso tarda unos segundos)
+export const sendTestPush = async (services: FirebaseServices, uid: string) => {
+  if (!(await registerPushDevice(services, uid))) throw new Error('Activa antes las alarmas con CLAR cerrada.');
+  const token = await currentToken(services);
+  if (!token) throw new Error('Este navegador no permite recibir las alarmas con CLAR cerrada.');
+  await httpsCallable(services.functions, 'sendTestPush')({ token });
 };
 
 // Mostrar o no el nombre de la tarea en las notificaciones de este dispositivo (se ve con el móvil bloqueado)
