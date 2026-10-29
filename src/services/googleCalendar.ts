@@ -2,6 +2,32 @@ import { FirebaseError } from 'firebase/app';
 import { doc, onSnapshot, type Firestore } from 'firebase/firestore';
 import { httpsCallable } from 'firebase/functions';
 import type { FirebaseServices } from './firebase';
+import { LOCALE, messages, type Locale } from '../i18n/locale';
+
+const m = messages(
+  {
+    denied: 'No se dio permiso en Google: el calendario no se ha conectado.',
+    incomplete: 'Google no completó la autorización. Inténtalo de nuevo.',
+    canceled: 'Conexión cancelada.',
+    timeout: 'Se acabó el tiempo para dar permiso en Google. Inténtalo de nuevo.',
+    unavailable: 'La sincronización con Google Calendar no está disponible en esta instalación.',
+    popupBlocked: 'El navegador bloqueó la ventana de Google. Permite las ventanas emergentes de CLAR.',
+    noServer: 'No se pudo conectar con el servidor. Revisa tu conexión e inténtalo de nuevo.',
+    slowUpload:
+      'La subida de las tareas está tardando más de lo normal y sigue en marcha. Vuelve a mirar en unos minutos.'
+  },
+  {
+    denied: "Permission wasn't given in Google: the calendar wasn't connected.",
+    incomplete: "Google didn't complete the authorization. Try again.",
+    canceled: 'Connection canceled.',
+    timeout: 'Time ran out to give permission in Google. Try again.',
+    unavailable: "Google Calendar sync isn't available in this installation.",
+    popupBlocked: 'Your browser blocked the Google window. Allow pop-ups for CLAR.',
+    noServer: "Couldn't connect to the server. Check your connection and try again.",
+    slowUpload:
+      'Uploading your tasks is taking longer than usual and is still in progress. Check again in a few minutes.'
+  }
+);
 
 // SINCRONIZACIÓN CON GOOGLE CALENDAR (función extra): la conexión desde la app. Al conectar se abre la autorización de
 // Google en una ventana (con PKCE); Google vuelve a /oauth/google.html (public/oauth/google.js), que pasa el código a
@@ -114,25 +140,18 @@ const waitForCode = (state: string, signal?: AbortSignal) =>
       if (data?.type !== CHANNEL || data.state !== state) return;
       finish();
       if (typeof data.code === 'string' && data.code) resolve(data.code);
-      else
-        reject(
-          new Error(
-            data.error === 'access_denied'
-              ? 'No se dio permiso en Google: el calendario no se ha conectado.'
-              : 'Google no completó la autorización. Inténtalo de nuevo.'
-          )
-        );
+      else reject(new Error(data.error === 'access_denied' ? m.denied : m.incomplete));
     };
     const onWindowMessage = (e: MessageEvent<OAuthMessage>) => {
       if (e.origin === window.location.origin) onMessage(e.data);
     };
     const onAbort = () => {
       finish();
-      reject(new Error('Conexión cancelada.'));
+      reject(new Error(m.canceled));
     };
     const timer = window.setTimeout(() => {
       finish();
-      reject(new Error('Se acabó el tiempo para dar permiso en Google. Inténtalo de nuevo.'));
+      reject(new Error(m.timeout));
     }, AUTHORIZATION_TIMEOUT_MS);
     channel?.addEventListener('message', (e: MessageEvent<OAuthMessage>) => onMessage(e.data));
     window.addEventListener('message', onWindowMessage);
@@ -146,9 +165,9 @@ export const connectGoogleCalendar = async (
   { functions }: FirebaseServices,
   { signal, onAuthorized }: { signal?: AbortSignal; onAuthorized?: () => void } = {}
 ) => {
-  if (!CLIENT_ID) throw new Error('La sincronización con Google Calendar no está disponible en esta instalación.');
+  if (!CLIENT_ID) throw new Error(m.unavailable);
   const popup = window.open('', 'clar-google-calendar', 'popup,width=520,height=680');
-  if (!popup) throw new Error('El navegador bloqueó la ventana de Google. Permite las ventanas emergentes de CLAR.');
+  if (!popup) throw new Error(m.popupBlocked);
   const state = randomString(24);
   const verifier = randomString(48);
   const redirectUri = `${window.location.origin}${OAUTH_CALLBACK_PATH}`;
@@ -173,25 +192,27 @@ export const connectGoogleCalendar = async (
   onAuthorized?.();
   return (
     await httpsCallable<
-      { code: string; codeVerifier: string; redirectUri: string; timeZone: string },
+      { code: string; codeVerifier: string; redirectUri: string; timeZone: string; language: Locale },
       { synced: number; failed: number }
     >(functions, 'connectGoogleCalendar', { timeout: CONNECT_TIMEOUT_MS })({
       code,
       codeVerifier: verifier,
       redirectUri,
-      timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone
+      timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+      // Los mensajes de error del servidor se muestran tal cual: en el idioma de la app
+      language: LOCALE
     })
   ).data;
 };
 
-// Un fallo de conexión con el servidor, en español. Los mensajes del servidor ya vienen en español y se muestran tal
-// cual (sin el código de estado que añade el SDK); solo se sustituye el mensaje genérico del SDK, que es el propio código
+// Un fallo de conexión con el servidor, en el idioma de la app. Los mensajes del servidor ya vienen escritos y se
+// muestran tal cual (sin el código de estado que añade el SDK); solo se sustituye el mensaje genérico del SDK, que es el
+// propio código
 const CALL_ERRORS: Record<string, string> = {
-  internal: 'No se pudo conectar con el servidor. Revisa tu conexión e inténtalo de nuevo.',
-  unavailable: 'No se pudo conectar con el servidor. Revisa tu conexión e inténtalo de nuevo.',
-  unknown: 'No se pudo conectar con el servidor. Revisa tu conexión e inténtalo de nuevo.',
-  'deadline-exceeded':
-    'La subida de las tareas está tardando más de lo normal y sigue en marcha. Vuelve a mirar en unos minutos.'
+  internal: m.noServer,
+  unavailable: m.noServer,
+  unknown: m.noServer,
+  'deadline-exceeded': m.slowUpload
 };
 export const calendarErrorMessage = (e: unknown, fallback: string) => {
   if (!(e instanceof Error)) return fallback;
@@ -204,5 +225,5 @@ export const calendarErrorMessage = (e: unknown, fallback: string) => {
 };
 
 export const disconnectGoogleCalendar = async ({ functions }: FirebaseServices) => {
-  await httpsCallable(functions, 'disconnectGoogleCalendar')();
+  await httpsCallable<{ language: Locale }>(functions, 'disconnectGoogleCalendar')({ language: LOCALE });
 };
