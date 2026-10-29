@@ -153,3 +153,121 @@ test('cancelling one repetition archives it as cancelled and creates the next on
   await expect(page.getByRole('heading', { name: title })).toHaveCount(1);
   await expect(page.getByText(`Vence: ${dateFormat.format(tomorrow)}`)).toBeVisible();
 });
+
+test('every 3 days with the «Cada N» control: the number can be cleared and retyped, and the summary follows it', async ({
+  page
+}) => {
+  const today = new Date();
+  const inThreeDays = new Date(today.getFullYear(), today.getMonth(), today.getDate() + 3);
+
+  await page.goto('/');
+  await signInWithGoogle(page);
+  await page.getByRole('button', { name: 'Listas', exact: true }).click();
+  await page.getByRole('button', { name: 'Añadir la primera tarea' }).click();
+  // «Más opciones» dice que ahí está la repetición
+  await expect(page.getByRole('button', { name: /^Más opciones/ })).toContainText('repetición');
+  await showMoreOptions(page);
+
+  // Sin repetir: «Repetir: No se repite»; al repetir, «Repetir: Cada [1] [día]»
+  const repeat = page.getByLabel('Repetir');
+  await expect(repeat.locator('option:checked')).toHaveText('No se repite');
+  await repeat.selectOption('DAILY');
+  const every = page.getByLabel('Cada cuántos días');
+  await expect(every).toHaveValue('1');
+  await expect(repeat.locator('option:checked')).toHaveText('día');
+
+  // Vaciar el campo no lo rellena con 1: se puede escribir otro número (4, no 14)
+  await every.fill('');
+  await expect(every).toHaveValue('');
+  await expect(page.getByRole('alert').filter({ hasText: 'Escribe un número del 1 al 99.' })).toBeVisible();
+  await every.pressSequentially('4');
+  await expect(every).toHaveValue('4');
+  await expect(page.getByRole('alert').filter({ hasText: 'Escribe un número del 1 al 99.' })).toHaveCount(0);
+  await expect(repeat.locator('option:checked')).toHaveText('días');
+  // Vacío al salir: vuelve el número de antes; 0 al salir: 1
+  await every.fill('');
+  await every.blur();
+  await expect(every).toHaveValue('4');
+  await every.fill('0');
+  await every.blur();
+  await expect(every).toHaveValue('1');
+
+  await every.fill('3');
+  await every.blur();
+  await expect(repeat.locator('option:checked')).toHaveText('días');
+  const summary = page.getByRole('status').filter({ hasText: /^Cada 3 días · Primera/ });
+  await expect(summary).toContainText(`la siguiente vencerá el ${dateFormat.format(inThreeDays)}`);
+  await expect(page.getByRole('status').filter({ hasText: /^Cada día/ })).toHaveCount(0);
+
+  const title = `Revisar el correo ${Date.now().toString(36)}`;
+  await fillAndSaveTask(page, { title });
+  await expect(page.getByText('Cada 3 días').first()).toBeVisible();
+
+  // El .ics lleva la serie cada 3 días
+  await openTaskActions(page, title);
+  const downloadPromise = page.waitForEvent('download');
+  await page.getByRole('button', { name: /Descargar \.ics/ }).click();
+  expect(readFileSync(await (await downloadPromise).path(), 'utf8')).toContain('RRULE:FREQ=DAILY;INTERVAL=3');
+
+  // Al editarla, «Más opciones» se abre solo, con «Cada 3 días»
+  await page.getByRole('button', { name: `Editar «${title}»` }).click();
+  await expect(page.getByRole('button', { name: /^Más opciones/ })).toHaveAttribute('aria-expanded', 'true');
+  await expect(page.getByLabel('Cada cuántos días')).toHaveValue('3');
+  await page.getByRole('dialog').getByRole('button', { name: 'Cancelar', exact: true }).click();
+
+  // Hecha hoy: la siguiente, dentro de 3 días
+  await completeTask(page, title);
+  await expect(page.getByText(`Vence: ${dateFormat.format(inThreeDays)}`)).toBeVisible();
+});
+
+test('repeating N days after doing it: the next one is due N days after it is done, not on fixed dates', async ({
+  page
+}) => {
+  const today = new Date();
+  const daysFromToday = (days: number) => new Date(today.getFullYear(), today.getMonth(), today.getDate() + days);
+  // Empezó hace 5 días (vencida): en fechas fijas, cada 2 días, la siguiente sería mañana; contando desde hoy, pasado
+  const start = daysFromToday(-5);
+
+  await page.goto('/');
+  await signInWithGoogle(page);
+  await page.getByRole('button', { name: 'Listas', exact: true }).click();
+  await page.getByRole('button', { name: 'Añadir la primera tarea' }).click();
+  await showMoreOptions(page);
+  await page.getByLabel('Repetir').selectOption('WEEKLY');
+  // En semanas también se puede; sin días de la semana
+  await expect(page.getByRole('group', { name: 'Días de la semana' })).toBeVisible();
+  await page.getByRole('radio', { name: '1 semana después de hacerla' }).check();
+  await expect(page.getByRole('group', { name: 'Días de la semana' })).toBeHidden();
+  // En meses y años no existe
+  await page.getByLabel('Repetir').selectOption('MONTHLY');
+  await expect(page.getByRole('radio', { name: /después de hacerla/ })).toHaveCount(0);
+
+  await page.getByLabel('Repetir').selectOption('DAILY');
+  await page.getByLabel('Cada cuántos días').fill('2');
+  const fromDone = page.getByRole('radio', { name: '2 días después de hacerla' });
+  await expect(fromDone).toBeChecked();
+  await page.getByLabel('Fecha de inicio', { exact: true }).fill(toDateString(start));
+  await expect(page.getByRole('status').filter({ hasText: /^2 días después de hacerla · Primera/ })).toContainText(
+    `Si la haces ese día, la siguiente vencerá el ${dateFormat.format(daysFromToday(-3))}`
+  );
+
+  const title = `Regar el huerto ${Date.now().toString(36)}`;
+  await fillAndSaveTask(page, { title });
+  await expect(page.getByText('2 días después de hacerla').first()).toBeVisible();
+
+  // Sin serie en el .ics: solo la repetición actual
+  await openTaskActions(page, title);
+  const downloadPromise = page.waitForEvent('download');
+  await page.getByRole('button', { name: /Descargar \.ics/ }).click();
+  expect(readFileSync(await (await downloadPromise).path(), 'utf8')).not.toContain('RRULE');
+
+  // Hecha hoy, con retraso: la siguiente vence dentro de 2 días (en fechas fijas sería mañana)
+  await completeTask(page, title);
+  await expect(page.getByText(`Vence: ${dateFormat.format(daysFromToday(2))}`)).toBeVisible();
+  await expect(page.getByText(`Vence: ${dateFormat.format(daysFromToday(1))}`)).toHaveCount(0);
+  await expect(page.getByRole('heading', { name: title })).toHaveCount(1);
+
+  // Al editar la siguiente, sigue contando desde que se hace
+  await page.getByRole('button', { name: `Editar «${title}»` }).click();
+  await expect(page.getByRole('radio', { name: '2 días después de hacerla' })).toBeChecked();
+});

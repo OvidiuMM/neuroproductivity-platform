@@ -67,7 +67,8 @@ export const buildAgenda = (
     }
 
     // Repeticiones previstas (las crea la app al completar cada una; aquí solo se anticipan). Solo desde la
-    // última tarea de la serie: una repetición reactivada ya tiene sucesora, que proyecta las mismas fechas.
+    // última tarea de la serie: una repetición reactivada ya tiene sucesora, que proyecta las mismas fechas. Las que
+    // cuentan desde que se hacen no tienen previstas: solo sale la repetición actual.
     if (task.recurrence && !task.nextOccurrenceId) {
       for (const date of occurrencesBetween(task.dueDate, task.recurrence, first, last)) {
         add({

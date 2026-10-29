@@ -109,6 +109,18 @@ describe('buildAgenda', () => {
     assert.deepEqual(items(agenda, '2026-10-19'), ['week-2:next:2026-10-19']);
   });
 
+  it('shows only the current one of a task repeated from completion: the next ones depend on when it is done', () => {
+    const plants = task('plants', {
+      dueDate: '2026-10-13',
+      recurrence: { frequency: 'DAILY', interval: 2, from: 'COMPLETION' }
+    });
+    const agenda = buildAgenda([plants], [], week, now);
+    assert.deepEqual(
+      week.map((d) => items(agenda, d)),
+      [[], ['plants'], [], [], [], [], []]
+    );
+  });
+
   it('shows the visible part of intervals of any length', () => {
     // Más de 400 días: el día de vencimiento sigue apareciendo
     const long = task('mortgage', { startDate: '2025-01-01', dueDate: '2026-10-16' });

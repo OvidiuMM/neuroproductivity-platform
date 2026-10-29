@@ -153,7 +153,8 @@ const formatDay = (date: string) => {
   );
 };
 
-// RRULE (RFC 5545) de la serie, como toRRule de la app (src/services/recurrence.ts). null si la repetición no vale
+// RRULE (RFC 5545) de la serie, como toRRule de la app (src/services/recurrence.ts). null si la repetición no vale o
+// si cuenta desde que se hace la tarea (días y semanas): entonces no hay serie, solo el evento de la repetición actual
 const FREQUENCIES = ['DAILY', 'WEEKLY', 'MONTHLY', 'YEARLY'];
 const RRULE_DAYS = ['SU', 'MO', 'TU', 'WE', 'TH', 'FR', 'SA'];
 const weekdayOf = (value: unknown) =>
@@ -165,6 +166,7 @@ export const recurrenceRule = (value: unknown, allDay: boolean, anchorDate: stri
   if (!value || typeof value !== 'object') return null;
   const rec = value as Record<string, unknown>;
   if (typeof rec.frequency !== 'string' || !FREQUENCIES.includes(rec.frequency)) return null;
+  if (rec.from === 'COMPLETION' && (rec.frequency === 'DAILY' || rec.frequency === 'WEEKLY')) return null;
   const interval = Number.isInteger(rec.interval) ? Math.max(1, rec.interval as number) : 1;
   const parts = [`FREQ=${rec.frequency}`, `INTERVAL=${interval}`];
   if (rec.frequency === 'WEEKLY') {

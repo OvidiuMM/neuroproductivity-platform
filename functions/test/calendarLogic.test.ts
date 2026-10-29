@@ -52,6 +52,57 @@ describe('calendar events on the server', () => {
     assert.equal(buildTaskEvent({ ...due, recurrence: { frequency: 'HOURLY' } }, MADRID, URL)?.recurrence, undefined);
   });
 
+  it('writes every N periods as the INTERVAL of the series', () => {
+    assert.deepEqual(
+      buildTaskEvent({ ...due, recurrence: { frequency: 'DAILY', interval: 3 } }, MADRID, URL)?.recurrence,
+      ['RRULE:FREQ=DAILY;INTERVAL=3']
+    );
+    assert.deepEqual(
+      buildTaskEvent({ ...due, recurrence: { frequency: 'WEEKLY', interval: 2, weekdays: [1, 5] } }, MADRID, URL)
+        ?.recurrence,
+      ['RRULE:FREQ=WEEKLY;INTERVAL=2;WKST=MO;BYDAY=MO,FR']
+    );
+    assert.equal(
+      recurrenceRule(
+        { frequency: 'MONTHLY', interval: 2, monthlyMode: 'DAY_OF_MONTH', monthDay: 16 },
+        false,
+        '2026-10-16',
+        MADRID
+      ),
+      'RRULE:FREQ=MONTHLY;INTERVAL=2;BYMONTHDAY=16'
+    );
+    // Un intervalo que no es un número entero cuenta como 1
+    assert.equal(
+      recurrenceRule({ frequency: 'DAILY', interval: '3' }, false, '2026-10-16', MADRID),
+      'RRULE:FREQ=DAILY;INTERVAL=1'
+    );
+  });
+
+  it('sends a task repeated from completion as a single event, the current repetition, with its reminder', () => {
+    for (const frequency of ['DAILY', 'WEEKLY']) {
+      const recurrence = { frequency, interval: 2, from: 'COMPLETION' };
+      assert.equal(recurrenceRule(recurrence, false, '2026-10-16', MADRID), null);
+      const event = buildTaskEvent({ ...due, alarmTime: '11:30', recurrence }, MADRID, URL);
+      assert.equal(event?.recurrence, undefined);
+      assert.deepEqual(event?.start, { dateTime: '2026-10-16T10:00:00.000Z', timeZone: MADRID });
+      assert.deepEqual(event?.reminders.overrides, [{ method: 'popup', minutes: 30 }]);
+    }
+    // Solo en días y semanas: en meses y años, o con otro valor, es una serie en fechas fijas
+    assert.equal(
+      recurrenceRule(
+        { frequency: 'MONTHLY', interval: 1, monthDay: 16, from: 'COMPLETION' },
+        false,
+        '2026-10-16',
+        MADRID
+      ),
+      'RRULE:FREQ=MONTHLY;INTERVAL=1;BYMONTHDAY=16'
+    );
+    assert.equal(
+      recurrenceRule({ frequency: 'DAILY', interval: 2, from: 'SCHEDULE' }, false, '2026-10-16', MADRID),
+      'RRULE:FREQ=DAILY;INTERVAL=2'
+    );
+  });
+
   it('drops a series whose end is not a real day, rather than repeating it forever', () => {
     assert.equal(
       recurrenceRule({ frequency: 'DAILY', interval: 1, until: '2026-02-30' }, false, '2026-02-01', MADRID),

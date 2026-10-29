@@ -102,6 +102,9 @@ export interface Recurrence {
   nth?: number; // NTH_WEEKDAY: 1–4
   weekday?: number; // NTH_WEEKDAY y LAST_WEEKDAY: 0 = domingo … 6 = sábado
   until?: string; // YYYY-MM-DD: sin repeticiones después de esta fecha (opcional)
+  // DAILY y WEEKLY: la siguiente vence N días o semanas después del día en que se hace (sin días de la semana). Sin
+  // él, en fechas fijas desde el inicio de la serie (también las de antes de 1.1.0)
+  from?: 'COMPLETION';
 }
 
 export interface WheelOfLifeLog {
@@ -188,6 +191,7 @@ export interface TaskFormValues {
   repeatInterval: number;
   repeatWeekdays: number[];
   repeatMonthlyMode: MonthlyMode;
+  repeatFromCompletion: boolean; // la siguiente, N días o semanas después de hacerla (Recurrence.from)
 }
 
 // BORRADOR DE TAREA: una tarea nueva que se cerró sin guardar. Se guarda sola en «Borradores» (en la cuenta) para
