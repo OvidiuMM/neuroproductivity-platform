@@ -1,4 +1,5 @@
-import { CALENDAR_SUMMARY, EVENT_MARK, type CalendarEventBody } from './calendarLogic';
+import { CALENDAR_SUMMARY, calendarDescription, EVENT_MARK, type CalendarEventBody } from './calendarLogic';
+import type { Language } from './i18n';
 
 // API DE GOOGLE (OAuth y Calendar), con fetch. Solo se usa el permiso `calendar.app.created`: crear un calendario
 // propio («CLAR») y sus eventos; el resto de calendarios de la persona no se ven ni se tocan. functions/test/
@@ -36,8 +37,8 @@ export interface GoogleCalendarApi {
   ): Promise<{ refreshToken: string | null; accessToken: string; expiresIn: number; scope: string }>;
   refreshAccessToken(client: OAuthClient, refreshToken: string): Promise<{ accessToken: string; expiresIn: number }>;
   revoke(token: string): Promise<void>;
-  // El calendario «CLAR»: el que ya había si sigue existiendo; si no, uno nuevo
-  ensureCalendar(accessToken: string, timeZone: string, previousId?: string): Promise<string>;
+  // El calendario «CLAR»: el que ya había si sigue existiendo; si no, uno nuevo, con su descripción en `language`
+  ensureCalendar(accessToken: string, timeZone: string, previousId?: string, language?: Language): Promise<string>;
   putEvent(accessToken: string, calendarId: string, eventId: string, event: CalendarEventBody): Promise<void>;
   deleteEvent(accessToken: string, calendarId: string, eventId: string): Promise<void>;
   // Los ids de los eventos que creó CLAR en el calendario
@@ -144,7 +145,7 @@ export const googleCalendarApi: GoogleCalendarApi = {
     if (!res.ok && res.status !== 400) throw new GoogleApiError(res.status, await errorReason(res));
   },
 
-  async ensureCalendar(accessToken, timeZone, previousId) {
+  async ensureCalendar(accessToken, timeZone, previousId, language = 'es') {
     if (previousId) {
       const res = await call(calendarUrl(previousId), { method: 'GET' }, accessToken);
       if (res.ok) return previousId;
@@ -159,7 +160,7 @@ export const googleCalendarApi: GoogleCalendarApi = {
       `${API}/calendars`,
       {
         method: 'POST',
-        ...json({ summary: CALENDAR_SUMMARY, description: 'Tareas con fecha de CLAR (se actualizan solas).', timeZone })
+        ...json({ summary: CALENDAR_SUMMARY, description: calendarDescription(language), timeZone })
       },
       accessToken
     );
