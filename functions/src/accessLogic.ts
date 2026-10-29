@@ -1,3 +1,5 @@
+import { messages, type Language } from './i18n';
+
 // Reglas de la aprobación de accesos, sin dependencias de Firebase para poder probarlas aisladas
 
 // blocked: lista negra. No puede volver a pedir acceso, ni entrar sola con la aprobación libre; también se bloquea su
@@ -16,6 +18,8 @@ export interface AccessRecord {
   decidedAt?: string;
   // Pendiente tras un rechazo o una retirada: la decide la administración también con la aprobación libre
   review?: boolean;
+  // El idioma de la app al pedir acceso (desde 1.2.0): el del aviso de aprobación si la cuenta aún no tiene el suyo
+  language?: Language;
 }
 
 export interface AuthToken {
@@ -137,20 +141,28 @@ export const publicAppUrl = (configured: string, projectId: string) => {
 // Avisos: a la administración por cada solicitud nueva y a la persona cuando se aprueba su acceso
 export type AccessEmail = 'new-request' | 'approved';
 
+// El aviso de aprobación, en el idioma de la persona
+const approvedEmail = messages(
+  {
+    subject: 'Ya tienes acceso a CLAR',
+    greeting: (name: string) => `Hola${name ? ` ${name}` : ''}:`,
+    body: 'Tu solicitud de acceso a CLAR está aprobada. Ya puedes entrar con la misma cuenta con la que la pediste:'
+  },
+  {
+    subject: 'You now have access to CLAR',
+    greeting: (name) => `Hi${name ? ` ${name}` : ''},`,
+    body: 'Your request for access to CLAR has been approved. You can now sign in with the same account you used to request it:'
+  }
+);
+
 // Correos solo en texto plano. El aviso a la administración no lleva datos de quien pide acceso (minimización): se
-// leen en la app
-export const buildEmail = (kind: AccessEmail, record: AccessRecord, appUrl: string) =>
-  kind === 'new-request'
-    ? {
-        subject: 'Nueva solicitud de acceso a CLAR',
-        text: `Hay una solicitud de acceso nueva. Revísala en «Administración» → «Solicitudes»: ${appUrl}`
-      }
-    : {
-        subject: 'Ya tienes acceso a CLAR',
-        text: [
-          `Hola${record.name ? ` ${record.name}` : ''}:`,
-          '',
-          'Tu solicitud de acceso a CLAR está aprobada. Ya puedes entrar con la misma cuenta con la que la pediste:',
-          appUrl
-        ].join('\n')
-      };
+// leen en la app. Va siempre en español; el de aprobación, en el idioma de la persona (`language`)
+export const buildEmail = (kind: AccessEmail, record: AccessRecord, appUrl: string, language: Language = 'es') => {
+  if (kind === 'new-request')
+    return {
+      subject: 'Nueva solicitud de acceso a CLAR',
+      text: `Hay una solicitud de acceso nueva. Revísala en «Administración» → «Solicitudes»: ${appUrl}`
+    };
+  const t = approvedEmail[language];
+  return { subject: t.subject, text: [t.greeting(record.name), '', t.body, appUrl].join('\n') };
+};

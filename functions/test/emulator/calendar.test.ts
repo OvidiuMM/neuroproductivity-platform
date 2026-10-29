@@ -31,6 +31,8 @@ const request = (code = 'abc') => ({
 const fakeGoogle = () => {
   const events = new Map<string, CalendarEventBody>();
   const calls: string[] = [];
+  // El idioma con el que se pidió cada calendario
+  const calendarLanguages: (string | undefined)[] = [];
   let failure: GoogleApiError | null = null;
   const during: { exchange?: () => Promise<unknown>; put?: () => Promise<unknown>; list?: () => Promise<unknown> } = {};
   const api: GoogleCalendarApi = {
@@ -48,8 +50,9 @@ const fakeGoogle = () => {
       calls.push(`revoke:${token}`);
       return Promise.resolve();
     },
-    ensureCalendar: (_token, _timeZone, previousId) => {
+    ensureCalendar: (_token, _timeZone, previousId, language) => {
       calls.push(`calendar:${previousId ?? 'new'}`);
+      calendarLanguages.push(language);
       return Promise.resolve(previousId ?? 'calendar-1');
     },
     putEvent: async (_token, calendarId, eventId, event) => {
@@ -77,7 +80,14 @@ const fakeGoogle = () => {
     revoke: (token) => api.revoke(token),
     appUrl: () => URL
   };
-  return { deps, events, calls, during, failWith: (error: GoogleApiError | null) => (failure = error) };
+  return {
+    deps,
+    events,
+    calls,
+    calendarLanguages,
+    during,
+    failWith: (error: GoogleApiError | null) => (failure = error)
+  };
 };
 
 const approve = (uid: string) => db.doc(`access/${uid}`).set({ status: 'approved', email: `${uid}@example.com` });
@@ -120,6 +130,34 @@ describe('Google Calendar sync', () => {
     const link = (await db.doc('calendar_tokens/cal-ana').get()).data();
     assert.equal(link?.calendarId, 'calendar-1');
     assert.equal(JSON.stringify(link).includes('refresh-abc'), false);
+  });
+
+  it('writes the calendar and the events in the language of the account (without one, in Spanish)', async () => {
+    const google = fakeGoogle();
+    await approve('cal-ana');
+    await grant('cal-ana');
+    await db.doc('users/cal-ana').set({ language: 'en' });
+    const observations = [{ type: 'checklist', text: 'Leer la cláusula 3', completed: false }];
+    await task('cal-ana', 't1', { dueDate: '2026-10-16', observations });
+    await connectCalendar('cal-ana', request(), google.deps);
+    assert.deepEqual(google.calendarLanguages, ['en']);
+    const english = [...google.events.values()][0];
+    // Lo que escribió la persona no se traduce
+    assert.equal(english.summary, 'Revisar el contrato');
+    assert.ok(english.description.startsWith('Notes:<ul><li>☐ Leer la cláusula 3</li></ul>'));
+    assert.ok(english.description.endsWith(`CLAR task: <a href="${URL}">${URL}</a>`));
+
+    // Al cambiar de idioma, cada evento pasa al nuevo con el siguiente cambio de su tarea
+    await db.doc('users/cal-ana').set({ language: 'es' });
+    await task('cal-ana', 't1', { dueDate: '2026-10-17', observations });
+    assert.equal(await syncTaskEvent('cal-ana', 't1', google.deps), 'saved');
+    assert.ok([...google.events.values()][0].description.startsWith('Notas:<ul><li>☐ Leer la cláusula 3</li></ul>'));
+
+    const other = fakeGoogle();
+    await approve('cal-bruno');
+    await grant('cal-bruno');
+    await connectCalendar('cal-bruno', request(), other.deps);
+    assert.deepEqual(other.calendarLanguages, ['es']);
   });
 
   it('refuses to connect without the feature, or without the calendar or offline permission', async () => {
