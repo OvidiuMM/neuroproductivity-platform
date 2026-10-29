@@ -14,6 +14,42 @@ import { alarmLabel, alarmMoment, describeAlarm } from '../services/alarms';
 import { TaskDates } from './TaskDates';
 import { TaskActionsMenu } from './TaskActionsMenu';
 import { useAreas } from '../hooks/useAreas';
+import { messages } from '../i18n/locale';
+
+const m = messages(
+  {
+    lowered: (original: string) =>
+      `Prioridad original: ${original}. Cuenta un nivel menos porque la fecha límite está a más de una semana.`,
+    farDeadline: 'plazo > 1 semana',
+    originalPriority: (original: string) => `(prioridad original: ${original})`,
+    pastAlarm: (label: string) => `Alarma de ${label}.`,
+    alarm: 'Alarma:',
+    estimate: 'Estimación:',
+    blocked: 'Bloqueada',
+    markDone: (title: string) => `Marcar «${title}» como hecha`,
+    markDoneTitle: 'Marcar como hecha',
+    goal: 'Meta:',
+    waitingFor: (title: string) => `Bloqueada: espera a «${title}»`,
+    edit: (title: string) => `Editar «${title}»`,
+    editTitle: 'Editar'
+  },
+  {
+    lowered: (original) =>
+      `Original priority: ${original}. It counts one level lower because the due date is more than a week away.`,
+    farDeadline: 'due > 1 week',
+    originalPriority: (original) => `(original priority: ${original})`,
+    pastAlarm: (label) => `Alarm: ${label}.`,
+    alarm: 'Alarm:',
+    estimate: 'Estimate:',
+    blocked: 'Blocked',
+    markDone: (title) => `Mark “${title}” as done`,
+    markDoneTitle: 'Mark as done',
+    goal: 'Goal:',
+    waitingFor: (title) => `Blocked: waiting for “${title}”`,
+    edit: (title) => `Edit “${title}”`,
+    editTitle: 'Edit'
+  }
+);
 
 // top: Top 10 (elevada, con descripción) · peripheral: posición 11 en adelante (plana) · someday: «Algún día»
 type Variant = 'top' | 'peripheral' | 'someday';
@@ -57,11 +93,11 @@ const PriorityBadge: React.FC<{ task: TaskItem; now: Date }> = ({ task, now }) =
       {effective !== task.priority && (
         <span
           className="inline-flex items-center gap-0.5 text-[10px] font-semibold text-slate-500"
-          title={`Prioridad original: ${PRIORITY_LABEL[task.priority]}. Cuenta un nivel menos porque la fecha límite está a más de una semana.`}
+          title={m.lowered(PRIORITY_LABEL[task.priority])}
         >
           <ArrowDown className="h-3 w-3" aria-hidden="true" />
-          plazo &gt; 1 semana
-          <span className="sr-only">(prioridad original: {PRIORITY_LABEL[task.priority]})</span>
+          {m.farDeadline}
+          <span className="sr-only">{m.originalPriority(PRIORITY_LABEL[task.priority])}</span>
         </span>
       )}
     </span>
@@ -75,10 +111,10 @@ const AlarmBadge: React.FC<{ task: TaskItem; now: Date }> = ({ task, now }) => {
   return (
     <span
       className="inline-flex items-center gap-1"
-      title={(at > now ? describeAlarm(task, now) : `Alarma de ${alarmLabel(at, now)}.`) ?? undefined}
+      title={(at > now ? describeAlarm(task, now) : m.pastAlarm(alarmLabel(at, now))) ?? undefined}
     >
       <Bell className="h-3 w-3" aria-hidden="true" />
-      <span className="sr-only">Alarma:</span>
+      <span className="sr-only">{m.alarm}</span>
       {alarmLabel(at, now)}
     </span>
   );
@@ -88,7 +124,7 @@ const EstimateBadge: React.FC<{ minutes?: number }> = ({ minutes }) =>
   minutes === undefined ? null : (
     <span className="inline-flex items-center gap-1 font-semibold">
       <Timer className="h-3 w-3" aria-hidden="true" />
-      <span className="sr-only">Estimación:</span>
+      <span className="sr-only">{m.estimate}</span>
       {formatEstimate(minutes)}
     </span>
   );
@@ -141,15 +177,15 @@ export const TaskCard: React.FC<TaskCardProps> = ({
     >
       {blocker ? (
         // Bloqueada: en lugar del círculo para completarla, un candado (lo explica la etiqueta de la tarjeta)
-        <span className="flex h-11 w-11 shrink-0 items-center justify-center" title="Bloqueada" aria-hidden="true">
+        <span className="flex h-11 w-11 shrink-0 items-center justify-center" title={m.blocked} aria-hidden="true">
           <Lock className="h-4 w-4 text-amber-700" />
         </span>
       ) : (
         <button
           type="button"
           onClick={() => onChangeStatus(task, 'DONE')}
-          aria-label={`Marcar «${task.title}» como hecha`}
-          title="Marcar como hecha"
+          aria-label={m.markDone(task.title)}
+          title={m.markDoneTitle}
           className="group flex h-11 w-11 shrink-0 items-center justify-center rounded-full"
         >
           <span className="flex h-6 w-6 items-center justify-center rounded-full border-2 border-slate-300 transition-colors group-hover:border-emerald-500 group-hover:bg-emerald-50 group-focus-visible:border-emerald-500 group-active:bg-emerald-100">
@@ -201,7 +237,7 @@ export const TaskCard: React.FC<TaskCardProps> = ({
           {goal ? (
             <span className="inline-flex items-center gap-1 font-semibold text-indigo-700">
               <Target className="h-3 w-3 text-indigo-500" aria-hidden="true" />
-              <span className="sr-only">Meta:</span>
+              <span className="sr-only">{m.goal}</span>
               {goal.title}
             </span>
           ) : (
@@ -215,7 +251,7 @@ export const TaskCard: React.FC<TaskCardProps> = ({
           {blocker ? (
             <span className="inline-flex items-center gap-1 font-semibold text-amber-800">
               <Lock className="h-3 w-3" aria-hidden="true" />
-              Bloqueada: espera a «{blocker.title}»
+              {m.waitingFor(blocker.title)}
             </span>
           ) : (
             <StatusBadge status={task.status} />
@@ -226,8 +262,8 @@ export const TaskCard: React.FC<TaskCardProps> = ({
       <button
         type="button"
         onClick={() => onEdit(task)}
-        aria-label={`Editar «${task.title}»`}
-        title="Editar"
+        aria-label={m.edit(task.title)}
+        title={m.editTitle}
         className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl text-slate-500 hover:bg-slate-100 hover:text-slate-800"
       >
         <Pencil className="h-4 w-4" aria-hidden="true" />

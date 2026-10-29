@@ -13,6 +13,28 @@ import {
 } from '../services/dateInput';
 import { toDateString } from '../services/recurrence';
 import { toLocalDate } from '../services/tasks';
+import { LOCALE_TAG, messages } from '../i18n/locale';
+
+const m = messages(
+  {
+    invalid: (format: string) => `Escribe la fecha como ${format}`,
+    required: 'Elige una fecha',
+    calendar: (label: string) => `Calendario: ${label}`,
+    previousMonth: 'Mes anterior',
+    nextMonth: 'Mes siguiente',
+    today: 'Hoy',
+    clear: 'Borrar'
+  },
+  {
+    invalid: (format) => `Write the date as ${format}`,
+    required: 'Choose a date',
+    calendar: (label) => `Calendar: ${label}`,
+    previousMonth: 'Previous month',
+    nextMonth: 'Next month',
+    today: 'Today',
+    clear: 'Clear'
+  }
+);
 
 interface DateFieldProps {
   // Nombre del campo: nombre accesible del texto (salvo que haya un <label htmlFor={id}> visible) y del calendario
@@ -30,10 +52,10 @@ interface DateFieldProps {
 
 const POPOVER_WIDTH = 288;
 const VIEWPORT_MARGIN = 8;
-const INVALID_MESSAGE = `Escribe la fecha como ${DATE_INPUT_PLACEHOLDER}`;
-const REQUIRED_MESSAGE = 'Elige una fecha';
-const monthFormat = new Intl.DateTimeFormat('es-ES', { month: 'long', year: 'numeric' });
-const fullDayFormat = new Intl.DateTimeFormat('es-ES', {
+const INVALID_MESSAGE = m.invalid(DATE_INPUT_PLACEHOLDER);
+const REQUIRED_MESSAGE = m.required;
+const monthFormat = new Intl.DateTimeFormat(LOCALE_TAG, { month: 'long', year: 'numeric' });
+const fullDayFormat = new Intl.DateTimeFormat(LOCALE_TAG, {
   weekday: 'long',
   day: 'numeric',
   month: 'long',
@@ -223,7 +245,7 @@ export const DateField: React.FC<DateFieldProps> = ({
         ref={buttonRef}
         type="button"
         onClick={toggle}
-        aria-label={`Calendario: ${label}`}
+        aria-label={m.calendar(label)}
         aria-haspopup="dialog"
         aria-expanded={open}
         aria-controls={open ? dialogId : undefined}
@@ -254,7 +276,7 @@ export const DateField: React.FC<DateFieldProps> = ({
               <button
                 type="button"
                 onClick={() => setFocusDate((d) => addMonthsTo(d, -1))}
-                aria-label="Mes anterior"
+                aria-label={m.previousMonth}
                 className="rounded-lg p-1.5 text-slate-700 hover:bg-slate-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400"
               >
                 <ChevronLeft className="h-4 w-4" aria-hidden="true" />
@@ -266,7 +288,7 @@ export const DateField: React.FC<DateFieldProps> = ({
               <button
                 type="button"
                 onClick={() => setFocusDate((d) => addMonthsTo(d, 1))}
-                aria-label="Mes siguiente"
+                aria-label={m.nextMonth}
                 className="rounded-lg p-1.5 text-slate-700 hover:bg-slate-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400"
               >
                 <ChevronRight className="h-4 w-4" aria-hidden="true" />
@@ -329,14 +351,14 @@ export const DateField: React.FC<DateFieldProps> = ({
                 onClick={() => select(today)}
                 className="rounded-lg px-2.5 py-1 font-semibold text-indigo-700 hover:bg-indigo-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400"
               >
-                Hoy
+                {m.today}
               </button>
               <button
                 type="button"
                 onClick={() => select('')}
                 className="rounded-lg px-2.5 py-1 font-semibold text-slate-600 hover:bg-slate-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400"
               >
-                Borrar
+                {m.clear}
               </button>
             </div>
           </div>,

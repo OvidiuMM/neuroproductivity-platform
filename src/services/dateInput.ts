@@ -1,18 +1,30 @@
 import { toDateString } from './recurrence';
 import { toLocalDate } from './tasks';
+import { messages } from '../i18n/locale';
 
 // Días de la semana empezando en lunes (`day` sigue a Date.getDay(): 0 = domingo)
-export const WEEKDAYS_MONDAY_FIRST = [
-  { day: 1, short: 'L', name: 'lunes' },
-  { day: 2, short: 'M', name: 'martes' },
-  { day: 3, short: 'X', name: 'miércoles' },
-  { day: 4, short: 'J', name: 'jueves' },
-  { day: 5, short: 'V', name: 'viernes' },
-  { day: 6, short: 'S', name: 'sábado' },
-  { day: 0, short: 'D', name: 'domingo' }
-] as const;
+export const WEEKDAYS_MONDAY_FIRST: readonly { day: number; short: string; name: string }[] = messages(
+  [
+    { day: 1, short: 'L', name: 'lunes' },
+    { day: 2, short: 'M', name: 'martes' },
+    { day: 3, short: 'X', name: 'miércoles' },
+    { day: 4, short: 'J', name: 'jueves' },
+    { day: 5, short: 'V', name: 'viernes' },
+    { day: 6, short: 'S', name: 'sábado' },
+    { day: 0, short: 'D', name: 'domingo' }
+  ],
+  [
+    { day: 1, short: 'M', name: 'Monday' },
+    { day: 2, short: 'T', name: 'Tuesday' },
+    { day: 3, short: 'W', name: 'Wednesday' },
+    { day: 4, short: 'T', name: 'Thursday' },
+    { day: 5, short: 'F', name: 'Friday' },
+    { day: 6, short: 'S', name: 'Saturday' },
+    { day: 0, short: 'S', name: 'Sunday' }
+  ]
+);
 
-export const DATE_INPUT_PLACEHOLDER = 'dd/mm/aaaa';
+export const DATE_INPUT_PLACEHOLDER = messages<string>('dd/mm/aaaa', 'dd/mm/yyyy');
 
 // YYYY-MM-DD → dd/mm/aaaa
 export const formatDateInput = (date: string) => {
