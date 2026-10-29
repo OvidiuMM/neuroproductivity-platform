@@ -405,6 +405,9 @@ export const AccessAdminView: React.FC<AccessAdminViewProps> = ({
                             <p className="text-sm font-semibold break-words text-slate-900">
                               {request.name || request.email}
                               {newSince && request.status === 'approved' && request.requestedAt > newSince && (
+                                <span className="sr-only">, </span>
+                              )}
+                              {newSince && request.status === 'approved' && request.requestedAt > newSince && (
                                 <span className="ml-2 rounded-full bg-red-600 px-1.5 py-0.5 align-middle text-[10px] font-bold text-white">
                                   {m.isNew}
                                 </span>

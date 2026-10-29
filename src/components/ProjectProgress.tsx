@@ -8,14 +8,15 @@ const m = messages(
     noTasks: 'Aún no tiene tareas.',
     progressOf: (title: string) => `Avance de «${title}»`,
     percent: (n: number) => `${n} %`,
-    valueText: (percent: number, done: number, total: number) => `${percent} %: ${done} de ${total} tareas hechas`,
+    valueText: (percent: number, done: number, total: number) =>
+      `${percent} %: ${done} de ${total} ${total === 1 ? 'tarea hecha' : 'tareas hechas'}`,
     summary: (done: number, total: number) => `${done} de ${total} ${total === 1 ? 'tarea hecha' : 'tareas hechas'}`
   },
   {
     noTasks: 'No tasks yet.',
     progressOf: (title) => `Progress of “${title}”`,
     percent: (n) => `${n}%`,
-    valueText: (percent, done, total) => `${percent}%: ${done} of ${total} tasks done`,
+    valueText: (percent, done, total) => `${percent}%: ${done} of ${total} ${total === 1 ? 'task done' : 'tasks done'}`,
     summary: (done, total) => `${done} of ${total} ${total === 1 ? 'task done' : 'tasks done'}`
   }
 );

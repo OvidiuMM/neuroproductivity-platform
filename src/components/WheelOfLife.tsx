@@ -38,13 +38,13 @@ const m = messages(
   },
   {
     firstStepTitle: 'First step: assess your Wheel of Life',
-    firstStepBefore: 'Score from 0 to 10 how satisfied you are now with each area and press ',
+    firstStepBefore: 'Rate from 0 to 10 how satisfied you are now with each area and press ',
     firstStepAfter:
       '. It will be your starting point: “Goals” shows the lowest areas first so you can set goals for them, and you can compare your progress with each new assessment.',
     viewHelp: 'View help',
     wheel: 'Wheel of Life',
     intro:
-      'Score from 0 to 10 how satisfied you are with each area of your life. The lowest ones are the starting point for your goals, and each assessment is saved so you can see how you change.',
+      'Rate from 0 to 10 how satisfied you are with each area of your life. The lowest ones are the starting point for your goals, and each assessment is saved so you can see how you change.',
     editAreas: 'Edit areas',
     compare: 'Compare with an earlier assessment',
     chart: 'Wheel of Life chart',

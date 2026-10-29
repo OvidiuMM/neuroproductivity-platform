@@ -33,7 +33,7 @@ const REQUEST_ERRORS: Record<string, string | undefined> = messages(
     'functions/permission-denied': 'Confirma tu email antes de solicitar acceso.'
   },
   {
-    'functions/resource-exhausted': 'You can ask for access again later.',
+    'functions/resource-exhausted': 'You can request access again later.',
     'functions/failed-precondition': "Your account doesn't have an email we can notify you at.",
     'functions/permission-denied': 'Confirm your email before you request access.'
   }

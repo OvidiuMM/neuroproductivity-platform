@@ -71,7 +71,7 @@ test('Metas orders the areas by score, flags weak ones without goals, and a task
   await expect(pending).toContainText('Profesional · Vence el 15 jun 2030');
   await expect(finances.getByRole('progressbar', { name: `Progreso de «${goalTitle}»` })).toHaveAttribute(
     'aria-valuetext',
-    '0 de 1 tareas hechas'
+    '0 de 1 tarea hecha'
   );
 
   // Pulsar la tarea la abre para editarla
@@ -89,7 +89,7 @@ test('Metas orders the areas by score, flags weak ones without goals, and a task
   await openSection(page, 'Metas');
   await expect(finances.getByRole('progressbar', { name: `Progreso de «${goalTitle}»` })).toHaveAttribute(
     'aria-valuetext',
-    '1 de 1 tareas hechas'
+    '1 de 1 tarea hecha'
   );
   await expect(pending).toHaveCount(0);
 
