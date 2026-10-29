@@ -1276,7 +1276,7 @@ export const TaskModal: React.FC<TaskModalProps> = ({
               </div>
 
               {/* FECHAS OPCIONALES: plazo (solo fecha límite) o intervalo (inicio + fecha límite), con hora opcional */}
-              <fieldset className="space-y-3 rounded-xl border border-slate-200 p-3.5">
+              <fieldset className="min-w-0 space-y-3 rounded-xl border border-slate-200 p-3.5">
                 <legend className="flex items-center gap-1.5 px-1 text-xs font-bold tracking-wider text-slate-600 uppercase">
                   <CalendarClock className="h-3.5 w-3.5 text-indigo-600" />
                   Inicio y repetición (opcional)
@@ -1332,8 +1332,9 @@ export const TaskModal: React.FC<TaskModalProps> = ({
                         <Repeat className="h-3.5 w-3.5 text-indigo-600" aria-hidden="true" />
                         Repetir
                       </label>
-                      {/* «Cada [N] [unidad]» va junto: si no cabe en la línea, pasa entero a la siguiente */}
-                      <div className="flex items-center gap-2">
+                      {/* «Cada [N] [unidad]» va junto: si no cabe en la línea, pasa entero a la siguiente (y, con el
+                          texto muy grande, la unidad baja también) */}
+                      <div className="flex min-w-0 flex-wrap items-center gap-2">
                         {repeatFrequency && (
                           <>
                             <label htmlFor="task-repeat-interval" className="text-xs text-slate-700">
@@ -1368,7 +1369,7 @@ export const TaskModal: React.FC<TaskModalProps> = ({
                             setIntervalText(null);
                             setRepeatFrequency(value);
                           }}
-                          className="rounded-lg border border-slate-300 bg-white px-2.5 py-1.5 text-xs focus:ring-2 focus:ring-indigo-400 focus:outline-none"
+                          className="max-w-full min-w-0 rounded-lg border border-slate-300 bg-white px-2.5 py-1.5 text-xs focus:ring-2 focus:ring-indigo-400 focus:outline-none"
                         >
                           <option value="">No se repite</option>
                           {/* Al repetir, tras «Cada N» solo va la unidad, en singular o plural según N. Sin repetir, la

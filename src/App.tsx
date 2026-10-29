@@ -1216,8 +1216,10 @@ export default function App({ user, services, isAdmin = false }: AppProps) {
   // formulario, o la tarea ya no está (confirmado por el servidor), se descarta
   if (launchAlarm !== null && isTaskModalOpen) setLaunchAlarm(null);
   else if (launchAlarm !== null && launchReady) {
-    const taskId = launchAlarm.slice(0, launchAlarm.lastIndexOf('@'));
-    const task = tasks.find((t) => t.id === taskId && !isArchived(t));
+    // La clave es «tarea@momento»: sin «@» no es de una alarma y no abre nada
+    const at = launchAlarm.lastIndexOf('@');
+    const taskId = at > 0 ? launchAlarm.slice(0, at) : null;
+    const task = taskId ? tasks.find((t) => t.id === taskId && !isArchived(t)) : undefined;
     if (task) {
       setLaunchAlarm(null);
       openAlarmTask(task);
