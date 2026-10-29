@@ -67,7 +67,7 @@ service cloud.firestore {
       return keys.hasOnly([
         'name', 'email', 'photoUrl', 'createdAt', 'lastLoginAt',
         'hasSeenOnboarding', 'onboardingVersion', 'onboardingSeenAt', 'onboardingOutcome',
-        'wheelAreas', 'featurePrefs', 'releaseNotesSeen', 'termsAcceptedAt', 'termsVersion'
+        'wheelAreas', 'featurePrefs', 'releaseNotesSeen', 'termsAcceptedAt', 'termsVersion', 'language'
       ]);
     }
 

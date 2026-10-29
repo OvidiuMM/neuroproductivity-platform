@@ -18,6 +18,7 @@ import { connectFunctionsEmulator, getFunctions, type Functions } from 'firebase
 // push.ts usa usingEmulators solo dentro de sus funciones: la importación circular no da problemas al cargar
 import { unregisterPushDevice } from './push';
 import { withAuthDomain } from './authDomain';
+import { LOCALE } from '../i18n/locale';
 
 // En desarrollo y en los tests e2e la app habla con los emuladores de Auth, Firestore y Functions (proyecto demo)
 export const usingEmulators = import.meta.env.VITE_USE_FIREBASE_EMULATORS === 'true';
@@ -77,8 +78,8 @@ export const getFirebase = (): Promise<FirebaseServices> => {
   services ??= loadConfig().then((config) => {
     const app = initializeApp(config);
     const auth = getAuth(app);
-    // Emails de verificación y de recuperación de contraseña en español
-    auth.languageCode = 'es';
+    // Emails de verificación y de recuperación de contraseña en el idioma de la app
+    auth.languageCode = LOCALE;
     // Caché persistente: la app funciona sin conexión y sincroniza al volver, también entre pestañas
     const db = initializeFirestore(app, {
       ignoreUndefinedProperties: true,

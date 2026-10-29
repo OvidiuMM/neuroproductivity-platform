@@ -109,6 +109,8 @@ describe('firestore.rules', () => {
     );
     // La última versión cuyas novedades vio
     await assertSucceeds(setDoc(doc(ana, 'users/ana'), { releaseNotesSeen: '0.9.6' }, { merge: true }));
+    // El idioma de la app
+    await assertSucceeds(setDoc(doc(ana, 'users/ana'), { language: 'en' }, { merge: true }));
     // La aceptación de las condiciones de uso
     await assertSucceeds(
       setDoc(doc(ana, 'users/ana'), { termsAcceptedAt: '2026-10-21', termsVersion: '2026-10-21' }, { merge: true })

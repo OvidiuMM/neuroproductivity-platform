@@ -25,6 +25,10 @@ import { isAndroid } from '../services/platform';
 import type { ExtraFeature, FeatureId } from '../services/features';
 import { CalendarConnection, type CalendarConnectionProps } from './CalendarConnection';
 import { ShareAppButton } from './ShareApp';
+import { LanguageSelector } from './LanguageSelector';
+import { messages } from '../i18n/locale';
+
+const m = messages({ language: 'Idioma' }, { language: 'Language' });
 
 interface AccountMenuProps {
   isOpen: boolean;
@@ -234,6 +238,11 @@ export const AccountMenu: React.FC<AccountMenuProps> = ({
           </div>
 
           <div className="space-y-2">
+            {/* El idioma de la app, en este dispositivo y en la cuenta (al cambiarlo, la app se vuelve a cargar) */}
+            <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-slate-200 px-4 py-2">
+              <span className="text-xs font-bold text-slate-700">{m.language}</span>
+              <LanguageSelector />
+            </div>
             <button type="button" onClick={onOpenAccessibility} disabled={busy !== null} className={actionClass}>
               <Accessibility className="h-4 w-4 text-indigo-600" aria-hidden="true" />
               Accesibilidad: tamaño del texto, contraste y animaciones
