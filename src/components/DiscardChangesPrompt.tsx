@@ -1,4 +1,10 @@
 import React, { useEffect, useRef } from 'react';
+import { messages } from '../i18n/locale';
+
+const m = messages(
+  { title: '¿Descartar los cambios?', keepEditing: 'Seguir editando', discard: 'Descartar' },
+  { title: 'Discard changes?', keepEditing: 'Keep editing', discard: 'Discard' }
+);
 
 // Pregunta antes de cerrar un formulario con cambios sin guardar. Va dentro de la ventana del formulario (que queda
 // inerte detrás): el foco empieza en «Seguir editando», la opción que no pierde nada, y al seguir editando vuelve
@@ -27,7 +33,7 @@ export const DiscardChangesPrompt: React.FC<{
         className="w-full max-w-sm space-y-3 rounded-2xl border border-slate-200 bg-white p-5 shadow-2xl"
       >
         <h3 id="discard-changes-title" className="text-sm font-bold text-slate-900">
-          ¿Descartar los cambios?
+          {m.title}
         </h3>
         <p id="discard-changes-text" className="text-xs leading-relaxed text-slate-700">
           {text}
@@ -39,14 +45,14 @@ export const DiscardChangesPrompt: React.FC<{
             onClick={onKeepEditing}
             className="min-h-11 rounded-xl border border-slate-200 px-4 text-xs font-semibold text-slate-800 hover:bg-slate-50"
           >
-            Seguir editando
+            {m.keepEditing}
           </button>
           <button
             type="button"
             onClick={onDiscard}
             className="min-h-11 rounded-xl bg-red-700 px-4 text-xs font-bold text-white hover:bg-red-800"
           >
-            Descartar
+            {m.discard}
           </button>
         </div>
       </div>

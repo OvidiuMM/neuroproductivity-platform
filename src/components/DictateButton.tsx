@@ -1,6 +1,12 @@
 import React, { useEffect, useEffectEvent, useRef, useState } from 'react';
 import { Mic, Square } from 'lucide-react';
 import { dictationAvailable, startDictation, type Dictation } from '../services/speech';
+import { messages } from '../i18n/locale';
+
+const m = messages(
+  { stop: 'Parar de dictar', listening: 'Escuchando… Habla ahora (como mucho 30 segundos).' },
+  { stop: 'Stop dictating', listening: 'Listening… Speak now (30 seconds at most).' }
+);
 
 // MICRÓFONO para dictar un campo: lo dicho se añade a lo que ya había. Pulsarlo otra vez para el dictado (que si no
 // termina al callar, o a los 30 segundos), y escribir a mano lo cancela. Solo sale en los navegadores que pueden
@@ -84,7 +90,7 @@ export const DictateButton: React.FC<{
         onClick={toggle}
         aria-label={label}
         aria-pressed={listening}
-        title={listening ? 'Parar de dictar' : label}
+        title={listening ? m.stop : label}
         data-autofocus={autoStart ? '' : undefined}
         className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg transition-colors ${
           listening
@@ -96,7 +102,7 @@ export const DictateButton: React.FC<{
       </button>
       {/* Lo que está pasando, también para los lectores de pantalla */}
       <span role="status" className="sr-only">
-        {listening ? 'Escuchando… Habla ahora (como mucho 30 segundos).' : ''}
+        {listening ? m.listening : ''}
       </span>
       {/* En su propia línea, al final de la fila (el campo y el micrófono van en una fila que se parte) */}
       {error && (

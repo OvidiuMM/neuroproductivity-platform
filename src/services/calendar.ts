@@ -2,6 +2,22 @@ import { TaskItem, TaskObservation } from '../types';
 import { dueMoment, formatDay, toLocalDate } from './tasks';
 import { toRRule } from './recurrence';
 import { alarmMoment } from './alarms';
+import { messages } from '../i18n/locale';
+
+const m = messages(
+  {
+    notes: 'Notas:',
+    dueDate: (date: string) => `Fecha límite: ${date}`,
+    clarTask: (url: string) => `Tarea de CLAR: ${url}`,
+    fullInClar: '… (completa en CLAR)'
+  },
+  {
+    notes: 'Notes:',
+    dueDate: (date) => `Due date: ${date}`,
+    clarTask: (url) => `CLAR task: ${url}`,
+    fullInClar: '… (full text in CLAR)'
+  }
+);
 
 // Evento de calendario a partir de las fechas de una tarea. Se exporta con enlaces "añadir evento"
 // de cada proveedor o con un archivo .ics: no hace falta conectar ninguna cuenta.
@@ -36,7 +52,7 @@ const notesText = (observations: TaskObservation[] = []) => {
       const link = o.url && o.url !== o.text ? ` (${o.url})` : '';
       return `- ${box}${o.text.trim()}${link}`;
     });
-  return lines.length ? `Notas:\n${lines.join('\n')}` : '';
+  return lines.length ? `${m.notes}\n${lines.join('\n')}` : '';
 };
 
 const addDays = (date: Date, days: number) => {
@@ -60,8 +76,8 @@ export const buildCalendarEvent = (
   const dateOnly = !task.startTime && !task.dueTime && !allDay;
   // Con inicio y sin hora límite, el evento (de una hora) no llega al día límite: se dice en la descripción
   const oneHour = Boolean(task.startTime && !task.dueTime);
-  const deadlineNote = oneHour && (task.startDate ?? dueDate) !== dueDate ? `Fecha límite: ${formatDay(dueDate)}` : '';
-  const description = [task.description, notesText(task.observations), deadlineNote, `Tarea de CLAR: ${appUrl}`]
+  const deadlineNote = oneHour && (task.startDate ?? dueDate) !== dueDate ? m.dueDate(formatDay(dueDate)) : '';
+  const description = [task.description, notesText(task.observations), deadlineNote, m.clarTask(appUrl)]
     .filter(Boolean)
     .join('\n\n');
   // Una repetición que cuenta desde que se hace no tiene serie: va como un evento suelto, el de la repetición actual
@@ -140,7 +156,7 @@ const localStamp = (d: Date) => `${localDay(d)}T${pad(d.getHours())}${pad(d.getM
 export const LINK_DESCRIPTION_MAX = 1500;
 const linkDescription = (description: string) =>
   description.length > LINK_DESCRIPTION_MAX
-    ? `${description.slice(0, LINK_DESCRIPTION_MAX).trimEnd()}… (completa en CLAR)`
+    ? `${description.slice(0, LINK_DESCRIPTION_MAX).trimEnd()}${m.fullInClar}`
     : description;
 
 export const googleCalendarUrl = (event: CalendarEvent) => {

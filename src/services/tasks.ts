@@ -1,19 +1,44 @@
 import { TaskItem, TaskPriority, TaskStatus } from '../types';
+import { LOCALE_TAG, messages } from '../i18n/locale';
+
+const m = messages(
+  {
+    status: {
+      PENDING: 'Pendiente',
+      IN_PROGRESS: 'En progreso',
+      BLOCKED: 'Bloqueada',
+      DONE: 'Hecha',
+      CANCELLED: 'Cancelada'
+    },
+    priority: { CRITICAL: 'Crítica', HIGH: 'Alta', MEDIUM: 'Media', LOW: 'Baja' },
+    due: (date: string) => `Vence: ${date}`,
+    rangeWithoutDue: 'Para un intervalo indica también la fecha límite.',
+    startAfterDue: 'La fecha de inicio no puede ser posterior a la fecha límite.'
+  },
+  {
+    status: {
+      PENDING: 'Pending',
+      IN_PROGRESS: 'In progress',
+      BLOCKED: 'Blocked',
+      DONE: 'Done',
+      CANCELLED: 'Canceled'
+    },
+    priority: { CRITICAL: 'Critical', HIGH: 'High', MEDIUM: 'Medium', LOW: 'Low' },
+    due: (date) => `Due: ${date}`,
+    rangeWithoutDue: 'For a date range, also set the due date.',
+    startAfterDue: "The start date can't be after the due date."
+  }
+);
 
 export const TASK_STATUSES: { value: TaskStatus; label: string; className: string }[] = [
-  { value: 'PENDING', label: 'Pendiente', className: 'bg-slate-100 text-slate-700 border-slate-200' },
-  { value: 'IN_PROGRESS', label: 'En progreso', className: 'bg-blue-50 text-blue-700 border-blue-200' },
-  { value: 'BLOCKED', label: 'Bloqueada', className: 'bg-amber-50 text-amber-800 border-amber-200' },
-  { value: 'DONE', label: 'Hecha', className: 'bg-emerald-50 text-emerald-700 border-emerald-200' },
-  { value: 'CANCELLED', label: 'Cancelada', className: 'bg-zinc-100 text-zinc-700 border-zinc-300' }
+  { value: 'PENDING', label: m.status.PENDING, className: 'bg-slate-100 text-slate-700 border-slate-200' },
+  { value: 'IN_PROGRESS', label: m.status.IN_PROGRESS, className: 'bg-blue-50 text-blue-700 border-blue-200' },
+  { value: 'BLOCKED', label: m.status.BLOCKED, className: 'bg-amber-50 text-amber-800 border-amber-200' },
+  { value: 'DONE', label: m.status.DONE, className: 'bg-emerald-50 text-emerald-700 border-emerald-200' },
+  { value: 'CANCELLED', label: m.status.CANCELLED, className: 'bg-zinc-100 text-zinc-700 border-zinc-300' }
 ];
 
-export const PRIORITY_LABEL: Record<TaskPriority, string> = {
-  CRITICAL: 'Crítica',
-  HIGH: 'Alta',
-  MEDIUM: 'Media',
-  LOW: 'Baja'
-};
+export const PRIORITY_LABEL: Record<TaskPriority, string> = m.priority;
 
 export const statusLabel = (status: TaskStatus) => TASK_STATUSES.find((s) => s.value === status)?.label ?? status;
 
@@ -104,7 +129,7 @@ export const DEADLINE_TITLE_CLASS: Record<DeadlineState, string> = {
   none: ''
 };
 
-const dateFormat = new Intl.DateTimeFormat('es-ES', { day: 'numeric', month: 'short', year: 'numeric' });
+const dateFormat = new Intl.DateTimeFormat(LOCALE_TAG, { day: 'numeric', month: 'short', year: 'numeric' });
 
 // Día en formato corto y legible (p. ej. «13 oct 2026»)
 export const formatDay = (date: string) => dateFormat.format(toLocalDate(date));
@@ -118,19 +143,17 @@ export const formatTaskDates = (
 ) => {
   if (!task.dueDate) return null;
   const due = formatPoint(task.dueDate, task.dueTime);
-  return task.startDate && !task.recurrence
-    ? `${formatPoint(task.startDate, task.startTime)} → ${due}`
-    : `Vence: ${due}`;
+  return task.startDate && !task.recurrence ? `${formatPoint(task.startDate, task.startTime)} → ${due}` : m.due(due);
 };
 
 export const validateTaskDates = (
   task: Pick<TaskItem, 'startDate' | 'startTime' | 'dueDate' | 'dueTime'>
 ): string | null => {
-  if (task.startDate && !task.dueDate) return 'Para un intervalo indica también la fecha límite.';
+  if (task.startDate && !task.dueDate) return m.rangeWithoutDue;
   if (task.startDate && task.dueDate) {
     const start = toLocalDate(task.startDate, task.startTime);
     const due = dueMoment(task)!;
-    if (start.getTime() > due.getTime()) return 'La fecha de inicio no puede ser posterior a la fecha límite.';
+    if (start.getTime() > due.getTime()) return m.startAfterDue;
   }
   return null;
 };
