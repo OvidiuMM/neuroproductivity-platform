@@ -15,6 +15,7 @@ import { popupsUnreliable } from './services/platform';
 import { LoadingScreen } from './components/BrandMark';
 import { getFirebase, type FirebaseServices } from './services/firebase';
 import { sendPasswordReset, signInWithEmail, signUpWithEmail } from './services/auth';
+import { messages } from './i18n/locale';
 
 type AuthState =
   | { status: 'loading' }
@@ -22,14 +23,34 @@ type AuthState =
   | { status: 'signed-out'; services: FirebaseServices }
   | { status: 'signed-in'; services: FirebaseServices; user: User };
 
-const SIGN_IN_ERRORS: Record<string, string> = {
-  'auth/network-request-failed': 'No hay conexión. Necesitas internet para iniciar sesión la primera vez.',
-  'auth/unauthorized-domain': 'Este dominio no está autorizado para iniciar sesión.',
-  'auth/operation-not-allowed': 'El inicio de sesión con Google no está activado en este proyecto.'
-};
+const SIGN_IN_ERRORS: Record<string, string> = messages(
+  {
+    'auth/network-request-failed': 'No hay conexión. Necesitas internet para iniciar sesión la primera vez.',
+    'auth/unauthorized-domain': 'Este dominio no está autorizado para iniciar sesión.',
+    'auth/operation-not-allowed': 'El inicio de sesión con Google no está activado en este proyecto.'
+  },
+  {
+    'auth/network-request-failed': "You're offline. You need internet to sign in the first time.",
+    'auth/unauthorized-domain': "This domain isn't authorized for sign-in.",
+    'auth/operation-not-allowed': "Google sign-in isn't enabled in this project."
+  }
+);
+
+const m = messages(
+  {
+    signInFailed: 'No se pudo iniciar sesión. Inténtalo de nuevo.',
+    loading: 'Cargando…',
+    startFailed: 'No se pudo iniciar la aplicación:'
+  },
+  {
+    signInFailed: "Couldn't sign in. Try again.",
+    loading: 'Loading…',
+    startFailed: "Couldn't start the app:"
+  }
+);
 
 const describeSignInError = (error: unknown) =>
-  (error instanceof FirebaseError && SIGN_IN_ERRORS[error.code]) || 'No se pudo iniciar sesión. Inténtalo de nuevo.';
+  (error instanceof FirebaseError && SIGN_IN_ERRORS[error.code]) || m.signInFailed;
 
 // Inicio de sesión obligatorio: la app solo se muestra con una cuenta (Google o email y contraseña)
 export const AuthGate: React.FC = () => {
@@ -85,14 +106,14 @@ export const AuthGate: React.FC = () => {
   };
 
   if (state.status === 'loading') {
-    return <LoadingScreen text="Cargando…" />;
+    return <LoadingScreen text={m.loading} />;
   }
 
   if (state.status === 'error') {
     return (
       <div className="flex min-h-screen items-center justify-center bg-slate-50 p-4">
         <p role="alert" className="max-w-md rounded-2xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">
-          No se pudo iniciar la aplicación: {state.message}
+          {m.startFailed} {state.message}
         </p>
       </div>
     );

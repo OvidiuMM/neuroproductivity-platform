@@ -1,5 +1,15 @@
 import React, { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { BRAND_NAME, BRAND_TAGLINE, BrandMark } from './BrandMark';
+import { messages } from '../i18n/locale';
+
+const m = messages(
+  {
+    loading: `Cargando ${BRAND_NAME}`,
+    preparing: 'Preparando tus datos…',
+    skip: 'Toca cualquier punto para omitir'
+  },
+  { loading: `Loading ${BRAND_NAME}`, preparing: 'Getting your data ready…', skip: 'Tap anywhere to skip' }
+);
 
 interface SplashScreenProps {
   onFinish?: () => void;
@@ -63,7 +73,7 @@ export const SplashScreen: React.FC<SplashScreenProps> = ({
         }, 200);
       }}
       role="status"
-      aria-label={`Cargando ${BRAND_NAME}`}
+      aria-label={m.loading}
       className={`fixed inset-0 z-50 flex flex-col items-center justify-between bg-slate-950 p-8 pt-[max(2rem,env(safe-area-inset-top))] pb-[max(2rem,env(safe-area-inset-bottom))] transition-all duration-300 select-none ${
         isFadingOut ? 'pointer-events-none scale-98 opacity-0' : 'scale-100 opacity-100'
       }`}
@@ -103,7 +113,7 @@ export const SplashScreen: React.FC<SplashScreenProps> = ({
             />
           </div>
           <div className="flex items-center justify-between font-mono text-[10px] text-slate-500">
-            <span>Preparando tus datos…</span>
+            <span>{m.preparing}</span>
             <span>{Math.min(100, progress)}%</span>
           </div>
         </div>
@@ -111,7 +121,7 @@ export const SplashScreen: React.FC<SplashScreenProps> = ({
 
       {/* Pie de pantalla de inicio */}
       <div className="z-10 space-y-1 pb-4 text-center">
-        <span className="text-[9px] text-slate-600">Toca cualquier punto para omitir</span>
+        <span className="text-[9px] text-slate-600">{m.skip}</span>
       </div>
     </div>
   );

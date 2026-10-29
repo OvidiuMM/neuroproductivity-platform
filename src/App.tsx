@@ -25,7 +25,7 @@ import {
   TaskFormValues,
   UserProfile
 } from './types';
-import { formatTaskDates, isArchived, isArchivedStatus, withStatus } from './services/tasks';
+import { formatDay, formatTaskDates, isArchived, isArchivedStatus, withStatus } from './services/tasks';
 import { nextRecurringTask } from './services/recurrence';
 import { forceSync, signOutAndClearCache, type FirebaseServices } from './services/firebase';
 import {
@@ -164,6 +164,8 @@ import type { ImportPlan } from './services/importData';
 import { changePassword, hasPassword } from './services/auth';
 import { useReauthMethods } from './hooks/useReauthMethods';
 import { CheckCircle2, Plus, Sparkles } from 'lucide-react';
+import { BRAND_TAGLINE } from './components/BrandMark';
+import { LOCALE_TAG, messages } from './i18n/locale';
 
 interface AppProps {
   user: User;
@@ -199,15 +201,240 @@ const ProductTour = retryableLazy(() => import('./components/ProductTour').then(
 const ReleaseNotesDialog = retryableLazy(() => import('./components/ReleaseNotes').then((m) => m.ReleaseNotesDialog));
 
 // Por qué no salió una respuesta a un mensaje de contacto (los códigos que devuelve replyToFeedback)
-const REPLY_ERRORS: Record<string, string> = {
-  'functions/permission-denied': 'Solo la administración puede responder los mensajes.',
-  'functions/invalid-argument': 'Escribe la respuesta.',
-  'functions/not-found': 'El mensaje ya no existe: quizá se eliminó la cuenta que lo envió.',
-  'functions/unavailable': 'No se pudo enviar la respuesta. Inténtalo de nuevo.',
-  'functions/failed-precondition': 'El envío de correos no está configurado.',
-  'functions/aborted':
-    'Esta respuesta ya se estaba enviando y no se sabe si salió: para no duplicarla, no se reenvía. Cancela y escribe otra si hace falta.'
-};
+const REPLY_ERRORS: Record<string, string> = messages(
+  {
+    'functions/permission-denied': 'Solo la administración puede responder los mensajes.',
+    'functions/invalid-argument': 'Escribe la respuesta.',
+    'functions/not-found': 'El mensaje ya no existe: quizá se eliminó la cuenta que lo envió.',
+    'functions/unavailable': 'No se pudo enviar la respuesta. Inténtalo de nuevo.',
+    'functions/failed-precondition': 'El envío de correos no está configurado.',
+    'functions/aborted':
+      'Esta respuesta ya se estaba enviando y no se sabe si salió: para no duplicarla, no se reenvía. Cancela y escribe otra si hace falta.'
+  },
+  {
+    'functions/permission-denied': 'Only the admin can reply to messages.',
+    'functions/invalid-argument': 'Write your reply.',
+    'functions/not-found': 'The message no longer exists: maybe the account that sent it was deleted.',
+    'functions/unavailable': "Couldn't send the reply. Try again.",
+    'functions/failed-precondition': "Sending emails isn't set up.",
+    'functions/aborted':
+      "This reply was already being sent and it's not known whether it went out: to avoid a duplicate, it isn't sent again. Cancel and write another one if needed."
+  }
+);
+
+// Textos de la app: avisos, errores y etiquetas
+const m = messages(
+  {
+    replyFailed: 'No se pudo enviar la respuesta. Comprueba la conexión e inténtalo de nuevo.',
+    yourAccount: 'Tu cuenta',
+    approvalLoadFailed: 'No se pudo cargar la configuración de la aprobación de cuentas.',
+    approvalOn: 'Aprobación obligatoria activada.',
+    approvalOffApproved: (approved: number) =>
+      `Aprobación desactivada. Se han aprobado ${approved === 1 ? '1 solicitud' : `${approved} solicitudes`}.`,
+    approvalOff: 'Aprobación desactivada: las cuentas nuevas entran solas.',
+    approvalFailed: 'No se pudo cambiar la aprobación de cuentas. Revisa tu conexión e inténtalo de nuevo.',
+    featuresLoadFailed: 'No se pudieron cargar las funciones extra de las cuentas. Vuelve a cargar la página.',
+    featuresSaved: 'Funciones extra guardadas.',
+    featuresNoAccess: 'Esta cuenta ya no tiene acceso: no puede tener funciones extra.',
+    featuresFailed: 'No se pudieron guardar las funciones extra. Revisa tu conexión e inténtalo de nuevo.',
+    requestsLoadFailed: 'No se pudieron cargar las solicitudes de acceso.',
+    messagesLoadFailed: 'No se pudieron cargar los mensajes.',
+    changeFailed: 'No se pudo guardar el cambio. Revisa tu conexión e inténtalo de nuevo.',
+    decisionFailed: 'No se pudo guardar la decisión. Revisa tu conexión e inténtalo de nuevo.',
+    // Lo que no se pudo hacer, dentro de couldNot
+    actions: {
+      sync: 'sincronizar',
+      loadData: 'cargar tus datos',
+      removeDraft: 'borrar el borrador',
+      restoreDraft: 'recuperar el borrador',
+      saveDraft: 'guardar el borrador',
+      undoDraft: 'deshacer el borrador',
+      deleteDraft: 'eliminar el borrador',
+      saveTask: 'guardar la tarea',
+      saveTaskAndNext: 'guardar la tarea y su siguiente repetición',
+      updateStatus: 'actualizar el estado',
+      saveGoal: 'guardar la meta',
+      deleteGoal: 'eliminar la meta',
+      saveProject: 'guardar el proyecto',
+      deleteProject: 'eliminar el proyecto',
+      deleteTask: 'eliminar la tarea',
+      saveAssessment: 'guardar la evaluación',
+      saveMeeting: 'guardar la reunión',
+      saveEmail: 'guardar el correo',
+      deleteEmail: 'eliminar el correo',
+      restoreEmail: 'recuperar el correo',
+      saveFeature: 'guardar la función extra',
+      saveAreas: 'guardar las áreas',
+      saveProgress: 'guardar tu progreso'
+    },
+    couldNot: (action: string) => `No se pudo ${action}. Revisa tu conexión e inténtalo de nuevo.`,
+    synced: 'Todo está sincronizado con el servidor.',
+    syncFailed: 'No se pudo sincronizar. Revisa tu conexión: tus cambios siguen guardados en este dispositivo.',
+    emptyDraftDeleted: 'Borrador vacío: eliminado.',
+    draftRestored: 'Borrador recuperado.',
+    draftSaved: 'Borrador guardado.',
+    savedAsDraft: 'Guardada en «Borradores», en Listas: puedes seguir con ella.',
+    draftAsBefore: 'El borrador vuelve a estar como antes.',
+    draftRemoved: 'Borrador quitado.',
+    draftDeleted: 'Borrador eliminado.',
+    taskSaved: 'Tarea guardada.',
+    taskSavedSomeday: 'Tarea guardada en «Algún día».',
+    taskAdded: 'Tarea añadida.',
+    undoing: 'Deshaciendo…',
+    taskRestored: 'Tarea recuperada.',
+    taskChanged: 'No se puede deshacer: la tarea ha cambiado entretanto.',
+    undoOffline: 'No se pudo deshacer: hace falta conexión. Puedes cambiarlo a mano.',
+    waitsFor: (title: string) => `Esta tarea espera a «${title}»: márcala como hecha o cancélala antes.`,
+    freedOne: (title: string) => ` Ya puedes empezar «${title}».`,
+    freedMany: (count: number) => ` Ya puedes empezar ${count} tareas que esperaban a esta.`,
+    closedWithNext: (canceled: boolean, next: string, freed: string) =>
+      `Tarea ${canceled ? 'cancelada' : 'hecha'} y archivada. Siguiente repetición: ${next}.${freed}`,
+    closedArchived: (canceled: boolean, freed: string) =>
+      `Tarea ${canceled ? 'cancelada' : 'hecha'} y archivada. La encontrarás en «Archivadas».${freed}`,
+    taskReactivated: 'Tarea reactivada: vuelve a su lista.',
+    goalSaved: 'Meta guardada.',
+    goalCreated: 'Meta creada. Añádele tareas en «Metas».',
+    goalAchieved: '¡Meta lograda!',
+    goalArchived: 'Meta archivada.',
+    goalReactivated: 'Meta reactivada.',
+    goalDeleted: 'Meta eliminada. Sus tareas siguen en tus listas.',
+    projectSaved: 'Proyecto guardado.',
+    projectCreated: 'Proyecto creado. Añádele tareas.',
+    projectFinished: 'Proyecto terminado.',
+    projectArchived: 'Proyecto archivado.',
+    projectReactivated: 'Proyecto reactivado.',
+    projectDeleted: 'Proyecto eliminado. Sus tareas siguen en la meta.',
+    taskDeleted: 'Tarea eliminada.',
+    // Nombre de una evaluación de la Rueda sin nombre, con su fecha
+    assessment: (date: string) => `Evaluación ${date}`,
+    assessmentSaved: 'Evaluación guardada.',
+    meetingSaved: 'Reunión guardada.',
+    emailSaved: 'Correo guardado.',
+    emailDraftSaved: 'Borrador guardado. Lo tienes en «Borradores».',
+    emailAutoDraft: 'Lo que escribiste se guardó como borrador.',
+    emailDeleted: 'Correo eliminado.',
+    emailRestored: 'Correo recuperado.',
+    emailChanged: 'No se puede deshacer: el correo se ha vuelto a guardar entretanto.',
+    importedItems: (n: number) => `${n} ${n === 1 ? 'elemento' : 'elementos'}`,
+    importedWheel: 'las áreas de tu Rueda',
+    importedAreas: (n: number) => `${n} ${n === 1 ? 'área' : 'áreas'}`,
+    imported: (parts: string[]) => `Importado: ${parts.join(' y ')}.`,
+    localImported: 'Datos importados a tu cuenta.',
+    localImportFailed: 'No se pudieron importar los datos. Comprueba tu conexión e inténtalo de nuevo.',
+    areasSaved: 'Áreas guardadas.',
+    allowNotifications: 'Para recibirlas, permite las notificaciones de CLAR en este navegador.',
+    alarmTitle: (time: string, title: string) => `Alarma de las ${time}: ${title}`,
+    skipToContent: 'Saltar al contenido',
+    newTask: 'Nueva tarea',
+    whatsNew: (version: string) => `CLAR v${version}: novedades de esta versión`,
+    viewHelp: 'Ver la ayuda',
+    undo: 'Deshacer'
+  },
+  {
+    replyFailed: "Couldn't send the reply. Check your connection and try again.",
+    yourAccount: 'Your account',
+    approvalLoadFailed: "Couldn't load the account approval settings.",
+    approvalOn: 'Approval required turned on.',
+    approvalOffApproved: (approved) =>
+      `Approval turned off. ${approved === 1 ? '1 request has' : `${approved} requests have`} been approved.`,
+    approvalOff: 'Approval turned off: new accounts get in by themselves.',
+    approvalFailed: "Couldn't change account approval. Check your connection and try again.",
+    featuresLoadFailed: "Couldn't load the accounts' extra features. Reload the page.",
+    featuresSaved: 'Extra features saved.',
+    featuresNoAccess: "This account no longer has access: it can't have extra features.",
+    featuresFailed: "Couldn't save the extra features. Check your connection and try again.",
+    requestsLoadFailed: "Couldn't load the access requests.",
+    messagesLoadFailed: "Couldn't load the messages.",
+    changeFailed: "Couldn't save the change. Check your connection and try again.",
+    decisionFailed: "Couldn't save the decision. Check your connection and try again.",
+    actions: {
+      sync: 'sync',
+      loadData: 'load your data',
+      removeDraft: 'delete the draft',
+      restoreDraft: 'restore the draft',
+      saveDraft: 'save the draft',
+      undoDraft: 'undo the draft change',
+      deleteDraft: 'delete the draft',
+      saveTask: 'save the task',
+      saveTaskAndNext: 'save the task and its next repeat',
+      updateStatus: 'update the status',
+      saveGoal: 'save the goal',
+      deleteGoal: 'delete the goal',
+      saveProject: 'save the project',
+      deleteProject: 'delete the project',
+      deleteTask: 'delete the task',
+      saveAssessment: 'save the assessment',
+      saveMeeting: 'save the meeting',
+      saveEmail: 'save the email',
+      deleteEmail: 'delete the email',
+      restoreEmail: 'restore the email',
+      saveFeature: 'save the extra feature',
+      saveAreas: 'save the areas',
+      saveProgress: 'save your progress'
+    },
+    couldNot: (action) => `Couldn't ${action}. Check your connection and try again.`,
+    synced: 'Everything is synced with the server.',
+    syncFailed: "Couldn't sync. Check your connection: your changes are still saved on this device.",
+    emptyDraftDeleted: 'Empty draft: deleted.',
+    draftRestored: 'Draft restored.',
+    draftSaved: 'Draft saved.',
+    savedAsDraft: 'Saved in “Drafts”, in Lists: you can pick it up later.',
+    draftAsBefore: 'The draft is back to how it was.',
+    draftRemoved: 'Draft removed.',
+    draftDeleted: 'Draft deleted.',
+    taskSaved: 'Task saved.',
+    taskSavedSomeday: 'Task saved in “Someday”.',
+    taskAdded: 'Task added.',
+    undoing: 'Undoing…',
+    taskRestored: 'Task restored.',
+    taskChanged: "Can't undo: the task has changed in the meantime.",
+    undoOffline: "Couldn't undo: you need a connection. You can change it by hand.",
+    waitsFor: (title) => `This task is waiting for “${title}”: mark that one as done or cancel it first.`,
+    freedOne: (title) => ` You can now start “${title}”.`,
+    freedMany: (count) => ` You can now start ${count} tasks that were waiting for this one.`,
+    closedWithNext: (canceled, next, freed) =>
+      `Task ${canceled ? 'canceled' : 'done'} and archived. Next repeat: ${next}.${freed}`,
+    closedArchived: (canceled, freed) =>
+      `Task ${canceled ? 'canceled' : 'done'} and archived. You'll find it in “Archived”.${freed}`,
+    taskReactivated: 'Task reactivated: it goes back to its list.',
+    goalSaved: 'Goal saved.',
+    goalCreated: 'Goal created. Add tasks to it in “Goals”.',
+    goalAchieved: 'Goal achieved!',
+    goalArchived: 'Goal archived.',
+    goalReactivated: 'Goal reactivated.',
+    goalDeleted: 'Goal deleted. Its tasks stay in your lists.',
+    projectSaved: 'Project saved.',
+    projectCreated: 'Project created. Add tasks to it.',
+    projectFinished: 'Project finished.',
+    projectArchived: 'Project archived.',
+    projectReactivated: 'Project reactivated.',
+    projectDeleted: 'Project deleted. Its tasks stay in the goal.',
+    taskDeleted: 'Task deleted.',
+    assessment: (date) => `Assessment ${date}`,
+    assessmentSaved: 'Assessment saved.',
+    meetingSaved: 'Meeting saved.',
+    emailSaved: 'Email saved.',
+    emailDraftSaved: 'Draft saved. You have it in “Drafts”.',
+    emailAutoDraft: 'What you wrote was saved as a draft.',
+    emailDeleted: 'Email deleted.',
+    emailRestored: 'Email restored.',
+    emailChanged: "Can't undo: the email has been saved again in the meantime.",
+    importedItems: (n) => `${n} ${n === 1 ? 'item' : 'items'}`,
+    importedWheel: 'your Wheel areas',
+    importedAreas: (n) => `${n} ${n === 1 ? 'area' : 'areas'}`,
+    imported: (parts) => `Imported: ${parts.join(' and ')}.`,
+    localImported: 'Data imported into your account.',
+    localImportFailed: "Couldn't import the data. Check your connection and try again.",
+    areasSaved: 'Areas saved.',
+    allowNotifications: 'To get them, allow notifications for CLAR in this browser.',
+    alarmTitle: (time, title) => `Alarm at ${time}: ${title}`,
+    skipToContent: 'Skip to content',
+    newTask: 'New task',
+    whatsNew: (version) => `CLAR v${version}: what's new in this version`,
+    viewHelp: 'View help',
+    undo: 'Undo'
+  }
+);
 
 export default function App({ user, services, isAdmin = false }: AppProps) {
   // Cómo confirmar la eliminación de la cuenta: primero el método con el que se entró (Google o la contraseña)
@@ -218,7 +445,7 @@ export default function App({ user, services, isAdmin = false }: AppProps) {
   // Perfil para la interfaz a partir de la cuenta (Google o email)
   const profile: UserProfile = {
     id: uid,
-    name: user.displayName || user.email || 'Tu cuenta',
+    name: user.displayName || user.email || m.yourAccount,
     email: user.email ?? undefined,
     photoUrl: user.photoURL ?? undefined,
     role: '',
@@ -288,23 +515,17 @@ export default function App({ user, services, isAdmin = false }: AppProps) {
     if (!isAdmin) return;
     return subscribeToApprovalRequired(db, setApprovalRequired, (e) => {
       console.error('Error loading access settings:', e);
-      setAccessError('No se pudo cargar la configuración de la aprobación de cuentas.');
+      setAccessError(m.approvalLoadFailed);
     });
   }, [db, isAdmin]);
   const handleSetApprovalRequired = async (required: boolean) => {
     setAccessError(null);
     try {
       const { approved } = await setAccessMode(services.functions, required);
-      showToast(
-        required
-          ? 'Aprobación obligatoria activada.'
-          : approved > 0
-            ? `Aprobación desactivada. Se han aprobado ${approved === 1 ? '1 solicitud' : `${approved} solicitudes`}.`
-            : 'Aprobación desactivada: las cuentas nuevas entran solas.'
-      );
+      showToast(required ? m.approvalOn : approved > 0 ? m.approvalOffApproved(approved) : m.approvalOff);
     } catch (e) {
       console.error('Error changing access mode:', e);
-      setAccessError('No se pudo cambiar la aprobación de cuentas. Revisa tu conexión e inténtalo de nuevo.');
+      setAccessError(m.approvalFailed);
     }
   };
 
@@ -324,7 +545,7 @@ export default function App({ user, services, isAdmin = false }: AppProps) {
       (e) => {
         console.error('Error loading extra features:', e);
         setAccountFeatures(null);
-        setFeaturesError('No se pudieron cargar las funciones extra de las cuentas. Vuelve a cargar la página.');
+        setFeaturesError(m.featuresLoadFailed);
       }
     );
   }, [db, isAdmin]);
@@ -332,14 +553,12 @@ export default function App({ user, services, isAdmin = false }: AppProps) {
     setAccessError(null);
     try {
       await setFeatures(services.functions, targetUid, features);
-      showToast('Funciones extra guardadas.');
+      showToast(m.featuresSaved);
       return true;
     } catch (e) {
       console.error('Error setting extra features:', e);
       setAccessError(
-        e instanceof FirebaseError && e.code === 'functions/failed-precondition'
-          ? 'Esta cuenta ya no tiene acceso: no puede tener funciones extra.'
-          : 'No se pudieron guardar las funciones extra. Revisa tu conexión e inténtalo de nuevo.'
+        e instanceof FirebaseError && e.code === 'functions/failed-precondition' ? m.featuresNoAccess : m.featuresFailed
       );
       return false;
     }
@@ -363,14 +582,14 @@ export default function App({ user, services, isAdmin = false }: AppProps) {
     if (!isAdmin) return;
     return subscribeToAccessRequests(db, setAccessRequests, (e) => {
       console.error('Error loading access requests:', e);
-      setAccessError('No se pudieron cargar las solicitudes de acceso.');
+      setAccessError(m.requestsLoadFailed);
     });
   }, [db, isAdmin]);
   useEffect(() => {
     if (!isAdmin) return;
     return subscribeToOpenFeedback(db, setFeedbackTickets, (e) => {
       console.error('Error loading feedback:', e);
-      setFeedbackError('No se pudieron cargar los mensajes.');
+      setFeedbackError(m.messagesLoadFailed);
     });
   }, [db, isAdmin]);
   // Lo pendiente en Administración (aviso rojo): solicitudes por decidir, mensajes sin leer y cuentas que entraron
@@ -396,7 +615,7 @@ export default function App({ user, services, isAdmin = false }: AppProps) {
       return true;
     } catch (e) {
       console.error('Error updating feedback:', e);
-      setFeedbackError('No se pudo guardar el cambio. Revisa tu conexión e inténtalo de nuevo.');
+      setFeedbackError(m.changeFailed);
       return false;
     }
   };
@@ -411,11 +630,7 @@ export default function App({ user, services, isAdmin = false }: AppProps) {
       return { reply: await replyToFeedback(services.functions, ticket.id, replyId, message) };
     } catch (e) {
       console.error('Error replying to feedback:', e);
-      return {
-        error:
-          (e instanceof FirebaseError && REPLY_ERRORS[e.code]) ||
-          'No se pudo enviar la respuesta. Comprueba la conexión e inténtalo de nuevo.'
-      };
+      return { error: (e instanceof FirebaseError && REPLY_ERRORS[e.code]) || m.replyFailed };
     }
   };
 
@@ -428,7 +643,7 @@ export default function App({ user, services, isAdmin = false }: AppProps) {
       await setAccess(services.functions, targetUid, status);
     } catch (e) {
       console.error('Error deciding access:', e);
-      setAccessError('No se pudo guardar la decisión. Revisa tu conexión e inténtalo de nuevo.');
+      setAccessError(m.decisionFailed);
     }
   };
 
@@ -472,7 +687,7 @@ export default function App({ user, services, isAdmin = false }: AppProps) {
   const reportError = useCallback(
     (action: string) => (e: unknown) => {
       console.error(`Error al ${action}:`, e);
-      showToast(`No se pudo ${action}. Revisa tu conexión e inténtalo de nuevo.`);
+      showToast(m.couldNot(action));
     },
     [showToast]
   );
@@ -516,13 +731,9 @@ export default function App({ user, services, isAdmin = false }: AppProps) {
     setIsSyncing(true);
     try {
       const synced = await forceSync(db, uid);
-      showToast(
-        synced
-          ? 'Todo está sincronizado con el servidor.'
-          : 'No se pudo sincronizar. Revisa tu conexión: tus cambios siguen guardados en este dispositivo.'
-      );
+      showToast(synced ? m.synced : m.syncFailed);
     } catch (e) {
-      reportError('sincronizar')(e);
+      reportError(m.actions.sync)(e);
     } finally {
       setIsSyncing(false);
     }
@@ -530,7 +741,7 @@ export default function App({ user, services, isAdmin = false }: AppProps) {
 
   // Suscripción en tiempo real a los datos de la cuenta
   useEffect(() => {
-    const onError = reportError('cargar tus datos');
+    const onError = reportError(m.actions.loadData);
     const unsubscribers = [
       subscribeToCollection(
         db,
@@ -640,10 +851,10 @@ export default function App({ user, services, isAdmin = false }: AppProps) {
     if (!form) {
       // Un borrador que se vació deja de serlo (con «Deshacer», vuelve como estaba)
       if (!previous) return;
-      deleteTaskDraft(db, uid, previous.id).catch(reportError('borrar el borrador'));
-      showToast('Borrador vacío: eliminado.', () => {
-        saveTaskDraft(db, uid, previous).catch(reportError('recuperar el borrador'));
-        showToast('Borrador recuperado.');
+      deleteTaskDraft(db, uid, previous.id).catch(reportError(m.actions.removeDraft));
+      showToast(m.emptyDraftDeleted, () => {
+        saveTaskDraft(db, uid, previous).catch(reportError(m.actions.restoreDraft));
+        showToast(m.draftRestored);
       });
       return;
     }
@@ -655,23 +866,23 @@ export default function App({ user, services, isAdmin = false }: AppProps) {
       createdAt: previous?.createdAt ?? now,
       updatedAt: now
     };
-    saveTaskDraft(db, uid, draft).catch(reportError('guardar el borrador'));
-    showToast(previous ? 'Borrador guardado.' : 'Guardada en «Borradores», en Listas: puedes seguir con ella.', () => {
+    saveTaskDraft(db, uid, draft).catch(reportError(m.actions.saveDraft));
+    showToast(previous ? m.draftSaved : m.savedAsDraft, () => {
       (previous ? saveTaskDraft(db, uid, previous) : deleteTaskDraft(db, uid, draft.id)).catch(
-        reportError('deshacer el borrador')
+        reportError(m.actions.undoDraft)
       );
-      showToast(previous ? 'El borrador vuelve a estar como antes.' : 'Borrador quitado.');
+      showToast(previous ? m.draftAsBefore : m.draftRemoved);
     });
   };
   // Eliminar desde la lista: la propia lista ofrece «Deshacer» (el aviso queda debajo de ella), y el aviso también, al
   // cerrarla
   const handleDeleteDraft = (draft: TaskDraft) => {
-    deleteTaskDraft(db, uid, draft.id).catch(reportError('eliminar el borrador'));
-    showToast('Borrador eliminado.', () => restoreDraft(draft));
+    deleteTaskDraft(db, uid, draft.id).catch(reportError(m.actions.deleteDraft));
+    showToast(m.draftDeleted, () => restoreDraft(draft));
   };
   const restoreDraft = (draft: TaskDraft) => {
-    saveTaskDraft(db, uid, draft).catch(reportError('recuperar el borrador'));
-    showToast('Borrador recuperado.');
+    saveTaskDraft(db, uid, draft).catch(reportError(m.actions.restoreDraft));
+    showToast(m.draftRestored);
   };
 
   const handleSaveTask = (taskData: TaskFormData) => {
@@ -683,8 +894,8 @@ export default function App({ user, services, isAdmin = false }: AppProps) {
         ...taskData,
         alarmSetAt: alarmSetAtFor(current, taskData, now),
         updatedAt: now
-      }).catch(reportError('guardar la tarea'));
-      showToast('Tarea guardada.');
+      }).catch(reportError(m.actions.saveTask));
+      showToast(m.taskSaved);
       setEditingTask(null);
     } else {
       const newTask: TaskItem = {
@@ -698,21 +909,21 @@ export default function App({ user, services, isAdmin = false }: AppProps) {
       };
       // Desde un borrador: la tarea y el borrador borrado van juntos
       (continuingDraft ? saveTaskFromDraft(db, uid, newTask, continuingDraft.id) : saveTask(db, uid, newTask)).catch(
-        reportError('guardar la tarea')
+        reportError(m.actions.saveTask)
       );
-      showToast(taskData.isSomeday ? 'Tarea guardada en «Algún día».' : 'Tarea añadida.');
+      showToast(taskData.isSomeday ? m.taskSavedSomeday : m.taskAdded);
     }
   };
 
   // "Hecha" archiva la tarea; cualquier otro estado la devuelve a su lista
   // «Deshacer»: comprueba en el servidor que nada ha cambiado y restaura con la hora de ahora (es un cambio nuevo)
   const undo = (attempt: () => Promise<boolean>) => () => {
-    showToast('Deshaciendo…');
+    showToast(m.undoing);
     attempt()
-      .then((done) => showToast(done ? 'Tarea recuperada.' : 'No se puede deshacer: la tarea ha cambiado entretanto.'))
+      .then((done) => showToast(done ? m.taskRestored : m.taskChanged))
       .catch((e: unknown) => {
         console.error('Error al deshacer:', e);
-        showToast('No se pudo deshacer: hace falta conexión. Puedes cambiarlo a mano.');
+        showToast(m.undoOffline);
       });
   };
 
@@ -721,68 +932,66 @@ export default function App({ user, services, isAdmin = false }: AppProps) {
     // Bloqueada por otra tarea abierta: no se puede hacer ni empezar todavía
     const blocker = blockerOf(task, tasksById(tasks));
     if (blocker && (status === 'DONE' || status === 'IN_PROGRESS')) {
-      showToast(`Esta tarea espera a «${blocker.title}»: márcala como hecha o cancélala antes.`);
+      showToast(m.waitsFor(blocker.title));
       return;
     }
     // Tarea recurrente marcada como Hecha o Cancelada: se crea la siguiente repetición (una sola vez por tarea). Cancelar
     // una repetición no termina la serie: para eso se quita la repetición al editarla
     const closing = isArchivedStatus(status);
     const next = closing && !task.nextOccurrenceId ? nextRecurringTask(task) : null;
-    const closedLabel = status === 'CANCELLED' ? 'cancelada' : 'hecha';
+    const canceled = status === 'CANCELLED';
     // Al cerrarla, las tareas que esperaban a ella se desbloquean
     const freed = closing && !isArchived(task) ? dependentsOf(task, tasks) : [];
     const freedNote =
-      freed.length === 1
-        ? ` Ya puedes empezar «${freed[0].title}».`
-        : freed.length > 1
-          ? ` Ya puedes empezar ${freed.length} tareas que esperaban a esta.`
-          : '';
+      freed.length === 1 ? m.freedOne(freed[0].title) : freed.length > 1 ? m.freedMany(freed.length) : '';
     const updated = withStatus(task, status);
     // Deshacer devuelve la tarea como estaba (y quita la repetición que se acaba de crear) si nada cambió entretanto
     const restored = () => ({ ...task, updatedAt: new Date().toISOString() });
     if (next) {
       const done = { ...updated, nextOccurrenceId: next.id };
-      completeRecurringTask(db, uid, done, next).catch(reportError('guardar la tarea y su siguiente repetición'));
+      completeRecurringTask(db, uid, done, next).catch(reportError(m.actions.saveTaskAndNext));
+      // La fecha de la siguiente, sin la etiqueta de formatTaskDates (una repetición siempre tiene solo fecha límite)
+      const nextDue = next.dueDate ? `${formatDay(next.dueDate)}${next.dueTime ? `, ${next.dueTime}` : ''}` : '';
       showToast(
-        `Tarea ${closedLabel} y archivada. Siguiente repetición: ${formatTaskDates(next)?.replace('Vence: ', '')}.${freedNote}`,
+        m.closedWithNext(canceled, nextDue, freedNote),
         undo(() => undoTaskChange(db, uid, [done, next], restored(), next.id))
       );
       return;
     }
-    saveTask(db, uid, updated).catch(reportError('actualizar el estado'));
+    saveTask(db, uid, updated).catch(reportError(m.actions.updateStatus));
     if (closing) {
       // Se celebra si se hace (no al cancelarla) una tarea que llevaba 14 días o más en la lista y no se repite
       showToast(
-        `Tarea ${closedLabel} y archivada. La encontrarás en «Archivadas».${freedNote}`,
+        m.closedArchived(canceled, freedNote),
         undo(() => undoTaskChange(db, uid, [updated], restored())),
         celebrate({ type: 'task', task, to: status })
       );
     } else if (isArchived(task)) {
-      showToast('Tarea reactivada: vuelve a su lista.');
+      showToast(m.taskReactivated);
     }
   };
 
   // METAS: si cambia de área, sus tareas heredan la nueva; al eliminarla, sus tareas se quedan sin meta
   const handleSaveGoal = (goal: Goal) => {
     const previous = goals.find((g) => g.id === goal.id);
-    saveGoal(db, uid, goal).catch(reportError('guardar la meta'));
-    showToast(previous ? 'Meta guardada.' : 'Meta creada. Añádele tareas en «Metas».');
+    saveGoal(db, uid, goal).catch(reportError(m.actions.saveGoal));
+    showToast(previous ? m.goalSaved : m.goalCreated);
   };
   // Desde el formulario de una tarea, que la confirma él mismo (con la ventana abierta, los avisos esperan)
   const handleCreateGoalFromTask = (goal: Goal) => {
-    saveGoal(db, uid, goal).catch(reportError('guardar la meta'));
+    saveGoal(db, uid, goal).catch(reportError(m.actions.saveGoal));
   };
   const handleSetGoalStatus = (goal: Goal, status: GoalStatus) => {
-    saveGoal(db, uid, { ...goal, status, updatedAt: new Date().toISOString() }).catch(reportError('guardar la meta'));
+    saveGoal(db, uid, { ...goal, status, updatedAt: new Date().toISOString() }).catch(reportError(m.actions.saveGoal));
     showToast(
-      status === 'ACHIEVED' ? '¡Meta lograda!' : status === 'ARCHIVED' ? 'Meta archivada.' : 'Meta reactivada.',
+      status === 'ACHIEVED' ? m.goalAchieved : status === 'ARCHIVED' ? m.goalArchived : m.goalReactivated,
       undefined,
       celebrate({ type: 'goal', goal, to: status })
     );
   };
   const handleDeleteGoal = (goal: Goal) => {
-    deleteGoal(db, uid, goal).catch(reportError('eliminar la meta'));
-    showToast('Meta eliminada. Sus tareas siguen en tus listas.');
+    deleteGoal(db, uid, goal).catch(reportError(m.actions.deleteGoal));
+    showToast(m.goalDeleted);
   };
 
   // DESCARGAS EN JSON: una tarea, una meta o un proyecto, con todos sus datos y lo que hace falta para entenderlos
@@ -797,35 +1006,31 @@ export default function App({ user, services, isAdmin = false }: AppProps) {
   // PROYECTOS: al eliminar uno, sus tareas se quedan en su meta
   const handleSaveProject = (project: Project) => {
     const previous = projects.find((p) => p.id === project.id);
-    saveProject(db, uid, project).catch(reportError('guardar el proyecto'));
-    showToast(previous ? 'Proyecto guardado.' : 'Proyecto creado. Añádele tareas.');
+    saveProject(db, uid, project).catch(reportError(m.actions.saveProject));
+    showToast(previous ? m.projectSaved : m.projectCreated);
     if (!previous) openProject(project.id);
   };
   const handleSetProjectStatus = (project: Project, status: ProjectStatus) => {
     saveProject(db, uid, { ...project, status, updatedAt: new Date().toISOString() }).catch(
-      reportError('guardar el proyecto')
+      reportError(m.actions.saveProject)
     );
     showToast(
-      status === 'FINISHED'
-        ? 'Proyecto terminado.'
-        : status === 'ARCHIVED'
-          ? 'Proyecto archivado.'
-          : 'Proyecto reactivado.',
+      status === 'FINISHED' ? m.projectFinished : status === 'ARCHIVED' ? m.projectArchived : m.projectReactivated,
       undefined,
       celebrate({ type: 'project', project, to: status })
     );
   };
   const handleDeleteProject = (project: Project) => {
-    deleteProject(db, uid, project).catch(reportError('eliminar el proyecto'));
+    deleteProject(db, uid, project).catch(reportError(m.actions.deleteProject));
     if (selectedProjectId === project.id) setSelectedProjectId(null);
-    showToast('Proyecto eliminado. Sus tareas siguen en la meta.');
+    showToast(m.projectDeleted);
   };
 
   const handleDeleteTask = (id: string) => {
     const deleted = tasks.find((t) => t.id === id);
-    deleteTask(db, uid, id).catch(reportError('eliminar la tarea'));
+    deleteTask(db, uid, id).catch(reportError(m.actions.deleteTask));
     showToast(
-      'Tarea eliminada.',
+      m.taskDeleted,
       deleted && undo(() => restoreDeletedTask(db, uid, { ...deleted, updatedAt: new Date().toISOString() }))
     );
   };
@@ -838,11 +1043,19 @@ export default function App({ user, services, isAdmin = false }: AppProps) {
       timestamp: now.toISOString(),
       label:
         label ||
-        `Evaluación ${now.toLocaleDateString('es-ES', { month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' })}`,
+        m.assessment(
+          now.toLocaleDateString(LOCALE_TAG, {
+            month: 'short',
+            day: 'numeric',
+            year: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit'
+          })
+        ),
       scores: { ...scores }
     };
-    appendWheelLog(db, uid, log).catch(reportError('guardar la evaluación'));
-    showToast('Evaluación guardada.');
+    appendWheelLog(db, uid, log).catch(reportError(m.actions.saveAssessment));
+    showToast(m.assessmentSaved);
   };
 
   const handleSaveMeeting = (meetingData: Omit<MeetingGuard, 'id' | 'createdAt'>) => {
@@ -852,29 +1065,21 @@ export default function App({ user, services, isAdmin = false }: AppProps) {
       userId: uid,
       createdAt: new Date().toISOString()
     };
-    saveMeeting(db, uid, meeting).catch(reportError('guardar la reunión'));
-    showToast('Reunión guardada.');
+    saveMeeting(db, uid, meeting).catch(reportError(m.actions.saveMeeting));
+    showToast(m.meetingSaved);
   };
 
   const handleSaveEmail = (email: EmailDraft, kind: EmailSaveKind) => {
-    saveEmail(db, uid, { ...email, userId: uid }).catch(reportError('guardar el correo'));
-    showToast(
-      kind === 'saved'
-        ? 'Correo guardado.'
-        : kind === 'draft'
-          ? 'Borrador guardado. Lo tienes en «Borradores».'
-          : 'Lo que escribiste se guardó como borrador.'
-    );
+    saveEmail(db, uid, { ...email, userId: uid }).catch(reportError(m.actions.saveEmail));
+    showToast(kind === 'saved' ? m.emailSaved : kind === 'draft' ? m.emailDraftSaved : m.emailAutoDraft);
   };
   const handleDeleteEmail = (email: EmailDraft) => {
-    deleteEmail(db, uid, email.id).catch(reportError('eliminar el correo'));
-    showToast(isDraft(email) ? 'Borrador eliminado.' : 'Correo eliminado.', () => {
-      showToast('Deshaciendo…');
+    deleteEmail(db, uid, email.id).catch(reportError(m.actions.deleteEmail));
+    showToast(isDraft(email) ? m.draftDeleted : m.emailDeleted, () => {
+      showToast(m.undoing);
       restoreDeletedEmail(db, uid, email)
-        .then((done) =>
-          showToast(done ? 'Correo recuperado.' : 'No se puede deshacer: el correo se ha vuelto a guardar entretanto.')
-        )
-        .catch(reportError('recuperar el correo'));
+        .then((done) => showToast(done ? m.emailRestored : m.emailChanged))
+        .catch(reportError(m.actions.restoreEmail));
     });
   };
 
@@ -892,22 +1097,25 @@ export default function App({ user, services, isAdmin = false }: AppProps) {
     // Solo cierra su propia ventana: una importación que se reanudó al volver la conexión no cierra la de otra nueva
     setImportPlan((current) => (current === plan ? null : current));
     const parts = [
-      plan.total > 0 && `${plan.total} ${plan.total === 1 ? 'elemento' : 'elementos'}`,
-      plan.restoredAreas
-        ? 'las áreas de tu Rueda'
-        : plan.addedAreas.length > 0 && `${plan.addedAreas.length} ${plan.addedAreas.length === 1 ? 'área' : 'áreas'}`
-    ].filter(Boolean);
-    showToast(`Importado: ${parts.join(' y ')}.`);
+      plan.total > 0 && m.importedItems(plan.total),
+      plan.restoredAreas ? m.importedWheel : plan.addedAreas.length > 0 && m.importedAreas(plan.addedAreas.length)
+    ].filter((part): part is string => Boolean(part));
+    showToast(m.imported(parts));
   };
   const handleDeleteAccount = (password?: string) =>
     deleteAccount(services, user, password, { withCalendar: calendarActive });
 
   // IMPORTACIÓN DE DATOS DE LA VERSIÓN SIN CUENTAS
   const handleImportLocalData = async (profileIds: string[]) => {
-    await importUserData(db, uid, buildImport(profileIds));
+    try {
+      await importUserData(db, uid, buildImport(profileIds));
+    } catch (e) {
+      // La ventana muestra el mensaje: el del SDK de Firebase es técnico y en inglés
+      throw new Error(m.localImportFailed, { cause: e });
+    }
     clearLocalData();
     setLocalProfiles([]);
-    showToast('Datos importados a tu cuenta.');
+    showToast(m.localImported);
   };
 
   const handleDiscardLocalData = () => {
@@ -958,7 +1166,7 @@ export default function App({ user, services, isAdmin = false }: AppProps) {
         active: activeFeatures({ isAdmin, granted: grantedFeatures, prefs: featurePrefs }),
         onToggle: (id: FeatureId, on: boolean) => {
           setFeaturePrefs((current) => ({ ...current, [id]: on }));
-          saveFeaturePref(db, uid, id, on).catch(reportError('guardar la función extra'));
+          saveFeaturePref(db, uid, id, on).catch(reportError(m.actions.saveFeature));
         }
       }
     : {
@@ -990,8 +1198,8 @@ export default function App({ user, services, isAdmin = false }: AppProps) {
     : null;
   const [isAreasEditorOpen, setIsAreasEditorOpen] = useState(false);
   const handleSaveAreas = (areas: WheelArea[]) => {
-    saveWheelAreas(db, uid, areas).catch(reportError('guardar las áreas'));
-    showToast('Áreas guardadas.');
+    saveWheelAreas(db, uid, areas).catch(reportError(m.actions.saveAreas));
+    showToast(m.areasSaved);
   };
 
   // También se puede volver a ver desde la guía. Si al entrar por primera vez hay datos de la versión sin cuentas,
@@ -1059,7 +1267,8 @@ export default function App({ user, services, isAdmin = false }: AppProps) {
   const [releaseNotesClosed, setReleaseNotesClosed] = useState(false);
   const markReleaseNotesRead = () => {
     rememberReleaseSeen();
-    if (!releaseSeenInProfile) markReleaseNotesSeen(db, uid, __APP_VERSION__).catch(reportError('guardar tu progreso'));
+    if (!releaseSeenInProfile)
+      markReleaseNotesSeen(db, uid, __APP_VERSION__).catch(reportError(m.actions.saveProgress));
     setReleaseNotesClosed(true);
   };
 
@@ -1074,7 +1283,7 @@ export default function App({ user, services, isAdmin = false }: AppProps) {
       setReleaseNotesClosed(true);
     }
     markOnboardingSeen(db, uid, outcome, firstWelcome && !releaseSeenInProfile ? __APP_VERSION__ : undefined).catch(
-      reportError('guardar tu progreso')
+      reportError(m.actions.saveProgress)
     );
     setWelcomeClosed(true);
     setIsWelcomeReplay(false);
@@ -1179,7 +1388,7 @@ export default function App({ user, services, isAdmin = false }: AppProps) {
   const handleTogglePush = async (on: boolean) => {
     if (on) {
       if (notificationState() !== 'granted' && (await requestNotifications()) !== 'granted')
-        throw new Error('Para recibirlas, permite las notificaciones de CLAR en este navegador.');
+        throw new Error(m.allowNotifications);
       await enablePush(services, uid);
     } else {
       await disablePush(services, uid);
@@ -1201,7 +1410,7 @@ export default function App({ user, services, isAdmin = false }: AppProps) {
       setAlarmAlerts((list) => [...list.filter((a) => a.key !== alarm.key), { ...alarm, raisedAt: new Date() }]),
     onNotify: (alarm) =>
       showSystemNotification(
-        `Alarma de las ${formatClock(alarm.at)}: ${alarm.task.title}`,
+        m.alarmTitle(formatClock(alarm.at), alarm.task.title),
         [formatTaskDates(alarm.task), alarmLateNote(alarm.at, new Date())].filter(Boolean).join(' · '),
         alarm.key
       )
@@ -1260,7 +1469,7 @@ export default function App({ user, services, isAdmin = false }: AppProps) {
             href="#main-content"
             className="sr-only focus:not-sr-only focus:fixed focus:top-2 focus:left-2 focus:z-[60] focus:rounded-lg focus:bg-slate-900 focus:px-4 focus:py-2 focus:text-sm focus:font-semibold focus:text-white"
           >
-            Saltar al contenido
+            {m.skipToContent}
           </a>
           {/* Barra de Navegación Superior con Contrato de 3 Zonas */}
           <Navbar
@@ -1287,7 +1496,7 @@ export default function App({ user, services, isAdmin = false }: AppProps) {
               className="inline-flex h-10 w-full items-center justify-center gap-2 rounded-xl bg-slate-900 px-4 text-sm font-bold text-white shadow-sm transition-colors hover:bg-slate-800 sm:w-auto"
             >
               <Plus className="h-4 w-4" aria-hidden="true" />
-              Nueva tarea
+              {m.newTask}
             </button>
           </div>
 
@@ -1476,20 +1685,20 @@ export default function App({ user, services, isAdmin = false }: AppProps) {
                 <button
                   type="button"
                   onClick={() => setIsReleaseNotesReplay(true)}
-                  aria-label={`CLAR v${__APP_VERSION__}: novedades de esta versión`}
+                  aria-label={m.whatsNew(__APP_VERSION__)}
                   className="font-bold text-slate-700 hover:text-indigo-700"
                 >
                   CLAR v{__APP_VERSION__}
                 </button>
                 <span className="text-slate-300">·</span>
-                <p className="text-slate-500">Decide qué hacer ahora, con claridad.</p>
+                <p className="text-slate-500">{BRAND_TAGLINE}.</p>
               </div>
               <div className="flex flex-wrap items-center justify-center gap-3 text-slate-600">
                 <button
                   onClick={() => navigate('help')}
                   className="text-[11px] font-semibold text-indigo-600 hover:text-indigo-800"
                 >
-                  Ver la ayuda
+                  {m.viewHelp}
                 </button>
                 <LegalLinks newTab />
               </div>
@@ -1500,7 +1709,7 @@ export default function App({ user, services, isAdmin = false }: AppProps) {
             type="button"
             onClick={() => openNewTask()}
             data-tour="new-task"
-            aria-label="Nueva tarea"
+            aria-label={m.newTask}
             className="fixed right-[calc(1rem+env(safe-area-inset-right))] bottom-[calc(5rem+env(safe-area-inset-bottom))] z-40 flex h-14 w-14 items-center justify-center rounded-2xl bg-slate-900 text-white shadow-lg shadow-slate-900/30 transition-transform hover:bg-slate-800 active:scale-95 md:hidden"
           >
             <Plus className="h-6 w-6" aria-hidden="true" />
@@ -1560,7 +1769,7 @@ export default function App({ user, services, isAdmin = false }: AppProps) {
                   onClick={toast.undo}
                   className="-my-1 ml-auto min-h-9 shrink-0 rounded-lg px-2.5 font-bold text-indigo-300 hover:bg-white/10 hover:text-indigo-200"
                 >
-                  Deshacer
+                  {m.undo}
                 </button>
               )}
             </div>

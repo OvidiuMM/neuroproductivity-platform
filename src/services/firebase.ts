@@ -18,7 +18,19 @@ import { connectFunctionsEmulator, getFunctions, type Functions } from 'firebase
 // push.ts usa usingEmulators solo dentro de sus funciones: la importación circular no da problemas al cargar
 import { unregisterPushDevice } from './push';
 import { withAuthDomain } from './authDomain';
-import { LOCALE } from '../i18n/locale';
+import { LOCALE, messages } from '../i18n/locale';
+
+// Se muestran tras «No se pudo iniciar la aplicación:» (AuthGate)
+const m = messages(
+  {
+    configFailed: (status: number) => `No se pudo cargar la configuración de Firebase (${status})`,
+    firstTimeOffline: 'no hay conexión. La primera vez, CLAR necesita conexión para abrirse.'
+  },
+  {
+    configFailed: (status) => `couldn't load the Firebase configuration (${status})`,
+    firstTimeOffline: "you're offline. The first time, CLAR needs a connection to open."
+  }
+);
 
 // En desarrollo y en los tests e2e la app habla con los emuladores de Auth, Firestore y Functions (proyecto demo)
 export const usingEmulators = import.meta.env.VITE_USE_FIREBASE_EMULATORS === 'true';
@@ -46,7 +58,7 @@ export const loadConfig = async (): Promise<FirebaseOptions> => {
   if (usingEmulators) return EMULATOR_CONFIG;
   try {
     const res = await fetch('/__/firebase/init.json');
-    if (!res.ok) throw new Error(`No se pudo cargar la configuración de Firebase (${res.status})`);
+    if (!res.ok) throw new Error(m.configFailed(res.status));
     const config = (await res.json()) as FirebaseOptions;
     try {
       localStorage.setItem(CONFIG_KEY, JSON.stringify(config));
@@ -57,9 +69,7 @@ export const loadConfig = async (): Promise<FirebaseOptions> => {
   } catch (error) {
     const saved = savedConfig();
     if (saved) return withAuthDomain(saved, window.location.hostname);
-    throw navigator.onLine === false
-      ? new Error('no hay conexión. La primera vez, CLAR necesita conexión para abrirse.')
-      : error;
+    throw navigator.onLine === false ? new Error(m.firstTimeOffline) : error;
   }
 };
 
