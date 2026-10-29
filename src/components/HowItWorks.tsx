@@ -110,7 +110,7 @@ const screensFor = (
         ? 'La alarma avisa mientras CLAR esté abierta: dentro de la app y, si lo permites, con una notificación del sistema. Con «Avisarme también con CLAR cerrada», en el menú de tu cuenta, te llega aunque CLAR esté cerrada o el móvil bloqueado, y «Probar notificación» comprueba que llega. Al tocar la notificación se abre la tarea. En el iPhone solo funciona desde CLAR en la pantalla de inicio, con iOS 16.4 o posterior: en Safari, Compartir › «Añadir a pantalla de inicio»; después abre CLAR desde el icono y vuelve a entrar. En Android, para que salga en lo alto de la pantalla, activa «Mostrar en pantalla emergente» en los ajustes de notificaciones de CLAR. Si no llegó y abres CLAR después de su hora pero antes del plazo, avisa al momento y dice a qué hora era. El archivo .ics del calendario también la lleva.'
         : 'La alarma avisa mientras CLAR esté abierta, también en segundo plano: dentro de la app y, si lo permites (en el formulario o en el menú de tu cuenta), con una notificación del sistema (en el iPhone, solo si instalas CLAR en la pantalla de inicio). Con CLAR cerrada o el móvil bloqueado no puede sonar: si abres CLAR después de su hora pero antes del plazo, avisa al momento y dice a qué hora era. Para no perderla, añade la tarea al calendario con el archivo .ics, que lleva la alarma.',
       'Las horas (límite, de inicio, de la alarma y de las reuniones) se escriben en 24 h, de 00:00 a 23:59: 9:30, 0930 o 21:45. Lo que no es una hora no se guarda.',
-      'Las tareas pueden repetirse (cada día, semana, mes o año; por ejemplo, «cada mes, el 2.º lunes»). Al repetir, «Inicio» es desde cuándo se repite y la fecha límite hasta cuándo; cada repetición vence su propio día. Al marcarla Hecha o Cancelada se archiva y se crea la siguiente.',
+      'Las tareas pueden repetirse cada N días, semanas, meses o años (por ejemplo, «cada 3 días» o «cada mes, el 2.º lunes»): en «Más opciones», «Repetir». En días y semanas, la siguiente puede ir en fechas fijas o contar desde que la haces: con «3 días después de hacerla», vence 3 días después del día en que la marques Hecha. Al repetir, «Inicio» es desde cuándo se repite y la fecha límite hasta cuándo; cada repetición vence su propio día. Al marcarla Hecha o Cancelada se archiva y se crea la siguiente.',
       'Las ideas sin urgencia van a «Algún día» y no compiten con el Top 10.'
     ]
   },
@@ -119,7 +119,7 @@ const screensFor = (
     title: 'Agenda',
     icon: <CalendarDays className="h-5 w-5 text-indigo-600" />,
     points: [
-      'Vista semanal (de lunes a domingo) y por días con las tareas con fecha de tus dos listas, los intervalos, las próximas repeticiones de las tareas recurrentes y las reuniones.',
+      'Vista semanal (de lunes a domingo) y por días con las tareas con fecha de tus dos listas, los intervalos, las próximas repeticiones de las tareas que se repiten en fechas fijas y las reuniones.',
       'En la vista por días, las tareas vencidas aparecen aparte. Pulsa una tarea para editarla.'
     ]
   },

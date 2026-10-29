@@ -25,9 +25,31 @@ const lastWeekdayOf = (year: number, month: number, weekday: number) => {
 // Lunes de la semana de una fecha (las semanas empiezan en lunes)
 const weekStart = (d: Date) => addDays(d, -((d.getDay() + 6) % 7));
 
+const intervalOf = (rec: Recurrence) => Math.max(1, Math.floor(rec.interval || 1));
+
+// Solo los días y las semanas pueden contar desde el día en que se hace la tarea
+export const canRepeatFromCompletion = (frequency: RecurrenceFrequency | ''): frequency is 'DAILY' | 'WEEKLY' =>
+  frequency === 'DAILY' || frequency === 'WEEKLY';
+
+// La siguiente vence N días o semanas después del día en que se hace, no en fechas fijas
+export const repeatsFromCompletion = (rec: Recurrence) =>
+  rec.from === 'COMPLETION' && canRepeatFromCompletion(rec.frequency);
+
+// Días entre el día en que se hace y la siguiente (repetición desde que se hace)
+const completionStep = (rec: Recurrence) => intervalOf(rec) * (rec.frequency === 'WEEKLY' ? 7 : 1);
+
+const UNITS: Record<RecurrenceFrequency, [string, string]> = {
+  DAILY: ['día', 'días'],
+  WEEKLY: ['semana', 'semanas'],
+  MONTHLY: ['mes', 'meses'],
+  YEARLY: ['año', 'años']
+};
+// «día» o «días» según N
+export const repeatUnit = (frequency: RecurrenceFrequency, n: number) => UNITS[frequency][n === 1 ? 0 : 1];
+
 // Siguiente fecha después de `from` según la regla (sin comprobar `until` ni el día de hoy)
 const stepAfter = (from: Date, rec: Recurrence): Date => {
-  const n = Math.max(1, Math.floor(rec.interval || 1));
+  const n = intervalOf(rec);
   switch (rec.frequency) {
     case 'DAILY':
       return addDays(from, n);
@@ -58,7 +80,11 @@ const stepAfter = (from: Date, rec: Recurrence): Date => {
 // Devuelve null si cae después de `until`.
 export const firstOccurrence = (from: string, rec: Recurrence): string | null => {
   const start = toLocalDate(from);
-  const startMatches = rec.frequency !== 'WEEKLY' || !rec.weekdays?.length || rec.weekdays.includes(start.getDay());
+  const startMatches =
+    rec.frequency !== 'WEEKLY' ||
+    repeatsFromCompletion(rec) ||
+    !rec.weekdays?.length ||
+    rec.weekdays.includes(start.getDay());
   const first = toDateString(startMatches ? start : stepAfter(start, rec));
   return rec.until && first > rec.until ? null : first;
 };
@@ -70,18 +96,26 @@ const deadlineOf = (d: Date, dueTime?: string) => {
   return new Date(d.getFullYear(), d.getMonth(), d.getDate(), hh, mm);
 };
 
-// Próxima fecha de la tarea tras `dueDate`. Si se completa con retraso, salta hasta la primera fecha que no haya
-// vencido, teniendo en cuenta la hora límite (no se crean repeticiones ya vencidas). Devuelve null si supera `until`.
+// Próxima fecha de la tarea tras `dueDate`, al completarla en `now`. Si se completa con retraso, salta hasta la primera
+// fecha que no haya vencido, teniendo en cuenta la hora límite (no se crean repeticiones ya vencidas). Contando desde
+// que se hace, es N días o semanas después del día local de `now`, sea cual sea `dueDate` (nunca vencida). Devuelve
+// null si supera `until`.
 export const nextOccurrence = (dueDate: string, rec: Recurrence, now = new Date(), dueTime?: string): string | null => {
+  if (repeatsFromCompletion(rec)) {
+    const afterDone = toDateString(addDays(now, completionStep(rec)));
+    return rec.until && afterDone > rec.until ? null : afterDone;
+  }
   let next = stepAfter(toLocalDate(dueDate), rec);
   for (let guard = 0; deadlineOf(next, dueTime) <= now && guard < 10_000; guard++) next = stepAfter(next, rec);
   if (rec.until && toDateString(next) > rec.until) return null;
   return toDateString(next);
 };
 
-// Próximas N fechas a partir de `dueDate` incluida (para la agenda), dentro de `until`
+// Próximas N fechas a partir de `dueDate` incluida (para la agenda), dentro de `until`. Contando desde que se hace,
+// solo `dueDate`: las siguientes dependen de cuándo se haga
 export const upcomingOccurrences = (dueDate: string, rec: Recurrence, count: number): string[] => {
   const dates = [dueDate];
+  if (repeatsFromCompletion(rec)) return dates;
   let current = toLocalDate(dueDate);
   while (dates.length < count) {
     current = stepAfter(current, rec);
@@ -94,8 +128,10 @@ export const upcomingOccurrences = (dueDate: string, rec: Recurrence, count: num
 
 // Repeticiones posteriores a `dueDate` entre `from` y `to` (incluidos) y dentro de `until`, para la agenda.
 // Se calculan hasta `to` sea cual sea la distancia a la fecha original (con un límite de seguridad de pasos).
+// Contando desde que se hace, ninguna: no se sabe cuándo se hará
 export const occurrencesBetween = (dueDate: string, rec: Recurrence, from: string, to: string): string[] => {
   const dates: string[] = [];
+  if (repeatsFromCompletion(rec)) return dates;
   let current = toLocalDate(dueDate);
   for (let guard = 0; guard < 50_000; guard++) {
     current = stepAfter(current, rec);
@@ -106,15 +142,23 @@ export const occurrencesBetween = (dueDate: string, rec: Recurrence, from: strin
   return dates;
 };
 
-// Regla con los anclajes tomados de la fecha límite (día del mes, N.º y día de la semana)
+// Regla con los anclajes tomados de la fecha límite (día del mes, N.º y día de la semana). Contando desde que se hace
+// (solo días y semanas), sin días de la semana
 export const buildRecurrence = (
   frequency: RecurrenceFrequency,
   dueDate: string,
-  options: { interval?: number; weekdays?: number[]; monthlyMode?: MonthlyMode; until?: string } = {}
+  options: {
+    interval?: number;
+    weekdays?: number[];
+    monthlyMode?: MonthlyMode;
+    until?: string;
+    from?: Recurrence['from'];
+  } = {}
 ): Recurrence => {
   const due = toLocalDate(dueDate);
   const base: Recurrence = { frequency, interval: Math.max(1, Math.floor(options.interval ?? 1)) };
   if (options.until) base.until = options.until;
+  if (options.from === 'COMPLETION' && canRepeatFromCompletion(frequency)) return { ...base, from: 'COMPLETION' };
   if (frequency === 'WEEKLY')
     return { ...base, weekdays: options.weekdays?.length ? [...options.weekdays].sort() : [due.getDay()] };
   if (frequency === 'MONTHLY') {
@@ -179,37 +223,41 @@ const ORDINALS = ['', '1.er', '2.º', '3.er', '4.º'];
 const untilFormat = new Intl.DateTimeFormat('es-ES', { day: 'numeric', month: 'short', year: 'numeric' });
 const dayMonthFormat = new Intl.DateTimeFormat('es-ES', { day: 'numeric', month: 'long' });
 
-const every = (n: number, one: string, many: string) => (n === 1 ? `Cada ${one}` : `Cada ${n} ${many}`);
+// «Cada día», «Cada 3 días»…
+export const everyPeriod = (n: number, frequency: RecurrenceFrequency) =>
+  n === 1 ? `Cada ${repeatUnit(frequency, 1)}` : `Cada ${n} ${repeatUnit(frequency, n)}`;
 
-// Descripción legible, p. ej. "Cada mes, el 2.º lunes"
-export const describeRecurrence = (rec: Recurrence, dueDate?: string): string => {
-  const n = Math.max(1, rec.interval || 1);
-  const due = dueDate ? toLocalDate(dueDate) : undefined;
-  let text: string;
+// Regla en fechas fijas, p. ej. "Cada mes, el 2.º lunes"
+const describeSchedule = (rec: Recurrence, due?: Date): string => {
+  const n = intervalOf(rec);
   switch (rec.frequency) {
     case 'DAILY':
-      text = every(n, 'día', 'días');
-      break;
+      return everyPeriod(n, 'DAILY');
     case 'WEEKLY': {
       const days = (rec.weekdays?.length ? rec.weekdays : due ? [due.getDay()] : [])
         .slice()
         .sort((a, b) => ((a + 6) % 7) - ((b + 6) % 7))
         .map((d) => WEEKDAY_SHORT[d]);
-      text = `${every(n, 'semana', 'semanas')}${days.length ? `: ${days.join(', ')}` : ''}`;
-      break;
+      return `${everyPeriod(n, 'WEEKLY')}${days.length ? `: ${days.join(', ')}` : ''}`;
     }
     case 'MONTHLY': {
-      const prefix = every(n, 'mes', 'meses');
+      const prefix = everyPeriod(n, 'MONTHLY');
       const weekday = WEEKDAY_NAMES[rec.weekday ?? due?.getDay() ?? 1];
-      if (rec.monthlyMode === 'NTH_WEEKDAY') text = `${prefix}, el ${ORDINALS[rec.nth ?? 1]} ${weekday}`;
-      else if (rec.monthlyMode === 'LAST_WEEKDAY') text = `${prefix}, el último ${weekday}`;
-      else text = `${prefix}, el día ${rec.monthDay ?? due?.getDate() ?? 1}`;
-      break;
+      if (rec.monthlyMode === 'NTH_WEEKDAY') return `${prefix}, el ${ORDINALS[rec.nth ?? 1]} ${weekday}`;
+      if (rec.monthlyMode === 'LAST_WEEKDAY') return `${prefix}, el último ${weekday}`;
+      return `${prefix}, el día ${rec.monthDay ?? due?.getDate() ?? 1}`;
     }
     case 'YEARLY':
-      text = `${every(n, 'año', 'años')}${due ? `, el ${dayMonthFormat.format(due)}` : ''}`;
-      break;
+      return `${everyPeriod(n, 'YEARLY')}${due ? `, el ${dayMonthFormat.format(due)}` : ''}`;
   }
+};
+
+// Descripción legible, p. ej. "Cada mes, el 2.º lunes" o "3 días después de hacerla"
+export const describeRecurrence = (rec: Recurrence, dueDate?: string): string => {
+  const n = intervalOf(rec);
+  const text = repeatsFromCompletion(rec)
+    ? `${n} ${repeatUnit(rec.frequency, n)} después de hacerla`
+    : describeSchedule(rec, dueDate ? toLocalDate(dueDate) : undefined);
   return rec.until ? `${text} (hasta el ${untilFormat.format(toLocalDate(rec.until))})` : text;
 };
 
@@ -230,9 +278,11 @@ const untilStamp = (until: string, allDay: boolean) => {
     .replace(/\.\d{3}/, '');
 };
 
-// `anchorDate` (la fecha límite) da el mes de las repeticiones anuales: el 29 de febrero pasa al 28 en años no bisiestos
-export const toRRule = (rec: Recurrence, allDay: boolean, anchorDate?: string): string => {
-  const parts = [`FREQ=${rec.frequency}`, `INTERVAL=${Math.max(1, rec.interval || 1)}`];
+// `anchorDate` (la fecha límite) da el mes de las repeticiones anuales: el 29 de febrero pasa al 28 en años no bisiestos.
+// Contando desde que se hace no hay serie (null): las fechas dependen de cuándo se haga cada una
+export const toRRule = (rec: Recurrence, allDay: boolean, anchorDate?: string): string | null => {
+  if (repeatsFromCompletion(rec)) return null;
+  const parts = [`FREQ=${rec.frequency}`, `INTERVAL=${intervalOf(rec)}`];
   if (rec.frequency === 'WEEKLY') {
     // La semana empieza en lunes, como en la app: decide qué días caen en cada semana cuando el intervalo es > 1
     parts.push('WKST=MO');
