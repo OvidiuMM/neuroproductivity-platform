@@ -24,6 +24,22 @@ const released = (year: number, month: number) => monthFormat.format(Date.UTC(ye
 
 export const RELEASE_NOTES: readonly ReleaseNote[] = [
   {
+    version: '1.2.1',
+    month: released(2026, 10),
+    changes: [
+      messages(
+        {
+          title: 'Arreglos',
+          text: 'Un área de la Rueda que renombraste ya no vuelve a su nombre de partida, y la página de entrada y la política de privacidad explican mejor quién ve tus datos y qué registros técnicos se guardan.'
+        },
+        {
+          title: 'Fixes',
+          text: 'A Wheel area you renamed no longer goes back to its starting name, and the sign-in page and the privacy policy explain better who sees your data and which technical logs are kept.'
+        }
+      )
+    ]
+  },
+  {
     version: '1.2.0',
     month: released(2026, 10),
     changes: [

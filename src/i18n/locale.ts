@@ -31,9 +31,29 @@ const read = (key: string) => {
 
 // El idioma de esta carga de la página. En los entornos sin navegador (pruebas, servidor), español; las pruebas
 // pueden fijar otro con globalThis.__CLAR_LOCALE__
+// Un enlace con ?lang=en (o ?lang=es) abre CLAR en ese idioma y lo deja elegido en el dispositivo, como si se hubiera
+// pulsado en el selector (pasa a la cuenta al entrar). El parámetro se quita de la dirección (consumeLocaleParam)
+const LANG_PARAM = 'lang';
+const fromUrl = (): Locale | null => {
+  if (typeof window === 'undefined') return null;
+  const value = new URLSearchParams(window.location.search).get(LANG_PARAM);
+  return isLocale(value) ? value : null;
+};
 const initial = (): Locale => {
   const forced = (globalThis as { __CLAR_LOCALE__?: unknown }).__CLAR_LOCALE__;
   if (isLocale(forced)) return forced;
+  const linked = fromUrl();
+  if (linked) {
+    try {
+      if (localStorage.getItem(STORAGE_KEY) !== linked) {
+        localStorage.setItem(STORAGE_KEY, linked);
+        localStorage.setItem(PENDING_KEY, '1');
+      }
+    } catch {
+      // Sin almacenamiento: vale para esta carga
+    }
+    return linked;
+  }
   const saved = typeof window === 'undefined' ? null : read(STORAGE_KEY);
   return isLocale(saved) ? saved : 'es';
 };
@@ -130,6 +150,15 @@ export const accountLanguageSync = ({
   if (pending || !isLocale(account)) return { action: 'save', language: stored ?? page };
   if (account === page) return { action: 'none' };
   return { action: 'adopt', language: account, reload: sinceOpenMs <= ADOPT_WINDOW_MS };
+};
+
+// Quita ?lang= de la dirección (ya se aplicó al cargar): así recargar o compartir la página no lo repite
+export const consumeLocaleParam = () => {
+  if (typeof window === 'undefined') return;
+  const url = new URL(window.location.href);
+  if (!url.searchParams.has(LANG_PARAM)) return;
+  url.searchParams.delete(LANG_PARAM);
+  window.history.replaceState(window.history.state, '', url);
 };
 
 // <html lang> según el idioma (lectores de pantalla, traductores, corrección ortográfica)

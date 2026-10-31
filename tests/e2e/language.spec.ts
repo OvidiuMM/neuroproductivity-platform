@@ -90,3 +90,15 @@ test('the account menu switches the language and saves it in the account; the ac
   await expect(page.locator('html')).toHaveAttribute('lang', 'es', { timeout: 15_000 });
   await expect(page.getByRole('button', { name: 'Listas', exact: true }).first()).toBeVisible();
 });
+
+test('a link with ?lang=en opens CLAR in English, keeps it and cleans the address', async ({ page }) => {
+  await page.goto('/?lang=en');
+  await expect(page.locator('html')).toHaveAttribute('lang', 'en');
+  await expect(page.getByRole('button', { name: 'Continue with Google' })).toBeVisible();
+  expect(new URL(page.url()).searchParams.has('lang')).toBe(false);
+  await page.reload();
+  await expect(page.locator('html')).toHaveAttribute('lang', 'en');
+  // Y de vuelta, con ?lang=es
+  await page.goto('/?lang=es');
+  await expect(page.getByRole('button', { name: 'Continuar con Google' })).toBeVisible();
+});

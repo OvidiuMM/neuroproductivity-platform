@@ -6,6 +6,8 @@ import { defineString } from 'firebase-functions/params';
 // Parámetros de Digital Asset Links. `firebase deploy` pide los valores la primera vez
 // y los guarda en functions/.env.<project-id> (ignorado por git).
 const androidPackageName = defineString('ANDROID_PACKAGE_NAME', {
+  // Sin configurar (p. ej. al probar en local), uno de ejemplo: no coincide con ninguna APK
+  default: 'com.example.clar',
   description: 'Package name de la APK Android (TWA)'
 });
 const androidSha256Fingerprint = defineString('ANDROID_SHA256_FINGERPRINT', {

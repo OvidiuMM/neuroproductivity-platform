@@ -13,3 +13,14 @@ test-results/
 .firebase/
 .firebaserc
 functions/lib/
+
+# Restos locales y archivos que nunca deben subirse
+*.tsbuildinfo
+pnpm-lock.yaml
+pnpm-workspace.yaml
+*.jks
+*.keystore
+*.p12
+*.pem
+*service-account*.json
+*adminsdk*.json

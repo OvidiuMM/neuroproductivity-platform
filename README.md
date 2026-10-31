@@ -1,17 +1,50 @@
-# CLAR — Plataforma de Gestión del Tiempo y Neurociencia Aplicada
+# CLAR — decide qué hacer ahora, con claridad
 
-[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
-[![Version](https://img.shields.io/badge/Version-1.0.0-indigo.svg)](#)
+[![CI](https://github.com/OvidiuMM/neuroproductivity-platform/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/OvidiuMM/neuroproductivity-platform/actions/workflows/ci.yml)
+[![Release](https://img.shields.io/github/v/release/OvidiuMM/neuroproductivity-platform?color=4f46e5)](https://github.com/OvidiuMM/neuroproductivity-platform/releases)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![React](https://img.shields.io/badge/React-19-61dafb.svg?logo=react&logoColor=black)](https://react.dev/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-7.x-3178c6.svg?logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
-[![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-4.x-38bdf8.svg?logo=tailwindcss&logoColor=white)](https://tailwindcss.com/)
-[![Architecture](https://img.shields.io/badge/Architecture-Offline--First-emerald.svg)](#-arquitectura-y-modelo-de-datos)
+[![Firebase](https://img.shields.io/badge/Firebase-Auth%20·%20Firestore%20·%20Functions-ffca28.svg?logo=firebase&logoColor=black)](https://firebase.google.com/)
 
-Plataforma web de **gestión del tiempo y neuroproductividad**, publicada en https://clar.life. Hasta la versión 0.7 se llamaba NeuroProductividad.
+**CLAR** es una app web gratuita y de código abierto para organizar tu tiempo: evalúas tu Rueda de la Vida, conviertes
+lo que quieres mejorar en metas y proyectos, y cada día decides qué hacer con un Top 10 y una agenda con alarmas.
+Funciona sin conexión y en español o en inglés. Pruébala en **https://clar.life**.
 
-> Algunas ideas de esta app se inspiran en el libro _Gestiona tu tiempo, disfruta de la vida_, de Jonathan Benito Sipos. Este proyecto no está afiliado ni respaldado por el autor.
+![CLAR: la lista de tareas con el Top 10](docs/screenshots/lists-en.png)
 
-El sistema rechaza las restricciones coercitivas (como las rotaciones atencionales arbitrarias o las "Tareas Muro" matutinas únicas), sustituyéndolas por un **andamiaje digital para la corteza prefrontal** que combina evaluación holística de la satisfacción vital, jerarquía visual basada en leyes de Gestalt, inferencia léxica TF-IDF y blindaje de la atención frente a interrupciones crónicas.
+> Algunas ideas de esta app se inspiran en el libro _Gestiona tu tiempo, disfruta de la vida_, de Jonathan Benito Sipos.
+> Este proyecto no está afiliado ni respaldado por el autor. Hasta la versión 0.7 se llamaba NeuroProductividad.
+
+CLAR no es una herramienta clínica ni científica: aplica ideas sencillas de gestión del tiempo (prioridades claras,
+tareas concretas y tiempo protegido frente a interrupciones) para que sepas qué hacer ahora sin perderte en listas
+infinitas.
+
+## In English
+
+**CLAR** is a free, open-source web app (PWA) to organize your time: rate your Wheel of Life, turn what you want to
+improve into goals and projects, and decide what to do each day with a Top 10 and an agenda with alarms. It works
+offline, in Spanish or English.
+
+- **Try it:** https://clar.life/?lang=en
+- **Stack:** React 19, TypeScript, Vite, Tailwind CSS 4 and Firebase (Auth, Firestore with offline cache, Cloud
+  Functions, Hosting, Cloud Messaging). Tests with Node's test runner, the Firebase emulators and Playwright.
+- **Run it locally** (Node.js ≥ 22.12 and Java 21 for the emulators; no Firebase account needed):
+
+  ```bash
+  git clone https://github.com/OvidiuMM/neuroproductivity-platform.git && cd neuroproductivity-platform
+  npm ci && npm ci --prefix functions && npm ci --prefix tools/eslint
+  npm run dev   # emulators + app; sign in with the emulated Google account admin@example.com
+  ```
+
+- **Contributing:** issues and pull requests are welcome. The docs and code comments are in Spanish; see
+  [Instalación y Puesta en Marcha](#-instalación-y-puesta-en-marcha) for every script and
+  [docs/requisitos.md](docs/requisitos.md) for the requirements. Security reports: [SECURITY.md](SECURITY.md).
+- **License:** [MIT](LICENSE).
+
+|                          Sign-in page                           |                         On the phone                          |
+| :-------------------------------------------------------------: | :-----------------------------------------------------------: |
+| ![The sign-in page in English](docs/screenshots/landing-en.png) | ![The lists on a phone](docs/screenshots/lists-mobile-en.png) |
 
 ---
 
@@ -74,7 +107,7 @@ La lista completa y numerada de lo que hace la app, con sus requisitos no funcio
 
 ### 3. Listas y jerarquía visual
 
-- **Segregación Estricta:** Separación absoluta entre la **Lista Profesional** y la **Lista Personal** para erradicar el coste metabólico asociado al cambio de contexto (_context-switching_).
+- **Dos listas separadas:** la **Lista Profesional** y la **Lista Personal** no se mezclan, para no saltar de un contexto a otro sin querer.
 - **Jerarquía visual (Top 10):** en lugar de limitar el inventario, las 10 primeras tareas se destacan con tipografía más marcada, elevación y más espacio; de la 11 en adelante se muestran planas y más discretas.
 - **Orden y filtros del Top 10:** por prioridad efectiva, fecha límite, estimación, actualización o área, y filtros por prioridad, estimación máxima, estado, plazo y área. Se guardan en cada dispositivo y el resumen «Top 10» cuenta lo mismo que muestra la lista.
 - **Prioridad efectiva y estimación:** si la fecha límite está a más de una semana, la tarea cuenta un nivel menos de prioridad (las tareas sin fecha mantienen la suya). Cada tarea puede llevar una estimación de duración, visible en todas las listas.
@@ -103,9 +136,9 @@ La lista completa y numerada de lo que hace la app, con sus requisitos no funcio
 
 ### 6. Tiempo protegido: el triángulo de las Bermudas
 
-- **Auditoría y Bloqueo de Reuniones Matutinas:** Bloqueo heurístico inquebrantable de reuniones convocadas antes de las 12:00 h (franja biológica de máxima demanda cognitiva y concentración profunda), sugiriendo su reubicación hacia las 13:00 h (hora valle).
-- **Triple Validación Obligatoria:** Toda reunión exige hora de inicio y de fin (la de fin, posterior), orden del día cerrado no vacío y un moderador nominal responsable.
-- **Redacción Inversa de Correo Electrónico:** Secuencia contra-intuitiva donde los adjuntos y el cuerpo del mensaje deben redactarse primero, manteniendo bloqueado el campo de **Destinatarios** hasta que el contenido esté validado. Alerta en tiempo real si el texto supera la dimensión estándar libre de scroll (_no-scroll_).
+- **Mañanas sin reuniones:** no deja programar reuniones antes de las 12:00 h, para reservar las mañanas al trabajo concentrado, y propone moverlas a las 13:00 h.
+- **Reuniones con lo necesario:** toda reunión exige hora de inicio y de fin (la de fin, posterior), orden del día cerrado no vacío y un moderador nominal responsable.
+- **Correos pensados antes de enviarlos:** primero los adjuntos y el cuerpo del mensaje; el campo de **Destinatarios** se desbloquea al final. Alerta en tiempo real si el texto supera la dimensión estándar libre de scroll (_no-scroll_).
 - **CLAR no envía correos:** los guarda (también a medias, como borradores), apunta de los adjuntos solo el nombre y el tamaño y, con «Abrir en mi correo», los pasa al programa de correo (ver [Borradores de correo](#borradores-de-correo-092)).
 
 ### Cuentas, Inicio, Agenda y accesibilidad
@@ -211,6 +244,13 @@ La lista completa y numerada de lo que hace la app, con sus requisitos no funcio
 - **Cómo se traduce:** `messages(es, en)` de `src/i18n/locale.ts`, junto a cada texto; el inglés tiene que tener la misma forma que el español o no compila. Fechas y números con `LOCALE_TAG` (`en-GB` en inglés). Las áreas de partida de la Rueda sin renombrar se guardan con su identificador y se ven en el idioma de la app (`storableAreas`).
 - **Servidor:** `functions/src/i18n.ts` y `callable.ts`: los errores en el idioma de quien llama, los emails a la persona en el suyo (los de la administración, en español), las notificaciones push en el de cada dispositivo (`push_devices/{uid}/tokens/{id}.language`) y los eventos de Google Calendar en el de la cuenta.
 - **Textos legales en inglés:** traducción con el aviso de que vale la versión en español. Al contacto se puede escribir en español o en inglés.
+
+### Lista para compartir (1.2.1)
+
+- **Enlace en inglés:** `https://clar.life/?lang=en` abre CLAR en inglés y lo deja elegido (`consumeLocaleParam` quita el parámetro de la dirección).
+- **Tarjeta del enlace** bilingüe (`public/og-image.png`) y descripciones más cortas; README con portada en inglés y capturas (`docs/screenshots/`), `SECURITY.md`, la licencia con su titular.
+- **Cabeceras:** `X-Frame-Options: SAMEORIGIN` y `frame-ancestors 'self'` (la app no se puede incrustar en otras webs).
+- **Arreglos:** un área renombrada no se toma por una de partida; elegir el idioma que ya se ve no lo cambia en la cuenta; la política de privacidad describe los registros técnicos (30 días).
 
 ---
 

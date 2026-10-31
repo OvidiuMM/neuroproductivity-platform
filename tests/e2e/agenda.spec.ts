@@ -136,7 +136,7 @@ test('on a phone, a title with a long link wraps and the page does not get wider
   await page.goto('/');
   await signInWithGoogle(page);
   await openSection(page, 'Listas');
-  const title = 'Revisar https://deardoc.example/boards/9929382056/views/2108790123456789012345678901234567';
+  const title = 'Revisar https://tracker.example/boards/9929382056/views/2108790123456789012345678901234567';
   await page.getByRole('button', { name: 'Añadir la primera tarea' }).click();
   await fillAndSaveTask(page, { title, dueDate: localDateFromToday(0), dueTime: '23:59' });
   const widerBy = () => page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
