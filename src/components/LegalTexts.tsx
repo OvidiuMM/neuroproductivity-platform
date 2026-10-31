@@ -219,7 +219,10 @@ const PrivacyPolicyEs: React.FC = () => (
       <List>
         <li>Tu cuenta y lo que escribes: hasta que lo borres o elimines la cuenta.</li>
         <li>Registro de acceso y mensajes de «Escríbenos»: hasta que elimines la cuenta.</li>
-        <li>Registros técnicos: 30 días.</li>
+        <li>
+          Registros técnicos: los de CLAR (Cloud Logging), 30 días. Los que guardan los servicios de Google para
+          funcionar siguen sus propios plazos (Hosting, unos meses; Authentication, unas semanas).
+        </li>
         <li>
           Funciones extra: hasta que la administración te las quite o te retire o bloquee el acceso, o elimines la
           cuenta.
@@ -654,7 +657,10 @@ const PrivacyPolicyEn: React.FC<EnglishTextProps> = ({ onShowSpanish }) => (
       <List>
         <li>Your account and what you write: until you delete it or delete your account.</li>
         <li>Access record and “Contact us” messages: until you delete your account.</li>
-        <li>Technical logs: 30 days.</li>
+        <li>
+          Technical logs: CLAR's own (Cloud Logging), 30 days. Those that Google's services keep to work follow their
+          own periods (Hosting, a few months; Authentication, a few weeks).
+        </li>
         <li>
           Extra features: until the administrator removes them from you or withdraws or blocks your access, or you
           delete your account.

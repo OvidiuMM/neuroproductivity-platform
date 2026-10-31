@@ -5,13 +5,15 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![React](https://img.shields.io/badge/React-19-61dafb.svg?logo=react&logoColor=black)](https://react.dev/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-7.x-3178c6.svg?logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
+**[English](#in-english)** · [Español](#clar--decide-qué-hacer-ahora-con-claridad)
+
 [![Firebase](https://img.shields.io/badge/Firebase-Auth%20·%20Firestore%20·%20Functions-ffca28.svg?logo=firebase&logoColor=black)](https://firebase.google.com/)
 
 **CLAR** es una app web gratuita y de código abierto para organizar tu tiempo: evalúas tu Rueda de la Vida, conviertes
 lo que quieres mejorar en metas y proyectos, y cada día decides qué hacer con un Top 10 y una agenda con alarmas.
 Funciona sin conexión y en español o en inglés. Pruébala en **https://clar.life**.
 
-![CLAR: la lista de tareas con el Top 10](docs/screenshots/lists-en.png)
+![CLAR: la lista de tareas con el Top 10](docs/screenshots/lists-es.png)
 
 > Algunas ideas de esta app se inspiran en el libro _Gestiona tu tiempo, disfruta de la vida_, de Jonathan Benito Sipos.
 > Este proyecto no está afiliado ni respaldado por el autor. Hasta la versión 0.7 se llamaba NeuroProductividad.
@@ -326,7 +328,7 @@ Firebase Hosting sirve la SPA compilada (`dist/`), la app lee y escribe directam
 | `/.well-known/assetlinks.json` | Función `api` (Digital Asset Links de la APK Android) |
 | `**`                           | `index.html` (fallback de la SPA)                     |
 
-Todas las respuestas llevan cabeceras de seguridad, definidas en `firebase.json`: `X-Content-Type-Options`, `Referrer-Policy`, `Permissions-Policy` (sin cámara, ubicación, pagos ni USB; el micrófono, solo para la propia app, para dictar) y una política de seguridad de contenidos (CSP) que solo permite el propio dominio, el inicio de sesión de Google, las APIs de Firebase (`*.googleapis.com`), las Cloud Functions (`*.cloudfunctions.net`) y las fotos de perfil de Google. Por ahora la CSP y la `Cross-Origin-Opener-Policy` van en modo «solo informar» (`…-Report-Only`): no bloquean nada y avisan en la consola del navegador. Un servicio externo nuevo hay que añadirlo a la CSP.
+Todas las respuestas llevan cabeceras de seguridad, definidas en `firebase.json`: `X-Content-Type-Options`, `Referrer-Policy`, `Permissions-Policy` (sin cámara, ubicación, pagos ni USB; el micrófono, solo para la propia app, para dictar) y una política de seguridad de contenidos (CSP) que solo permite el propio dominio, el inicio de sesión de Google, las APIs de Firebase (`*.googleapis.com`), las Cloud Functions (`*.cloudfunctions.net`) y las fotos de perfil de Google. Además, `X-Frame-Options: SAMEORIGIN` y `frame-ancestors 'self'` impiden incrustar la app en otras webs. Por ahora el resto de la CSP y la `Cross-Origin-Opener-Policy` van en modo «solo informar» (`…-Report-Only`): no bloquean nada y avisan en la consola del navegador. Un servicio externo nuevo hay que añadirlo a la CSP.
 
 Requisitos: un proyecto de Firebase en plan Blaze (Cloud Functions lo exige), una base de datos de Firestore `(default)` en `europe-west1`, los proveedores de inicio de sesión **Google** y **Correo electrónico/contraseña** activados en Authentication y la Firebase CLI con sesión iniciada (`npx firebase login`).
 
@@ -336,7 +338,7 @@ El ID del proyecto no se versiona: `.firebaserc` está en `.gitignore`. En cada 
 npx firebase use --add
 ```
 
-Las funciones usan los parámetros `ANDROID_PACKAGE_NAME` y `ANDROID_SHA256_FINGERPRINT` (la función `api`), `ADMIN_EMAIL` y `SMTP_USER` (accesos y contacto) y, opcionales, `SMTP_HOST` (el servidor SMTP; por defecto `smtp.ionos.es`) y `APP_URL` (la dirección de la app en los emails). `firebase deploy` pide los que faltan y los guarda en `functions/.env.<project-id>`, ignorado por git; en CI salen de las variables y los secretos del repositorio. Para los emuladores, defínelos en `functions/.env.local`.
+Las funciones usan los parámetros `ANDROID_PACKAGE_NAME` y `ANDROID_SHA256_FINGERPRINT` (la función `api`), `ADMIN_EMAIL` y `SMTP_USER` (accesos y contacto) y, opcionales, `SMTP_HOST` (el servidor SMTP; por defecto `smtp.ionos.es`) y `APP_URL` (la dirección de la app en los emails). `firebase deploy` pide los que faltan y los guarda en `functions/.env.<project-id>`, ignorado por git; en CI salen de las variables y los secretos del repositorio. Para los emuladores no hace falta nada: `ANDROID_PACKAGE_NAME` y `ANDROID_SHA256_FINGERPRINT` tienen valores de ejemplo y el resto no se usa sin conexión a producción.
 
 #### Aprobación de accesos
 

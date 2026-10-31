@@ -31,8 +31,9 @@ const read = (key: string) => {
 
 // El idioma de esta carga de la página. En los entornos sin navegador (pruebas, servidor), español; las pruebas
 // pueden fijar otro con globalThis.__CLAR_LOCALE__
-// Un enlace con ?lang=en (o ?lang=es) abre CLAR en ese idioma y lo deja elegido en el dispositivo, como si se hubiera
-// pulsado en el selector (pasa a la cuenta al entrar). El parámetro se quita de la dirección (consumeLocaleParam)
+// Un enlace con ?lang=en (o ?lang=es) abre CLAR en ese idioma y lo deja guardado en el dispositivo. No cambia el idioma
+// de una cuenta que ya tiene uno (en esa visita se ve el del enlace; la siguiente, el de la cuenta); una cuenta sin
+// idioma, o nueva, se queda con el del enlace. El parámetro se quita de la dirección (consumeLocaleParam)
 const LANG_PARAM = 'lang';
 const fromUrl = (): Locale | null => {
   if (typeof window === 'undefined') return null;
@@ -45,10 +46,7 @@ const initial = (): Locale => {
   const linked = fromUrl();
   if (linked) {
     try {
-      if (localStorage.getItem(STORAGE_KEY) !== linked) {
-        localStorage.setItem(STORAGE_KEY, linked);
-        localStorage.setItem(PENDING_KEY, '1');
-      }
+      localStorage.setItem(STORAGE_KEY, linked);
     } catch {
       // Sin almacenamiento: vale para esta carga
     }
@@ -58,6 +56,8 @@ const initial = (): Locale => {
   return isLocale(saved) ? saved : 'es';
 };
 export const LOCALE: Locale = initial();
+// Esta carga viene de un enlace con ?lang=: el idioma de la cuenta no la vuelve a cargar (useAccountLanguage)
+export const LINKED = fromUrl() !== null;
 const RELOADED_KEY = 'clar_locale_reloaded';
 // La recarga para adoptar el idioma de la cuenta funcionó: se olvida (ver setLocale)
 if (typeof window !== 'undefined') {
@@ -163,5 +163,10 @@ export const consumeLocaleParam = () => {
 
 // <html lang> según el idioma (lectores de pantalla, traductores, corrección ortográfica)
 export const applyDocumentLocale = () => {
-  if (typeof document !== 'undefined') document.documentElement.lang = LOCALE;
+  if (typeof document === 'undefined') return;
+  document.documentElement.lang = LOCALE;
+  document.title = messages<string>(
+    'CLAR · Decide qué hacer ahora, con claridad',
+    'CLAR · Decide what to do now, with clarity'
+  );
 };

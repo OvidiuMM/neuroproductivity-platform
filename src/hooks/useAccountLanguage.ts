@@ -4,6 +4,7 @@ import {
   accountLanguageSync,
   clearPendingLocale,
   hasPendingLocale,
+  LINKED,
   LOCALE,
   setLocale,
   storedLocale
@@ -31,6 +32,7 @@ export const useAccountLanguage = (db: Firestore, uid: string, language: unknown
       saveLanguage(db, uid, sync.language)
         .then(clearPendingLocale)
         .catch((e) => console.warn('Could not save the language:', e));
-    else if (sync.action === 'adopt') setLocale(sync.language, { pending: false, reload: sync.reload });
+    // Si se abrió con un enlace ?lang=, esta visita se queda en el del enlace; la siguiente, en el de la cuenta
+    else if (sync.action === 'adopt') setLocale(sync.language, { pending: false, reload: sync.reload && !LINKED });
   }, [db, uid, language, fromServer]);
 };

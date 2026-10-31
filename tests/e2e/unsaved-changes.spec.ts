@@ -103,7 +103,10 @@ test('a goal form with unsaved changes also asks before closing', async ({ page 
   await openSection(page, 'Metas');
   await page.getByRole('button', { name: 'Nueva meta', exact: true }).click();
   const form = page.getByRole('dialog', { name: 'Nueva meta' });
-  await form.getByLabel(/^Meta/).fill(`Correr una media maratón ${unique()}`);
+  const goal = `Correr una media maratón ${unique()}`;
+  await form.getByLabel(/^Meta/).fill(goal);
+  // Que el formulario ya tenga lo escrito antes de cerrarlo (en CI, Escape podía llegar antes)
+  await expect(form.getByLabel(/^Meta/)).toHaveValue(goal);
   await page.keyboard.press('Escape');
   const prompt = page.getByRole('alertdialog', { name: '¿Descartar los cambios?' });
   await expect(prompt).toContainText('Has empezado una meta nueva y no la has guardado.');

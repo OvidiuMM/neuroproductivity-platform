@@ -13,8 +13,8 @@ export const WHEEL_CATEGORIES: DefaultWheelCategory[] = [
 ];
 
 // Nombre de las áreas de partida en cada idioma (en español, su identificador). Se guardan con su identificador como
-// nombre; al leerlas, un área de partida sin renombrar (con el nombre de partida de cualquier idioma) se muestra con
-// el del idioma de la app. Las renombradas conservan su nombre.
+// nombre; al leerlas, un área de partida guardada con su identificador se muestra con el nombre del idioma de la app.
+// Las renombradas conservan su nombre (también si coincide con el de partida del otro idioma).
 const DEFAULT_AREA_NAMES: Record<Locale, Record<DefaultWheelCategory, string>> = {
   es: {
     Salud: 'Salud',
