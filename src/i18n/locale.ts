@@ -31,13 +31,33 @@ const read = (key: string) => {
 
 // El idioma de esta carga de la página. En los entornos sin navegador (pruebas, servidor), español; las pruebas
 // pueden fijar otro con globalThis.__CLAR_LOCALE__
+// Un enlace con ?lang=en (o ?lang=es) abre CLAR en ese idioma y lo deja guardado en el dispositivo. No cambia el idioma
+// de una cuenta que ya tiene uno (en esa visita se ve el del enlace; la siguiente, el de la cuenta); una cuenta sin
+// idioma, o nueva, se queda con el del enlace. El parámetro se quita de la dirección (consumeLocaleParam)
+const LANG_PARAM = 'lang';
+const fromUrl = (): Locale | null => {
+  if (typeof window === 'undefined') return null;
+  const value = new URLSearchParams(window.location.search).get(LANG_PARAM);
+  return isLocale(value) ? value : null;
+};
 const initial = (): Locale => {
   const forced = (globalThis as { __CLAR_LOCALE__?: unknown }).__CLAR_LOCALE__;
   if (isLocale(forced)) return forced;
+  const linked = fromUrl();
+  if (linked) {
+    try {
+      localStorage.setItem(STORAGE_KEY, linked);
+    } catch {
+      // Sin almacenamiento: vale para esta carga
+    }
+    return linked;
+  }
   const saved = typeof window === 'undefined' ? null : read(STORAGE_KEY);
   return isLocale(saved) ? saved : 'es';
 };
 export const LOCALE: Locale = initial();
+// Esta carga viene de un enlace con ?lang=: el idioma de la cuenta no la vuelve a cargar (useAccountLanguage)
+export const LINKED = fromUrl() !== null;
 const RELOADED_KEY = 'clar_locale_reloaded';
 // La recarga para adoptar el idioma de la cuenta funcionó: se olvida (ver setLocale)
 if (typeof window !== 'undefined') {
@@ -69,14 +89,22 @@ export const clearPendingLocale = () => {
 
 // Cambia el idioma y vuelve a cargar la app. `pending`: lo eligió la persona en este dispositivo (se guardará en su
 // cuenta al entrar); sin él, viene de la cuenta. `reload: false`: se aplica la próxima vez que se abra. Si el
-// dispositivo no deja guardarlo, no se recarga (se quedaría igual) y devuelve false. Elegir el que ya está no cambia
-// nada (tampoco pasa a la cuenta). Contra bucles, al adoptar el de la cuenta: si una recarga por ese idioma no sirvió
+// dispositivo no deja guardarlo, no se recarga (se quedaría igual) y devuelve false. Elegir el que ya se ve no cambia
+// nada (tampoco pasa a la cuenta, aunque en este dispositivo aún no se hubiera elegido ninguno). Contra bucles, al adoptar el de la cuenta: si una recarga por ese idioma no sirvió
 // (la página volvió a cargar en otro), no se repite. Cuando sí sirvió, al cargar se olvida.
 export const setLocale = (
   next: Locale,
   { pending = true, reload = true }: { pending?: boolean; reload?: boolean } = {}
 ) => {
-  if (next === LOCALE && next === storedLocale()) return true;
+  // El que ya se ve: no es un cambio (tampoco una elección que deba pasar a la cuenta)
+  if (next === LOCALE) {
+    try {
+      if (storedLocale() !== next) localStorage.setItem(STORAGE_KEY, next);
+    } catch {
+      // Sin almacenamiento: no hace falta
+    }
+    return true;
+  }
   try {
     localStorage.setItem(STORAGE_KEY, next);
     if (pending) localStorage.setItem(PENDING_KEY, '1');
@@ -124,7 +152,21 @@ export const accountLanguageSync = ({
   return { action: 'adopt', language: account, reload: sinceOpenMs <= ADOPT_WINDOW_MS };
 };
 
+// Quita ?lang= de la dirección (ya se aplicó al cargar): así recargar o compartir la página no lo repite
+export const consumeLocaleParam = () => {
+  if (typeof window === 'undefined') return;
+  const url = new URL(window.location.href);
+  if (!url.searchParams.has(LANG_PARAM)) return;
+  url.searchParams.delete(LANG_PARAM);
+  window.history.replaceState(window.history.state, '', url);
+};
+
 // <html lang> según el idioma (lectores de pantalla, traductores, corrección ortográfica)
 export const applyDocumentLocale = () => {
-  if (typeof document !== 'undefined') document.documentElement.lang = LOCALE;
+  if (typeof document === 'undefined') return;
+  document.documentElement.lang = LOCALE;
+  document.title = messages<string>(
+    'CLAR · Decide qué hacer ahora, con claridad',
+    'CLAR · Decide what to do now, with clarity'
+  );
 };

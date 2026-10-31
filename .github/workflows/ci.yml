@@ -80,10 +80,6 @@ jobs:
       - name: Install Playwright browser
         run: npx playwright install --with-deps chromium
 
-      # El emulador de Functions carga functions/.env.local (no versionado); en CI lleva valores de ejemplo
-      - name: Write demo Cloud Functions params for the emulator
-        run: printf 'ANDROID_PACKAGE_NAME=org.example.neuroproductividad\n' > functions/.env.local
-
       - name: Run end-to-end tests
         run: npm run test:e2e
 

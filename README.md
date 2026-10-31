@@ -1,17 +1,52 @@
-# CLAR — Plataforma de Gestión del Tiempo y Neurociencia Aplicada
+# CLAR — decide qué hacer ahora, con claridad
 
-[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
-[![Version](https://img.shields.io/badge/Version-1.0.0-indigo.svg)](#)
+[![CI](https://github.com/OvidiuMM/neuroproductivity-platform/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/OvidiuMM/neuroproductivity-platform/actions/workflows/ci.yml)
+[![Release](https://img.shields.io/github/v/release/OvidiuMM/neuroproductivity-platform?color=4f46e5)](https://github.com/OvidiuMM/neuroproductivity-platform/releases)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![React](https://img.shields.io/badge/React-19-61dafb.svg?logo=react&logoColor=black)](https://react.dev/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-7.x-3178c6.svg?logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
-[![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-4.x-38bdf8.svg?logo=tailwindcss&logoColor=white)](https://tailwindcss.com/)
-[![Architecture](https://img.shields.io/badge/Architecture-Offline--First-emerald.svg)](#-arquitectura-y-modelo-de-datos)
+**[English](#in-english)** · [Español](#clar--decide-qué-hacer-ahora-con-claridad)
 
-Plataforma web de **gestión del tiempo y neuroproductividad**, publicada en https://clar.life. Hasta la versión 0.7 se llamaba NeuroProductividad.
+[![Firebase](https://img.shields.io/badge/Firebase-Auth%20·%20Firestore%20·%20Functions-ffca28.svg?logo=firebase&logoColor=black)](https://firebase.google.com/)
 
-> Algunas ideas de esta app se inspiran en el libro _Gestiona tu tiempo, disfruta de la vida_, de Jonathan Benito Sipos. Este proyecto no está afiliado ni respaldado por el autor.
+**CLAR** es una app web gratuita y de código abierto para organizar tu tiempo: evalúas tu Rueda de la Vida, conviertes
+lo que quieres mejorar en metas y proyectos, y cada día decides qué hacer con un Top 10 y una agenda con alarmas.
+Funciona sin conexión y en español o en inglés. Pruébala en **https://clar.life**.
 
-El sistema rechaza las restricciones coercitivas (como las rotaciones atencionales arbitrarias o las "Tareas Muro" matutinas únicas), sustituyéndolas por un **andamiaje digital para la corteza prefrontal** que combina evaluación holística de la satisfacción vital, jerarquía visual basada en leyes de Gestalt, inferencia léxica TF-IDF y blindaje de la atención frente a interrupciones crónicas.
+![CLAR: la lista de tareas con el Top 10](docs/screenshots/lists-es.png)
+
+> Algunas ideas de esta app se inspiran en el libro _Gestiona tu tiempo, disfruta de la vida_, de Jonathan Benito Sipos.
+> Este proyecto no está afiliado ni respaldado por el autor. Hasta la versión 0.7 se llamaba NeuroProductividad.
+
+CLAR no es una herramienta clínica ni científica: aplica ideas sencillas de gestión del tiempo (prioridades claras,
+tareas concretas y tiempo protegido frente a interrupciones) para que sepas qué hacer ahora sin perderte en listas
+infinitas.
+
+## In English
+
+**CLAR** is a free, open-source web app (PWA) to organize your time: rate your Wheel of Life, turn what you want to
+improve into goals and projects, and decide what to do each day with a Top 10 and an agenda with alarms. It works
+offline, in Spanish or English.
+
+- **Try it:** https://clar.life/?lang=en
+- **Stack:** React 19, TypeScript, Vite, Tailwind CSS 4 and Firebase (Auth, Firestore with offline cache, Cloud
+  Functions, Hosting, Cloud Messaging). Tests with Node's test runner, the Firebase emulators and Playwright.
+- **Run it locally** (Node.js ≥ 22.12 and Java 21 for the emulators; no Firebase account needed):
+
+  ```bash
+  git clone https://github.com/OvidiuMM/neuroproductivity-platform.git && cd neuroproductivity-platform
+  npm ci && npm ci --prefix functions && npm ci --prefix tools/eslint
+  npm run dev   # emulators + app; sign in with the emulated Google account admin@example.com
+  ```
+
+- **Contributing:** issues and pull requests are welcome. The docs and code comments are in Spanish; see
+  [Instalación y Puesta en Marcha](#-instalación-y-puesta-en-marcha) for every script and
+  [docs/requisitos.md](docs/requisitos.md) for the requirements. Security reports: [SECURITY.md](SECURITY.md).
+- **License:** [MIT](LICENSE).
+
+|                          Sign-in page                           |                         On the phone                          |
+| :-------------------------------------------------------------: | :-----------------------------------------------------------: |
+| ![The sign-in page in English](docs/screenshots/landing-en.png) | ![The lists on a phone](docs/screenshots/lists-mobile-en.png) |
 
 ---
 
@@ -74,7 +109,7 @@ La lista completa y numerada de lo que hace la app, con sus requisitos no funcio
 
 ### 3. Listas y jerarquía visual
 
-- **Segregación Estricta:** Separación absoluta entre la **Lista Profesional** y la **Lista Personal** para erradicar el coste metabólico asociado al cambio de contexto (_context-switching_).
+- **Dos listas separadas:** la **Lista Profesional** y la **Lista Personal** no se mezclan, para no saltar de un contexto a otro sin querer.
 - **Jerarquía visual (Top 10):** en lugar de limitar el inventario, las 10 primeras tareas se destacan con tipografía más marcada, elevación y más espacio; de la 11 en adelante se muestran planas y más discretas.
 - **Orden y filtros del Top 10:** por prioridad efectiva, fecha límite, estimación, actualización o área, y filtros por prioridad, estimación máxima, estado, plazo y área. Se guardan en cada dispositivo y el resumen «Top 10» cuenta lo mismo que muestra la lista.
 - **Prioridad efectiva y estimación:** si la fecha límite está a más de una semana, la tarea cuenta un nivel menos de prioridad (las tareas sin fecha mantienen la suya). Cada tarea puede llevar una estimación de duración, visible en todas las listas.
@@ -103,15 +138,15 @@ La lista completa y numerada de lo que hace la app, con sus requisitos no funcio
 
 ### 6. Tiempo protegido: el triángulo de las Bermudas
 
-- **Auditoría y Bloqueo de Reuniones Matutinas:** Bloqueo heurístico inquebrantable de reuniones convocadas antes de las 12:00 h (franja biológica de máxima demanda cognitiva y concentración profunda), sugiriendo su reubicación hacia las 13:00 h (hora valle).
-- **Triple Validación Obligatoria:** Toda reunión exige hora de inicio y de fin (la de fin, posterior), orden del día cerrado no vacío y un moderador nominal responsable.
-- **Redacción Inversa de Correo Electrónico:** Secuencia contra-intuitiva donde los adjuntos y el cuerpo del mensaje deben redactarse primero, manteniendo bloqueado el campo de **Destinatarios** hasta que el contenido esté validado. Alerta en tiempo real si el texto supera la dimensión estándar libre de scroll (_no-scroll_).
+- **Mañanas sin reuniones:** no deja programar reuniones antes de las 12:00 h, para reservar las mañanas al trabajo concentrado, y propone moverlas a las 13:00 h.
+- **Reuniones con lo necesario:** toda reunión exige hora de inicio y de fin (la de fin, posterior), orden del día cerrado no vacío y un moderador nominal responsable.
+- **Correos pensados antes de enviarlos:** primero los adjuntos y el cuerpo del mensaje; el campo de **Destinatarios** se desbloquea al final. Alerta en tiempo real si el texto supera la dimensión estándar libre de scroll (_no-scroll_).
 - **CLAR no envía correos:** los guarda (también a medias, como borradores), apunta de los adjuntos solo el nombre y el tamaño y, con «Abrir en mi correo», los pasa al programa de correo (ver [Borradores de correo](#borradores-de-correo-092)).
 
 ### Cuentas, Inicio, Agenda y accesibilidad
 
 - **Cuentas y sincronización:** Inicio de sesión con Google o con email y contraseña (con verificación del email antes de solicitar acceso y recuperación de la contraseña por email); los datos de cada cuenta se guardan en Firestore (UE), funcionan sin conexión y se sincronizan entre dispositivos. En el primer inicio de sesión se ofrece importar los datos que la versión anterior guardaba solo en el navegador. Un indicador en la cabecera está verde cuando todo está guardado en el servidor y naranja cuando hay cambios pendientes o no hay conexión; al pulsarlo se fuerza la sincronización.
-- **Cuenta autogestionada:** desde el menú de la cuenta se activan las notificaciones de las alarmas (y, en cada dispositivo, «Avisarme también con CLAR cerrada»), se ven las funciones extra activadas (la administración enciende o apaga las suyas), se cambia la contraseña, se cierra la sesión en todos los dispositivos (los demás pierden el acceso en menos de una hora), se descargan los datos, se importa una descarga anterior (se añade lo que falta y lo que ya está no se toca) y se elimina la cuenta con todo su contenido, confirmándolo con la contraseña o con Google.
+- **Cuenta autogestionada:** desde el menú de la cuenta se activan las notificaciones de las alarmas (y, en cada dispositivo, «Avisarme también con CLAR cerrada»), se cambia la contraseña, se cierra la sesión en todos los dispositivos (los demás pierden el acceso en menos de una hora), se descargan los datos, se importa una descarga anterior (se añade lo que falta y lo que ya está no se toca) y se elimina la cuenta con todo su contenido, confirmándolo con la contraseña o con Google.
 - **Acceso:** la administración puede exigir la aprobación de cada cuenta (por defecto) o desactivarla; también puede retirar el acceso o bloquear una cuenta junto con su email. Sin acceso se ve una pantalla para solicitarlo con un mensaje opcional, desde la que también se pueden descargar o eliminar los datos guardados. La administración decide en **Administración** → **Solicitudes** y recibe un email por cada solicitud. Un aviso rojo, en «Administración» y en sus pestañas, cuenta las solicitudes pendientes, los mensajes sin leer y, con la aprobación desactivada, las cuentas que entraron solas desde la última vez que se miraron las solicitudes en ese dispositivo, que salen marcadas como «Nueva»; la persona recibe otro cuando se aprueba (detalles en [Aprobación de accesos](#aprobación-de-accesos)).
 - **Accesibilidad:** panel propio (menú de la cuenta y pantallas de inicio de sesión y acceso) con tamaño del texto, alto contraste, reducir animaciones, foco muy visible y celebraciones, guardados en cada dispositivo. Toda la app se usa con el teclado (los diálogos atrapan y devuelven el foco, enlace para saltar al contenido) y una auditoría automática WCAG 2.1 AA revisa cada pantalla en CI.
 - **Celebraciones:** al hacer una tarea que llevaba 14 días o más en la lista (las recurrentes no cuentan), lograr una meta o terminar un proyecto, el aviso añade un mensaje motivador, elegido sin repetir el último de su tipo entre al menos 12 (`src/services/celebrations.ts`), y sale un confeti breve en índigo y violeta (`CelebrationBurst`, decorativo; con menos movimiento no se ve). Solo por lo que se hace en esa pestaña y una vez por elemento y sesión; nunca al cancelar, deshacer, importar ni por cambios de otros dispositivos. Se apagan en «Accesibilidad».
@@ -174,13 +209,11 @@ La lista completa y numerada de lo que hace la app, con sus requisitos no funcio
 - **Eliminar la cuenta tras entrar con Google:** se confirma con el método con el que se entró en esta sesión (`useReauthMethods`); una cuenta con contraseña y Google puede cambiar al otro, y los errores de la ventana de Google salen en español.
 - **Pruebas e2e más estables:** un paso de calentamiento (`tests/e2e/warm-up.setup.ts`) carga la app y despierta los emuladores antes de todas, y Vite busca las dependencias de todo `src` al arrancar.
 
-### Alarmas con CLAR cerrada, proyectos opcionales, funciones extra, Google Calendar y novedades (0.9.6)
+### Alarmas con CLAR cerrada, proyectos opcionales y novedades (0.9.6)
 
 - **Alarmas con CLAR cerrada (push):** con «Avisarme también con CLAR cerrada» activado en un dispositivo (menú de la cuenta; la notificación lleva solo la hora salvo que se pida el nombre de la tarea), las alarmas le llegan aunque la app esté cerrada o el móvil bloqueado, por Firebase Cloud Messaging y una Cloud Function que se ejecuta cada minuto (ver [Notificaciones push de las alarmas](#notificaciones-push-de-las-alarmas)).
 - **Proyectos opcionales:** la bienvenida, el recorrido guiado (un paso más, «Proyectos (opcional)»), la sección y la ayuda presentan los proyectos como una herramienta opcional para agrupar tareas relacionadas de una meta o de una parte de ella (ninguno, uno o varios por meta).
 - **Importar sin recortar:** un registro con un texto o una lista que pasa su tope cuenta entero como no válido.
-- **Funciones extra:** en **Administración** → **Solicitudes**, cada cuenta con acceso tiene «Funciones extra» para activarle funciones del catálogo (`src/services/features.ts`, con los mismos ids en `functions/src/featuresLogic.ts`). Una función activada está en uso desde ese momento y la cuenta la ve en su menú; la administración las tiene todas y las enciende o apaga en el suyo (empiezan apagadas). Las guarda la Cloud Function `setFeatures` en `features/{uid}`, y se borran al retirar, rechazar o bloquear la cuenta y al eliminarla.
-- **Sincronización con Google Calendar (función extra):** con la función en uso, «Conectar Google Calendar», en el menú de la cuenta, crea un calendario «CLAR» en la cuenta de Google de la persona y mantiene en él sus tareas con fecha (salvo «Algún día»), en un solo sentido, con los mismos eventos que «Añadir al calendario» (ver [Sincronización con Google Calendar](#sincronización-con-google-calendar)).
 - **Novedades de cada versión:** al entrar después de una actualización, una ventana cuenta una vez por cuenta las novedades de la versión (lo visto se guarda en el perfil, `releaseNotesSeen`, y en el dispositivo; las cuentas nuevas empiezan por la bienvenida, que las da por vistas). Están todas en la Ayuda y se abren también al pulsar la versión. El contenido está en `src/services/releaseNotes.ts`: al publicar una versión se añade su entrada al principio, y una prueba unitaria falla si la de `package.json` no tiene la suya.
 - **CI:** `actions/checkout` y `actions/setup-node` en v7 (Node 24).
 
@@ -212,17 +245,24 @@ La lista completa y numerada de lo que hace la app, con sus requisitos no funcio
 - **Servidor:** `functions/src/i18n.ts` y `callable.ts`: los errores en el idioma de quien llama, los emails a la persona en el suyo (los de la administración, en español), las notificaciones push en el de cada dispositivo (`push_devices/{uid}/tokens/{id}.language`) y los eventos de Google Calendar en el de la cuenta.
 - **Textos legales en inglés:** traducción con el aviso de que vale la versión en español. Al contacto se puede escribir en español o en inglés.
 
+### Lista para compartir (1.2.1)
+
+- **Enlace en inglés:** `https://clar.life/?lang=en` abre CLAR en inglés y lo deja elegido (`consumeLocaleParam` quita el parámetro de la dirección).
+- **Tarjeta del enlace** bilingüe (`public/og-image.png`) y descripciones más cortas; README con portada en inglés y capturas (`docs/screenshots/`), `SECURITY.md`, la licencia con su titular.
+- **Cabeceras:** `X-Frame-Options: SAMEORIGIN` y `frame-ancestors 'self'` (la app no se puede incrustar en otras webs).
+- **Arreglos:** un área renombrada no se toma por una de partida; elegir el idioma que ya se ve no lo cambia en la cuenta; la política de privacidad describe los registros técnicos (30 días).
+
 ---
 
 ## 🛠️ Stack Tecnológico
 
-| Capa                    | Tecnologías                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                |
-| :---------------------- | :----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Frontend**            | React 19, TypeScript, Vite, Tailwind CSS v4, Lucide Icons                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  |
-| **Algoritmia**          | Motor TF-IDF & Cosine Similarity en TS, Parser sintáctico de verbos en español                                                                                                                                                                                                                                                                                                                                                                                                                                                             |
-| **Visualización**       | SVG interactivo polar / radar, Matemáticas polares de deformación poligonal                                                                                                                                                                                                                                                                                                                                                                                                                                                                |
-| **Cuentas y datos**     | Firebase Authentication (Google y email con contraseña) y Cloud Firestore (`europe-west1`) con caché persistente: funciona sin conexión y sincroniza entre dispositivos                                                                                                                                                                                                                                                                                                                                                                    |
-| **Hosting y funciones** | Firebase Hosting (SPA, en https://clar.life) y Cloud Functions for Firebase 2.ª gen (`europe-west1`): funciones invocables de acceso, funciones extra, Google Calendar, contacto y registro de dispositivos para las alarmas push, los triggers `queueTaskAlarm` y `syncTaskCalendar` (con la API de Google Calendar) y la función programada `sendDueAlarms` (Firebase Cloud Messaging), con avisos por email (SMTP de IONOS, con nodemailer), y la función HTTP `api`, que solo sirve `/.well-known/assetlinks.json` para la APK Android |
+| Capa                    | Tecnologías                                                                                                                                                                                                                                                                                                                                                                                                                                       |
+| :---------------------- | :------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| **Frontend**            | React 19, TypeScript, Vite, Tailwind CSS v4, Lucide Icons                                                                                                                                                                                                                                                                                                                                                                                         |
+| **Algoritmia**          | Motor TF-IDF & Cosine Similarity en TS, Parser sintáctico de verbos en español                                                                                                                                                                                                                                                                                                                                                                    |
+| **Visualización**       | SVG interactivo polar / radar, Matemáticas polares de deformación poligonal                                                                                                                                                                                                                                                                                                                                                                       |
+| **Cuentas y datos**     | Firebase Authentication (Google y email con contraseña) y Cloud Firestore (`europe-west1`) con caché persistente: funciona sin conexión y sincroniza entre dispositivos                                                                                                                                                                                                                                                                           |
+| **Hosting y funciones** | Firebase Hosting (SPA, en https://clar.life) y Cloud Functions for Firebase 2.ª gen (`europe-west1`): funciones invocables de acceso, contacto y registro de dispositivos para las alarmas push, el trigger `queueTaskAlarm` y la función programada `sendDueAlarms` (Firebase Cloud Messaging), con avisos por email (SMTP de IONOS, con nodemailer), y la función HTTP `api`, que solo sirve `/.well-known/assetlinks.json` para la APK Android |
 
 ---
 
@@ -288,7 +328,7 @@ Firebase Hosting sirve la SPA compilada (`dist/`), la app lee y escribe directam
 | `/.well-known/assetlinks.json` | Función `api` (Digital Asset Links de la APK Android) |
 | `**`                           | `index.html` (fallback de la SPA)                     |
 
-Todas las respuestas llevan cabeceras de seguridad, definidas en `firebase.json`: `X-Content-Type-Options`, `Referrer-Policy`, `Permissions-Policy` (sin cámara, ubicación, pagos ni USB; el micrófono, solo para la propia app, para dictar) y una política de seguridad de contenidos (CSP) que solo permite el propio dominio, el inicio de sesión de Google, las APIs de Firebase (`*.googleapis.com`), las Cloud Functions (`*.cloudfunctions.net`) y las fotos de perfil de Google. Por ahora la CSP y la `Cross-Origin-Opener-Policy` van en modo «solo informar» (`…-Report-Only`): no bloquean nada y avisan en la consola del navegador. Un servicio externo nuevo hay que añadirlo a la CSP.
+Todas las respuestas llevan cabeceras de seguridad, definidas en `firebase.json`: `X-Content-Type-Options`, `Referrer-Policy`, `Permissions-Policy` (sin cámara, ubicación, pagos ni USB; el micrófono, solo para la propia app, para dictar) y una política de seguridad de contenidos (CSP) que solo permite el propio dominio, el inicio de sesión de Google, las APIs de Firebase (`*.googleapis.com`), las Cloud Functions (`*.cloudfunctions.net`) y las fotos de perfil de Google. Además, `X-Frame-Options: SAMEORIGIN` y `frame-ancestors 'self'` impiden incrustar la app en otras webs. Por ahora el resto de la CSP y la `Cross-Origin-Opener-Policy` van en modo «solo informar» (`…-Report-Only`): no bloquean nada y avisan en la consola del navegador. Un servicio externo nuevo hay que añadirlo a la CSP.
 
 Requisitos: un proyecto de Firebase en plan Blaze (Cloud Functions lo exige), una base de datos de Firestore `(default)` en `europe-west1`, los proveedores de inicio de sesión **Google** y **Correo electrónico/contraseña** activados en Authentication y la Firebase CLI con sesión iniciada (`npx firebase login`).
 
@@ -298,7 +338,7 @@ El ID del proyecto no se versiona: `.firebaserc` está en `.gitignore`. En cada 
 npx firebase use --add
 ```
 
-Las funciones usan los parámetros `ANDROID_PACKAGE_NAME` y `ANDROID_SHA256_FINGERPRINT` (la función `api`), `ADMIN_EMAIL` y `SMTP_USER` (accesos y contacto) y, opcionales, `SMTP_HOST` (el servidor SMTP; por defecto `smtp.ionos.es`) y `APP_URL` (la dirección de la app en los emails). `firebase deploy` pide los que faltan y los guarda en `functions/.env.<project-id>`, ignorado por git; en CI salen de las variables y los secretos del repositorio. Para los emuladores, defínelos en `functions/.env.local`.
+Las funciones usan los parámetros `ANDROID_PACKAGE_NAME` y `ANDROID_SHA256_FINGERPRINT` (la función `api`), `ADMIN_EMAIL` y `SMTP_USER` (accesos y contacto) y, opcionales, `SMTP_HOST` (el servidor SMTP; por defecto `smtp.ionos.es`) y `APP_URL` (la dirección de la app en los emails). `firebase deploy` pide los que faltan y los guarda en `functions/.env.<project-id>`, ignorado por git; en CI salen de las variables y los secretos del repositorio. Para los emuladores no hace falta nada: `ANDROID_PACKAGE_NAME` y `ANDROID_SHA256_FINGERPRINT` tienen valores de ejemplo y el resto no se usa sin conexión a producción.
 
 #### Aprobación de accesos
 
@@ -344,22 +384,12 @@ Con CLAR cerrada, las alarmas llegan por Firebase Cloud Messaging a los disposit
 3. **APK (TWA):** generarla con la delegación de notificaciones (Bubblewrap: `enableNotifications: true`) y el permiso `POST_NOTIFICATIONS` de Android 13+. Los accesos directos del manifiesto («Nueva tarea por voz», desde 1.0.0) se incluyen al generarla: con una APK anterior, hay que regenerarla (`bubblewrap update`) para que salgan. En la app instalada desde Chrome, salen solos tras la siguiente comprobación del manifiesto (como mucho, un día).
 4. **Emuladores:** FCM no tiene emulador, así que con ellos no se usa push; el trigger funciona y la tarea programada no se ejecuta.
 
-#### Sincronización con Google Calendar
+#### Secretos de Google para desplegar
 
-Es la función extra «Sincronizar con Google Calendar», en un solo sentido: CLAR → Google. «Conectar Google Calendar», en el menú de la cuenta, abre la autorización de Google en una ventana (solo el permiso `calendar.app.created`, sin conexión, con PKCE); Google vuelve a `/oauth/google.html` (`public/oauth/`), que pasa el código a la app. La Cloud Function `connectGoogleCalendar` lo canjea, comprueba que la cuenta puede usar la función, crea el calendario «CLAR» (o vuelve a usar el anterior), guarda el permiso cifrado con AES-256-GCM en `calendar_tokens/{uid}` y sube las tareas con fecha. Después, el trigger `syncTaskCalendar` crea, actualiza o borra el evento de cada tarea al cambiarla, con un id fijo por tarea, y comprueba cada vez que la cuenta sigue con la función (concedida y con acceso, o la administración con su interruptor encendido). Los eventos salen de `functions/src/calendarLogic.ts`, que da el mismo resultado que «Añadir al calendario» (`tests/unit/calendarSync.test.ts` lo comprueba). `disconnectGoogleCalendar`, quitar la función (`calendarFeatureChanged`, `calendarPrefChanged`), perder el acceso y eliminar la cuenta retiran el permiso en Google; el calendario se queda en la cuenta de Google. La app solo lee `calendar_status/{uid}`. Si Google retira el permiso o se borra el calendario, la cuenta pasa a «Volver a conectar».
-
-Configuración, una sola vez (los secretos se escriben en el terminal, nunca en el repositorio ni en un chat). **Los dos secretos tienen que existir antes de desplegar esta versión: sin ellos, el despliegue falla.**
-
-1. **API:** `gcloud services enable calendar-json.googleapis.com --project "$PROJECT_ID"`.
-2. **Pantalla de consentimiento** (Google Cloud → Google Auth Platform): usuarios externos, nombre «CLAR», dominio autorizado `clar.life`, enlaces a `https://clar.life/privacidad` y `https://clar.life/condiciones`, y el permiso `https://www.googleapis.com/auth/calendar.app.created`. Publícala («En producción»): en «Prueba», Google caduca los permisos a los 7 días. Hasta que Google verifique la app (el permiso es sensible: pide la política de privacidad, que ya incluye la declaración de uso limitado, y un vídeo del flujo), la ventana avisa de que la app no está verificada.
-3. **Cliente OAuth** (Credenciales → Crear ID de cliente → Aplicación web): origen `https://clar.life` y URI de redirección `https://clar.life/oauth/google.html` (y las de `https://<proyecto>.web.app`, si se usa esa dirección).
-4. **Secreto del cliente**, en Secret Manager (el CLI lo pide por teclado, sin mostrarlo ni dejarlo en el historial): `npx firebase functions:secrets:set GOOGLE_OAUTH_CLIENT_SECRET --project "$PROJECT_ID"`.
-5. **Clave del cifrado** de los permisos, generada en local: `openssl rand -base64 32 | gcloud secrets create CALENDAR_TOKEN_KEY --data-file=- --project "$PROJECT_ID"`. Si se cambia, los permisos guardados dejan de poder leerse y cada cuenta tiene que volver a conectar.
-   Después, que las funciones puedan leer los dos secretos (como `SMTP_PASSWORD`; sin esto el despliegue falla):
-   `for s in GOOGLE_OAUTH_CLIENT_SECRET CALENDAR_TOKEN_KEY; do gcloud secrets add-iam-policy-binding "$s" --project "$PROJECT_ID" --member "serviceAccount:$PROJECT_NUMBER-compute@developer.gserviceaccount.com" --role roles/secretmanager.secretAccessor; done`.
-6. **Id del cliente** (no es secreto), en la variable del repositorio `GOOGLE_OAUTH_CLIENT_ID` (`gh variable set GOOGLE_OAUTH_CLIENT_ID`). La compilación lo lee como `VITE_GOOGLE_OAUTH_CLIENT_ID` y las funciones, como el parámetro `GOOGLE_OAUTH_CLIENT_ID`; sin él, la app no ofrece conectar.
-7. **Límites conocidos:** la zona horaria es la del dispositivo al conectar (para cambiarla, desconectar y volver a conectar). En el iPhone con CLAR instalada en la pantalla de inicio, la ventana de Google se abre aparte y no puede devolver el código: hay que conectar desde Safari. En la APK de Android hay que probar la conexión antes de anunciarla.
-8. **Emuladores:** Google no tiene emulador. `npm run test:push` prueba la conexión, la sincronización y la desconexión con un Google simulado; las pruebas de extremo a extremo interceptan la ventana de Google, y en los emuladores `connectGoogleCalendar` dice que no está disponible.
+El despliegue necesita dos secretos en Secret Manager, aunque no se use la función que los lee (sin ellos, falla):
+`GOOGLE_OAUTH_CLIENT_SECRET` (el secreto de un cliente OAuth web de Google) y `CALENDAR_TOKEN_KEY` (una clave aleatoria,
+p. ej. `openssl rand -base64 32`), con permiso de lectura para la cuenta de servicio de las funciones, como
+`SMTP_PASSWORD`. Los detalles están en `functions/src/calendarSync.ts`.
 
 #### Dominio propio (clar.life)
 

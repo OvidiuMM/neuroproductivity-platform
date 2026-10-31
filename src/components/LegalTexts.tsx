@@ -121,6 +121,12 @@ const PrivacyPolicyEs: React.FC = () => (
           Android; el de Mozilla, Apple o Microsoft en sus navegadores), que la recibe cifrada.
         </li>
         <li>
+          <strong>Registros técnicos:</strong> al usar CLAR, los servicios de Google que la sirven (Firebase Hosting,
+          Authentication y Cloud Functions) registran datos técnicos de cada acceso, como la dirección IP, el navegador
+          y la hora. Los registros propios de CLAR solo llevan recuentos y códigos de error, sin tus datos. Sirven para
+          la seguridad y para detectar y corregir fallos.
+        </li>
+        <li>
           <strong>En tu dispositivo:</strong> CLAR usa el almacenamiento local de tu navegador (Local Storage e
           IndexedDB) y la sesión de Firebase exclusivamente por motivos técnicos. Guarda la sesión, una copia de tus
           datos para usar la app sin conexión (se borra al cerrar sesión; ver «Cuánto tiempo se guardan») y algunas
@@ -213,6 +219,10 @@ const PrivacyPolicyEs: React.FC = () => (
       <List>
         <li>Tu cuenta y lo que escribes: hasta que lo borres o elimines la cuenta.</li>
         <li>Registro de acceso y mensajes de «Escríbenos»: hasta que elimines la cuenta.</li>
+        <li>
+          Registros técnicos: los de CLAR (Cloud Logging), 30 días. Los que guardan los servicios de Google para
+          funcionar siguen sus propios plazos (Hosting, unos meses; Authentication, unas semanas).
+        </li>
         <li>
           Funciones extra: hasta que la administración te las quite o te retire o bloquee el acceso, o elimines la
           cuenta.
@@ -550,6 +560,12 @@ const PrivacyPolicyEn: React.FC<EnglishTextProps> = ({ onShowSpanish }) => (
           Android; Mozilla's, Apple's or Microsoft's in their browsers), which receives it encrypted.
         </li>
         <li>
+          <strong>Technical logs:</strong> when you use CLAR, the Google services that run it (Firebase Hosting,
+          Authentication and Cloud Functions) log technical data about each request, such as the IP address, the browser
+          and the time. CLAR's own logs only contain counts and error codes, none of your data. They are used for
+          security and to detect and fix problems.
+        </li>
+        <li>
           <strong>On your device:</strong> CLAR uses your browser's local storage (Local Storage and IndexedDB) and the
           Firebase session for technical purposes only. It stores the session, a copy of your data to use the app
           offline (deleted when you sign out; see “How long we keep it”) and some preferences: the app language,
@@ -641,6 +657,10 @@ const PrivacyPolicyEn: React.FC<EnglishTextProps> = ({ onShowSpanish }) => (
       <List>
         <li>Your account and what you write: until you delete it or delete your account.</li>
         <li>Access record and “Contact us” messages: until you delete your account.</li>
+        <li>
+          Technical logs: CLAR's own (Cloud Logging), 30 days. Those that Google's services keep to work follow their
+          own periods (Hosting, a few months; Authentication, a few weeks).
+        </li>
         <li>
           Extra features: until the administrator removes them from you or withdraws or blocks your access, or you
           delete your account.

@@ -13,8 +13,8 @@ export const WHEEL_CATEGORIES: DefaultWheelCategory[] = [
 ];
 
 // Nombre de las áreas de partida en cada idioma (en español, su identificador). Se guardan con su identificador como
-// nombre; al leerlas, un área de partida sin renombrar (con el nombre de partida de cualquier idioma) se muestra con
-// el del idioma de la app. Las renombradas conservan su nombre.
+// nombre; al leerlas, un área de partida guardada con su identificador se muestra con el nombre del idioma de la app.
+// Las renombradas conservan su nombre (también si coincide con el de partida del otro idioma).
 const DEFAULT_AREA_NAMES: Record<Locale, Record<DefaultWheelCategory, string>> = {
   es: {
     Salud: 'Salud',
@@ -43,9 +43,10 @@ const isDefaultCategory = (id: string): id is DefaultWheelCategory =>
 // El nombre de partida de un área en el idioma de la app; el de un área añadida es su identificador
 export const defaultAreaLabel = (id: WheelCategory) => (isDefaultCategory(id) ? areaNames[id] : id);
 
-// Un área de partida que conserva su nombre de partida (en cualquiera de los idiomas)
-const hasDefaultName = (id: string, label: string) =>
-  isDefaultCategory(id) && Object.values(DEFAULT_AREA_NAMES).some((names) => names[id] === label);
+// Un área de partida sin renombrar se guarda con su identificador como nombre (que es su nombre en español, como antes
+// de 1.2.0): se muestra con el nombre de partida del idioma de la app. Cualquier otro nombre es de la persona, aunque
+// coincida con el de partida del otro idioma
+const isUnrenamed = (id: string, label: string) => isDefaultCategory(id) && label === id;
 
 // ÁREAS DE CADA CUENTA: renombrar, ocultar y añadir. Se guardan en el perfil (wheelAreas); sin nada guardado, las 7
 // de partida
@@ -64,16 +65,18 @@ export const resolveAreas = (stored: unknown): WheelArea[] => {
     const { id, label, hidden } = entry as Record<string, unknown>;
     if (typeof id !== 'string' || !id || seen.has(id) || typeof label !== 'string' || !label.trim()) continue;
     seen.add(id);
-    const name = hasDefaultName(id, label.trim()) ? defaultAreaLabel(id) : label.trim();
+    const name = isUnrenamed(id, label.trim()) ? defaultAreaLabel(id) : label.trim();
     areas.push(hidden === true ? { id, label: name, hidden: true } : { id, label: name });
   }
   return areas.some((a) => !a.hidden) ? areas : DEFAULT_AREAS;
 };
 
-// Lo que se guarda: un área de partida con su nombre de partida, con su identificador como nombre (así se ve en el
-// idioma que se use después)
+// Lo que se guarda: un área de partida con su nombre de partida en el idioma de la app, con su identificador como
+// nombre (así se ve en el idioma que se use después)
 export const storableAreas = (areas: WheelArea[]): WheelArea[] =>
-  areas.map((a) => (hasDefaultName(a.id, a.label) && a.label !== a.id ? { ...a, label: a.id } : a));
+  areas.map((a) =>
+    isDefaultCategory(a.id) && a.label === defaultAreaLabel(a.id) && a.label !== a.id ? { ...a, label: a.id } : a
+  );
 
 export const visibleAreas = (areas: WheelArea[]) => areas.filter((a) => !a.hidden);
 

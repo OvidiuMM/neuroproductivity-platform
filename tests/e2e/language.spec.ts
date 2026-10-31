@@ -90,3 +90,45 @@ test('the account menu switches the language and saves it in the account; the ac
   await expect(page.locator('html')).toHaveAttribute('lang', 'es', { timeout: 15_000 });
   await expect(page.getByRole('button', { name: 'Listas', exact: true }).first()).toBeVisible();
 });
+
+test('a link with ?lang=en opens CLAR in English, keeps it and cleans the address', async ({ page }) => {
+  await page.goto('/?lang=en');
+  await expect(page.locator('html')).toHaveAttribute('lang', 'en');
+  await expect(page.getByRole('button', { name: 'Continue with Google' })).toBeVisible();
+  expect(new URL(page.url()).searchParams.has('lang')).toBe(false);
+  await page.reload();
+  await expect(page.locator('html')).toHaveAttribute('lang', 'en');
+  // Y de vuelta, con ?lang=es
+  await page.goto('/?lang=es');
+  await expect(page.getByRole('button', { name: 'Continuar con Google' })).toBeVisible();
+});
+
+test('a ?lang link does not change the language of an account that has one; this visit shows the link language', async ({
+  page
+}) => {
+  test.slow();
+  const email = uniqueEmail();
+  await page.goto('/');
+  await signInWithGoogle(page, email);
+  const uid = await uidOf(email);
+  await expect.poll(async () => (await readDocument(`users/${uid}`))?.language).toBe('es');
+  await page.goto('/?lang=en');
+  await expect(page.locator('html')).toHaveAttribute('lang', 'en');
+  await expect(page.getByRole('button', { name: 'Lists', exact: true }).first()).toBeVisible({ timeout: 15_000 });
+  // La cuenta sigue en español y, en la próxima visita, manda
+  expect((await readDocument(`users/${uid}`))?.language).toBe('es');
+  await page.reload();
+  await expect(page.locator('html')).toHaveAttribute('lang', 'es', { timeout: 15_000 });
+});
+
+test('choosing the language already shown is not a choice for the account', async ({ page }) => {
+  // Un dispositivo nuevo: pulsar «Español», que ya se ve, no deja una elección pendiente de pasar a la cuenta
+  await page.goto('/');
+  await languageGroup(page).getByRole('button', { name: 'Español', exact: true }).click();
+  await expect(page.locator('html')).toHaveAttribute('lang', 'es');
+  expect(await page.evaluate(() => localStorage.getItem('clar_locale_pending'))).toBeNull();
+  // Elegir el otro, sí
+  await languageGroup(page).getByRole('button', { name: 'English', exact: true }).click();
+  await expect(page.locator('html')).toHaveAttribute('lang', 'en');
+  expect(await page.evaluate(() => localStorage.getItem('clar_locale_pending'))).toBe('1');
+});

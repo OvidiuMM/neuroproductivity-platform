@@ -102,7 +102,7 @@ const m = messages<{
     featuresLabel: 'Qué hace CLAR',
     yourData: 'Tus datos',
     dataStored:
-      'Se guardan en la Unión Europea y solo tú los ves. Puedes descargarlos o borrarlos cuando quieras. Sin anuncios ni analítica.',
+      'Se guardan en tu cuenta, en la Unión Europea, y nadie más los ve en la app. Puedes descargarlos o borrarlos cuando quieras. Sin anuncios ni analítica.',
     install: 'Instálala en el móvil desde el navegador: «Añadir a la pantalla de inicio».',
     openSource: 'Código abierto (licencia MIT):',
     code: 'el código en GitHub',
@@ -155,7 +155,7 @@ const m = messages<{
     featuresLabel: 'What CLAR does',
     yourData: 'Your data',
     dataStored:
-      "It's stored in the European Union and only you can see it. You can download or delete it whenever you want. No ads, no analytics.",
+      "It's stored in your account, in the European Union, and nobody else sees it in the app. You can download or delete it whenever you want. No ads, no analytics.",
     install: 'Install it on your phone from the browser: “Add to Home Screen”.',
     openSource: 'Open source (MIT license):',
     code: 'the code on GitHub',
